@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Xcode - per-user data (절대 공유 X)
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+DerivedData/
+
+# Xcode - build artifacts
+build/
+*.o
+*.dSYM.zip
+*.dSYM
+*.ipa
+*.xcarchive
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.pins
+Package.resolved
+
+# CocoaPods (안 쓰지만 혹시 도입할 때)
+Pods/
+
+# Carthage (안 쓰지만)
+Carthage/Build/
+
+# fastlane (안 쓰지만)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# IDE
+.vscode/
+.idea/
+
+# 환경 변수 / 비밀
+.env
+.env.*
+!.env.example
+secrets.plist
+GoogleService-Info.plist

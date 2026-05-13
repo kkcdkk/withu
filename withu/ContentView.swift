@@ -2,20 +2,207 @@
 //  ContentView.swift
 //  withu
 //
-//  Created by seoyoung on 5/12/26.
-//
 
 import SwiftUI
+import HealthKit
 
 struct ContentView: View {
+    // 서버 연결 (Step 1)
+    @State private var serverStatus: String = "확인 전"
+    @State private var pingLoading: Bool = false
+
+    // HealthKit (Step 2)
+    @State private var health = HealthKitManager.shared
+    @State private var healthMessage: String = "권한 요청 안 함"
+    @State private var healthLoading: Bool = false
+
+    // 캐릭터 (Step 3)
+    @State private var overrideState: CharacterState? = nil   // 디버그용 강제 변경
+
+    private var characterState: CharacterState {
+        overrideState ?? CharacterStateResolver.resolve(
+            sleep: health.sleep,
+            workouts: health.recentWorkouts,
+            todaySteps: health.todaySteps
+        )
+    }
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationStack {
+            Form {
+                characterSection
+                cameraSection
+                serverSection
+                healthSection
+                debugSection
+            }
+            .navigationTitle("withu")
         }
-        .padding()
+    }
+
+    // MARK: - Character
+
+    private var characterSection: some View {
+        Section {
+            CharacterView(state: characterState)
+                .listRowBackground(Color.clear)
+        }
+    }
+
+    // MARK: - Camera
+
+    private var cameraSection: some View {
+        Section("카메라") {
+            NavigationLink {
+                CameraView(characterState: characterState)
+            } label: {
+                Label("캐릭터랑 사진 찍기", systemImage: "camera.fill")
+            }
+        }
+    }
+
+    // MARK: - Server
+
+    private var serverSection: some View {
+        Section("로컬 서버") {
+            HStack {
+                Text("상태")
+                Spacer()
+                Text(serverStatus).foregroundStyle(.secondary)
+            }
+            Button {
+                Task { await sendPing() }
+            } label: {
+                if pingLoading { ProgressView() } else { Text("Ping 보내기") }
+            }
+            .disabled(pingLoading)
+        }
+    }
+
+    private func sendPing() async {
+        pingLoading = true
+        defer { pingLoading = false }
+        do {
+            let ok = try await APIClient.shared.ping()
+            serverStatus = ok ? "✅ 연결 성공" : "❌ 비정상 응답"
+        } catch {
+            serverStatus = "❌ \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - HealthKit
+
+    private var healthSection: some View {
+        Section("HealthKit") {
+            HStack {
+                Text("권한")
+                Spacer()
+                Text(health.isAuthorized ? "✅ 요청 완료" : "❓ 미요청")
+                    .foregroundStyle(.secondary)
+            }
+
+            Button("권한 요청") {
+                Task { await requestAuth() }
+            }
+            .disabled(healthLoading)
+
+            Button("데이터 불러오기") {
+                Task { await loadAll() }
+            }
+            .disabled(healthLoading)
+
+            Text(healthMessage)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if let s = health.sleep {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("💤 수면 (지난 7일)").font(.subheadline).bold()
+                    Text("총 수면: \(formatDuration(s.totalAsleep))")
+                    Text("기록 수: \(s.sampleCount)건")
+                    if let last = s.lastNight {
+                        Text("마지막: \(last.formatted(date: .abbreviated, time: .shortened))")
+                    }
+                }
+                .font(.footnote)
+            }
+
+            if let steps = health.todaySteps {
+                Text("👟 오늘 걸음: \(Int(steps))보").font(.subheadline)
+            }
+
+            if !health.recentWorkouts.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("🏋️ 최근 운동").font(.subheadline).bold()
+                    ForEach(Array(health.recentWorkouts.prefix(5).enumerated()), id: \.offset) { _, w in
+                        HStack {
+                            Text(w.activity.displayName)
+                            Spacer()
+                            Text(formatDuration(w.duration))
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.footnote)
+                    }
+                }
+            }
+        }
+    }
+
+    private func requestAuth() async {
+        healthLoading = true
+        defer { healthLoading = false }
+        do {
+            try await health.requestAuthorization()
+            healthMessage = "권한 요청 완료"
+        } catch {
+            healthMessage = "❌ \(error.localizedDescription)"
+        }
+    }
+
+    private func loadAll() async {
+        healthLoading = true
+        defer { healthLoading = false }
+
+        var errors: [String] = []
+        do { _ = try await health.fetchSleep(days: 7) }
+        catch { errors.append("수면: \(error.localizedDescription)") }
+        do { _ = try await health.fetchWorkouts(days: 7) }
+        catch { errors.append("운동: \(error.localizedDescription)") }
+        do { _ = try await health.fetchTodaySteps() }
+        catch { errors.append("걸음: \(error.localizedDescription)") }
+
+        healthMessage = errors.isEmpty
+            ? "✅ 데이터 로드 완료"
+            : "⚠️ 일부 실패\n" + errors.joined(separator: "\n")
+    }
+
+    // MARK: - Debug
+
+    private var debugSection: some View {
+        Section("디버그 (상태 강제)") {
+            Picker("상태 강제", selection: $overrideState) {
+                Text("자동").tag(CharacterState?.none)
+                Text("idle").tag(CharacterState?.some(.idle))
+                Text("sleeping").tag(CharacterState?.some(.sleeping))
+                Text("walking").tag(CharacterState?.some(.walking))
+                Text("running").tag(CharacterState?.some(.running))
+                Text("cycling").tag(CharacterState?.some(.cycling))
+                Text("energetic").tag(CharacterState?.some(.energetic))
+            }
+            .pickerStyle(.menu)
+
+            Text("자동 모드는 HealthKit 데이터 + 현재 시각으로 결정")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let h = Int(seconds) / 3600
+        let m = (Int(seconds) % 3600) / 60
+        return "\(h)시간 \(m)분"
     }
 }
 

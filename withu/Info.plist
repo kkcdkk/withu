@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>AI 캐릭터가 수면/운동 데이터에 맞춰 반응하기 위해 건강 데이터를 읽어요.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>(현재 단계에선 쓰지 않지만 향후 기록 저장 기능에 사용해요.)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>AI 캐릭터랑 함께 사진을 찍기 위해 카메라가 필요해요.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>촬영한 사진을 사진 앱에 저장하기 위해 권한이 필요해요.</string>
+</dict>
+</plist>

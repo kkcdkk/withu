@@ -10,9 +10,22 @@
 		1D34FECE2FB278620033EC7D /* withu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = withu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1D34FEE42FB36B130033EC7D /* Exceptions for "withu" folder in "withu" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1D34FECD2FB278620033EC7D /* withu */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1D34FED02FB278620033EC7D /* withu */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1D34FEE42FB36B130033EC7D /* Exceptions for "withu" folder in "withu" target */,
+			);
 			path = withu;
 			sourceTree = "<group>";
 		};
@@ -244,12 +257,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = withu/withu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withu/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AI 캐릭터가 수면/운동 데이터에 맞춰 반응하기 위해 건강 데이터를 읽어요.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "(현재 단계에선 쓰지 않지만 향후 기록 저장 기능에 사용해요.)";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AI 캐릭터 서버와 통신하기 위해 로컬 네트워크 접근이 필요합니다.  ";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -286,12 +304,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = withu/withu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withu/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "AI 캐릭터가 수면/운동 데이터에 맞춰 반응하기 위해 건강 데이터를 읽어요.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "(현재 단계에선 쓰지 않지만 향후 기록 저장 기능에 사용해요.)";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AI 캐릭터 서버와 통신하기 위해 로컬 네트워크 접근이 필요합니다.  ";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
