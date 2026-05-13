@@ -1,21 +1,21 @@
 ## 요약
 
-- 
+- 작성 예정
 
 ## 관련 이슈
 
-- 
+- 작성 예정
 
 ## 변경 범위
 
-- 
+- 작성 예정
 
 ## 검증
 
 - [ ] `xcodebuild -list -project withu.xcodeproj`
 - [ ] `xcodebuild -project withu.xcodeproj -scheme withu -configuration Debug -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build`
 - [ ] 시뮬레이터 또는 실기기 실행 확인
-- [ ] 해당 없음: 
+- [ ] 해당 없음: 작성 예정
 
 ## QA 승인
 
