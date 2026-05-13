@@ -59,6 +59,14 @@
 			);
 			target = 1D34FECD2FB278620033EC7D /* withu */;
 		};
+		1D34FFF72FB4C5250033EC7D /* Exceptions for "withu" folder in "withu Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Character/CharacterState.swift,
+				Shared/WatchMessage.swift,
+			);
+			target = 1D34FFAE2FB4C2760033EC7D /* withu Watch App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -66,6 +74,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				1D34FEE42FB36B130033EC7D /* Exceptions for "withu" folder in "withu" target */,
+				1D34FFF72FB4C5250033EC7D /* Exceptions for "withu" folder in "withu Watch App" target */,
 			);
 			path = withu;
 			sourceTree = "<group>";
