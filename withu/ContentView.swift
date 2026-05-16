@@ -28,12 +28,14 @@ struct ContentView: View {
     }
 
     @State private var connectivity = ConnectivityManager.shared
+    @State private var notifications = NotificationManager.shared
 
     var body: some View {
         NavigationStack {
             Form {
                 characterSection
                 watchSection
+                notificationsSection
                 cameraSection
                 serverSection
                 healthSection
@@ -42,12 +44,19 @@ struct ContentView: View {
             .navigationTitle("withu")
             .task {
                 connectivity.activate()
+                await notifications.refreshAuthorizationStatus()
             }
             .onChange(of: characterState) { _, newValue in
                 sendStateToWatch(newValue)
             }
-            .onChange(of: health.todaySteps) { _, _ in
+            .onChange(of: health.todaySteps) { _, newSteps in
                 sendStateToWatch(characterState)
+                if let s = newSteps {
+                    Task { await notifications.scheduleStepGoalIfNeeded(steps: s) }
+                }
+            }
+            .onChange(of: health.recentWorkouts) { _, newWorkouts in
+                Task { await notifications.scheduleWorkoutEndedIfNeeded(latest: newWorkouts.first) }
             }
         }
     }
@@ -60,6 +69,44 @@ struct ContentView: View {
             timestamp: Date()
         )
         connectivity.send(msg)
+    }
+
+    // MARK: - Notifications section
+
+    private var notificationsSection: some View {
+        Section("알림") {
+            HStack {
+                Text("권한 상태")
+                Spacer()
+                Text(authStatusLabel)
+                    .foregroundStyle(.secondary)
+            }
+            if notifications.authorizationStatus != .authorized {
+                Button("알림 권한 요청") {
+                    Task { await notifications.requestAuthorization() }
+                }
+            }
+            Button("매일 22:30 취침 리마인더 설정") {
+                Task { await notifications.scheduleBedtimeReminder() }
+            }
+            Button("등록된 알림 모두 취소", role: .destructive) {
+                notifications.cancelAll()
+            }
+            if let err = notifications.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var authStatusLabel: String {
+        switch notifications.authorizationStatus {
+        case .notDetermined:    return "❓ 미요청"
+        case .denied:           return "❌ 거부됨"
+        case .authorized:       return "✅ 허용됨"
+        case .provisional:      return "🤖 자동 허용"
+        case .ephemeral:        return "🕐 일시 허용"
+        @unknown default:       return "?"
+        }
     }
 
     // MARK: - Watch status section
