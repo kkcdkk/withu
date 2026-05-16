@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		1D34FFB02FB4C2760033EC7D /* withu Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1D822BE92FB92FA500E2A443 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BE82FB92FA500E2A443 /* WidgetKit.framework */; };
+		1D822BEB2FB92FA500E2A443 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */; };
+		1D822BF82FB92FA600E2A443 /* withuComplicationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -17,6 +20,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1D34FFAE2FB4C2760033EC7D;
 			remoteInfo = "withu Watch App";
+		};
+		1D822BF62FB92FA600E2A443 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1D34FEC62FB278620033EC7D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1D822BE52FB92FA500E2A443;
+			remoteInfo = withuComplicationExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,6 +52,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822BF92FB92FA600E2A443 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1D822BF82FB92FA600E2A443 /* withuComplicationExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +70,10 @@
 		1D34FF912FB4C04F0033EC7D /* withu Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "withu Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D34FFAA2FB4C2760033EC7D /* withu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = withu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "withu Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = withuComplicationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D822BE82FB92FA500E2A443 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		1D822BFF2FB9304400E2A443 /* withuComplicationExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = withuComplicationExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -63,9 +88,26 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Character/CharacterState.swift,
+				Shared/SharedAppState.swift,
 				Shared/WatchMessage.swift,
 			);
 			target = 1D34FFAE2FB4C2760033EC7D /* withu Watch App */;
+		};
+		1D822BFD2FB92FA600E2A443 /* Exceptions for "withuComplication" folder in "withuComplicationExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
+		};
+		1D822C042FB9324700E2A443 /* Exceptions for "withu" folder in "withuComplicationExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Character/CharacterState.swift,
+				Shared/SharedAppState.swift,
+				Shared/WatchMessage.swift,
+			);
+			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -75,6 +117,7 @@
 			exceptions = (
 				1D34FEE42FB36B130033EC7D /* Exceptions for "withu" folder in "withu" target */,
 				1D34FFF72FB4C5250033EC7D /* Exceptions for "withu" folder in "withu Watch App" target */,
+				1D822C042FB9324700E2A443 /* Exceptions for "withu" folder in "withuComplicationExtension" target */,
 			);
 			path = withu;
 			sourceTree = "<group>";
@@ -82,6 +125,14 @@
 		1D34FFB32FB4C2760033EC7D /* withu Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "withu Watch App";
+			sourceTree = "<group>";
+		};
+		1D822BEC2FB92FA500E2A443 /* withuComplication */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1D822BFD2FB92FA600E2A443 /* Exceptions for "withuComplication" folder in "withuComplicationExtension" target */,
+			);
+			path = withuComplication;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -101,14 +152,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822BE32FB92FA500E2A443 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D822BEB2FB92FA500E2A443 /* SwiftUI.framework in Frameworks */,
+				1D822BE92FB92FA500E2A443 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1D34FEC52FB278620033EC7D = {
 			isa = PBXGroup;
 			children = (
+				1D822BFF2FB9304400E2A443 /* withuComplicationExtension.entitlements */,
 				1D34FED02FB278620033EC7D /* withu */,
 				1D34FFB32FB4C2760033EC7D /* withu Watch App */,
+				1D822BEC2FB92FA500E2A443 /* withuComplication */,
+				1D822BE72FB92FA500E2A443 /* Frameworks */,
 				1D34FECF2FB278620033EC7D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -120,8 +183,18 @@
 				1D34FF912FB4C04F0033EC7D /* withu Watch App.app */,
 				1D34FFAA2FB4C2760033EC7D /* withu.app */,
 				1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */,
+				1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1D822BE72FB92FA500E2A443 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1D822BE82FB92FA500E2A443 /* WidgetKit.framework */,
+				1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -193,10 +266,12 @@
 				1D34FFAB2FB4C2760033EC7D /* Sources */,
 				1D34FFAC2FB4C2760033EC7D /* Frameworks */,
 				1D34FFAD2FB4C2760033EC7D /* Resources */,
+				1D822BF92FB92FA600E2A443 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1D822BF72FB92FA600E2A443 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1D34FFB32FB4C2760033EC7D /* withu Watch App */,
@@ -208,6 +283,28 @@
 			productReference = 1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		1D822BE52FB92FA500E2A443 /* withuComplicationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D822BFC2FB92FA600E2A443 /* Build configuration list for PBXNativeTarget "withuComplicationExtension" */;
+			buildPhases = (
+				1D822BE22FB92FA500E2A443 /* Sources */,
+				1D822BE32FB92FA500E2A443 /* Frameworks */,
+				1D822BE42FB92FA500E2A443 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1D822BEC2FB92FA500E2A443 /* withuComplication */,
+			);
+			name = withuComplicationExtension;
+			packageProductDependencies = (
+			);
+			productName = withuComplicationExtension;
+			productReference = 1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -215,7 +312,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					1D34FECD2FB278620033EC7D = {
@@ -229,6 +326,9 @@
 					};
 					1D34FFAE2FB4C2760033EC7D = {
 						CreatedOnToolsVersion = 26.4.1;
+					};
+					1D822BE52FB92FA500E2A443 = {
+						CreatedOnToolsVersion = 26.5;
 					};
 				};
 			};
@@ -250,6 +350,7 @@
 				1D34FF902FB4C04F0033EC7D /* withu Watch App */,
 				1D34FFA92FB4C2760033EC7D /* withu */,
 				1D34FFAE2FB4C2760033EC7D /* withu Watch App */,
+				1D822BE52FB92FA500E2A443 /* withuComplicationExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -283,6 +384,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822BE42FB92FA500E2A443 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -300,6 +408,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822BE22FB92FA500E2A443 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -307,6 +422,11 @@
 			isa = PBXTargetDependency;
 			target = 1D34FFAE2FB4C2760033EC7D /* withu Watch App */;
 			targetProxy = 1D34FFB12FB4C2760033EC7D /* PBXContainerItemProxy */;
+		};
+		1D822BF72FB92FA600E2A443 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
+			targetProxy = 1D822BF62FB92FA600E2A443 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -563,6 +683,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "withu Watch App/withu Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -596,6 +717,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "withu Watch App/withu Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -662,6 +784,75 @@
 			};
 			name = Release;
 		};
+		1D822BFA2FB92FA600E2A443 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = withuComplicationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withuComplication/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = withuComplication;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.watchkitapp.withuComplication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Debug;
+		};
+		1D822BFB2FB92FA600E2A443 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = withuComplicationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withuComplication/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = withuComplication;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.watchkitapp.withuComplication;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -706,6 +897,15 @@
 			buildConfigurations = (
 				1D34FFBF2FB4C2770033EC7D /* Debug */,
 				1D34FFC02FB4C2770033EC7D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D822BFC2FB92FA600E2A443 /* Build configuration list for PBXNativeTarget "withuComplicationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D822BFA2FB92FA600E2A443 /* Debug */,
+				1D822BFB2FB92FA600E2A443 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

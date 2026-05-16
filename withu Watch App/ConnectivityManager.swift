@@ -5,6 +5,7 @@
 
 import Foundation
 import WatchConnectivity
+import WidgetKit
 
 /// 워치 쪽 WCSession 매니저. iPhone 에서 보낸 캐릭터 메시지를 받음.
 @Observable
@@ -29,6 +30,7 @@ final class ConnectivityManager: NSObject {
     }
 
     /// applicationContext / receivedApplicationContext 에서 메시지 추출.
+    /// 받은 메시지는 App Group 에 저장하고 위젯 timeline 도 리로드.
     private func ingest(_ context: [String: Any]) {
         guard let data = context[WatchMessage.payloadKey] as? Data else { return }
         do {
@@ -36,6 +38,10 @@ final class ConnectivityManager: NSObject {
             self.lastMessage = msg
             self.lastReceivedAt = Date()
             self.lastError = nil
+
+            // 위젯/컴플리케이션이 읽을 수 있게 공유 컨테이너에 저장
+            SharedAppState.save(msg)
+            WidgetCenter.shared.reloadAllTimelines()
         } catch {
             self.lastError = "디코드 실패: \(error.localizedDescription)"
         }
