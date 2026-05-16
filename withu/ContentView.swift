@@ -27,16 +27,74 @@ struct ContentView: View {
         )
     }
 
+    @State private var connectivity = ConnectivityManager.shared
+
     var body: some View {
         NavigationStack {
             Form {
                 characterSection
+                watchSection
                 cameraSection
                 serverSection
                 healthSection
                 debugSection
             }
             .navigationTitle("withu")
+            .task {
+                connectivity.activate()
+            }
+            .onChange(of: characterState) { _, newValue in
+                sendStateToWatch(newValue)
+            }
+            .onChange(of: health.todaySteps) { _, _ in
+                sendStateToWatch(characterState)
+            }
+        }
+    }
+
+    private func sendStateToWatch(_ state: CharacterState) {
+        let msg = WatchMessage(
+            state: state,
+            todaySteps: health.todaySteps,
+            lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
+            timestamp: Date()
+        )
+        connectivity.send(msg)
+    }
+
+    // MARK: - Watch status section
+
+    private var watchSection: some View {
+        Section("Apple Watch 연결") {
+            HStack {
+                Text("페어링")
+                Spacer()
+                Text(connectivity.isPaired ? "✅" : "❌")
+            }
+            HStack {
+                Text("워치 앱 설치")
+                Spacer()
+                Text(connectivity.isWatchAppInstalled ? "✅" : "❌")
+            }
+            HStack {
+                Text("Reachable")
+                Spacer()
+                Text(connectivity.isReachable ? "✅" : "—")
+            }
+            if let last = connectivity.lastSentAt {
+                HStack {
+                    Text("마지막 전송")
+                    Spacer()
+                    Text(last.formatted(date: .omitted, time: .standard))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let err = connectivity.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+            Button("지금 보내기") {
+                sendStateToWatch(characterState)
+            }
         }
     }
 

@@ -6,7 +6,8 @@
 import SwiftUI
 
 /// 캐릭터가 가질 수 있는 상태. 각 상태마다 표시용 정보를 가짐.
-enum CharacterState: Hashable {
+/// `String` raw value + `Codable` 이라 watchOS 와 메시지로 직렬화/공유 가능.
+enum CharacterState: String, Codable, Hashable, CaseIterable {
     case idle
     case sleeping
     case walking
