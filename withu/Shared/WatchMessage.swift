@@ -1,0 +1,20 @@
+//
+//  WatchMessage.swift
+//  withu (Shared between iOS and watchOS targets)
+//
+//  Xcode UI 에서 이 파일의 Target Membership 을 iOS + watchOS 둘 다 체크해야 함.
+//
+
+import Foundation
+
+/// iPhone → Watch 로 보내는 캐릭터 스냅샷 메시지.
+/// `updateApplicationContext` 로 직렬화돼 전달됨.
+struct WatchMessage: Codable, Equatable, Sendable {
+    let state: CharacterState
+    let todaySteps: Double?
+    let lastSleepHours: Double?
+    let timestamp: Date
+
+    /// 직렬화/역직렬화 키. 양쪽이 같은 이름을 쓰게 명시.
+    static let payloadKey = "withu.watchMessage.v1"
+}

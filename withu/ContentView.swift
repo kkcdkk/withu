@@ -5,6 +5,7 @@
 
 import SwiftUI
 import HealthKit
+import WidgetKit
 
 struct ContentView: View {
     // 서버 연결 (Step 1)
@@ -23,20 +24,174 @@ struct ContentView: View {
         overrideState ?? CharacterStateResolver.resolve(
             sleep: health.sleep,
             workouts: health.recentWorkouts,
-            todaySteps: health.todaySteps
+            todaySteps: health.todaySteps,
+            weather: weather.snapshot
         )
     }
+
+    @State private var connectivity = ConnectivityManager.shared
+    @State private var notifications = NotificationManager.shared
+    @State private var weather = WeatherManager.shared
 
     var body: some View {
         NavigationStack {
             Form {
                 characterSection
+                weatherSection
+                watchSection
+                notificationsSection
                 cameraSection
                 serverSection
                 healthSection
                 debugSection
             }
             .navigationTitle("withu")
+            .task {
+                connectivity.activate()
+                await notifications.refreshAuthorizationStatus()
+                weather.refresh()
+            }
+            .onChange(of: characterState) { _, newValue in
+                sendStateToWatch(newValue)
+            }
+            .onChange(of: health.todaySteps) { _, newSteps in
+                sendStateToWatch(characterState)
+                if let s = newSteps {
+                    Task { await notifications.scheduleStepGoalIfNeeded(steps: s) }
+                }
+            }
+            .onChange(of: health.recentWorkouts) { _, newWorkouts in
+                Task { await notifications.scheduleWorkoutEndedIfNeeded(latest: newWorkouts.first) }
+            }
+            .onChange(of: weather.snapshot) { _, _ in
+                // 날씨 바뀌면 캐릭터 재계산 → 워치/위젯에 새 메시지 푸시
+                sendStateToWatch(characterState)
+            }
+        }
+    }
+
+    private func sendStateToWatch(_ state: CharacterState) {
+        let msg = WatchMessage(
+            state: state,
+            todaySteps: health.todaySteps,
+            lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
+            timestamp: Date()
+        )
+        // 1) iOS 위젯이 읽을 수 있게 App Group 에 저장 + 위젯 타임라인 리로드
+        SharedAppState.save(msg)
+        WidgetCenter.shared.reloadAllTimelines()
+        // 2) 워치로도 전송
+        connectivity.send(msg)
+    }
+
+    // MARK: - Weather section
+
+    private var weatherSection: some View {
+        Section("날씨") {
+            if let snap = weather.snapshot {
+                HStack {
+                    Text("\(snap.condition.emoji) \(snap.condition.caption)")
+                        .font(.headline)
+                    Spacer()
+                    Text("\(snap.temperatureC, specifier: "%.1f")°C")
+                        .foregroundStyle(.secondary)
+                }
+                Text("측정: \(snap.timestamp.formatted(date: .omitted, time: .shortened))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Text("날씨 정보 없음")
+                    Spacer()
+                    if weather.isFetching {
+                        ProgressView()
+                    }
+                }
+            }
+            Button {
+                weather.refresh(force: true)
+            } label: {
+                Text(weather.isFetching ? "가져오는 중…" : "날씨 새로고침")
+            }
+            .disabled(weather.isFetching)
+
+            if let err = weather.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+        }
+    }
+
+    // MARK: - Notifications section
+
+    private var notificationsSection: some View {
+        Section("알림") {
+            HStack {
+                Text("권한 상태")
+                Spacer()
+                Text(authStatusLabel)
+                    .foregroundStyle(.secondary)
+            }
+            if notifications.authorizationStatus != .authorized {
+                Button("알림 권한 요청") {
+                    Task { await notifications.requestAuthorization() }
+                }
+            }
+            Button("매일 22:30 취침 리마인더 설정") {
+                Task { await notifications.scheduleBedtimeReminder() }
+            }
+            Button("등록된 알림 모두 취소", role: .destructive) {
+                notifications.cancelAll()
+            }
+            if let err = notifications.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var authStatusLabel: String {
+        switch notifications.authorizationStatus {
+        case .notDetermined:    return "❓ 미요청"
+        case .denied:           return "❌ 거부됨"
+        case .authorized:       return "✅ 허용됨"
+        case .provisional:      return "🤖 자동 허용"
+        case .ephemeral:        return "🕐 일시 허용"
+        @unknown default:       return "?"
+        }
+    }
+
+    // MARK: - Watch status section
+
+    private var watchSection: some View {
+        Section("Apple Watch 연결") {
+            HStack {
+                Text("페어링")
+                Spacer()
+                Text(connectivity.isPaired ? "✅" : "❌")
+            }
+            HStack {
+                Text("워치 앱 설치")
+                Spacer()
+                Text(connectivity.isWatchAppInstalled ? "✅" : "❌")
+            }
+            HStack {
+                Text("Reachable")
+                Spacer()
+                Text(connectivity.isReachable ? "✅" : "—")
+            }
+            if let last = connectivity.lastSentAt {
+                HStack {
+                    Text("마지막 전송")
+                    Spacer()
+                    Text(last.formatted(date: .omitted, time: .standard))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let err = connectivity.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+            Button("지금 보내기") {
+                sendStateToWatch(characterState)
+            }
         }
     }
 
@@ -182,12 +337,9 @@ struct ContentView: View {
         Section("디버그 (상태 강제)") {
             Picker("상태 강제", selection: $overrideState) {
                 Text("자동").tag(CharacterState?.none)
-                Text("idle").tag(CharacterState?.some(.idle))
-                Text("sleeping").tag(CharacterState?.some(.sleeping))
-                Text("walking").tag(CharacterState?.some(.walking))
-                Text("running").tag(CharacterState?.some(.running))
-                Text("cycling").tag(CharacterState?.some(.cycling))
-                Text("energetic").tag(CharacterState?.some(.energetic))
+                ForEach(CharacterState.allCases, id: \.self) { state in
+                    Text(state.rawValue).tag(CharacterState?.some(state))
+                }
             }
             .pickerStyle(.menu)
 

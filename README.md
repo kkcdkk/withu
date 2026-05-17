@@ -2,10 +2,9 @@
 
 # withu
 
-**나만의 AI 캐릭터와 함께하는 iOS / watchOS 스마트 비서**
+**내가 그린 작은 친구와 사는 하루**
 
-내가 만든 캐릭터가 내 수면·운동·일상에 따라 살아 움직이고,
-함께 사진도 찍을 수 있는 개인 맞춤형 컴패니언 앱.
+자고, 걷고, 뛰고, 같이 사진 찍는 — 그것 뿐.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B%20%7C%20watchOS%2010%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
