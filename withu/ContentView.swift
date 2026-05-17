@@ -221,9 +221,9 @@ struct ContentView: View {
     private var healthSection: some View {
         Section("HealthKit") {
             HStack {
-                Text("권한")
+                Text("데이터 접근")
                 Spacer()
-                Text(health.isAuthorized ? "✅ 요청 완료" : "❓ 미요청")
+                Text(health.isAuthorized ? "✅ 가능" : "❓ 확인 안 됨")
                     .foregroundStyle(.secondary)
             }
 
