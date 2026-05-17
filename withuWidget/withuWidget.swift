@@ -87,35 +87,29 @@ struct WidgetView: View {
     }
 }
 
-// MARK: 잠금화면 (accessory*)
+// MARK: 잠금화면 (accessory*) — iOS 가 강제 모노톤 tint 라 SF Symbol 이 적합
 
 private struct CircularView: View {
     let entry: CharacterEntry
     var body: some View {
-        ZStack {
-            Circle().fill(entry.state.tint.opacity(0.25))
-            Image(systemName: entry.state.symbolName)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(entry.state.tint)
-        }
+        // 시스템이 자동 tint — Circle 배경 없이 SF Symbol 만 둬야 자연스러움
+        Image(systemName: entry.state.symbolName)
+            .font(.system(size: 24, weight: .semibold))
+            .widgetAccentable()
     }
 }
 
 private struct RectangularView: View {
     let entry: CharacterEntry
     var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Circle().fill(entry.state.tint.opacity(0.25))
-                Image(systemName: entry.state.symbolName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(entry.state.tint)
-            }
-            .frame(width: 28, height: 28)
+        HStack(spacing: 6) {
+            Image(systemName: entry.state.symbolName)
+                .font(.system(size: 18, weight: .semibold))
+                .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
                 if let steps = entry.todaySteps {
-                    Text("👟 \(Int(steps))보").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text("👟 \(Int(steps))보").font(.system(size: 10))
                 }
             }
             Spacer(minLength: 0)
@@ -132,77 +126,58 @@ private struct InlineView: View {
 
 // MARK: 홈화면 (system*)
 
+/// 위젯을 "스티커처럼" — 배경 박스 / 회색 원 제거.
+/// 홈화면 wallpaper 가 비치고 캐릭터만 떠 있는 느낌.
 private struct SmallView: View {
     let entry: CharacterEntry
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle().fill(entry.state.tint.opacity(0.20))
-                CharacterImageView(state: entry.state)
-                    .padding(12)
-            }
-            .aspectRatio(1, contentMode: .fit)
-            Text(entry.state.caption)
-                .font(.caption)
-                .bold()
-                .lineLimit(1)
+        // 캐릭터를 위젯의 약 1/3 사이즈로 작게 (화면 전체 대비 약 1/9)
+        VStack {
+            CharacterImageView(state: entry.state)
+                .frame(width: 56, height: 56)
         }
-        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 private struct MediumView: View {
     let entry: CharacterEntry
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(entry.state.tint.opacity(0.20))
-                CharacterImageView(state: entry.state)
-                    .padding(12)
-            }
-            .frame(width: 96, height: 96)
-
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            CharacterImageView(state: entry.state)
+                .frame(width: 64, height: 64)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(entry.state.caption)
-                    .font(.headline)
+                    .font(.subheadline)
                     .bold()
                 if let steps = entry.todaySteps {
-                    Text("👟 오늘 \(Int(steps))보")
-                        .font(.caption)
+                    Text("👟 \(Int(steps))보")
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                Text("withu")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)
         }
-        .padding()
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 private struct LargeView: View {
     let entry: CharacterEntry
     var body: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle().fill(entry.state.tint.opacity(0.18))
-                CharacterImageView(state: entry.state)
-                    .padding(30)
-            }
-            .frame(maxWidth: .infinity)
-            .aspectRatio(1, contentMode: .fit)
-
+        VStack(spacing: 10) {
+            CharacterImageView(state: entry.state)
+                .frame(width: 140, height: 140)
             Text(entry.state.caption)
-                .font(.title3)
-                .bold()
+                .font(.headline)
             if let steps = entry.todaySteps {
                 Text("👟 오늘 \(Int(steps))보")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -214,7 +189,11 @@ struct withuWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             WidgetView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(for: .widget) {
+                    // 투명 배경 — 호스트 wallpaper 비치게.
+                    // (iOS 17+ containerBackground 는 의무라 비워둘 수 없음, Color.clear 명시.)
+                    Color.clear
+                }
         }
         .configurationDisplayName("withu 캐릭터")
         .description("내 캐릭터의 지금 상태를 보여줘요.")
@@ -226,6 +205,10 @@ struct withuWidget: Widget {
             .systemMedium,
             .systemLarge,
         ])
+        // 사용자가 위젯 추가 또는 길게 누른 후 "배경" 토글로
+        // 흰색 backdrop 을 진짜 투명으로 바꿀 수 있게.
+        // (iOS 17+ — Color.clear 만으론 light mode 에서 시스템이 흰색 강제)
+        .containerBackgroundRemovable(true)
     }
 }
 

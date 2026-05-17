@@ -82,25 +82,19 @@ struct CharacterComplicationView: View {
         }
     }
 
+    /// 워치 컴플리케이션도 시스템 tint 강제 — SF Symbol 이 자연스러움.
+    /// CharacterImageView 의 컬러 PNG 는 모노톤으로 변환돼 "기본 아이콘처럼" 보임.
     private var circular: some View {
-        ZStack {
-            Circle().fill(entry.state.tint.opacity(0.25))
-            Image(systemName: entry.state.symbolName)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(entry.state.tint)
-        }
+        Image(systemName: entry.state.symbolName)
+            .font(.system(size: 24, weight: .semibold))
+            .widgetAccentable()
     }
 
     private var rectangular: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Circle().fill(entry.state.tint.opacity(0.25))
-                Image(systemName: entry.state.symbolName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(entry.state.tint)
-            }
-            .frame(width: 28, height: 28)
-
+        HStack(spacing: 6) {
+            Image(systemName: entry.state.symbolName)
+                .font(.system(size: 18, weight: .semibold))
+                .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption)
                     .font(.caption2)
@@ -109,11 +103,9 @@ struct CharacterComplicationView: View {
                 if let steps = entry.todaySteps {
                     Text("👟 \(Int(steps))보")
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
                 } else {
                     Text(entry.date, style: .relative)
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 0)
@@ -133,11 +125,12 @@ struct withuComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             CharacterComplicationView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(for: .widget) { Color.clear }
         }
         .configurationDisplayName("withu 캐릭터")
         .description("내 캐릭터의 지금 상태를 시계 페이스에 보여줘요.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .containerBackgroundRemovable(true)
     }
 }
 
