@@ -1,0 +1,26 @@
+name: Sync GitHub Issues → Notion
+
+on:
+  issues:
+    types: [opened, closed, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync issue to Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_ISSUE_DB_ID: 3631b13f-13a5-81b5-ad4e-d2edb9d15a66
+          ISSUE_PAYLOAD: ${{ toJSON(github.event.issue) }}
+        run: python .github/scripts/notion_sync.py
