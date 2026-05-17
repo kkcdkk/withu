@@ -24,17 +24,20 @@ struct ContentView: View {
         overrideState ?? CharacterStateResolver.resolve(
             sleep: health.sleep,
             workouts: health.recentWorkouts,
-            todaySteps: health.todaySteps
+            todaySteps: health.todaySteps,
+            weather: weather.snapshot
         )
     }
 
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
+    @State private var weather = WeatherManager.shared
 
     var body: some View {
         NavigationStack {
             Form {
                 characterSection
+                weatherSection
                 watchSection
                 notificationsSection
                 cameraSection
@@ -46,6 +49,7 @@ struct ContentView: View {
             .task {
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()
+                weather.refresh()
             }
             .onChange(of: characterState) { _, newValue in
                 sendStateToWatch(newValue)
@@ -58,6 +62,10 @@ struct ContentView: View {
             }
             .onChange(of: health.recentWorkouts) { _, newWorkouts in
                 Task { await notifications.scheduleWorkoutEndedIfNeeded(latest: newWorkouts.first) }
+            }
+            .onChange(of: weather.snapshot) { _, _ in
+                // 날씨 바뀌면 캐릭터 재계산 → 워치/위젯에 새 메시지 푸시
+                sendStateToWatch(characterState)
             }
         }
     }
@@ -74,6 +82,43 @@ struct ContentView: View {
         WidgetCenter.shared.reloadAllTimelines()
         // 2) 워치로도 전송
         connectivity.send(msg)
+    }
+
+    // MARK: - Weather section
+
+    private var weatherSection: some View {
+        Section("날씨") {
+            if let snap = weather.snapshot {
+                HStack {
+                    Text("\(snap.condition.emoji) \(snap.condition.caption)")
+                        .font(.headline)
+                    Spacer()
+                    Text("\(snap.temperatureC, specifier: "%.1f")°C")
+                        .foregroundStyle(.secondary)
+                }
+                Text("측정: \(snap.timestamp.formatted(date: .omitted, time: .shortened))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Text("날씨 정보 없음")
+                    Spacer()
+                    if weather.isFetching {
+                        ProgressView()
+                    }
+                }
+            }
+            Button {
+                weather.refresh(force: true)
+            } label: {
+                Text(weather.isFetching ? "가져오는 중…" : "날씨 새로고침")
+            }
+            .disabled(weather.isFetching)
+
+            if let err = weather.lastError {
+                Text(err).font(.footnote).foregroundStyle(.red)
+            }
+        }
     }
 
     // MARK: - Notifications section
@@ -292,12 +337,9 @@ struct ContentView: View {
         Section("디버그 (상태 강제)") {
             Picker("상태 강제", selection: $overrideState) {
                 Text("자동").tag(CharacterState?.none)
-                Text("idle").tag(CharacterState?.some(.idle))
-                Text("sleeping").tag(CharacterState?.some(.sleeping))
-                Text("walking").tag(CharacterState?.some(.walking))
-                Text("running").tag(CharacterState?.some(.running))
-                Text("cycling").tag(CharacterState?.some(.cycling))
-                Text("energetic").tag(CharacterState?.some(.energetic))
+                ForEach(CharacterState.allCases, id: \.self) { state in
+                    Text(state.rawValue).tag(CharacterState?.some(state))
+                }
             }
             .pickerStyle(.menu)
 
