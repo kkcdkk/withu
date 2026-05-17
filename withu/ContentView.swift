@@ -211,7 +211,12 @@ struct ContentView: View {
             NavigationLink {
                 CharacterGenView()
             } label: {
-                Label("AI 로 캐릭터 만들기", systemImage: "wand.and.stars")
+                Label("캐릭터 만들기", systemImage: "wand.and.stars")
+            }
+            NavigationLink {
+                BatchCharacterGenView()
+            } label: {
+                Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
             }
         }
     }

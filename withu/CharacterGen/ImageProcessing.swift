@@ -34,6 +34,17 @@ enum ImageProcessing {
         return normalizeSquare(cutout, target: target)
     }
 
+    /// AI 생성 결과처럼 가짜 체커보드 배경이 박혀 있을 수 있는 이미지를
+    /// 베스트-에포트로 진짜 alpha PNG 로 변환.
+    /// Vision 이 전경을 못 잡으면 원본을 그대로 반환 (사용자 노출 안 함).
+    static func bestEffortTransparent(_ image: UIImage) async -> UIImage {
+        do {
+            return try await removeBackground(from: image)
+        } catch {
+            return image
+        }
+    }
+
     // MARK: - 배경 제거 (Vision)
 
     /// iOS 17+ 의 VNGenerateForegroundInstanceMaskRequest 로 전경 추출.

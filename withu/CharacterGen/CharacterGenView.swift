@@ -398,7 +398,8 @@ struct CharacterGenView: View {
                 lastError = "이미지 디코드 실패"
                 return
             }
-            resultImage = img
+            // AI 출력의 가짜 체커보드를 진짜 alpha 로 후처리 (Vision 실패 시 원본)
+            resultImage = await ImageProcessing.bestEffortTransparent(img)
             revisedPrompt = resp.revisedPrompt
         } catch {
             lastError = "❌ \(error.localizedDescription)"
