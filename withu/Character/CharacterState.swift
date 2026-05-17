@@ -61,6 +61,10 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         }
     }
 
+    /// Asset Catalog 에 해당 캐릭터 PNG 가 있을 경우 이 이름으로 등록.
+    /// 예: `character_idle`, `character_beach`. 없으면 자동으로 SF Symbol 로 fallback.
+    var imageAssetName: String { "character_\(rawValue)" }
+
     /// 인라인 위젯/짧은 슬롯용 표시 이모지.
     var symbolEmoji: String {
         switch self {

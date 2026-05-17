@@ -138,11 +138,8 @@ private struct SmallView: View {
         VStack(spacing: 8) {
             ZStack {
                 Circle().fill(entry.state.tint.opacity(0.20))
-                Image(systemName: entry.state.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(18)
-                    .foregroundStyle(entry.state.tint)
+                CharacterImageView(state: entry.state)
+                    .padding(12)
             }
             .aspectRatio(1, contentMode: .fit)
             Text(entry.state.caption)
@@ -160,11 +157,8 @@ private struct MediumView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle().fill(entry.state.tint.opacity(0.20))
-                Image(systemName: entry.state.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(20)
-                    .foregroundStyle(entry.state.tint)
+                CharacterImageView(state: entry.state)
+                    .padding(12)
             }
             .frame(width: 96, height: 96)
 
@@ -193,11 +187,8 @@ private struct LargeView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle().fill(entry.state.tint.opacity(0.18))
-                Image(systemName: entry.state.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(40)
-                    .foregroundStyle(entry.state.tint)
+                CharacterImageView(state: entry.state)
+                    .padding(30)
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
