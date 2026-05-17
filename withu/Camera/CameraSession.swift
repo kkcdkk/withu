@@ -31,6 +31,10 @@ enum CameraError: LocalizedError {
 @Observable
 @MainActor
 final class CameraSession: NSObject {
+    /// 카메라는 시스템 단일 자원 — singleton 으로 재사용.
+    /// CameraView 가 NavigationStack 에서 다시 push 돼도 같은 인스턴스 사용.
+    static let shared = CameraSession()
+
     /// AVCaptureVideoPreviewLayer 가 참조할 raw 세션
     @ObservationIgnored let session = AVCaptureSession()
 
@@ -41,6 +45,8 @@ final class CameraSession: NSObject {
     private(set) var isConfigured: Bool = false
     private(set) var isRunning: Bool = false
     private(set) var lastError: String?
+
+    private override init() { super.init() }
 
     // MARK: - 권한
 
@@ -65,10 +71,25 @@ final class CameraSession: NSObject {
         #else
         guard await requestAuthorization() else { throw CameraError.notAuthorized }
 
+        // 이미 input/output 추가된 상태면 재구성 skip (멱등).
+        // CameraView 가 NavigationStack 에서 다시 push 됐을 때 같은 session 인스턴스가
+        // 재사용되면 canAddInput 이 false 가 돼서 noCamera 로 잘못 보고되던 것 방지.
+        if isConfigured && !session.inputs.isEmpty && !session.outputs.isEmpty {
+            return
+        }
+
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             sessionQueue.async {
                 self.session.beginConfiguration()
                 self.session.sessionPreset = .photo
+
+                // 잔존 input/output 정리 (이전 진입 흔적이 부분만 남은 케이스)
+                for input in self.session.inputs {
+                    self.session.removeInput(input)
+                }
+                for output in self.session.outputs {
+                    self.session.removeOutput(output)
+                }
 
                 guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                             for: .video,
