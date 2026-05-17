@@ -5,6 +5,7 @@
 
 import SwiftUI
 import HealthKit
+import WidgetKit
 
 struct ContentView: View {
     // 서버 연결 (Step 1)
@@ -68,6 +69,10 @@ struct ContentView: View {
             lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
             timestamp: Date()
         )
+        // 1) iOS 위젯이 읽을 수 있게 App Group 에 저장 + 위젯 타임라인 리로드
+        SharedAppState.save(msg)
+        WidgetCenter.shared.reloadAllTimelines()
+        // 2) 워치로도 전송
         connectivity.send(msg)
     }
 

@@ -48,4 +48,16 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .energetic: return .pink
         }
     }
+
+    /// 인라인 위젯/짧은 슬롯용 표시 이모지.
+    var symbolEmoji: String {
+        switch self {
+        case .idle:      return "🙂"
+        case .sleeping:  return "💤"
+        case .walking:   return "🚶"
+        case .running:   return "🏃"
+        case .cycling:   return "🚴"
+        case .energetic: return "✨"
+        }
+    }
 }
