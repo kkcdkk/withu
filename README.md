@@ -6,10 +6,10 @@
 
 자고, 걷고, 뛰고, 같이 사진 찍는 — 그것 뿐.
 
-![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B%20%7C%20watchOS%2010%2B-blue)
-![Swift](https://img.shields.io/badge/Swift-6.0-orange)
+![Platform](https://img.shields.io/badge/Platform-iOS%2026.4%2B%20%7C%20watchOS%2026.4%2B-blue)
+![Swift](https://img.shields.io/badge/Swift-6-orange)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-purple)
-![Backend](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Qwen%20%2B%20SD-green)
+![Backend](https://img.shields.io/badge/Backend-FastAPI%20%2B%20OpenAI%20gpt--image--2-green)
 ![License](https://img.shields.io/badge/License-Personal-lightgrey)
 
 </div>
@@ -18,100 +18,111 @@
 
 ## 🌱 프로젝트 소개
 
-상용 AI 서비스에 의존하지 않고, **내 PC에서 직접 돌리는 오픈소스 모델**(Qwen, Stable Diffusion 등)에 SwiftUI 앱이 LAN으로 붙어 움직이는 구조.
+**iOS / watchOS 의 캐릭터 컴패니언 앱.** HealthKit·날씨·시간을 보고 캐릭터의 모습이 자동으로 바뀌고, 메인 화면 / 워치 시계 페이스 / iPhone 잠금화면·홈화면 / 카메라 합성 사진까지 한 캐릭터가 따라다님.
 
-- 외부에 데이터가 안 나가서 **프라이버시 안전**
-- API 사용료 **0원**
-- 캐릭터의 화풍·반응까지 내가 정의
+캐릭터는 두 가지 방법으로 만들 수 있어:
+- **AI 생성** (OpenAI gpt-image-2) — 자체 호스팅 FastAPI 가 proxy
+- **이미지 직접 첨부** — 내가 가진 사진/그림에서 Apple Vision 으로 배경 자동 제거
 
 ## ✨ 핵심 기능
 
 | 기능 | 설명 |
 |---|---|
-| 🎨 **AI 캐릭터 생성** | 텍스트/이미지 입력으로 나만의 캐릭터 생성 (Stable Diffusion) |
-| 📸 **함께 사진 찍기** | AVFoundation 커스텀 카메라에 캐릭터를 오버레이해서 합성 촬영 |
-| 💤 **건강 데이터 연동** | HealthKit으로 수면·운동·걸음 수를 읽어 캐릭터가 반응 |
-| ⌚️ **Apple Watch 위젯** | 활동 상태에 따라 컴플리케이션 이미지가 동적으로 변경 |
-| 🔔 **알림 반응** | 전화·메시지 알림에 캐릭터가 반응 (Apple 정책 범위 내) |
+| 🎨 **AI 캐릭터 생성** | 프롬프트로 캐릭터 생성. 그림체 (일반/픽셀) 선택, 참고 이미지 첨부, 결과 보고 이어서 다듬기 |
+| 🖼 **이미지 직접 첨부** | 사진 → Apple Vision 배경 제거 + 1024×1024 정규화 → 캐릭터 슬롯으로 적용 (무료, 로컬) |
+| 📸 **함께 사진 찍기** | AVFoundation 커스텀 카메라 + 캐릭터 오버레이 합성. 9개 상태 picker 로 즉시 변경 |
+| 💤 **건강 데이터 연동** | HealthKit 수면·운동·걸음 수 → 캐릭터 상태 자동 변경 (running / sleeping / energetic …) |
+| 🌤 **날씨 ↔ 캐릭터** | Open-Meteo 무료 API. 매우 더우면 해변, 비 오면 우산, 눈 오면 눈놀이 |
+| ⌚️ **Apple Watch** | WatchConnectivity 로 캐릭터 상태 실시간 sync + 시계 페이스 컴플리케이션 (3 family) |
+| 📱 **iOS 위젯** | 잠금화면 (accessory 3종) + 홈화면 (small / medium / large) |
+| 🔔 **로컬 알림** | 걸음 목표 달성 / 취침 리마인더 / 워크아웃 종료 알림 |
 
 ## 🏗️ 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       내 LAN 네트워크                        │
-│                                                              │
-│   ┌──────────────┐         REST          ┌────────────────┐  │
-│   │   📱 iPhone   │ ◄─────────────────► │  💻 내 PC      │  │
-│   │  withu.app   │   JSON / base64       │   FastAPI     │  │
-│   │  (Swift)     │                       │   ├─ Qwen     │  │
-│   └──────┬───────┘                       │   └─ SD       │  │
-│          │ WatchConnectivity              └────────────────┘  │
-│   ┌──────▼───────┐                                            │
-│   │  ⌚️ Watch     │                                            │
-│   └──────────────┘                                            │
-└─────────────────────────────────────────────────────────────┘
-        │                              │
-        ▼                              ▼
-   HealthKit                      AVFoundation
-   UserNotifications              Photos
-   CallKit                        WidgetKit
+                ┌────────────────────────────┐
+                │   ☁️  OpenAI gpt-image-2    │
+                │   (HTTPS, $0.011~0.17/img)  │
+                └─────────────▲───────────────┘
+                              │
+              ┌───────────────┴─────────────┐
+              │   💻 내 PC (FastAPI proxy)   │
+              │   - SYSTEM_PROMPT 분기       │
+              │   - images.generate / .edit  │
+              └─────────────▲───────────────┘
+                              │ LAN HTTP
+   ┌──────────────┐           │
+   │   📱 iPhone   │ ◄─────────┘
+   │   withu.app   │
+   └──────┬───────┘
+          │ WCSession (App Group 공유)
+   ┌──────▼───────┐
+   │   ⌚️ Watch    │
+   └──────────────┘
+
+   HealthKit  ·  WeatherKit (Open-Meteo)  ·  Vision (배경 제거)
+   AVFoundation  ·  Photos  ·  WidgetKit  ·  UserNotifications
 ```
 
 ## 🧱 기술 스택
 
-### iOS / watchOS
+### iOS / watchOS / Widget Extensions
 - **언어**: Swift 6
-- **UI**: SwiftUI (`@Observable`, `NavigationStack`, modern concurrency)
-- **동시성**: Swift Concurrency (async/await, actors)
-- **프레임워크**: AVFoundation · HealthKit · Photos · WatchConnectivity · WidgetKit · UserNotifications
+- **UI**: SwiftUI (`@Observable`, `NavigationStack`, `TimelineView`)
+- **동시성**: Swift Concurrency (async/await, actors, continuations)
+- **프레임워크**: HealthKit · AVFoundation · Photos · WatchConnectivity · WidgetKit · UserNotifications · CoreLocation · **Vision** (iOS 17+)
+- **데이터 공유**: App Group (`group.com.seoyoung.withu`) 으로 메인앱 / 워치앱 / 위젯 / 워치 컴플리케이션 4개 타겟 공유
 
-### 백엔드 (별도 저장소)
+### 백엔드 (별도 저장소 `~/dev/withu-server/`)
 - **언어**: Python 3.14
 - **프레임워크**: FastAPI + Uvicorn
-- **AI 모델**: Qwen (텍스트) · Stable Diffusion (이미지)
+- **AI**: OpenAI Python SDK 2.x → `gpt-image-2`
+- **시크릿**: `.env` 의 `OPENAI_API_KEY` (gitignore)
 
 ## 📂 프로젝트 구조
 
 ```
 withu/
-├── withu/
-│   ├── Networking/          # FastAPI 통신 (URLSession actor, Codable, async/await)
-│   │   ├── APIClient.swift
-│   │   ├── APIConfig.swift
-│   │   └── APIModels.swift
-│   ├── HealthKit/           # 수면·운동·걸음 데이터 (Observable, async wrappers)
-│   │   └── HealthKitManager.swift
-│   ├── Character/           # 상태 머신 + 표시 뷰
-│   │   ├── CharacterState.swift
-│   │   ├── CharacterStateResolver.swift
-│   │   └── CharacterView.swift
-│   ├── Camera/              # AVCaptureSession + UIViewRepresentable + 합성/저장
-│   │   ├── CameraSession.swift
-│   │   ├── CameraPreviewView.swift
-│   │   ├── CameraView.swift
-│   │   ├── PhotoCompositor.swift
-│   │   └── PhotoSaver.swift
+├── withu/                            # iOS 앱
+│   ├── Networking/                   # APIClient (actor), Codable, async/await
+│   ├── HealthKit/                    # @Observable 매니저 + continuation 래퍼
+│   ├── Character/                    # 상태머신 + 표시 뷰 (App Group/Asset/SF Symbol 3단 fallback)
+│   ├── CharacterGen/                 # AI 생성 + 이미지 첨부 + Vision 배경 제거
+│   ├── Camera/                       # AVCaptureSession + UIViewRepresentable + 합성/저장
+│   ├── Connectivity/                 # WCSession (sender)
+│   ├── Notifications/                # UserNotifications 로컬 알림
+│   ├── Shared/                       # 4개 타겟 공유 (WatchMessage, SharedAppState, CharacterImageStore)
+│   ├── Weather/                      # CLLocationManager + Open-Meteo
+│   ├── Assets.xcassets/              # character_<state>.imageset 9개
 │   ├── ContentView.swift
 │   ├── withuApp.swift
 │   └── Info.plist
+├── withu Watch App/                  # watchOS 앱
+├── withuComplication/                # watchOS Widget Extension (시계 페이스)
+├── withuWidget/                      # iOS Widget Extension (잠금/홈)
 └── withu.xcodeproj
 ```
 
 ## 🚀 시작하기
 
-### 1. 백엔드 서버 (`withu-server` 별도 저장소)
+### 1. 백엔드 서버 (`~/dev/withu-server/`)
 
 ```bash
 cd ~/dev/withu-server
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "fastapi[standard]" uvicorn
+pip install "fastapi[standard]" openai python-dotenv
+
+# OpenAI 키 설정
+cp .env.example .env
+# .env 에 OPENAI_API_KEY=sk-... 채우기
+
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-> `--host 0.0.0.0` 빼면 시뮬레이터/실기기에서 접근 못 함.
+> ⚠️ OpenAI API 사용은 ChatGPT Plus 와 별개 결제. [platform.openai.com](https://platform.openai.com) 에서 credit 충전 필요. medium $0.04/이미지.
 
-### 2. iOS 앱
+### 2. iOS / watchOS 앱
 
 ```bash
 git clone <이 저장소>
@@ -119,28 +130,20 @@ cd withu
 open withu.xcodeproj
 ```
 
-Xcode에서:
-1. `withu/Networking/APIConfig.swift` 의 `baseURL` 을 본인 PC LAN IP로 변경
-   ```swift
-   static let baseURL = URL(string: "http://192.168.x.x:8000")!
-   ```
-   확인: 터미널에서 `ipconfig getifaddr en0`
-2. **Signing & Capabilities** → Team 본인 Apple ID로 설정
-3. **HealthKit Capability** 활성화 (Step 2 에서 자동 추가됨)
-4. ▶ Run (`⌘R`)
+Xcode 에서:
+1. `withu/Networking/APIConfig.swift` 의 `baseURL` 을 본인 PC LAN IP 로 변경 (`ipconfig getifaddr en0`)
+2. **Signing & Capabilities** → 4개 타겟 모두 Team 본인 Apple ID 로 설정
+3. ▶ Run (`⌘R`)
 
-> 시뮬레이터에선 카메라가 동작하지 않음 → 실기기 테스트 필요
+> 시뮬레이터에선 카메라가 동작하지 않음 → 실기기 테스트 권장. 실기기 첫 빌드 후 폰에서 **설정 → 일반 → VPN 및 기기 관리** 에서 개발자 신뢰.
 
-## 🧪 개발 / 검증 명령
-
-현재 Xcode 프로젝트의 공유 scheme은 `withu` 입니다.
+## 🧪 개발 / 검증
 
 ```bash
 xcodebuild -list -project withu.xcodeproj
 ```
 
-로컬 signing 설정 없이 CI나 에이전트 환경에서 컴파일만 확인할 때:
-
+로컬 signing 설정 없이 컴파일만 확인:
 ```bash
 xcodebuild -project withu.xcodeproj \
   -scheme withu \
@@ -150,64 +153,52 @@ xcodebuild -project withu.xcodeproj \
   build
 ```
 
-현재 저장소에는 테스트 타겟이 없습니다. 테스트 타겟이 추가되면 simulator destination을 지정한
-`xcodebuild test` 명령을 표준 검증 루트에 추가하세요.
-
 ## 🤝 에이전트 / 협업 규칙
 
-Codex, Claude 같은 에이전트는 [AGENTS.md](AGENTS.md)를 먼저 따릅니다.
+Codex, Claude 같은 에이전트는 [AGENTS.md](AGENTS.md) 의 한국어 git 운영 규칙을 따름.
 
-- 작업 시작 전 `git status --short` 로 기존 변경사항을 확인
-- 사용자 변경사항을 되돌리거나 덮어쓰지 않기
-- GitHub issue, PR, 댓글, 커밋 메시지는 가능한 한 한국어로 작성
-- `main`은 최종 배포 기준, 개발 통합은 `develop` 브랜치에서 진행
-- 기본 에이전트 브랜치 이름은 `codex/<작업-요약>` 이며 보통 `develop`에서 생성
-- 일반 개발 PR은 `develop`으로 올리고, QA 승인 후 머지
-- 해결된 issue는 검증 결과를 한국어 댓글로 남긴 뒤 close
-- harness-only 작업에서는 문서, 에이전트 운영 파일, 간단한 git hygiene만 수정
-- local signing, provisioning, LAN IP, secret, DerivedData는 커밋하지 않기
+- `main`: 배포 기준 / `develop`: 개발 통합 / `task/<작업명>`: 기능 브랜치
+- 일반 PR base = `develop`, 배포 PR 만 `develop -> main`
+- 로컬 signing / LAN IP / secret 은 커밋하지 않음 (`git update-index --skip-worktree`)
 
 ## 🗺️ 개발 로드맵
 
-단계별 점진적 구현 방식.
-
 - [x] **Step 1** — 프로젝트 세팅 + FastAPI 통신 뼈대 (URLSession actor, Codable)
-- [x] **Step 2** — HealthKit 권한 + 수면/운동/걸음 데이터 읽기
+- [x] **Step 2** — HealthKit 권한 + 수면/운동/걸음 데이터
 - [x] **Step 3** — 캐릭터 상태머신 + SwiftUI 반응형 화면 (`@Observable`)
-- [x] **Step 4** — AVFoundation 커스텀 카메라 + 캐릭터 오버레이 합성 + 저장
-- [ ] **Step 5** — watchOS 타겟 추가 + WatchConnectivity
-- [ ] **Step 6** — WidgetKit/ClockKit 컴플리케이션 + UserNotifications
+- [x] **Step 4** — AVFoundation 커스텀 카메라 + 캐릭터 오버레이 합성
+- [x] **Step 5** — watchOS 타겟 + WatchConnectivity
+- [x] **Step 6** — 워치 컴플리케이션 (WidgetKit) + UserNotifications 로컬 알림
+- [x] **Step 7** — iOS 잠금/홈화면 위젯 (App Group 공유)
+- [x] **Step 8** — 날씨 ↔ 캐릭터 연동 (CLLocationManager + Open-Meteo)
+- [x] **Step 9** — 캐릭터 일러스트 9컷 + SF Symbol fallback
+- [x] **Step 10** — OpenAI gpt-image-2 통합 (FastAPI proxy)
+- [x] **Step 11** — AI 생성 이미지를 캐릭터 슬롯에 적용 (App Group 파일 저장)
+- [x] **Step 12** — 그림체/참고이미지 옵션 + timeout 안정화 + 카메라 picker
+- [x] **Step 13** — 이미지 직접 첨부 + Apple Vision 배경 제거
+- [ ] **다음** — 캐릭터 대사/멘트 (Qwen 또는 GPT-Text), App Store 트랙
 
 ## 💡 설계 노트
 
-### 왜 `@Observable` 인가
-iOS 17부터 도입된 새 매크로. 옛 `ObservableObject` + `@Published` 보일러플레이트 제거.
+### 4개 타겟 데이터 공유
+App Group 컨테이너에 `WatchMessage` (Codable JSON) 와 캐릭터 PNG 파일을 두고 모든 타겟이 같은 공간을 읽음. `WidgetCenter.shared.reloadAllTimelines()` 로 위젯도 즉시 갱신.
 
-```swift
-// Before (iOS 13~16)
-class HealthKitManager: ObservableObject {
-    @Published var sleep: SleepSummary?
-}
+### CharacterImageView 우선순위 fallback
+1) 사용자가 적용한 App Group 파일 → 2) Asset Catalog 9컷 → 3) SF Symbol 자동 fallback. 어느 단계든 데이터 없어도 화면이 깨지지 않음.
 
-// After (iOS 17+)
-@Observable
-class HealthKitManager {
-    var sleep: SleepSummary?
-}
-```
+### Vision 으로 로컬 배경 제거
+iOS 17+ 의 `VNGenerateForegroundInstanceMaskRequest` — Apple Photos "주제 추출" 과 동일 기술. 인터넷·서버·비용 X.
 
-### 왜 `actor` 인가 (APIClient)
-네트워크 요청은 여러 곳에서 동시에 호출될 가능성이 있음. `actor` 는 내부 상태 변경을 시리얼라이즈해서 데이터 레이스를 컴파일 타임에 방지.
-
-### 왜 순수 함수로 상태 계산하나
-`CharacterStateResolver.resolve(now:sleep:workouts:todaySteps:)` 는 시간을 인자로 받는 순수 함수.
-→ 시간을 주입해서 테스트 가능, 비즈니스 로직을 뷰에서 분리.
+### `actor` APIClient
+URLSession 호출이 여러 화면에서 동시에 일어날 수 있음 — 내부 상태를 actor 로 시리얼라이즈해 데이터 레이스 컴파일 타임 방지.
 
 ## 🔒 프라이버시
 
-- 모든 건강 데이터는 **HealthKit 권한 범위 내에서만** 읽음
-- AI 추론은 **사용자 본인 PC에서만** 실행됨 (외부 API 호출 없음)
-- 촬영한 사진은 사용자의 사진 앱에만 저장
+- HealthKit 은 사용자가 명시 허용한 항목만 읽음
+- 위치 데이터는 날씨 API 호출에만 사용 (서버에 저장 X)
+- AI 생성 시 프롬프트가 OpenAI 로 전송됨 — 외부 호출 명시
+- 촬영 / 합성 사진은 사용자 사진 앱에만 저장
+- API 키, LAN IP, signing 정보는 git 에 안 들어감 (skip-worktree)
 
 ## 📜 라이선스
 
@@ -217,6 +208,6 @@ class HealthKitManager {
 
 <div align="center">
 
-Made with 🩵 + Swift + 🤖 self-hosted AI
+Made with 🩵 + Swift + 🤖
 
 </div>
