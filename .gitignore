@@ -55,3 +55,7 @@ fastlane/test_output
 !.env.example
 secrets.plist
 GoogleService-Info.plist
+
+# Cloudflare Workers / Node
+node_modules/
+.wrangler/
