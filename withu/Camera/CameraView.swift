@@ -12,7 +12,7 @@ struct CameraView: View {
     /// 사용자가 picker 로 자유롭게 변경 가능 (메인 화면의 자동 상태는 영향 X).
     @State private var selectedState: CharacterState
 
-    @State private var camera = CameraSession()
+    @State private var camera = CameraSession.shared
     @State private var statusText: String = "초기화 중…"
     @State private var isCapturing: Bool = false
     @State private var previewCaptured: UIImage?
