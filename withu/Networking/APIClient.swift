@@ -35,6 +35,8 @@ actor APIClient {
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = APIConfig.timeout
+        config.timeoutIntervalForResource = APIConfig.resourceTimeout
+        config.waitsForConnectivity = true   // 잠깐 끊기면 죽이지 말고 기다리기
         self.session = URLSession(configuration: config)
 
         self.decoder = JSONDecoder()
