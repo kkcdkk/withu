@@ -141,20 +141,7 @@ struct withuComplication: Widget {
     }
 }
 
-// MARK: - 표시용 이모지 (inline 슬롯에서만 사용)
-
-extension CharacterState {
-    var symbolEmoji: String {
-        switch self {
-        case .idle:      return "🙂"
-        case .sleeping:  return "💤"
-        case .walking:   return "🚶"
-        case .running:   return "🏃"
-        case .cycling:   return "🚴"
-        case .energetic: return "✨"
-        }
-    }
-}
+// symbolEmoji 는 공유 CharacterState 에 정의됨 (iOS 위젯과 공유)
 
 #Preview("Circular", as: .accessoryCircular) {
     withuComplication()

@@ -11,6 +11,9 @@
 		1D822BE92FB92FA500E2A443 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BE82FB92FA500E2A443 /* WidgetKit.framework */; };
 		1D822BEB2FB92FA500E2A443 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */; };
 		1D822BF82FB92FA600E2A443 /* withuComplicationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1D822CE72FB93D6300E2A443 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BE82FB92FA500E2A443 /* WidgetKit.framework */; };
+		1D822CE82FB93D6300E2A443 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */; };
+		1D822CF52FB93D6300E2A443 /* withuWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1D822CE62FB93D6300E2A443 /* withuWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +30,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1D822BE52FB92FA500E2A443;
 			remoteInfo = withuComplicationExtension;
+		};
+		1D822CF32FB93D6300E2A443 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1D34FEC62FB278620033EC7D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1D822CE52FB93D6300E2A443;
+			remoteInfo = withuWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -63,6 +73,17 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822CF62FB93D6300E2A443 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1D822CF52FB93D6300E2A443 /* withuWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +95,8 @@
 		1D822BE82FB92FA500E2A443 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		1D822BEA2FB92FA500E2A443 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		1D822BFF2FB9304400E2A443 /* withuComplicationExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = withuComplicationExtension.entitlements; sourceTree = "<group>"; };
+		1D822CE62FB93D6300E2A443 /* withuWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = withuWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D822CFB2FB93DCE00E2A443 /* withuWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = withuWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -109,6 +132,22 @@
 			);
 			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
 		};
+		1D822CFA2FB93D6300E2A443 /* Exceptions for "withuWidget" folder in "withuWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1D822CE52FB93D6300E2A443 /* withuWidgetExtension */;
+		};
+		1D822CFD2FB93F3F00E2A443 /* Exceptions for "withu" folder in "withuWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Character/CharacterState.swift,
+				Shared/SharedAppState.swift,
+				Shared/WatchMessage.swift,
+			);
+			target = 1D822CE52FB93D6300E2A443 /* withuWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -118,6 +157,7 @@
 				1D34FEE42FB36B130033EC7D /* Exceptions for "withu" folder in "withu" target */,
 				1D34FFF72FB4C5250033EC7D /* Exceptions for "withu" folder in "withu Watch App" target */,
 				1D822C042FB9324700E2A443 /* Exceptions for "withu" folder in "withuComplicationExtension" target */,
+				1D822CFD2FB93F3F00E2A443 /* Exceptions for "withu" folder in "withuWidgetExtension" target */,
 			);
 			path = withu;
 			sourceTree = "<group>";
@@ -133,6 +173,14 @@
 				1D822BFD2FB92FA600E2A443 /* Exceptions for "withuComplication" folder in "withuComplicationExtension" target */,
 			);
 			path = withuComplication;
+			sourceTree = "<group>";
+		};
+		1D822CE92FB93D6300E2A443 /* withuWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1D822CFA2FB93D6300E2A443 /* Exceptions for "withuWidget" folder in "withuWidgetExtension" target */,
+			);
+			path = withuWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -161,16 +209,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822CE32FB93D6300E2A443 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D822CE82FB93D6300E2A443 /* SwiftUI.framework in Frameworks */,
+				1D822CE72FB93D6300E2A443 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1D34FEC52FB278620033EC7D = {
 			isa = PBXGroup;
 			children = (
+				1D822CFB2FB93DCE00E2A443 /* withuWidgetExtension.entitlements */,
 				1D822BFF2FB9304400E2A443 /* withuComplicationExtension.entitlements */,
 				1D34FED02FB278620033EC7D /* withu */,
 				1D34FFB32FB4C2760033EC7D /* withu Watch App */,
 				1D822BEC2FB92FA500E2A443 /* withuComplication */,
+				1D822CE92FB93D6300E2A443 /* withuWidget */,
 				1D822BE72FB92FA500E2A443 /* Frameworks */,
 				1D34FECF2FB278620033EC7D /* Products */,
 			);
@@ -184,6 +243,7 @@
 				1D34FFAA2FB4C2760033EC7D /* withu.app */,
 				1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */,
 				1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */,
+				1D822CE62FB93D6300E2A443 /* withuWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -207,10 +267,12 @@
 				1D34FECA2FB278620033EC7D /* Sources */,
 				1D34FECB2FB278620033EC7D /* Frameworks */,
 				1D34FECC2FB278620033EC7D /* Resources */,
+				1D822CF62FB93D6300E2A443 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1D822CF42FB93D6300E2A443 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1D34FED02FB278620033EC7D /* withu */,
@@ -305,6 +367,28 @@
 			productReference = 1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		1D822CE52FB93D6300E2A443 /* withuWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D822CF92FB93D6300E2A443 /* Build configuration list for PBXNativeTarget "withuWidgetExtension" */;
+			buildPhases = (
+				1D822CE22FB93D6300E2A443 /* Sources */,
+				1D822CE32FB93D6300E2A443 /* Frameworks */,
+				1D822CE42FB93D6300E2A443 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1D822CE92FB93D6300E2A443 /* withuWidget */,
+			);
+			name = withuWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = withuWidgetExtension;
+			productReference = 1D822CE62FB93D6300E2A443 /* withuWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -330,6 +414,9 @@
 					1D822BE52FB92FA500E2A443 = {
 						CreatedOnToolsVersion = 26.5;
 					};
+					1D822CE52FB93D6300E2A443 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 				};
 			};
 			buildConfigurationList = 1D34FEC92FB278620033EC7D /* Build configuration list for PBXProject "withu" */;
@@ -351,6 +438,7 @@
 				1D34FFA92FB4C2760033EC7D /* withu */,
 				1D34FFAE2FB4C2760033EC7D /* withu Watch App */,
 				1D822BE52FB92FA500E2A443 /* withuComplicationExtension */,
+				1D822CE52FB93D6300E2A443 /* withuWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -391,6 +479,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822CE42FB93D6300E2A443 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -415,6 +510,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1D822CE22FB93D6300E2A443 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -427,6 +529,11 @@
 			isa = PBXTargetDependency;
 			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
 			targetProxy = 1D822BF62FB92FA600E2A443 /* PBXContainerItemProxy */;
+		};
+		1D822CF42FB93D6300E2A443 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1D822CE52FB93D6300E2A443 /* withuWidgetExtension */;
+			targetProxy = 1D822CF32FB93D6300E2A443 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -691,7 +798,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = withu;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -725,7 +831,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = withu;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -853,6 +958,73 @@
 			};
 			name = Release;
 		};
+		1D822CF72FB93D6300E2A443 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = withuWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withuWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = withuWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.withuWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1D822CF82FB93D6300E2A443 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = withuWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = withuWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = withuWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.withuWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -906,6 +1078,15 @@
 			buildConfigurations = (
 				1D822BFA2FB92FA600E2A443 /* Debug */,
 				1D822BFB2FB92FA600E2A443 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D822CF92FB93D6300E2A443 /* Build configuration list for PBXNativeTarget "withuWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D822CF72FB93D6300E2A443 /* Debug */,
+				1D822CF82FB93D6300E2A443 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
