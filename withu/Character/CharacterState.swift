@@ -65,6 +65,22 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
     /// 예: `character_idle`, `character_beach`. 없으면 자동으로 SF Symbol 로 fallback.
     var imageAssetName: String { "character_\(rawValue)" }
 
+    /// AI 생성 시 사용자에게 채워주는 시작 프롬프트 (상태에 맞는 동작/표정).
+    /// 사용자가 자유롭게 수정 가능. 그림체/가드레일은 서버가 자동 추가.
+    var generationHint: String {
+        switch self {
+        case .idle:         return "standing peacefully, hands folded, looking calm with a small smile"
+        case .sleeping:     return "sleeping on a small pillow, eyes closed, with a 'zzz' bubble nearby"
+        case .walking:      return "walking happily with one foot up, motion lines, friendly expression"
+        case .running:      return "running with arms swinging energetically, dynamic pose"
+        case .cycling:      return "riding a small bicycle, wearing a tiny helmet, friendly smile"
+        case .energetic:    return "jumping in the air with sparkles around, super happy"
+        case .beach:        return "lying on a beach towel with sunglasses, sun overhead"
+        case .rainyShelter: return "holding an umbrella, wearing rain boots, raindrops around"
+        case .snowPlay:     return "standing in snow, making a snowball, wearing mittens and scarf"
+        }
+    }
+
     /// 인라인 위젯/짧은 슬롯용 표시 이모지.
     var symbolEmoji: String {
         switch self {

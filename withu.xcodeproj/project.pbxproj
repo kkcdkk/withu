@@ -112,6 +112,7 @@
 			membershipExceptions = (
 				Character/CharacterImageView.swift,
 				Character/CharacterState.swift,
+				Shared/CharacterImageStore.swift,
 				Shared/SharedAppState.swift,
 				Shared/WatchMessage.swift,
 			);
@@ -129,6 +130,7 @@
 			membershipExceptions = (
 				Character/CharacterImageView.swift,
 				Character/CharacterState.swift,
+				Shared/CharacterImageStore.swift,
 				Shared/SharedAppState.swift,
 				Shared/WatchMessage.swift,
 			);
@@ -146,6 +148,7 @@
 			membershipExceptions = (
 				Character/CharacterImageView.swift,
 				Character/CharacterState.swift,
+				Shared/CharacterImageStore.swift,
 				Shared/SharedAppState.swift,
 				Shared/WatchMessage.swift,
 			);

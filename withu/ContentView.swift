@@ -8,10 +8,6 @@ import HealthKit
 import WidgetKit
 
 struct ContentView: View {
-    // 서버 연결 (Step 1)
-    @State private var serverStatus: String = "확인 전"
-    @State private var pingLoading: Bool = false
-
     // HealthKit (Step 2)
     @State private var health = HealthKitManager.shared
     @State private var healthMessage: String = "권한 요청 안 함"
@@ -41,7 +37,6 @@ struct ContentView: View {
                 watchSection
                 notificationsSection
                 cameraSection
-                serverSection
                 healthSection
                 debugSection
             }
@@ -218,35 +213,6 @@ struct ContentView: View {
             } label: {
                 Label("AI 로 캐릭터 만들기", systemImage: "wand.and.stars")
             }
-        }
-    }
-
-    // MARK: - Server
-
-    private var serverSection: some View {
-        Section("로컬 서버") {
-            HStack {
-                Text("상태")
-                Spacer()
-                Text(serverStatus).foregroundStyle(.secondary)
-            }
-            Button {
-                Task { await sendPing() }
-            } label: {
-                if pingLoading { ProgressView() } else { Text("Ping 보내기") }
-            }
-            .disabled(pingLoading)
-        }
-    }
-
-    private func sendPing() async {
-        pingLoading = true
-        defer { pingLoading = false }
-        do {
-            let ok = try await APIClient.shared.ping()
-            serverStatus = ok ? "✅ 연결 성공" : "❌ 비정상 응답"
-        } catch {
-            serverStatus = "❌ \(error.localizedDescription)"
         }
     }
 

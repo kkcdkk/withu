@@ -22,29 +22,34 @@ struct CharacterImageView: View {
     var symbolPaddingRatio: CGFloat = 0.2
 
     var body: some View {
-        if assetExists {
+        #if canImport(UIKit)
+        if let userImage = CharacterImageStore.load(state) {
+            // 1순위: 사용자가 AI 로 만들어 적용한 이미지 (App Group)
+            Image(uiImage: userImage)
+                .resizable()
+                .scaledToFit()
+        } else if UIImage(named: state.imageAssetName) != nil {
+            // 2순위: Asset Catalog 의 placeholder (Step 9 의 9컷)
             Image(state.imageAssetName)
                 .resizable()
                 .scaledToFit()
         } else {
-            // SF Symbol fallback
-            GeometryReader { geo in
-                Image(systemName: state.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(geo.size.width * symbolPaddingRatio)
-                    .foregroundStyle(state.tint)
-                    .frame(width: geo.size.width, height: geo.size.height)
-            }
+            sfSymbolFallback
         }
+        #else
+        sfSymbolFallback
+        #endif
     }
 
-    private var assetExists: Bool {
-        #if canImport(UIKit)
-        return UIImage(named: state.imageAssetName) != nil
-        #else
-        return false
-        #endif
+    private var sfSymbolFallback: some View {
+        GeometryReader { geo in
+            Image(systemName: state.symbolName)
+                .resizable()
+                .scaledToFit()
+                .padding(geo.size.width * symbolPaddingRatio)
+                .foregroundStyle(state.tint)
+                .frame(width: geo.size.width, height: geo.size.height)
+        }
     }
 }
 
