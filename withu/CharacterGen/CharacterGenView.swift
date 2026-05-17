@@ -7,7 +7,14 @@ import SwiftUI
 import PhotosUI
 import WidgetKit
 
+enum GenerationMode: String, CaseIterable, Hashable {
+    case aiGenerate = "AI 생성"
+    case importPhoto = "이미지 첨부"
+}
+
 struct CharacterGenView: View {
+    @State private var mode: GenerationMode = .aiGenerate
+
     @State private var targetState: CharacterState = .idle
     @State private var prompt: String = CharacterState.idle.generationHint
     @State private var refinementPrompt: String = ""
@@ -16,9 +23,15 @@ struct CharacterGenView: View {
     @State private var quality: String = "medium"
     @State private var artStyle: String = "casual"   // "casual" | "pixel"
 
-    /// 사용자가 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
+    /// AI 생성 모드 — 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var referenceImage: UIImage?
+
+    /// 이미지 첨부 모드 — 첨부 + 배경 제거 처리된 결과
+    @State private var importPickerItem: PhotosPickerItem?
+    @State private var importedRawImage: UIImage?
+    @State private var importedProcessedImage: UIImage?
+    @State private var isProcessing: Bool = false
 
     @State private var isGenerating: Bool = false
     @State private var resultImage: UIImage?
@@ -30,12 +43,18 @@ struct CharacterGenView: View {
 
     var body: some View {
         Form {
+            modeSection
             stateSection
-            promptSection
-            referenceSection
-            optionsSection
-            resultSection
-            refinementSection
+            if mode == .aiGenerate {
+                promptSection
+                referenceSection
+                optionsSection
+                resultSection
+                refinementSection
+            } else {
+                importSection
+                importResultSection
+            }
         }
         .navigationTitle("캐릭터 만들기")
         .alert("적용됨", isPresented: $showAppliedAlert) {
@@ -55,9 +74,41 @@ struct CharacterGenView: View {
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
         }
+        .onChange(of: importPickerItem) { _, item in
+            Task { await loadAndProcessImport(item) }
+        }
+        .onChange(of: mode) { _, _ in
+            // 모드 전환 시 결과/에러 reset
+            resultImage = nil
+            revisedPrompt = nil
+            lastError = nil
+            importedRawImage = nil
+            importedProcessedImage = nil
+        }
     }
 
-    // MARK: - State picker
+    // MARK: - Common sections
+
+    private var modeSection: some View {
+        Section {
+            Picker("방식", selection: $mode) {
+                ForEach(GenerationMode.allCases, id: \.self) { m in
+                    Text(m.rawValue).tag(m)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(isGenerating || isProcessing)
+        } footer: {
+            switch mode {
+            case .aiGenerate:
+                Text("프롬프트로 캐릭터를 새로 만듭니다 (OpenAI 호출, 비용 발생).")
+                    .foregroundStyle(.secondary)
+            case .importPhoto:
+                Text("내가 가진 사진/그림을 그대로 사용. 자동으로 배경 제거 + 정사각형 정규화 (무료, 로컬 처리).")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
 
     private var stateSection: some View {
         Section {
@@ -71,7 +122,7 @@ struct CharacterGenView: View {
                 }
             }
             .pickerStyle(.menu)
-            .disabled(isGenerating)
+            .disabled(isGenerating || isProcessing)
 
             HStack {
                 Text("현재 적용된 이미지")
@@ -85,7 +136,7 @@ struct CharacterGenView: View {
         }
     }
 
-    // MARK: - Prompt
+    // MARK: - AI generate sections
 
     private var promptSection: some View {
         Section {
@@ -115,7 +166,6 @@ struct CharacterGenView: View {
         }
     }
 
-    /// 생성 버튼 라벨 — ProgressView + 경과 초 카운트.
     @ViewBuilder
     private var generatingLabel: some View {
         if let start = generationStartedAt {
@@ -130,8 +180,6 @@ struct CharacterGenView: View {
             HStack { ProgressView(); Text("생성 중…") }
         }
     }
-
-    // MARK: - Reference image attach
 
     private var referenceSection: some View {
         Section {
@@ -173,8 +221,6 @@ struct CharacterGenView: View {
         }
     }
 
-    // MARK: - Options
-
     private var optionsSection: some View {
         Section("옵션") {
             Picker("그림체", selection: $artStyle) {
@@ -193,8 +239,6 @@ struct CharacterGenView: View {
             .disabled(isGenerating)
         }
     }
-
-    // MARK: - Result
 
     @ViewBuilder
     private var resultSection: some View {
@@ -226,8 +270,6 @@ struct CharacterGenView: View {
         }
     }
 
-    // MARK: - Refinement
-
     @ViewBuilder
     private var refinementSection: some View {
         if resultImage != nil {
@@ -254,7 +296,59 @@ struct CharacterGenView: View {
         }
     }
 
-    // MARK: - Actions
+    // MARK: - Import sections
+
+    private var importSection: some View {
+        Section {
+            PhotosPicker(importedRawImage == nil ? "사진 선택" : "다른 사진으로 변경",
+                         selection: $importPickerItem,
+                         matching: .images)
+                .disabled(isProcessing)
+            if isProcessing {
+                HStack { ProgressView(); Text("배경 제거 + 정규화 중…") }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("사진 선택")
+        } footer: {
+            Text("선택하면 자동으로 배경 제거 + 정사각형 1024×1024 정규화. OpenAI 호출 없음 (무료, 로컬 처리).")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var importResultSection: some View {
+        if let processed = importedProcessedImage {
+            Section("처리 결과") {
+                ZStack {
+                    // 투명 배경 시각화: 체커보드 같은 회색
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(uiColor: .tertiarySystemBackground))
+                    Image(uiImage: processed)
+                        .resizable()
+                        .scaledToFit()
+                }
+                .frame(maxHeight: 300)
+
+                Button {
+                    apply(processed, to: targetState)
+                } label: {
+                    Label("'\(targetState.rawValue)' 자리에 적용", systemImage: "checkmark.circle.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                Button("사진 앱에 저장") {
+                    Task { await saveToPhotos(processed) }
+                }
+            }
+        }
+        if let err = lastError {
+            Section { Text(err).foregroundStyle(.red) }
+        }
+    }
+
+    // MARK: - Actions (AI generate)
 
     private func generate() async {
         isGenerating = true
@@ -311,6 +405,49 @@ struct CharacterGenView: View {
         }
     }
 
+    private func loadReference(_ item: PhotosPickerItem?) async {
+        guard let item else {
+            referenceImage = nil
+            return
+        }
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                referenceImage = img
+            }
+        } catch {
+            lastError = "참고 이미지 로드 실패: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Actions (Import)
+
+    private func loadAndProcessImport(_ item: PhotosPickerItem?) async {
+        guard let item else {
+            importedRawImage = nil
+            importedProcessedImage = nil
+            return
+        }
+        isProcessing = true
+        lastError = nil
+        defer { isProcessing = false }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let raw = UIImage(data: data) else {
+                lastError = "사진 로드 실패"
+                return
+            }
+            importedRawImage = raw
+            let processed = try await ImageProcessing.prepareForCharacter(raw)
+            importedProcessedImage = processed
+        } catch {
+            lastError = "❌ \(error.localizedDescription)"
+            importedProcessedImage = nil
+        }
+    }
+
+    // MARK: - Common actions
+
     private func apply(_ image: UIImage, to state: CharacterState) {
         let ok = CharacterImageStore.save(image, for: state)
         if ok {
@@ -328,21 +465,6 @@ struct CharacterGenView: View {
             showSavedAlert = true
         } catch {
             lastError = "❌ \(error.localizedDescription)"
-        }
-    }
-
-    private func loadReference(_ item: PhotosPickerItem?) async {
-        guard let item else {
-            referenceImage = nil
-            return
-        }
-        do {
-            if let data = try await item.loadTransferable(type: Data.self),
-               let img = UIImage(data: data) {
-                referenceImage = img
-            }
-        } catch {
-            lastError = "참고 이미지 로드 실패: \(error.localizedDescription)"
         }
     }
 }

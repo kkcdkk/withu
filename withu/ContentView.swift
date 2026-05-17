@@ -204,7 +204,7 @@ struct ContentView: View {
     private var cameraSection: some View {
         Section("카메라") {
             NavigationLink {
-                CameraView(characterState: characterState)
+                CameraView()
             } label: {
                 Label("캐릭터랑 사진 찍기", systemImage: "camera.fill")
             }
