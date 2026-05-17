@@ -11,11 +11,14 @@ struct GenerateImageRequest: Codable {
     let steps: Int
     let width: Int
     let height: Int
+    let quality: String?   // "standard" | "hd"
+    let style: String?     // "vivid" | "natural"
 }
 
 struct GenerateImageResponse: Codable {
     let imageBase64: String
     let seed: Int
+    let revisedPrompt: String?
 }
 
 struct APIErrorDetail: Codable {

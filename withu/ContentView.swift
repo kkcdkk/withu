@@ -213,6 +213,11 @@ struct ContentView: View {
             } label: {
                 Label("캐릭터랑 사진 찍기", systemImage: "camera.fill")
             }
+            NavigationLink {
+                CharacterGenView()
+            } label: {
+                Label("AI 로 캐릭터 만들기", systemImage: "wand.and.stars")
+            }
         }
     }
 
