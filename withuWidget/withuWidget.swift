@@ -87,14 +87,13 @@ struct WidgetView: View {
     }
 }
 
-// MARK: 잠금화면 (accessory*) — iOS 가 강제 모노톤 tint 라 SF Symbol 이 적합
+// MARK: 잠금화면 (accessory*) — 시스템이 모노톤 tint 강제하지만
+// alpha PNG 의 캐릭터 실루엣은 그대로 살아남음. 시스템 색으로 채워진 캐릭터.
 
 private struct CircularView: View {
     let entry: CharacterEntry
     var body: some View {
-        // 시스템이 자동 tint — Circle 배경 없이 SF Symbol 만 둬야 자연스러움
-        Image(systemName: entry.state.symbolName)
-            .font(.system(size: 24, weight: .semibold))
+        CharacterImageView(state: entry.state)
             .widgetAccentable()
     }
 }
@@ -103,8 +102,8 @@ private struct RectangularView: View {
     let entry: CharacterEntry
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: entry.state.symbolName)
-                .font(.system(size: 18, weight: .semibold))
+            CharacterImageView(state: entry.state)
+                .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
