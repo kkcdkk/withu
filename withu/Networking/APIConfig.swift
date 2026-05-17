@@ -12,7 +12,8 @@ enum APIConfig {
     static let baseURL = URL(string: "http://127.0.0.1:8000")!
 
     /// AI 이미지 생성은 medium 1~3분, high 2~5분 정도 걸림.
-    /// URLSession 의 timeoutIntervalForRequest 가 너무 짧으면 iOS 가
-    /// "internet offline" 으로 잘못 보고하니 충분히 길게 잡음.
-    static let timeout: TimeInterval = 600   // 10분
+    /// idle / 전체 transfer 둘 다 넉넉히 잡음. 짧은 timeout 으로
+    /// iOS 가 "internet offline" 잘못 보고하던 것 방지.
+    static let timeout: TimeInterval = 1800              // 30분 (request idle)
+    static let resourceTimeout: TimeInterval = 3600      // 60분 (전체 transfer)
 }

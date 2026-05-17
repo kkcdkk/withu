@@ -2,31 +2,37 @@
 //  CharacterGenView.swift
 //  withu
 //
-//  로컬 FastAPI 서버 → OpenAI gpt-image-2 로 캐릭터 이미지 생성/편집.
-//
 
 import SwiftUI
+import PhotosUI
 import WidgetKit
 
 struct CharacterGenView: View {
-    /// 어떤 상태용 이미지를 만들 건지. 변경되면 prompt placeholder 가 자동 갱신.
     @State private var targetState: CharacterState = .idle
     @State private var prompt: String = CharacterState.idle.generationHint
     @State private var refinementPrompt: String = ""
 
     /// "low" $0.011 / "medium" $0.04 / "high" $0.17
     @State private var quality: String = "medium"
+    @State private var artStyle: String = "casual"   // "casual" | "pixel"
+
+    /// 사용자가 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
+    @State private var photoPickerItem: PhotosPickerItem?
+    @State private var referenceImage: UIImage?
+
     @State private var isGenerating: Bool = false
     @State private var resultImage: UIImage?
     @State private var revisedPrompt: String?
     @State private var lastError: String?
     @State private var showAppliedAlert: Bool = false
     @State private var showSavedAlert: Bool = false
+    @State private var generationStartedAt: Date?
 
     var body: some View {
         Form {
             stateSection
             promptSection
+            referenceSection
             optionsSection
             resultSection
             refinementSection
@@ -43,13 +49,15 @@ struct CharacterGenView: View {
             Text("사진 앱에 추가됐어요.")
         }
         .onChange(of: targetState) { _, new in
-            // 상태 바뀔 때 prompt 가 비어있거나 기본값이면 새 hint 로 교체
             prompt = new.generationHint
             refinementPrompt = ""
         }
+        .onChange(of: photoPickerItem) { _, item in
+            Task { await loadReference(item) }
+        }
     }
 
-    // MARK: - Sections
+    // MARK: - State picker
 
     private var stateSection: some View {
         Section {
@@ -74,11 +82,10 @@ struct CharacterGenView: View {
             }
         } header: {
             Text("어떤 상태용 이미지?")
-        } footer: {
-            Text("선택한 상태에 어울리는 프롬프트가 아래에 자동으로 채워져요.")
-                .foregroundStyle(.secondary)
         }
     }
+
+    // MARK: - Prompt
 
     private var promptSection: some View {
         Section {
@@ -89,7 +96,7 @@ struct CharacterGenView: View {
                 Task { await generate() }
             } label: {
                 if isGenerating {
-                    HStack { ProgressView(); Text("생성 중…") }
+                    generatingLabel
                 } else {
                     Label("이미지 생성", systemImage: "wand.and.stars")
                 }
@@ -99,26 +106,95 @@ struct CharacterGenView: View {
             Text("프롬프트")
         } footer: {
             if isGenerating {
-                Text("⚠️ 생성 중엔 앱을 그대로 켜둬 주세요. 다른 앱으로 전환하면 생성이 중단될 수 있어요.")
+                Text("⚠️ 생성 중엔 앱을 그대로 켜둬 주세요.")
                     .foregroundStyle(.orange)
             } else {
-                Text("그림체/가드레일은 서버가 자동으로 붙입니다.\nlow ~60초 · medium 1~3분 · high 2~5분")
+                Text("그림체/가드레일은 서버가 자동으로 붙입니다.\n실측: low ~20초 · medium ~50초 · high 1~2분")
                     .foregroundStyle(.secondary)
             }
         }
     }
 
+    /// 생성 버튼 라벨 — ProgressView + 경과 초 카운트.
+    @ViewBuilder
+    private var generatingLabel: some View {
+        if let start = generationStartedAt {
+            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                let elapsed = Int(ctx.date.timeIntervalSince(start))
+                HStack {
+                    ProgressView()
+                    Text("생성 중… \(elapsed)초")
+                }
+            }
+        } else {
+            HStack { ProgressView(); Text("생성 중…") }
+        }
+    }
+
+    // MARK: - Reference image attach
+
+    private var referenceSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                if let ref = referenceImage {
+                    Image(uiImage: ref)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.secondary.opacity(0.15))
+                        .frame(width: 64, height: 64)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundStyle(.secondary)
+                        )
+                }
+                VStack(alignment: .leading) {
+                    PhotosPicker(referenceImage == nil ? "사진 선택" : "다른 사진으로 변경",
+                                 selection: $photoPickerItem,
+                                 matching: .images)
+                        .disabled(isGenerating)
+                    if referenceImage != nil {
+                        Button("참고 이미지 제거", role: .destructive) {
+                            referenceImage = nil
+                            photoPickerItem = nil
+                        }
+                        .disabled(isGenerating)
+                    }
+                }
+            }
+        } header: {
+            Text("참고 이미지 (선택)")
+        } footer: {
+            Text("첨부하면 이 이미지를 참고해 새 캐릭터를 만들어요. 비워두면 텍스트만으로 생성.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Options
+
     private var optionsSection: some View {
-        Section("품질") {
+        Section("옵션") {
+            Picker("그림체", selection: $artStyle) {
+                Text("일반 (파스텔)").tag("casual")
+                Text("픽셀 (8/16-bit)").tag("pixel")
+            }
+            .pickerStyle(.segmented)
+            .disabled(isGenerating)
+
             Picker("품질", selection: $quality) {
-                Text("low — $0.011 (빠름)").tag("low")
-                Text("medium — $0.04 (균형)").tag("medium")
-                Text("high — $0.17 (느림, 정밀)").tag("high")
+                Text("low — $0.011").tag("low")
+                Text("medium — $0.04").tag("medium")
+                Text("high — $0.17").tag("high")
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)
         }
     }
+
+    // MARK: - Result
 
     @ViewBuilder
     private var resultSection: some View {
@@ -150,6 +226,8 @@ struct CharacterGenView: View {
         }
     }
 
+    // MARK: - Refinement
+
     @ViewBuilder
     private var refinementSection: some View {
         if resultImage != nil {
@@ -170,7 +248,7 @@ struct CharacterGenView: View {
             } header: {
                 Text("이어서 다듬기")
             } footer: {
-                Text("위 이미지를 참고해 새 이미지로 변형. 예: \"표정만 더 환하게\", \"파스텔 톤으로 부드럽게\". 매 호출은 동일 비용.")
+                Text("위 결과를 참고해 새 이미지로 변형. 매 호출은 동일 비용.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -180,9 +258,14 @@ struct CharacterGenView: View {
 
     private func generate() async {
         isGenerating = true
+        generationStartedAt = .now
         lastError = nil
-        defer { isGenerating = false }
-        await send(prompt: prompt, reference: nil)
+        defer {
+            isGenerating = false
+            generationStartedAt = nil
+        }
+        let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
+        await send(prompt: prompt, reference: referenceB64)
     }
 
     private func refine() async {
@@ -193,8 +276,12 @@ struct CharacterGenView: View {
         }
         let referenceB64 = pngData.base64EncodedString()
         isGenerating = true
+        generationStartedAt = .now
         lastError = nil
-        defer { isGenerating = false }
+        defer {
+            isGenerating = false
+            generationStartedAt = nil
+        }
         await send(prompt: refinementPrompt, reference: referenceB64)
         refinementPrompt = ""
     }
@@ -208,6 +295,7 @@ struct CharacterGenView: View {
                 width: 1024,
                 height: 1024,
                 quality: quality,
+                artStyle: artStyle,
                 style: "auto"
             )
             let resp = try await APIClient.shared.generateImage(req)
@@ -240,6 +328,21 @@ struct CharacterGenView: View {
             showSavedAlert = true
         } catch {
             lastError = "❌ \(error.localizedDescription)"
+        }
+    }
+
+    private func loadReference(_ item: PhotosPickerItem?) async {
+        guard let item else {
+            referenceImage = nil
+            return
+        }
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                referenceImage = img
+            }
+        } catch {
+            lastError = "참고 이미지 로드 실패: \(error.localizedDescription)"
         }
     }
 }

@@ -11,8 +11,9 @@ struct GenerateImageRequest: Codable {
     let steps: Int
     let width: Int
     let height: Int
-    let quality: String?   // "standard" | "hd"
-    let style: String?     // "vivid" | "natural"
+    let quality: String?   // "low" | "medium" | "high" | "auto"
+    let artStyle: String?  // "casual" | "pixel"
+    let style: String?     // legacy
 }
 
 struct GenerateImageResponse: Codable {
