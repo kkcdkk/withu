@@ -2,10 +2,9 @@
 
 # withu
 
-**나만의 AI 캐릭터와 함께하는 iOS / watchOS 스마트 비서**
+**내가 그린 작은 친구와 사는 하루**
 
-내가 만든 캐릭터가 내 수면·운동·일상에 따라 살아 움직이고,
-함께 사진도 찍을 수 있는 개인 맞춤형 컴패니언 앱.
+자고, 걷고, 뛰고, 같이 사진 찍는 — 그것 뿐.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B%20%7C%20watchOS%2010%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange)
@@ -131,6 +130,42 @@ Xcode에서:
 4. ▶ Run (`⌘R`)
 
 > 시뮬레이터에선 카메라가 동작하지 않음 → 실기기 테스트 필요
+
+## 🧪 개발 / 검증 명령
+
+현재 Xcode 프로젝트의 공유 scheme은 `withu` 입니다.
+
+```bash
+xcodebuild -list -project withu.xcodeproj
+```
+
+로컬 signing 설정 없이 CI나 에이전트 환경에서 컴파일만 확인할 때:
+
+```bash
+xcodebuild -project withu.xcodeproj \
+  -scheme withu \
+  -configuration Debug \
+  -destination 'generic/platform=iOS' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+현재 저장소에는 테스트 타겟이 없습니다. 테스트 타겟이 추가되면 simulator destination을 지정한
+`xcodebuild test` 명령을 표준 검증 루트에 추가하세요.
+
+## 🤝 에이전트 / 협업 규칙
+
+Codex, Claude 같은 에이전트는 [AGENTS.md](AGENTS.md)를 먼저 따릅니다.
+
+- 작업 시작 전 `git status --short` 로 기존 변경사항을 확인
+- 사용자 변경사항을 되돌리거나 덮어쓰지 않기
+- GitHub issue, PR, 댓글, 커밋 메시지는 가능한 한 한국어로 작성
+- `main`은 최종 배포 기준, 개발 통합은 `develop` 브랜치에서 진행
+- 기본 에이전트 브랜치 이름은 `codex/<작업-요약>` 이며 보통 `develop`에서 생성
+- 일반 개발 PR은 `develop`으로 올리고, QA 승인 후 머지
+- 해결된 issue는 검증 결과를 한국어 댓글로 남긴 뒤 close
+- harness-only 작업에서는 문서, 에이전트 운영 파일, 간단한 git hygiene만 수정
+- local signing, provisioning, LAN IP, secret, DerivedData는 커밋하지 않기
 
 ## 🗺️ 개발 로드맵
 

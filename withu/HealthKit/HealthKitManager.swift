@@ -30,7 +30,7 @@ struct SleepSummary {
     let lastNight: Date?
 }
 
-struct WorkoutSummary {
+struct WorkoutSummary: Equatable {
     let activity: HKWorkoutActivityType
     let start: Date
     let duration: TimeInterval

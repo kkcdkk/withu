@@ -6,13 +6,24 @@
 import SwiftUI
 
 struct CameraView: View {
-    let characterState: CharacterState
+    let initialState: CharacterState
+
+    /// 카메라 안에서만 사용되는 임시 캐릭터. 진입 시엔 자동 계산된 initialState 로 시작,
+    /// 사용자가 picker 로 자유롭게 변경 가능 (메인 화면의 자동 상태는 영향 X).
+    @State private var selectedState: CharacterState
 
     @State private var camera = CameraSession()
     @State private var statusText: String = "초기화 중…"
     @State private var isCapturing: Bool = false
     @State private var previewCaptured: UIImage?
     @State private var showSavedToast: Bool = false
+
+    /// 카메라는 항상 idle 로 시작. 다른 캐릭터로 찍고 싶으면 하단 picker 로 선택
+    /// (등록된 이미지가 없으면 placeholder/SF Symbol 로 보임 — 미리 CharacterGen 에서 만들어 적용).
+    init(characterState: CharacterState = .idle) {
+        self.initialState = characterState
+        self._selectedState = State(initialValue: characterState)
+    }
 
     /// 캐릭터를 화면(=사진) 가운데 아래쪽에 두기 위한 정규화 좌표 (0~1).
     /// (x, y, w, h). 화면 비율과 사진 비율이 거의 같다고 가정.
@@ -59,7 +70,7 @@ struct CameraView: View {
         #endif
     }
 
-    /// 카메라 위에 떠 있는 캐릭터. characterRect 와 같은 비율로 배치.
+    /// 카메라 위에 떠 있는 캐릭터. CharacterImageView 사용 → 사용자 적용 이미지 자동 반영.
     private var overlayLayer: some View {
         GeometryReader { geo in
             let rect = CGRect(
@@ -68,18 +79,9 @@ struct CameraView: View {
                 width: characterRect.width * geo.size.width,
                 height: characterRect.height * geo.size.height
             )
-            ZStack {
-                Circle()
-                    .fill(characterState.tint.opacity(0.18))
-                Image(systemName: characterState.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(rect.width * 0.22)
-                    .foregroundStyle(characterState.tint)
-                    .symbolEffect(.bounce, value: characterState)
-            }
-            .frame(width: rect.width, height: rect.height)
-            .position(x: rect.midX, y: rect.midY)
+            CharacterImageView(state: selectedState)
+                .frame(width: rect.width, height: rect.height)
+                .position(x: rect.midX, y: rect.midY)
         }
         .allowsHitTesting(false)
     }
@@ -97,6 +99,8 @@ struct CameraView: View {
                     .padding(.trailing, 16)
             }
             Spacer()
+            characterPicker
+                .padding(.bottom, 12)
             HStack {
                 Spacer()
                 Button {
@@ -116,6 +120,34 @@ struct CameraView: View {
                 Spacer()
             }
             .padding(.bottom, 50)
+        }
+    }
+
+    /// 가로 스크롤로 9개 상태 thumbnail 보여주는 picker.
+    /// 선택된 항목은 테두리 강조.
+    private var characterPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(CharacterState.allCases, id: \.self) { state in
+                    Button {
+                        selectedState = state
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                            CharacterImageView(state: state)
+                                .padding(6)
+                        }
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Circle()
+                                .stroke(selectedState == state ? .white : .clear, lineWidth: 3)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
         }
     }
 
@@ -175,7 +207,7 @@ struct CameraView: View {
             let raw = try await camera.capturePhoto()
             let composed = PhotoCompositor.compose(
                 photo: raw,
-                state: characterState,
+                state: selectedState,
                 normalizedRect: characterRect
             )
             previewCaptured = composed

@@ -6,24 +6,32 @@ Icon?
 
 # Xcode - per-user data (절대 공유 X)
 xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
 *.xcuserstate
 *.xcuserdatad/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
 DerivedData/
 
 # Xcode - build artifacts
 build/
 *.o
+*.hmap
 *.dSYM.zip
 *.dSYM
 *.ipa
 *.xcarchive
+*.xcresult
+*.resultBundle
 
 # Swift Package Manager
 .build/
 .swiftpm/
 Packages/
 Package.pins
-Package.resolved
+# iOS app projects should commit Package.resolved when SwiftPM dependencies are added.
 
 # CocoaPods (안 쓰지만 혹시 도입할 때)
 Pods/
@@ -47,3 +55,7 @@ fastlane/test_output
 !.env.example
 secrets.plist
 GoogleService-Info.plist
+
+# Cloudflare Workers / Node
+node_modules/
+.wrangler/

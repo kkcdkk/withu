@@ -15,12 +15,8 @@ struct CharacterView: View {
                     .fill(state.tint.opacity(0.15))
                     .frame(width: 200, height: 200)
 
-                Image(systemName: state.symbolName)
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(state.tint)
-                    .frame(width: 110, height: 110)
-                    .symbolEffect(.bounce, value: state)
+                CharacterImageView(state: state)
+                    .frame(width: 140, height: 140)
             }
 
             Text(state.caption)
