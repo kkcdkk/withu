@@ -56,6 +56,7 @@ struct BatchCharacterGenView: View {
             }
         }
         .navigationTitle("일괄 생성")
+        .scrollDismissesKeyboard(.interactively)
         .alert("완료", isPresented: $showFinishedAlert) {
             Button("확인", role: .cancel) {}
         } message: {

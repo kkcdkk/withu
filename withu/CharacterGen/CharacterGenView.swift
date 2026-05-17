@@ -57,6 +57,7 @@ struct CharacterGenView: View {
             }
         }
         .navigationTitle("캐릭터 만들기")
+        .scrollDismissesKeyboard(.interactively)
         .alert("적용됨", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
         } message: {

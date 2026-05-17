@@ -41,6 +41,7 @@ struct ContentView: View {
                 debugSection
             }
             .navigationTitle("withu")
+            .scrollDismissesKeyboard(.interactively)
             .task {
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()

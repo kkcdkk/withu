@@ -6,28 +6,20 @@
 import SwiftUI
 
 struct CameraView: View {
-    let initialState: CharacterState
-
-    /// 카메라 안에서만 사용되는 임시 캐릭터. 진입 시엔 자동 계산된 initialState 로 시작,
-    /// 사용자가 picker 로 자유롭게 변경 가능 (메인 화면의 자동 상태는 영향 X).
-    @State private var selectedState: CharacterState
+    /// 카메라는 항상 idle 하나로 시작. 사용자가 picker 로 추가하거나 변경.
+    @State private var placed: [PlacedCharacter] = [
+        PlacedCharacter(state: .idle, position: CGPoint(x: 0.5, y: 0.6))
+    ]
+    @State private var selectedID: UUID?
 
     @State private var camera = CameraSession.shared
     @State private var statusText: String = "초기화 중…"
     @State private var isCapturing: Bool = false
     @State private var previewCaptured: UIImage?
     @State private var showSavedToast: Bool = false
+    @State private var showDeleteHint: Bool = false
 
-    /// 카메라는 항상 idle 로 시작. 다른 캐릭터로 찍고 싶으면 하단 picker 로 선택
-    /// (등록된 이미지가 없으면 placeholder/SF Symbol 로 보임 — 미리 CharacterGen 에서 만들어 적용).
-    init(characterState: CharacterState = .idle) {
-        self.initialState = characterState
-        self._selectedState = State(initialValue: characterState)
-    }
-
-    /// 캐릭터를 화면(=사진) 가운데 아래쪽에 두기 위한 정규화 좌표 (0~1).
-    /// (x, y, w, h). 화면 비율과 사진 비율이 거의 같다고 가정.
-    private let characterRect = CGRect(x: 0.30, y: 0.55, width: 0.40, height: 0.30)
+    init() {}
 
     var body: some View {
         ZStack {
@@ -40,17 +32,16 @@ struct CameraView: View {
             if showSavedToast {
                 toast("📚 사진에 저장됐어요")
             }
+            if showDeleteHint {
+                toast("길게 눌러서 삭제 · 탭해서 선택 · 드래그해서 이동")
+            }
         }
         .ignoresSafeArea()
-        .task {
-            await setupCamera()
-        }
-        .onDisappear {
-            camera.stop()
-        }
+        .task { await setupCamera() }
+        .onDisappear { camera.stop() }
     }
 
-    // MARK: - Layers
+    // MARK: - Camera preview
 
     @ViewBuilder
     private var cameraLayer: some View {
@@ -70,21 +61,48 @@ struct CameraView: View {
         #endif
     }
 
-    /// 카메라 위에 떠 있는 캐릭터. CharacterImageView 사용 → 사용자 적용 이미지 자동 반영.
+    // MARK: - Overlay: 여러 캐릭터, 드래그/탭/길게누름
+
     private var overlayLayer: some View {
         GeometryReader { geo in
-            let rect = CGRect(
-                x: characterRect.minX * geo.size.width,
-                y: characterRect.minY * geo.size.height,
-                width: characterRect.width * geo.size.width,
-                height: characterRect.height * geo.size.height
-            )
-            CharacterImageView(state: selectedState)
-                .frame(width: rect.width, height: rect.height)
-                .position(x: rect.midX, y: rect.midY)
+            ZStack {
+                ForEach($placed) { $character in
+                    characterTile($character, container: geo.size)
+                }
+            }
         }
-        .allowsHitTesting(false)
     }
+
+    private func characterTile(_ character: Binding<PlacedCharacter>,
+                                container: CGSize) -> some View {
+        let rect = character.wrappedValue.rect(in: container)
+        let isSelected = selectedID == character.wrappedValue.id
+        return CharacterImageView(state: character.wrappedValue.state)
+            .frame(width: rect.width, height: rect.height)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(.white, lineWidth: isSelected ? 3 : 0)
+            )
+            .position(x: rect.midX, y: rect.midY)
+            .onTapGesture {
+                selectedID = character.wrappedValue.id
+            }
+            .onLongPressGesture(minimumDuration: 0.4) {
+                remove(character.wrappedValue.id)
+            }
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        character.wrappedValue.position = CGPoint(
+                            x: max(0, min(1, value.location.x / container.width)),
+                            y: max(0, min(1, value.location.y / container.height))
+                        )
+                        selectedID = character.wrappedValue.id
+                    }
+            )
+    }
+
+    // MARK: - Controls
 
     private var controlsLayer: some View {
         VStack {
@@ -99,6 +117,11 @@ struct CameraView: View {
                     .padding(.trailing, 16)
             }
             Spacer()
+            if let id = selectedID,
+               let char = placed.first(where: { $0.id == id }) {
+                selectedCharacterControls(for: char)
+                    .padding(.bottom, 8)
+            }
             characterPicker
                 .padding(.bottom, 12)
             HStack {
@@ -107,12 +130,8 @@ struct CameraView: View {
                     Task { await shoot() }
                 } label: {
                     ZStack {
-                        Circle()
-                            .stroke(.white, lineWidth: 4)
-                            .frame(width: 78, height: 78)
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 64, height: 64)
+                        Circle().stroke(.white, lineWidth: 4).frame(width: 78, height: 78)
+                        Circle().fill(.white).frame(width: 64, height: 64)
                         if isCapturing { ProgressView().tint(.black) }
                     }
                 }
@@ -123,51 +142,78 @@ struct CameraView: View {
         }
     }
 
-    /// 가로 스크롤로 9개 상태 thumbnail 보여주는 picker.
-    /// 선택된 항목은 테두리 강조.
+    /// 가로 스크롤 picker — 탭 시 새 캐릭터 추가.
     private var characterPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(CharacterState.allCases, id: \.self) { state in
-                    Button {
-                        selectedState = state
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                            CharacterImageView(state: state)
-                                .padding(6)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("탭하면 캐릭터 추가됨 · 화면의 캐릭터 길게 눌러서 삭제")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 16)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(CharacterState.allCases, id: \.self) { state in
+                        Button {
+                            addCharacter(state)
+                        } label: {
+                            ZStack {
+                                Circle().fill(.ultraThinMaterial)
+                                CharacterImageView(state: state).padding(6)
+                                VStack {
+                                    Spacer()
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundStyle(.white)
+                                        .background(Circle().fill(.black.opacity(0.4)))
+                                        .padding(2)
+                                }
+                            }
+                            .frame(width: 56, height: 56)
                         }
-                        .frame(width: 56, height: 56)
-                        .overlay(
-                            Circle()
-                                .stroke(selectedState == state ? .white : .clear, lineWidth: 3)
-                        )
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
         }
     }
+
+    /// 선택된 캐릭터에 한해 사이즈 슬라이더 + 삭제.
+    private func selectedCharacterControls(for char: PlacedCharacter) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .foregroundStyle(.white)
+            Slider(value: Binding(
+                get: { placed.first(where: { $0.id == char.id })?.size ?? 0.35 },
+                set: { newValue in
+                    if let i = placed.firstIndex(where: { $0.id == char.id }) {
+                        placed[i].size = newValue
+                    }
+                }
+            ), in: 0.15...0.7)
+            .tint(.white)
+            Button(role: .destructive) {
+                remove(char.id)
+            } label: {
+                Image(systemName: "trash.fill").foregroundStyle(.white)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Capture preview
 
     private func preview(_ image: UIImage) -> some View {
         ZStack {
             Color.black.opacity(0.9)
             VStack(spacing: 16) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .padding()
+                Image(uiImage: image).resizable().scaledToFit().padding()
                 HStack(spacing: 16) {
-                    Button("취소", role: .cancel) {
-                        previewCaptured = nil
-                    }
-                    .buttonStyle(.bordered)
-                    Button("저장") {
-                        Task { await saveCurrent(image) }
-                    }
-                    .buttonStyle(.borderedProminent)
+                    Button("취소", role: .cancel) { previewCaptured = nil }
+                        .buttonStyle(.bordered)
+                    Button("저장") { Task { await saveCurrent(image) } }
+                        .buttonStyle(.borderedProminent)
                 }
                 .padding(.bottom, 40)
             }
@@ -188,6 +234,17 @@ struct CameraView: View {
 
     // MARK: - Actions
 
+    private func addCharacter(_ state: CharacterState) {
+        let new = PlacedCharacter(state: state, position: CGPoint(x: 0.5, y: 0.55))
+        placed.append(new)
+        selectedID = new.id
+    }
+
+    private func remove(_ id: UUID) {
+        placed.removeAll { $0.id == id }
+        if selectedID == id { selectedID = nil }
+    }
+
     private func setupCamera() async {
         do {
             try await camera.configure()
@@ -205,11 +262,7 @@ struct CameraView: View {
         defer { isCapturing = false }
         do {
             let raw = try await camera.capturePhoto()
-            let composed = PhotoCompositor.compose(
-                photo: raw,
-                state: selectedState,
-                normalizedRect: characterRect
-            )
+            let composed = PhotoCompositor.compose(photo: raw, placed: placed)
             previewCaptured = composed
         } catch {
             statusText = "❌ \(error.localizedDescription)"
@@ -229,6 +282,4 @@ struct CameraView: View {
     }
 }
 
-#Preview {
-    CameraView(characterState: .idle)
-}
+#Preview { CameraView() }
