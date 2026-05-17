@@ -18,7 +18,9 @@ struct CameraView: View {
     @State private var previewCaptured: UIImage?
     @State private var showSavedToast: Bool = false
 
-    init(characterState: CharacterState) {
+    /// 카메라는 항상 idle 로 시작. 다른 캐릭터로 찍고 싶으면 하단 picker 로 선택
+    /// (등록된 이미지가 없으면 placeholder/SF Symbol 로 보임 — 미리 CharacterGen 에서 만들어 적용).
+    init(characterState: CharacterState = .idle) {
         self.initialState = characterState
         self._selectedState = State(initialValue: characterState)
     }
