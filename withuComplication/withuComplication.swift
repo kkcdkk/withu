@@ -82,18 +82,17 @@ struct CharacterComplicationView: View {
         }
     }
 
-    /// 워치 컴플리케이션도 시스템 tint 강제 — SF Symbol 이 자연스러움.
-    /// CharacterImageView 의 컬러 PNG 는 모노톤으로 변환돼 "기본 아이콘처럼" 보임.
+    /// 워치 컴플리케이션도 시스템 tint 강제. alpha PNG 면 캐릭터 실루엣이
+    /// 시스템 색으로 채워져 SF Symbol 보다 더 캐릭터답게 보임.
     private var circular: some View {
-        Image(systemName: entry.state.symbolName)
-            .font(.system(size: 24, weight: .semibold))
+        CharacterImageView(state: entry.state)
             .widgetAccentable()
     }
 
     private var rectangular: some View {
         HStack(spacing: 6) {
-            Image(systemName: entry.state.symbolName)
-                .font(.system(size: 18, weight: .semibold))
+            CharacterImageView(state: entry.state)
+                .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption)
