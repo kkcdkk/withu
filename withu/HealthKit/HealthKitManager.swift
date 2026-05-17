@@ -45,6 +45,9 @@ final class HealthKitManager {
 
     @ObservationIgnored private let store = HKHealthStore()
 
+    /// 권한 요청을 한 번이라도 했거나 마지막 fetch 가 성공했는지.
+    /// (Apple HealthKit 은 어떤 항목이 허용됐는지 앱에 알리지 않으므로
+    ///  정확한 "허용 여부" 는 fetch 가 에러 없이 통과하면 추론.)
     private(set) var isAuthorized: Bool = false
     private(set) var sleep: SleepSummary?
     private(set) var recentWorkouts: [WorkoutSummary] = []
@@ -114,6 +117,7 @@ final class HealthKitManager {
             lastNight: asleep.first?.startDate
         )
         sleep = summary
+        isAuthorized = true   // fetch 가 에러 없이 통과 → 권한 있음으로 간주
         return summary
     }
 
@@ -147,6 +151,7 @@ final class HealthKitManager {
             )
         }
         recentWorkouts = summaries
+        isAuthorized = true   // fetch 통과 → 권한 있음으로 간주
         return summaries
     }
 
@@ -182,6 +187,7 @@ final class HealthKitManager {
             store.execute(q)
         }
         todaySteps = total
+        isAuthorized = true   // fetch 통과 → 권한 있음으로 간주
         return total
     }
 }
