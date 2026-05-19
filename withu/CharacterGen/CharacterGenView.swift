@@ -451,8 +451,7 @@ struct CharacterGenView: View {
     // MARK: - Common actions
 
     private func apply(_ image: UIImage, to state: CharacterState) {
-        let ok = CharacterImageStore.save(image, for: state)
-        if ok {
+        if CharacterImageStore.save(image, for: state) != nil {
             WidgetCenter.shared.reloadAllTimelines()
             showAppliedAlert = true
         } else {
