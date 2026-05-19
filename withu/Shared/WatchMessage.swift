@@ -13,8 +13,27 @@ struct WatchMessage: Codable, Equatable, Sendable {
     let state: CharacterState
     let todaySteps: Double?
     let lastSleepHours: Double?
+    /// 오늘 활동(운동) 분
+    let todayActiveMinutes: Double?
+    /// 오늘 활성 칼로리
+    let todayActiveKcal: Double?
     let timestamp: Date
 
     /// 직렬화/역직렬화 키. 양쪽이 같은 이름을 쓰게 명시.
     static let payloadKey = "withu.watchMessage.v1"
+
+    // 옛 메시지와 호환: 새 필드는 옵셔널, 디코드 시 nil 허용
+    init(state: CharacterState,
+         todaySteps: Double? = nil,
+         lastSleepHours: Double? = nil,
+         todayActiveMinutes: Double? = nil,
+         todayActiveKcal: Double? = nil,
+         timestamp: Date = Date()) {
+        self.state = state
+        self.todaySteps = todaySteps
+        self.lastSleepHours = lastSleepHours
+        self.todayActiveMinutes = todayActiveMinutes
+        self.todayActiveKcal = todayActiveKcal
+        self.timestamp = timestamp
+    }
 }

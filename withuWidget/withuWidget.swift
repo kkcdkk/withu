@@ -12,12 +12,16 @@ struct CharacterEntry: TimelineEntry {
     let date: Date
     let state: CharacterState
     let todaySteps: Double?
+    let todayActiveMinutes: Double?
+    let todayActiveKcal: Double?
     let isPlaceholder: Bool
 
     static let placeholder = CharacterEntry(
         date: .now,
         state: .idle,
         todaySteps: 4321,
+        todayActiveMinutes: 38,
+        todayActiveKcal: 412,
         isPlaceholder: true
     )
 
@@ -25,13 +29,22 @@ struct CharacterEntry: TimelineEntry {
         self.date = message.timestamp
         self.state = message.state
         self.todaySteps = message.todaySteps
+        self.todayActiveMinutes = message.todayActiveMinutes
+        self.todayActiveKcal = message.todayActiveKcal
         self.isPlaceholder = false
     }
 
-    init(date: Date, state: CharacterState, todaySteps: Double?, isPlaceholder: Bool = false) {
+    init(date: Date,
+         state: CharacterState,
+         todaySteps: Double?,
+         todayActiveMinutes: Double? = nil,
+         todayActiveKcal: Double? = nil,
+         isPlaceholder: Bool = false) {
         self.date = date
         self.state = state
         self.todaySteps = todaySteps
+        self.todayActiveMinutes = todayActiveMinutes
+        self.todayActiveKcal = todayActiveKcal
         self.isPlaceholder = isPlaceholder
     }
 }
@@ -48,9 +61,22 @@ struct CharacterProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CharacterEntry>) -> Void) {
-        let entry = currentEntry()
-        let next = Calendar.current.date(byAdding: .hour, value: 1, to: .now) ?? .now
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        // 매 15분 새 entry 미리 만들어둠 → iOS 가 reload 자주 안 해도 자동 갱신
+        let now = Date()
+        var entries: [CharacterEntry] = []
+        for i in 0..<8 {
+            let date = Calendar.current.date(byAdding: .minute, value: i * 15, to: now) ?? now
+            let base = currentEntry()
+            entries.append(CharacterEntry(
+                date: date,
+                state: base.state,
+                todaySteps: base.todaySteps,
+                todayActiveMinutes: base.todayActiveMinutes,
+                todayActiveKcal: base.todayActiveKcal,
+                isPlaceholder: false
+            ))
+        }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 
     private func currentEntry() -> CharacterEntry {
@@ -107,13 +133,20 @@ private struct RectangularView: View {
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
-                if let steps = entry.todaySteps {
-                    Text("👟 \(Int(steps))보").font(.system(size: 10))
-                }
+                Text(lockRectMetric(entry)).font(.system(size: 10)).lineLimit(1)
             }
             Spacer(minLength: 0)
         }
     }
+}
+
+/// 잠금화면 rectangular 의 한 줄 — 핵심 metric 2~3개 모음.
+private func lockRectMetric(_ entry: CharacterEntry) -> String {
+    var parts: [String] = []
+    if let s = entry.todaySteps, s > 0 { parts.append("👟\(Int(s))") }
+    if let k = entry.todayActiveKcal, k > 0 { parts.append("🔥\(Int(k))") }
+    if let m = entry.todayActiveMinutes, m > 0 { parts.append("🏃\(Int(m))") }
+    return parts.joined(separator: " · ")
 }
 
 private struct InlineView: View {
@@ -130,10 +163,16 @@ private struct InlineView: View {
 private struct SmallView: View {
     let entry: CharacterEntry
     var body: some View {
-        // 캐릭터를 위젯의 약 1/3 사이즈로 작게 (화면 전체 대비 약 1/9)
-        VStack {
+        VStack(spacing: 4) {
             CharacterImageView(state: entry.state)
                 .frame(width: 56, height: 56)
+            // 작아도 핵심 활동량 한 줄
+            if entry.todaySteps != nil || entry.todayActiveKcal != nil {
+                Text(fitnessLineShort(entry))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -142,22 +181,16 @@ private struct SmallView: View {
 private struct MediumView: View {
     let entry: CharacterEntry
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             CharacterImageView(state: entry.state)
-                .frame(width: 64, height: 64)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.state.caption)
-                    .font(.subheadline)
-                    .bold()
-                if let steps = entry.todaySteps {
-                    Text("👟 \(Int(steps))보")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                .frame(width: 72, height: 72)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.state.caption).font(.subheadline).bold()
+                fitnessRows(entry, layout: .compact)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -165,19 +198,46 @@ private struct MediumView: View {
 private struct LargeView: View {
     let entry: CharacterEntry
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             CharacterImageView(state: entry.state)
                 .frame(width: 140, height: 140)
-            Text(entry.state.caption)
-                .font(.headline)
-            if let steps = entry.todaySteps {
-                Text("👟 오늘 \(Int(steps))보")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
+            Text(entry.state.caption).font(.headline)
+            fitnessRows(entry, layout: .expanded)
         }
+        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+// MARK: - Fitness 표시 helpers
+
+private enum FitnessLayout { case compact, expanded }
+
+@ViewBuilder
+private func fitnessRows(_ entry: CharacterEntry, layout: FitnessLayout) -> some View {
+    let font: Font = (layout == .compact) ? .caption2 : .callout
+    VStack(alignment: .leading, spacing: 2) {
+        if let s = entry.todaySteps {
+            Text("👟 \(Int(s))보").font(font).foregroundStyle(.secondary)
+        }
+        if let m = entry.todayActiveMinutes, m > 0 {
+            Text("🏃 \(Int(m))분").font(font).foregroundStyle(.secondary)
+        }
+        if let k = entry.todayActiveKcal, k > 0 {
+            Text("🔥 \(Int(k))kcal").font(font).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// systemSmall 의 한 줄 짧은 표시. 가장 큰 metric 하나만.
+private func fitnessLineShort(_ entry: CharacterEntry) -> String {
+    if let s = entry.todaySteps, s > 0 {
+        return "👟 \(Int(s))"
+    }
+    if let k = entry.todayActiveKcal, k > 0 {
+        return "🔥 \(Int(k))"
+    }
+    return ""
 }
 
 // MARK: - Widget

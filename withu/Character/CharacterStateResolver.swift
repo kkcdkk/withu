@@ -13,11 +13,13 @@ enum CharacterStateResolver {
     private static let energeticStepThreshold: Double = 8000
     private static let sleepHours: Set<Int> = Set(0..<7).union([22, 23])
 
+    /// 우선순위: 운동 진행 중 → 운동 상태. 그 외 → 날씨 기반.
+    /// (수면/활동량은 명시적 무시 — "운동 우선·평소는 날씨" 정책)
     static func resolve(
         now: Date = Date(),
-        sleep: SleepSummary?,
+        sleep: SleepSummary? = nil,           // 현재 정책에서 무시 — 시그니처는 호환용
         workouts: [WorkoutSummary],
-        todaySteps: Double?,
+        todaySteps: Double? = nil,            // 현재 정책에서 무시
         weather: WeatherSnapshot? = nil,
         calendar: Calendar = .current
     ) -> CharacterState {
@@ -29,37 +31,16 @@ enum CharacterStateResolver {
             }
         }
 
-        // 2) 수면 시간대 + 수면 기록 있음 → 자는 중
-        let hour = calendar.component(.hour, from: now)
-        if sleepHours.contains(hour), let s = sleep, s.sampleCount > 0 {
-            return .sleeping
+        // 2) 날씨 기반 (운동 안 할 때)
+        guard let w = weather else { return .idle }
+        if w.isHot { return .beach }
+        switch w.condition {
+        case .rainy, .thunder: return .rainyShelter
+        case .snowy:           return .snowPlay
+        case .sunny:           return .walking      // 햇살 받으며 산책
+        case .cloudy, .foggy:  return .idle         // 평온히
+        case .unknown:         return .idle
         }
-
-        // 3) 매우 더운 날 → 해변 (활동도 압도)
-        if let w = weather, w.isHot {
-            return .beach
-        }
-
-        // 4) 비 + 활동량 낮음 → 우산
-        let steps = todaySteps ?? 0
-        if let w = weather, w.condition == .rainy || w.condition == .thunder {
-            if steps < energeticStepThreshold {
-                return .rainyShelter
-            }
-            // 비 오는 날에 많이 걸었으면 그냥 energetic 으로 떨어짐
-        }
-
-        // 5) 눈 + 활동량 있음 → 눈 신
-        if let w = weather, w.condition == .snowy, steps > 0 {
-            return .snowPlay
-        }
-
-        // 6) 활동량 많은 날
-        if steps >= energeticStepThreshold {
-            return .energetic
-        }
-
-        return .idle
     }
 
     private static func mapWorkout(_ type: HKWorkoutActivityType) -> CharacterState {

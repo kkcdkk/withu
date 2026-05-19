@@ -135,6 +135,10 @@ struct CharacterGalleryView: View {
         let ok = CharacterImageStore.applyGalleryItem(item.id, to: state)
         if ok {
             WidgetCenter.shared.reloadAllTimelines()
+            // 워치도 같은 이미지로 갱신
+            if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
+                ConnectivityManager.shared.sendCharacterImage(img, for: state)
+            }
             withAnimation { toastText = "\(state.rawValue) 자리에 적용됨" }
             hideToastAfter(1.6)
         } else {

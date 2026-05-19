@@ -5,6 +5,7 @@
 
 import Foundation
 import WatchConnectivity
+import UIKit
 
 /// iPhone 에서 watch 로 캐릭터 상태를 보내는 매니저.
 /// `updateApplicationContext` 를 써서 "마지막 값" 동기화. 두 디바이스가 동시에
@@ -27,6 +28,9 @@ final class ConnectivityManager: NSObject {
     // 마지막으로 보낸 메시지를 기억해두고 같으면 안 보냄 (중복 트래픽 방지)
     @ObservationIgnored private var lastSentMessage: WatchMessage?
 
+    /// 캐릭터 이미지 파일 전송 시 metadata 키 — 워치 쪽이 어느 state 의 이미지인지 알 수 있게.
+    static let characterImageMetadataKey = "withu.characterImage.state"
+
     private override init() { super.init() }
 
     func activate() {
@@ -36,6 +40,29 @@ final class ConnectivityManager: NSObject {
         }
         session.delegate = self
         session.activate()
+    }
+
+    /// 사용자가 적용한 캐릭터 이미지를 워치로 전송 (file transfer).
+    /// 큰 PNG 도 OS 가 백그라운드에서 안정적으로 보냄.
+    func sendCharacterImage(_ image: UIImage, for state: CharacterState) {
+        guard let session, session.activationState == .activated,
+              session.isPaired, session.isWatchAppInstalled else { return }
+        guard let data = image.pngData() else {
+            lastError = "PNG 인코딩 실패"
+            return
+        }
+        // 임시 파일에 써서 transferFile 로 보냄
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("character_\(state.rawValue)_\(UUID().uuidString).png")
+        do {
+            try data.write(to: tmpURL, options: .atomic)
+            session.transferFile(
+                tmpURL,
+                metadata: [Self.characterImageMetadataKey: state.rawValue]
+            )
+        } catch {
+            lastError = "워치 이미지 전송 실패: \(error.localizedDescription)"
+        }
     }
 
     /// 캐릭터 상태 메시지를 워치로 전송.

@@ -453,6 +453,8 @@ struct CharacterGenView: View {
     private func apply(_ image: UIImage, to state: CharacterState) {
         if CharacterImageStore.save(image, for: state) != nil {
             WidgetCenter.shared.reloadAllTimelines()
+            // 워치도 같이 갱신 — file transfer (백그라운드, OS 가 안정적 처리)
+            ConnectivityManager.shared.sendCharacterImage(image, for: state)
             showAppliedAlert = true
         } else {
             lastError = "❌ App Group 저장 실패"

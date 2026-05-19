@@ -71,6 +71,8 @@ struct ContentView: View {
             state: state,
             todaySteps: health.todaySteps,
             lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
+            todayActiveMinutes: health.todayActiveMinutes,
+            todayActiveKcal: health.todayActiveKcal,
             timestamp: Date()
         )
         // 1) iOS 위젯이 읽을 수 있게 App Group 에 저장 + 위젯 타임라인 리로드
@@ -264,8 +266,16 @@ struct ContentView: View {
                 .font(.footnote)
             }
 
-            if let steps = health.todaySteps {
-                Text("👟 오늘 걸음: \(Int(steps))보").font(.subheadline)
+            HStack(spacing: 14) {
+                if let steps = health.todaySteps {
+                    Label("\(Int(steps))보", systemImage: "figure.walk").font(.subheadline)
+                }
+                if let m = health.todayActiveMinutes, m > 0 {
+                    Label("\(Int(m))분", systemImage: "figure.run").font(.subheadline)
+                }
+                if let k = health.todayActiveKcal, k > 0 {
+                    Label("\(Int(k))kcal", systemImage: "flame.fill").font(.subheadline)
+                }
             }
 
             if !health.recentWorkouts.isEmpty {
@@ -307,6 +317,13 @@ struct ContentView: View {
         catch { errors.append("운동: \(error.localizedDescription)") }
         do { _ = try await health.fetchTodaySteps() }
         catch { errors.append("걸음: \(error.localizedDescription)") }
+        do { _ = try await health.fetchTodayActiveMinutes() }
+        catch { errors.append("활동 분: \(error.localizedDescription)") }
+        do { _ = try await health.fetchTodayActiveKcal() }
+        catch { errors.append("칼로리: \(error.localizedDescription)") }
+
+        // 새 데이터로 워치/위젯 즉시 갱신
+        sendStateToWatch(characterState)
 
         healthMessage = errors.isEmpty
             ? "✅ 데이터 로드 완료"

@@ -12,12 +12,16 @@ struct CharacterEntry: TimelineEntry {
     let date: Date
     let state: CharacterState
     let todaySteps: Double?
+    let todayActiveMinutes: Double?
+    let todayActiveKcal: Double?
     let isPlaceholder: Bool
 
     static let placeholder = CharacterEntry(
         date: .now,
         state: .idle,
         todaySteps: 4321,
+        todayActiveMinutes: 38,
+        todayActiveKcal: 412,
         isPlaceholder: true
     )
 
@@ -25,13 +29,22 @@ struct CharacterEntry: TimelineEntry {
         self.date = message.timestamp
         self.state = message.state
         self.todaySteps = message.todaySteps
+        self.todayActiveMinutes = message.todayActiveMinutes
+        self.todayActiveKcal = message.todayActiveKcal
         self.isPlaceholder = false
     }
 
-    init(date: Date, state: CharacterState, todaySteps: Double?, isPlaceholder: Bool = false) {
+    init(date: Date,
+         state: CharacterState,
+         todaySteps: Double?,
+         todayActiveMinutes: Double? = nil,
+         todayActiveKcal: Double? = nil,
+         isPlaceholder: Bool = false) {
         self.date = date
         self.state = state
         self.todaySteps = todaySteps
+        self.todayActiveMinutes = todayActiveMinutes
+        self.todayActiveKcal = todayActiveKcal
         self.isPlaceholder = isPlaceholder
     }
 }
@@ -49,9 +62,9 @@ struct CharacterProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CharacterEntry>) -> Void) {
         let entry = currentEntry()
-        // 한 시간마다 한 번씩만 자동 갱신. 실제 갱신은 메시지 도착 시
-        // ConnectivityManager 가 WidgetCenter.reloadAllTimelines 호출함.
-        let next = Calendar.current.date(byAdding: .hour, value: 1, to: .now) ?? .now
+        // 30분마다 자동 새로고침. 실제 즉시 갱신은 ConnectivityManager 가
+        // 메시지 받을 때 WidgetCenter.reloadAllTimelines 로 강제 reload.
+        let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
 

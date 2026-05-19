@@ -432,6 +432,8 @@ struct BatchCharacterGenView: View {
             let transparent = await ImageProcessing.bestEffortTransparent(img)
             results[state] = transparent
             CharacterImageStore.save(transparent, for: state)
+            // 워치도 함께 (백그라운드 file transfer, 워치 안 보고 있어도 OS 가 큐잉)
+            ConnectivityManager.shared.sendCharacterImage(transparent, for: state)
             return true
         } catch {
             errors[state] = error.localizedDescription

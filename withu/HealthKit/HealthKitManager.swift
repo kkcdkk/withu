@@ -52,6 +52,10 @@ final class HealthKitManager {
     private(set) var sleep: SleepSummary?
     private(set) var recentWorkouts: [WorkoutSummary] = []
     private(set) var todaySteps: Double?
+    /// 오늘의 활동(운동) 분. HealthKit 의 appleExerciseTime.
+    private(set) var todayActiveMinutes: Double?
+    /// 오늘의 활성 칼로리. activeEnergyBurned.
+    private(set) var todayActiveKcal: Double?
 
     private init() {}
 
@@ -67,6 +71,9 @@ final class HealthKitManager {
         }
         if let active = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) {
             types.insert(active)
+        }
+        if let exercise = HKObjectType.quantityType(forIdentifier: .appleExerciseTime) {
+            types.insert(exercise)
         }
         return types
     }
@@ -189,6 +196,53 @@ final class HealthKitManager {
         todaySteps = total
         isAuthorized = true   // fetch 통과 → 권한 있음으로 간주
         return total
+    }
+
+    // MARK: - 오늘 활동 분 + 칼로리
+
+    /// 오늘의 운동(활동) 분 (appleExerciseTime, unit: minute).
+    func fetchTodayActiveMinutes() async throws -> Double {
+        let total = try await fetchTodayCumulative(.appleExerciseTime, unit: .minute())
+        todayActiveMinutes = total
+        isAuthorized = true
+        return total
+    }
+
+    /// 오늘의 활성 칼로리 (activeEnergyBurned, unit: kcal).
+    func fetchTodayActiveKcal() async throws -> Double {
+        let total = try await fetchTodayCumulative(.activeEnergyBurned, unit: .kilocalorie())
+        todayActiveKcal = total
+        isAuthorized = true
+        return total
+    }
+
+    private func fetchTodayCumulative(_ identifier: HKQuantityTypeIdentifier,
+                                       unit: HKUnit) async throws -> Double {
+        guard let qType = HKObjectType.quantityType(forIdentifier: identifier) else {
+            throw HealthError.typeUnavailable(identifier.rawValue)
+        }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let q = HKStatisticsQuery(
+                quantityType: qType,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, stats, error in
+                if let err = error as NSError?,
+                   err.domain == HKErrorDomain,
+                   err.code == HKError.errorNoData.rawValue {
+                    continuation.resume(returning: 0); return
+                }
+                if let error {
+                    continuation.resume(throwing: HealthError.query(error)); return
+                }
+                let sum = stats?.sumQuantity()?.doubleValue(for: unit) ?? 0
+                continuation.resume(returning: sum)
+            }
+            store.execute(q)
+        }
     }
 }
 
