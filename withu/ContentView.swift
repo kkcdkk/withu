@@ -219,6 +219,11 @@ struct ContentView: View {
             } label: {
                 Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
             }
+            NavigationLink {
+                CharacterGalleryView()
+            } label: {
+                Label("캐릭터 갤러리", systemImage: "photo.stack")
+            }
         }
     }
 

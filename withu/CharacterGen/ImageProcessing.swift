@@ -36,12 +36,22 @@ enum ImageProcessing {
 
     /// AI 생성 결과처럼 가짜 체커보드 배경이 박혀 있을 수 있는 이미지를
     /// 베스트-에포트로 진짜 alpha PNG 로 변환.
-    /// Vision 이 전경을 못 잡으면 원본을 그대로 반환 (사용자 노출 안 함).
-    static func bestEffortTransparent(_ image: UIImage) async -> UIImage {
-        do {
-            return try await removeBackground(from: image)
-        } catch {
-            return image
+    /// Vision 이 전경을 못 잡거나 15초 안에 안 끝나면 원본을 그대로 반환.
+    /// (일부 이미지에서 Vision 이 매우 느리거나 hang 하는 케이스 안전망.)
+    static func bestEffortTransparent(_ image: UIImage, timeoutSeconds: Double = 15) async -> UIImage {
+        await withTaskGroup(of: UIImage?.self) { group in
+            group.addTask {
+                do { return try await removeBackground(from: image) }
+                catch { return nil }
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(timeoutSeconds))
+                return nil   // timeout → 원본 fallback
+            }
+            // 먼저 끝난 결과를 채택, 나머지 task 는 cancel
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first ?? image
         }
     }
 
