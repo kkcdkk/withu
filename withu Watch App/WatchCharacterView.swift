@@ -82,6 +82,18 @@ private func motion(for state: CharacterState, at date: Date) -> MotionFrame {
         let p = phase(period: 3.2)
         return MotionFrame(scale: 1.0 + 0.025 * p)
 
+    case .wakingUp:
+        // 졸린 듯 느리게 살짝 휘청 — 호흡 + 좌우 살짝
+        let p1 = phase(period: 2.8)
+        let p2 = phase(period: 4.0)
+        return MotionFrame(scale: 1.0 + 0.02 * p1,
+                           offsetX: 1.5 * p2,
+                           rotation: 1.0 * p2)
+
+    case .eating:
+        // 모션 없음 — 가만히 밥 먹는 모습
+        return MotionFrame()
+
     case .idle:
         // 평범한 호흡 + 살짝 까닥
         let p = phase(period: 2.4)
@@ -111,6 +123,12 @@ private func motion(for state: CharacterState, at date: Date) -> MotionFrame {
         // 손 흔드는 느낌 — 좌우 회전
         let p = phase(period: 1.1)
         return MotionFrame(rotation: 5 * p)
+
+    case .cloudy:
+        // 잔잔한 호흡 — 구름 위에 있는 듯 부드럽게
+        let p = phase(period: 2.6)
+        return MotionFrame(scale: 1.0 + 0.025 * p,
+                           offsetY: -1.2 * p)
 
     case .snowPlay:
         // 발랄한 좌우 점프

@@ -14,7 +14,10 @@ import WidgetKit
 struct BatchCharacterGenView: View {
     // MARK: - Input
 
-    @State private var baseIdentity: String = "round chibi mascot character with simple features and friendly closed-eye smile"
+    @State private var baseIdentity: String = {
+        let p = CharacterProfileStore.load().aiPrompt
+        return p.isEmpty ? "round chibi mascot character with simple features and friendly closed-eye smile" : p
+    }()
 
     @State private var stateHints: [CharacterState: String] = Dictionary(
         uniqueKeysWithValues: CharacterState.allCases.map { ($0, $0.generationHint) }
@@ -44,6 +47,13 @@ struct BatchCharacterGenView: View {
     @State private var errors: [CharacterState: String] = [:]
 
     @State private var showFinishedAlert: Bool = false
+    /// 배치 생성 Task — 중단 버튼이 cancel() 호출
+    @State private var batchTask: Task<Void, Never>?
+
+    // 결과 사진 클릭 시 sheet
+    @State private var selectedResult: (state: CharacterState, image: UIImage)?
+    @State private var revisionText: String = ""
+    @State private var isRevising: Bool = false
 
     // 사진 앱 저장 상태
     @State private var isSavingPhotos: Bool = false
@@ -78,6 +88,19 @@ struct BatchCharacterGenView: View {
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
         }
+        .sheet(item: Binding(
+            get: { selectedResult.map { ResultSelection(state: $0.state, image: $0.image) } },
+            set: { _ in selectedResult = nil }
+        )) { sel in
+            resultDetailSheet(state: sel.state, image: sel.image)
+        }
+    }
+
+    /// sheet 의 item 으로 쓸 wrapper (Identifiable 필요)
+    private struct ResultSelection: Identifiable {
+        let state: CharacterState
+        let image: UIImage
+        var id: String { state.rawValue }
     }
 
     // MARK: - Sections
@@ -110,9 +133,14 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("생성할 상태 (\(selectedStates.count)개)")
         } footer: {
-            let cost = costPer(quality: quality) * Double(selectedStates.count)
-            Text("예상 비용: \(selectedStates.count)개 × \(String(format: "$%.3f", costPer(quality: quality))) = \(String(format: "$%.2f", cost))")
-                .foregroundStyle(.secondary)
+            let count = selectedStates.count
+            let cost = costPer(quality: quality) * Double(count)
+            let parallel = min(count, Self.maxConcurrent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("선택 \(count)개 · 병렬 실행 \(parallel)개 동시")
+                Text("예상 비용: \(count) × \(String(format: "$%.3f", costPer(quality: quality))) = \(String(format: "$%.2f", cost))")
+            }
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -280,7 +308,7 @@ struct BatchCharacterGenView: View {
     private var startSection: some View {
         Section {
             Button {
-                Task { await startBatch() }
+                batchTask = Task { await startBatch() }
             } label: {
                 if isGenerating {
                     HStack {
@@ -300,6 +328,12 @@ struct BatchCharacterGenView: View {
                 Text("⚠️ 진행 중엔 앱을 그대로 켜둬 주세요. 병렬로 \(inProgressStates.count)개 동시 진행 중.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
+                Button(role: .destructive) {
+                    batchTask?.cancel()
+                    batchTask = nil
+                } label: {
+                    Label("중단", systemImage: "stop.circle.fill")
+                }
             }
         }
     }
@@ -337,16 +371,22 @@ struct BatchCharacterGenView: View {
     }
 
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
-        VStack(spacing: 6) {
-            Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            HStack {
-                Text(state.symbolEmoji)
-                Text(state.rawValue).font(.caption).lineLimit(1)
-                Spacer()
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+        Button {
+            selectedResult = (state, image)
+            revisionText = ""
+        } label: {
+            VStack(spacing: 6) {
+                Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack {
+                    Text(state.symbolEmoji)
+                    Text(state.rawValue).font(.caption).lineLimit(1)
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private func errorCard(state: CharacterState, error: String) -> some View {
@@ -391,8 +431,10 @@ struct BatchCharacterGenView: View {
         return referenceImage?.pngData()?.base64EncodedString()
     }
 
-    /// 전체 순차 시작 — 한 state 가 완전히 끝나야 다음 state 진행.
-    /// 가장 단순하고 안정적. 서버 / OpenAI 부담 최소.
+    /// 동시 호출 개수. 3 = 균형 (서버 부담 적당 + 시간 단축).
+    private static let maxConcurrent: Int = 3
+
+    /// 전체 병렬 시작 — TaskGroup 풀 패턴으로 maxConcurrent 개만 동시 진행.
     private func startBatch() async {
         isGenerating = true
         results.removeAll()
@@ -409,9 +451,25 @@ struct BatchCharacterGenView: View {
         }
 
         let toGen = CharacterState.allCases.filter { selectedStates.contains($0) }
-        for state in toGen {
-            let refB64 = resolveReference(for: state)
-            await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
+        var iterator = toGen.makeIterator()
+
+        await withTaskGroup(of: Void.self) { group in
+            // 1차 — 초기 풀 크기만큼 채움
+            for _ in 0..<Self.maxConcurrent {
+                guard let state = iterator.next() else { break }
+                let refB64 = resolveReference(for: state)
+                group.addTask { @MainActor in
+                    await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
+                }
+            }
+            // 하나 끝나면 즉시 다음 추가 → 풀 유지
+            while await group.next() != nil {
+                guard let state = iterator.next() else { continue }
+                let refB64 = resolveReference(for: state)
+                group.addTask { @MainActor in
+                    await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
+                }
+            }
         }
     }
 
@@ -463,6 +521,130 @@ struct BatchCharacterGenView: View {
         } catch {
             errors[state] = error.localizedDescription
             return false
+        }
+    }
+
+    /// 결과 카드 탭 시 열리는 sheet — 큰 이미지 + 저장 / 수정 옵션
+    @ViewBuilder
+    private func resultDetailSheet(state: CharacterState, image: UIImage) -> some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 320)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    Text("\(state.symbolEmoji) \(state.caption)")
+                        .font(.headline)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("수정 요청 (자연어)").font(.caption).foregroundStyle(.secondary)
+                        TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
+                            .lineLimit(2...4)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    .padding(.horizontal)
+
+                    HStack(spacing: 12) {
+                        Button {
+                            Task { await saveOneToPhotos(image) }
+                        } label: {
+                            Label("저장", systemImage: "square.and.arrow.down")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            Task { await reviseOne(state, text: revisionText) }
+                        } label: {
+                            if isRevising {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                Label("수정", systemImage: "wand.and.stars")
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical)
+            }
+            .navigationTitle("결과 보기")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") { selectedResult = nil }
+                }
+            }
+        }
+    }
+
+    /// 단일 이미지를 사진 앱에 저장 (add-only 권한).
+    private func saveOneToPhotos(_ image: UIImage) async {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → withu 에서 허용해 주세요."
+            showSaveResultAlert = true
+            return
+        }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            }
+            saveResultMessage = "사진 앱에 저장됐어요."
+        } catch {
+            saveResultMessage = "저장 실패: \(error.localizedDescription)"
+        }
+        showSaveResultAlert = true
+    }
+
+    /// 기존 결과 + 자연어 수정 요청으로 재생성. 현재 결과를 reference 로.
+    private func reviseOne(_ state: CharacterState, text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isRevising = true
+        defer { isRevising = false }
+
+        // 현재 결과 reference + 기존 prompt + 수정 요청
+        let currentImage = results[state]
+        let refB64 = currentImage?.pngData()?.base64EncodedString()
+        let basePrompt = "\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
+        let modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
+
+        inProgressStates.insert(state)
+        stateStartedAt[state] = .now
+        defer {
+            inProgressStates.remove(state)
+            stateStartedAt.removeValue(forKey: state)
+        }
+        do {
+            let req = GenerateImageRequest(
+                prompt: modifiedPrompt,
+                referenceImageBase64: refB64,
+                steps: 30,
+                width: 1024,
+                height: 1024,
+                quality: quality,
+                artStyle: artStyle,
+                style: "auto"
+            )
+            let resp = try await APIClient.shared.generateImage(req)
+            if let data = Data(base64Encoded: resp.imageBase64),
+               let img = UIImage(data: data) {
+                let transparent = await ImageProcessing.bestEffortTransparent(img)
+                results[state] = transparent
+                CharacterImageStore.save(transparent, for: state)
+                ConnectivityManager.shared.sendCharacterImage(transparent, for: state)
+                // sheet 의 image 도 갱신 — 새 결과 즉시 표시
+                selectedResult = (state, transparent)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        } catch {
+            errors[state] = error.localizedDescription
         }
     }
 

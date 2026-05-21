@@ -10,11 +10,14 @@ import SwiftUI
 enum CharacterState: String, Codable, Hashable, CaseIterable {
     case idle
     case sleeping
+    case wakingUp        // 기상 직후 (07:00-08:00) — 베개 + 졸린 표정
     case walking
     case running
     case cycling
     case energetic       // 활동량 많음 (워크아웃은 아니지만 걸음 많은 날)
+    case eating          // 식사 시간 (12:00-12:30, 18:00-18:30)
     case beach           // 매우 더운 날 — 해변 일광욕
+    case cloudy          // 흐림 — 캐릭터 위에 작은 구름
     case rainyShelter    // 비 + 휴식 — 우산
     case snowPlay        // 눈 + 활동 — 눈사람/스노우보드
 
@@ -23,11 +26,14 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:           return "face.smiling"
         case .sleeping:       return "moon.zzz.fill"
+        case .wakingUp:       return "bed.double.fill"
         case .walking:        return "figure.walk"
         case .running:        return "figure.run"
         case .cycling:        return "bicycle"
         case .energetic:      return "sparkles"
+        case .eating:         return "fork.knife"
         case .beach:          return "sun.max.fill"
+        case .cloudy:         return "cloud.fill"
         case .rainyShelter:   return "umbrella.fill"
         case .snowPlay:       return "snowflake"
         }
@@ -37,11 +43,14 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:           return "느긋한 하루"
         case .sleeping:       return "쿨쿨… 자고 있어요"
+        case .wakingUp:       return "잠 깨는 중 🥱"
         case .walking:        return "산책 중 🚶"
         case .running:        return "달리는 중 🏃"
         case .cycling:        return "자전거 타는 중 🚴"
         case .energetic:      return "에너지 넘치는 하루!"
+        case .eating:         return "맛있게 식사 중 🍽️"
         case .beach:          return "해변에서 일광욕 🏖️"
+        case .cloudy:         return "구름 낀 하루 ☁️"
         case .rainyShelter:   return "우산 쓰고 비 구경 ☔️"
         case .snowPlay:       return "눈 속에서 신나게 ❄️"
         }
@@ -51,11 +60,14 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:           return .gray
         case .sleeping:       return .indigo
+        case .wakingUp:       return .purple
         case .walking:        return .green
         case .running:        return .orange
         case .cycling:        return .blue
         case .energetic:      return .pink
+        case .eating:         return .red
         case .beach:          return .yellow
+        case .cloudy:         return .gray
         case .rainyShelter:   return .teal
         case .snowPlay:       return .cyan
         }
@@ -71,11 +83,14 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:         return "standing peacefully, hands folded, looking calm with a small smile"
         case .sleeping:     return "sleeping on a small pillow, eyes closed, with a 'zzz' bubble nearby"
+        case .wakingUp:     return "just woken up, holding a pillow, half-closed sleepy eyes, messy hair, yawning"
         case .walking:      return "walking happily with one foot up, motion lines, friendly expression"
         case .running:      return "running with arms swinging energetically, dynamic pose"
         case .cycling:      return "riding a small bicycle, wearing a tiny helmet, friendly smile"
         case .energetic:    return "jumping in the air with sparkles around, super happy"
+        case .eating:       return "sitting at a small table, happily eating a meal with fork and spoon, food on plate"
         case .beach:        return "lying on a beach towel with sunglasses, sun overhead"
+        case .cloudy:       return "standing calmly with small fluffy clouds floating above the head, soft cloudy sky background, peaceful expression"
         case .rainyShelter: return "holding an umbrella, wearing rain boots, raindrops around"
         case .snowPlay:     return "standing in snow, making a snowball, wearing mittens and scarf"
         }
@@ -86,11 +101,14 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:           return "🙂"
         case .sleeping:       return "💤"
+        case .wakingUp:       return "🥱"
         case .walking:        return "🚶"
         case .running:        return "🏃"
         case .cycling:        return "🚴"
         case .energetic:      return "✨"
+        case .eating:         return "🍽️"
         case .beach:          return "🏖️"
+        case .cloudy:         return "☁️"
         case .rainyShelter:   return "☔️"
         case .snowPlay:       return "❄️"
         }

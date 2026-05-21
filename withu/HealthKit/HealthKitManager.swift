@@ -5,6 +5,7 @@
 
 import Foundation
 import HealthKit
+import WidgetKit
 
 enum HealthError: LocalizedError {
     case notAvailable
@@ -44,6 +45,9 @@ final class HealthKitManager {
     static let shared = HealthKitManager()
 
     @ObservationIgnored private let store = HKHealthStore()
+    @ObservationIgnored private var workoutObserverQuery: HKObserverQuery?
+    @ObservationIgnored private var stepObserverQuery: HKObserverQuery?
+    @ObservationIgnored private var sleepObserverQuery: HKObserverQuery?
 
     /// 권한 요청을 한 번이라도 했거나 마지막 fetch 가 성공했는지.
     /// (Apple HealthKit 은 어떤 항목이 허용됐는지 앱에 알리지 않으므로
@@ -59,6 +63,9 @@ final class HealthKitManager {
     /// iOS 의 수면 일정(Health 앱) 안에 현재 시각이 들어있는지.
     /// Apple 이 wind-down ~ 기상 시간을 자동으로 `inBed` sample 로 미리 기록함.
     private(set) var isInBedSchedule: Bool = false
+    /// 사용자가 Health 수면 일정 설정해뒀는지 (= inBed sample 존재 여부).
+    /// 없으면 resolver 가 기본 22-07 시간대로 fallback.
+    private(set) var hasSleepSchedule: Bool = false
 
     private init() {}
 
@@ -131,6 +138,94 @@ final class HealthKitManager {
         return summary
     }
 
+    // MARK: - 자동 감지 (observer + background delivery)
+
+    /// HealthKit 의 workout / step 변화 자동 감지 + 백그라운드 위젯 reload.
+    ///
+    /// === ⚠️ Apple 의 백그라운드 딜레이 정책 주의사항 ===
+    ///
+    /// 1. **Entitlement 필요**: Xcode → Signing & Capabilities → "Background Modes"
+    ///    추가 후 "Background fetch" 체크. + "HealthKit" capability 의 Background Delivery 도.
+    ///    안 하면 enableBackgroundDelivery 가 silent 하게 무시됨.
+    ///
+    /// 2. **frequency 의미**: HKWorkout / sleepAnalysis 같은 category/correlation 은
+    ///    `.immediate` 사용 가능. HKQuantityType (stepCount 등) 은 `.hourly` 가 최대.
+    ///    iOS 가 배터리 보호 위해 *.immediate 도 수십 초 ~ 수 분 지연시킬 수 있음.*
+    ///    "즉시" 보장 X — best-effort.
+    ///
+    /// 3. **completionHandler 필수**: HKObserverQuery callback 안에서 반드시 호출.
+    ///    안 하면 OS 가 retry 안 보내고 background delivery 자동 비활성화 가능.
+    ///
+    /// 4. **백그라운드 실행 시간**: 깨어난 후 약 30초 안에 작업 끝내야. async fetch +
+    ///    widget reload 정도면 충분. 길어지면 OS 가 강제 종료.
+    ///
+    /// 5. **앱이 force-quit 상태면 안 깨어남**: 사용자가 위로 swipe up 으로 종료한 상태면
+    ///    iOS 가 background callback 안 보냄. 보통 launch 한 번 해두면 그 후 작동.
+    ///
+    /// 6. **observer 는 long-lived**: 한 번 execute 하면 앱 종료까지 살아있음.
+    ///    중복 execute 방지 위해 nil 체크.
+    ///
+    /// 7. **권한 필요**: 해당 type 의 read 권한 있어야 callback 옴.
+    func startObservingChanges() {
+        // 1) Workout 변화 (운동 종료 시점 감지)
+        if workoutObserverQuery == nil {
+            let workoutType = HKObjectType.workoutType()
+            let query = HKObserverQuery(sampleType: workoutType,
+                                        predicate: nil) { [weak self] _, completionHandler, error in
+                // completionHandler 반드시 호출 — 안 하면 다음 callback 안 옴
+                defer { completionHandler() }
+                guard error == nil, let self else { return }
+                Task { @MainActor in
+                    _ = try? await self.fetchWorkouts(days: 1)
+                    // 위젯/컴플리케이션 즉시 reload — 배경에서 깨어나도 캐릭터 갱신
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+            }
+            workoutObserverQuery = query
+            store.execute(query)
+            // 백그라운드 delivery 활성화 — 앱이 백그라운드여도 callback 옴.
+            store.enableBackgroundDelivery(for: workoutType, frequency: .immediate) { _, _ in
+                // 결과 무시. 실패해도 foreground observer 는 작동.
+            }
+        }
+        // 2) Step 변화 (활동량 갱신)
+        if stepObserverQuery == nil,
+           let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) {
+            let query = HKObserverQuery(sampleType: stepType,
+                                        predicate: nil) { [weak self] _, completionHandler, error in
+                defer { completionHandler() }
+                guard error == nil, let self else { return }
+                Task { @MainActor in
+                    _ = try? await self.fetchTodaySteps()
+                    _ = try? await self.fetchTodayActiveMinutes()
+                    _ = try? await self.fetchTodayActiveKcal()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+            }
+            stepObserverQuery = query
+            store.execute(query)
+            // stepCount 는 quantity type — frequency .immediate 가 .hourly 로 강등될 수 있음
+            store.enableBackgroundDelivery(for: stepType, frequency: .immediate) { _, _ in }
+        }
+        // 3) Sleep 변화 (inBed sample 생성/종료 시점 감지 → sleeping state)
+        if sleepObserverQuery == nil,
+           let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            let query = HKObserverQuery(sampleType: sleepType,
+                                        predicate: nil) { [weak self] _, completionHandler, error in
+                defer { completionHandler() }
+                guard error == nil, let self else { return }
+                Task { @MainActor in
+                    _ = await self.fetchInBedSchedule()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+            }
+            sleepObserverQuery = query
+            store.execute(query)
+            // sleepAnalysis 는 category type — .immediate 지원
+            store.enableBackgroundDelivery(for: sleepType, frequency: .immediate) { _, _ in }
+        }
+    }
+
     // MARK: - 현재 수면 일정 안인지
 
     /// Health 앱의 수면 일정에 따르면 지금 자고 있어야 하는 시각인지 확인.
@@ -161,8 +256,11 @@ final class HealthKitManager {
         }
 
         let inBedValue = HKCategoryValueSleepAnalysis.inBed.rawValue
-        let nowInside = samples.contains { s in
-            s.value == inBedValue && s.startDate <= now && now < s.endDate
+        let inBedSamples = samples.filter { $0.value == inBedValue }
+        // 어떤 시점이든 inBed sample 있음 = 사용자가 수면 일정 설정함
+        hasSleepSchedule = !inBedSamples.isEmpty
+        let nowInside = inBedSamples.contains { s in
+            s.startDate <= now && now < s.endDate
         }
         isInBedSchedule = nowInside
         return nowInside

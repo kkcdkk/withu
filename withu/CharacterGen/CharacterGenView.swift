@@ -55,8 +55,15 @@ struct CharacterGenView: View {
                 importSection
                 importResultSection
             }
+            Section {
+                NavigationLink {
+                    BatchCharacterGenView()
+                } label: {
+                    Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
+                }
+            }
         }
-        .navigationTitle("캐릭터 만들기")
+        .navigationTitle("함께할 캐릭터 생성하기")
         .scrollDismissesKeyboard(.interactively)
         .alert("적용됨", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}

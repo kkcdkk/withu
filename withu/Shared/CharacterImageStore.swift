@@ -14,6 +14,11 @@ import Foundation
 import UIKit
 #endif
 
+extension Notification.Name {
+    /// 활성 슬롯 캐릭터 이미지가 변경됨 — ContentView 등이 재로드 트리거에 사용.
+    static let characterImageChanged = Notification.Name("withu.characterImageChanged")
+}
+
 /// 갤러리 한 항목.
 struct GalleryItem: Identifiable, Codable, Equatable {
     let id: String              // UUID().uuidString
@@ -135,7 +140,9 @@ enum CharacterImageStore {
             try? data.write(to: activeURL, options: .atomic)
         }
         // 2) 갤러리에도 같은 데이터 저장 + 메타 등록
-        return addToGalleryInternal(data: data, sourceState: state)
+        let item = addToGalleryInternal(data: data, sourceState: state)
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+        return item
     }
 
     /// 활성 슬롯 삭제 → asset / SF Symbol fallback 으로 돌아감.
@@ -206,6 +213,7 @@ enum CharacterImageStore {
               let activeURL = activeFileURL(for: state) else { return false }
         do {
             try data.write(to: activeURL, options: .atomic)
+            NotificationCenter.default.post(name: .characterImageChanged, object: state)
             return true
         } catch {
             return false

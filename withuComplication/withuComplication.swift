@@ -145,6 +145,7 @@ struct withuComplication: Widget {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             CharacterComplicationView(entry: entry)
                 .containerBackground(for: .widget) { Color.clear }
+                .widgetURL(URL(string: "withu://main"))   // 컴플리케이션 탭 → 워치 앱 열림
         }
         .configurationDisplayName("withu 캐릭터")
         .description("내 캐릭터의 지금 상태를 시계 페이스에 보여줘요.")

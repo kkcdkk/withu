@@ -318,6 +318,7 @@ struct withuWidget: Widget {
                     // (iOS 17+ containerBackground 는 의무라 비워둘 수 없음, Color.clear 명시.)
                     Color.clear
                 }
+                .widgetURL(URL(string: "withu://main"))   // 위젯 탭 → 앱 열림
         }
         .configurationDisplayName("withu 캐릭터")
         .description("내 캐릭터의 지금 상태를 보여줘요.")
