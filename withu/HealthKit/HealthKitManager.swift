@@ -56,6 +56,9 @@ final class HealthKitManager {
     private(set) var todayActiveMinutes: Double?
     /// 오늘의 활성 칼로리. activeEnergyBurned.
     private(set) var todayActiveKcal: Double?
+    /// iOS 의 수면 일정(Health 앱) 안에 현재 시각이 들어있는지.
+    /// Apple 이 wind-down ~ 기상 시간을 자동으로 `inBed` sample 로 미리 기록함.
+    private(set) var isInBedSchedule: Bool = false
 
     private init() {}
 
@@ -126,6 +129,43 @@ final class HealthKitManager {
         sleep = summary
         isAuthorized = true   // fetch 가 에러 없이 통과 → 권한 있음으로 간주
         return summary
+    }
+
+    // MARK: - 현재 수면 일정 안인지
+
+    /// Health 앱의 수면 일정에 따르면 지금 자고 있어야 하는 시각인지 확인.
+    /// iOS 는 schedule 의 wind-down ~ 기상 시각을 `inBed` 카테고리 sample 로 미리 기록.
+    /// 어떤 사유 (권한 거부, 일정 미설정 등) 든 false 반환 — never throws.
+    @discardableResult
+    func fetchInBedSchedule() async -> Bool {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            isInBedSchedule = false
+            return false
+        }
+        let now = Date()
+        let start = now.addingTimeInterval(-24 * 3600)
+        let end = now.addingTimeInterval(24 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+
+        // throws 없는 continuation — query error 도 빈 결과로 처리.
+        let samples: [HKCategorySample] = await withCheckedContinuation { cont in
+            let q = HKSampleQuery(
+                sampleType: sleepType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                cont.resume(returning: (samples as? [HKCategorySample]) ?? [])
+            }
+            store.execute(q)
+        }
+
+        let inBedValue = HKCategoryValueSleepAnalysis.inBed.rawValue
+        let nowInside = samples.contains { s in
+            s.value == inBedValue && s.startDate <= now && now < s.endDate
+        }
+        isInBedSchedule = nowInside
+        return nowInside
     }
 
     // MARK: - 워크아웃 (지난 N일)

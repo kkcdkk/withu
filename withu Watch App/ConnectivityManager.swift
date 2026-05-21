@@ -23,6 +23,11 @@ final class ConnectivityManager: NSObject {
 
     /// 마지막으로 받은 캐릭터 이미지의 state — 단순 UI 표시용
     private(set) var lastReceivedImageState: String?
+    /// 캐릭터 이미지가 새로 도착할 때마다 +1. SwiftUI view 가 .id() 또는
+    /// .onChange 로 의존하면, 같은 state 의 이미지만 바뀌어도 강제 재로드됨.
+    private(set) var characterImageVersion: Int = 0
+    /// 마지막으로 컴플리케이션 reload 를 trigger 한 시각 (디버그)
+    private(set) var lastComplicationReloadAt: Date?
 
     @ObservationIgnored private let session: WCSession? =
         WCSession.isSupported() ? WCSession.default : nil
@@ -92,7 +97,30 @@ extension ConnectivityManager: WCSessionDelegate {
             Task { @MainActor in
                 CharacterImageStore.save(img, for: state)
                 self.lastReceivedImageState = stateRaw
+                self.characterImageVersion &+= 1
+
+                // 컴플리케이션이 SharedAppState 메시지에 의존하니까, 사진 받자마자
+                // 마지막 메시지의 timestamp 만 새로 써서 강제로 trigger.
+                // 이게 없으면 iOS 의 force resend (applicationContext) 가 file transfer
+                // 와 다른 채널이라 타이밍 차이로 컴플리케이션이 옛 state 그대로일 수 있음.
+                if let last = SharedAppState.loadMessage() {
+                    let refreshed = WatchMessage(
+                        state: last.state,
+                        todaySteps: last.todaySteps,
+                        lastSleepHours: last.lastSleepHours,
+                        todayActiveMinutes: last.todayActiveMinutes,
+                        todayActiveKcal: last.todayActiveKcal,
+                        weatherEmoji: last.weatherEmoji,
+                        weatherTempC: last.weatherTempC,
+                        timestamp: Date()
+                    )
+                    SharedAppState.save(refreshed)
+                }
+
                 WidgetCenter.shared.reloadAllTimelines()
+                // kind 별 명시적 reload — 시스템이 reloadAllTimelines 무시하는 케이스 대비
+                WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
+                self.lastComplicationReloadAt = Date()
             }
         } else {
             Task { @MainActor in self.lastError = "수신 파일 디코드 실패" }

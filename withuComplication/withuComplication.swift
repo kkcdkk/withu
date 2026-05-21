@@ -80,6 +80,7 @@ struct CharacterProvider: TimelineProvider {
 
 struct CharacterComplicationView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: CharacterEntry
 
     var body: some View {
@@ -95,18 +96,24 @@ struct CharacterComplicationView: View {
         }
     }
 
-    /// 워치 컴플리케이션도 시스템 tint 강제. alpha PNG 면 캐릭터 실루엣이
-    /// 시스템 색으로 채워져 SF Symbol 보다 더 캐릭터답게 보임.
+    /// fullColor (Modular 등) → 원본 그대로
+    /// accented/vibrant (단색 강제 face) → outline + 어두운 디테일
+    private var useOutline: Bool {
+        renderingMode != .fullColor
+    }
+
     private var circular: some View {
-        CharacterImageView(state: entry.state)
-            .widgetAccentable()
+        CharacterImageView(state: entry.state,
+                           maxPixelSize: 128,
+                           outlineOnly: useOutline)
     }
 
     private var rectangular: some View {
         HStack(spacing: 6) {
-            CharacterImageView(state: entry.state)
+            CharacterImageView(state: entry.state,
+                               maxPixelSize: 128,
+                               outlineOnly: useOutline)
                 .frame(width: 28, height: 28)
-                .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.state.caption)
                     .font(.caption2)

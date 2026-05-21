@@ -14,6 +14,9 @@ struct CharacterEntry: TimelineEntry {
     let todaySteps: Double?
     let todayActiveMinutes: Double?
     let todayActiveKcal: Double?
+    let lastSleepHours: Double?
+    let weatherEmoji: String?
+    let weatherTempC: Double?
     let isPlaceholder: Bool
 
     static let placeholder = CharacterEntry(
@@ -22,6 +25,9 @@ struct CharacterEntry: TimelineEntry {
         todaySteps: 4321,
         todayActiveMinutes: 38,
         todayActiveKcal: 412,
+        lastSleepHours: 7.5,
+        weatherEmoji: "☀️",
+        weatherTempC: 18,
         isPlaceholder: true
     )
 
@@ -31,6 +37,9 @@ struct CharacterEntry: TimelineEntry {
         self.todaySteps = message.todaySteps
         self.todayActiveMinutes = message.todayActiveMinutes
         self.todayActiveKcal = message.todayActiveKcal
+        self.lastSleepHours = message.lastSleepHours
+        self.weatherEmoji = message.weatherEmoji
+        self.weatherTempC = message.weatherTempC
         self.isPlaceholder = false
     }
 
@@ -39,12 +48,18 @@ struct CharacterEntry: TimelineEntry {
          todaySteps: Double?,
          todayActiveMinutes: Double? = nil,
          todayActiveKcal: Double? = nil,
+         lastSleepHours: Double? = nil,
+         weatherEmoji: String? = nil,
+         weatherTempC: Double? = nil,
          isPlaceholder: Bool = false) {
         self.date = date
         self.state = state
         self.todaySteps = todaySteps
         self.todayActiveMinutes = todayActiveMinutes
         self.todayActiveKcal = todayActiveKcal
+        self.lastSleepHours = lastSleepHours
+        self.weatherEmoji = weatherEmoji
+        self.weatherTempC = weatherTempC
         self.isPlaceholder = isPlaceholder
     }
 }
@@ -73,6 +88,9 @@ struct CharacterProvider: TimelineProvider {
                 todaySteps: base.todaySteps,
                 todayActiveMinutes: base.todayActiveMinutes,
                 todayActiveKcal: base.todayActiveKcal,
+                lastSleepHours: base.lastSleepHours,
+                weatherEmoji: base.weatherEmoji,
+                weatherTempC: base.weatherTempC,
                 isPlaceholder: false
             ))
         }
@@ -119,7 +137,8 @@ struct WidgetView: View {
 private struct CircularView: View {
     let entry: CharacterEntry
     var body: some View {
-        CharacterImageView(state: entry.state)
+        // accessoryCircular 은 작은 원. 128px 면 충분 (메모리 절약).
+        CharacterImageView(state: entry.state, maxPixelSize: 128)
             .widgetAccentable()
     }
 }
@@ -128,11 +147,13 @@ private struct RectangularView: View {
     let entry: CharacterEntry
     var body: some View {
         HStack(spacing: 6) {
-            CharacterImageView(state: entry.state)
+            CharacterImageView(state: entry.state, maxPixelSize: 128)
                 .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
+                // 1줄: 날씨 + state caption
+                Text(lockRectHeader(entry)).font(.caption2).bold().lineLimit(1)
+                // 2줄: 건강 metric 압축
                 Text(lockRectMetric(entry)).font(.system(size: 10)).lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -140,20 +161,32 @@ private struct RectangularView: View {
     }
 }
 
-/// 잠금화면 rectangular 의 한 줄 — 핵심 metric 2~3개 모음.
+private func lockRectHeader(_ entry: CharacterEntry) -> String {
+    if let w = weatherLine(entry) { return "\(w) · \(entry.state.caption)" }
+    return entry.state.caption
+}
+
+/// 잠금화면 rectangular 의 한 줄 — 핵심 metric 압축.
 private func lockRectMetric(_ entry: CharacterEntry) -> String {
     var parts: [String] = []
     if let s = entry.todaySteps, s > 0 { parts.append("👟\(Int(s))") }
-    if let k = entry.todayActiveKcal, k > 0 { parts.append("🔥\(Int(k))") }
     if let m = entry.todayActiveMinutes, m > 0 { parts.append("🏃\(Int(m))") }
+    if let h = entry.lastSleepHours, h > 0 { parts.append("💤\(formatHours(h))") }
     return parts.joined(separator: " · ")
 }
 
 private struct InlineView: View {
     let entry: CharacterEntry
     var body: some View {
-        Text("\(entry.state.symbolEmoji) \(entry.state.caption)")
+        Text(inlineText(entry))
     }
+}
+
+private func inlineText(_ entry: CharacterEntry) -> String {
+    var parts: [String] = ["\(entry.state.symbolEmoji) \(entry.state.caption)"]
+    if let w = weatherLine(entry) { parts.append(w) }
+    if let s = entry.todaySteps, s > 0 { parts.append("👟\(Int(s))") }
+    return parts.joined(separator: " · ")
 }
 
 // MARK: 홈화면 (system*)
@@ -163,16 +196,20 @@ private struct InlineView: View {
 private struct SmallView: View {
     let entry: CharacterEntry
     var body: some View {
-        VStack(spacing: 4) {
-            CharacterImageView(state: entry.state)
-                .frame(width: 56, height: 56)
-            // 작아도 핵심 활동량 한 줄
-            if entry.todaySteps != nil || entry.todayActiveKcal != nil {
-                Text(fitnessLineShort(entry))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+        VStack(spacing: 3) {
+            // 맨 위: 날씨 (있을 때만)
+            if let weather = weatherLine(entry) {
+                Text(weather)
+                    .font(.system(size: 11)).bold()
                     .lineLimit(1)
             }
+            CharacterImageView(state: entry.state, maxPixelSize: 256)
+                .frame(width: 46, height: 46)
+            // 핵심 metric 들 한 줄에 압축. small 은 좁아서 가장 큰 2개만.
+            Text(smallMetricLine(entry))
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -181,11 +218,16 @@ private struct SmallView: View {
 private struct MediumView: View {
     let entry: CharacterEntry
     var body: some View {
-        HStack(spacing: 14) {
-            CharacterImageView(state: entry.state)
-                .frame(width: 72, height: 72)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.state.caption).font(.subheadline).bold()
+        HStack(spacing: 12) {
+            VStack(spacing: 4) {
+                CharacterImageView(state: entry.state, maxPixelSize: 256)
+                    .frame(width: 64, height: 64)
+                Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                if let weather = weatherLine(entry) {
+                    Text(weather).font(.caption).bold()
+                }
                 fitnessRows(entry, layout: .compact)
             }
             Spacer(minLength: 0)
@@ -198,10 +240,16 @@ private struct MediumView: View {
 private struct LargeView: View {
     let entry: CharacterEntry
     var body: some View {
-        VStack(spacing: 12) {
-            CharacterImageView(state: entry.state)
-                .frame(width: 140, height: 140)
-            Text(entry.state.caption).font(.headline)
+        VStack(spacing: 8) {
+            // 맨 위 날씨 한 줄
+            if let weather = weatherLine(entry) {
+                Text(weather)
+                    .font(.headline)
+            }
+            CharacterImageView(state: entry.state, maxPixelSize: 512)
+                .frame(width: 120, height: 120)
+            Text(entry.state.caption).font(.subheadline).bold()
+            Divider().padding(.horizontal, 40)
             fitnessRows(entry, layout: .expanded)
         }
         .padding()
@@ -226,18 +274,35 @@ private func fitnessRows(_ entry: CharacterEntry, layout: FitnessLayout) -> some
         if let k = entry.todayActiveKcal, k > 0 {
             Text("🔥 \(Int(k))kcal").font(font).foregroundStyle(.secondary)
         }
+        if let h = entry.lastSleepHours, h > 0 {
+            Text("💤 \(formatHours(h))").font(font).foregroundStyle(.secondary)
+        }
     }
 }
 
-/// systemSmall 의 한 줄 짧은 표시. 가장 큰 metric 하나만.
-private func fitnessLineShort(_ entry: CharacterEntry) -> String {
-    if let s = entry.todaySteps, s > 0 {
-        return "👟 \(Int(s))"
+/// 맨 위 한 줄: 날씨 이모지 + 온도. 둘 다 없으면 nil.
+private func weatherLine(_ entry: CharacterEntry) -> String? {
+    let emoji = entry.weatherEmoji ?? ""
+    if let t = entry.weatherTempC {
+        let head = emoji.isEmpty ? "" : "\(emoji) "
+        return "\(head)\(Int(t.rounded()))°"
     }
-    if let k = entry.todayActiveKcal, k > 0 {
-        return "🔥 \(Int(k))"
-    }
-    return ""
+    return emoji.isEmpty ? nil : emoji
+}
+
+/// systemSmall 의 한 줄. 걸음수 + 수면 (또는 가장 큰 metric 두 개).
+private func smallMetricLine(_ entry: CharacterEntry) -> String {
+    var parts: [String] = []
+    if let s = entry.todaySteps, s > 0 { parts.append("👟\(Int(s))") }
+    if let h = entry.lastSleepHours, h > 0 { parts.append("💤\(formatHours(h))") }
+    return parts.joined(separator: " · ")
+}
+
+private func formatHours(_ h: Double) -> String {
+    if h < 1 { return "\(Int(h * 60))분" }
+    let whole = Int(h)
+    let frac = Int((h - Double(whole)) * 10)
+    return frac == 0 ? "\(whole)h" : "\(whole).\(frac)h"
 }
 
 // MARK: - Widget

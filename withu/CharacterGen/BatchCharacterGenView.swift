@@ -8,6 +8,7 @@
 
 import SwiftUI
 import PhotosUI
+import Photos
 import WidgetKit
 
 struct BatchCharacterGenView: View {
@@ -24,29 +25,30 @@ struct BatchCharacterGenView: View {
     @State private var quality: String = "medium"
     @State private var artStyle: String = "casual"
 
-    /// 일관성 유지 — 첫 결과를 두 번째 호출부터 reference 로
-    @State private var keepConsistency: Bool = true
-
-    /// 첫 결과를 보고 나머지 진행 여부 결정 (기본 ON)
-    @State private var confirmAfterFirst: Bool = true
-
-    /// 참고 이미지 첨부 (모든 호출의 reference 로 사용)
+    /// 전체 참고 이미지 (state 별 reference 가 없을 때의 fallback)
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var referenceImage: UIImage?
+
+    /// state 별 개별 참고 이미지. 있으면 전체 reference 보다 우선.
+    @State private var stateReferenceImages: [CharacterState: UIImage] = [:]
+    @State private var stateReferencePickerItems: [CharacterState: PhotosPickerItem] = [:]
 
     // MARK: - Progress
 
     @State private var isGenerating: Bool = false
-    @State private var currentState: CharacterState?
-    @State private var currentStartedAt: Date?
+    /// 현재 진행 중인 state 들 (병렬이라 여러 개 동시 가능)
+    @State private var inProgressStates: Set<CharacterState> = []
+    @State private var stateStartedAt: [CharacterState: Date] = [:]
 
     @State private var results: [CharacterState: UIImage] = [:]
     @State private var errors: [CharacterState: String] = [:]
 
-    @State private var awaitingConfirm: Bool = false
-    @State private var firstResult: (state: CharacterState, image: UIImage)?
-
     @State private var showFinishedAlert: Bool = false
+
+    // 사진 앱 저장 상태
+    @State private var isSavingPhotos: Bool = false
+    @State private var saveResultMessage: String?
+    @State private var showSaveResultAlert: Bool = false
 
     // MARK: - Body
 
@@ -57,9 +59,6 @@ struct BatchCharacterGenView: View {
             referenceSection
             optionsSection
             startSection
-            if awaitingConfirm, let first = firstResult {
-                confirmSection(first: first)
-            }
             if !results.isEmpty || !errors.isEmpty {
                 resultsSection
             }
@@ -70,6 +69,11 @@ struct BatchCharacterGenView: View {
             Button("확인", role: .cancel) {}
         } message: {
             Text("\(results.count)개 생성 성공, \(errors.count)개 실패. 성공한 캐릭터는 자동으로 적용됐어요.")
+        }
+        .alert("사진 저장", isPresented: $showSaveResultAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(saveResultMessage ?? "")
         }
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
@@ -123,6 +127,9 @@ struct BatchCharacterGenView: View {
             .font(.footnote)
             .disabled(isGenerating)
 
+            // state 별 참고 이미지 (있으면 전체 reference 보다 우선)
+            stateReferencePicker(state)
+
             Button("기본값으로 되돌리기") {
                 stateHints[state] = state.generationHint
             }
@@ -148,9 +155,57 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// state 별 참고 이미지 선택기. 작은 thumbnail + Picker / 제거 버튼.
+    @ViewBuilder
+    private func stateReferencePicker(_ state: CharacterState) -> some View {
+        HStack(spacing: 10) {
+            if let ref = stateReferenceImages[state] {
+                Image(uiImage: ref).resizable().scaledToFill()
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.secondary.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                    .overlay(Image(systemName: "photo")
+                        .foregroundStyle(.secondary).font(.caption))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                PhotosPicker(
+                    stateReferenceImages[state] == nil ? "참고 이미지 추가" : "변경",
+                    selection: Binding(
+                        get: { stateReferencePickerItems[state] },
+                        set: { item in
+                            if let item {
+                                stateReferencePickerItems[state] = item
+                                Task { await loadStateReference(state, item: item) }
+                            } else {
+                                stateReferencePickerItems.removeValue(forKey: state)
+                                stateReferenceImages.removeValue(forKey: state)
+                            }
+                        }
+                    ),
+                    matching: .images
+                )
+                .font(.footnote)
+                .disabled(isGenerating)
+
+                if stateReferenceImages[state] != nil {
+                    Button("이 state 참고 제거", role: .destructive) {
+                        stateReferenceImages.removeValue(forKey: state)
+                        stateReferencePickerItems.removeValue(forKey: state)
+                    }
+                    .font(.caption2)
+                    .disabled(isGenerating)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     @ViewBuilder
     private func resultBadge(_ state: CharacterState) -> some View {
-        if currentState == state, let started = currentStartedAt {
+        if inProgressStates.contains(state), let started = stateStartedAt[state] {
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 let elapsed = Int(ctx.date.timeIntervalSince(started))
                 HStack(spacing: 4) {
@@ -214,16 +269,10 @@ struct BatchCharacterGenView: View {
                 Text("high — $0.17").tag("high")
             }
             .pickerStyle(.menu).disabled(isGenerating)
-
-            Toggle("일관성 유지 (첫 결과를 다음 호출의 reference)", isOn: $keepConsistency)
-                .disabled(isGenerating)
-
-            Toggle("첫 결과 보고 계속할지 결정", isOn: $confirmAfterFirst)
-                .disabled(isGenerating)
         } header: {
             Text("옵션")
         } footer: {
-            Text("\"첫 결과 보고…\" 켜두면 첫 한 장 만든 다음 미리보기 — 마음에 안 들면 나머지 생성 안 함 (비용 절약).")
+            Text("모든 state 가 병렬로 동시에 생성돼요. 참고 이미지 우선순위: state 별 > 전체 > 없음.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -244,46 +293,14 @@ struct BatchCharacterGenView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(isGenerating || awaitingConfirm || selectedStates.isEmpty
+            .disabled(isGenerating || selectedStates.isEmpty
                       || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             if isGenerating {
-                Text("⚠️ 진행 중엔 앱을 그대로 켜둬 주세요.")
+                Text("⚠️ 진행 중엔 앱을 그대로 켜둬 주세요. 병렬로 \(inProgressStates.count)개 동시 진행 중.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
-            } else if awaitingConfirm {
-                Text("👇 아래 \"첫 결과 확인\" 에서 계속 / 중단 선택")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    private func confirmSection(first: (state: CharacterState, image: UIImage)) -> some View {
-        Section {
-            Image(uiImage: first.image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxHeight: 240)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            Text("'\(first.state.rawValue)' 자리 첫 결과")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack {
-                Button("계속 (나머지 \(selectedStates.count - 1)개 생성)") {
-                    Task { await continueRest() }
-                }
-                .buttonStyle(.borderedProminent)
-                Spacer()
-                Button("중단", role: .destructive) {
-                    cancelBatch()
-                }
-            }
-        } header: {
-            Text("첫 결과 확인")
-        } footer: {
-            Text("마음에 들면 계속 — 같은 캐릭터로 나머지 진행. 마음에 안 들면 중단 후 프롬프트 / 옵션 다듬기.")
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -298,6 +315,23 @@ struct BatchCharacterGenView: View {
                         errorCard(state: state, error: err)
                     }
                 }
+            }
+
+            if !results.isEmpty {
+                Button {
+                    Task { await saveAllToPhotos() }
+                } label: {
+                    if isSavingPhotos {
+                        HStack {
+                            ProgressView()
+                            Text("저장 중…")
+                        }
+                    } else {
+                        Label("사진 앱에 모두 저장 (\(results.count)장)",
+                              systemImage: "square.and.arrow.down")
+                    }
+                }
+                .disabled(isSavingPhotos)
             }
         }
     }
@@ -316,98 +350,89 @@ struct BatchCharacterGenView: View {
     }
 
     private func errorCard(state: CharacterState, error: String) -> some View {
-        VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.15)).frame(height: 120)
-                .overlay(Image(systemName: "xmark.octagon").foregroundStyle(.red).font(.title))
-            HStack {
-                Text(state.symbolEmoji)
-                Text(state.rawValue).font(.caption).lineLimit(1)
-                Spacer()
+        Button {
+            Task { await retryOne(state) }
+        } label: {
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.15)).frame(height: 120)
+                    .overlay(
+                        VStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .foregroundStyle(.red).font(.title)
+                            Text("탭해서 재시도")
+                                .font(.caption2).foregroundStyle(.red)
+                        }
+                    )
+                HStack {
+                    Text(state.symbolEmoji)
+                    Text(state.rawValue).font(.caption).lineLimit(1)
+                    Spacer()
+                }
+                Text(error)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(error)
-                .font(.caption2)
-                .foregroundStyle(.red)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .buttonStyle(.plain)
+        .disabled(inProgressStates.contains(state))
     }
 
     // MARK: - Actions
 
-    /// 전체 시작 — 첫 한 장 만들고, confirmAfterFirst 면 미리보기 후 사용자 선택 대기
+    /// state 의 reference base64 결정. state 별 > 공통 > nil.
+    /// startBatch / retryOne 양쪽에서 사용.
+    private func resolveReference(for state: CharacterState) -> String? {
+        if let img = stateReferenceImages[state],
+           let data = img.pngData() {
+            return data.base64EncodedString()
+        }
+        return referenceImage?.pngData()?.base64EncodedString()
+    }
+
+    /// 전체 순차 시작 — 한 state 가 완전히 끝나야 다음 state 진행.
+    /// 가장 단순하고 안정적. 서버 / OpenAI 부담 최소.
     private func startBatch() async {
         isGenerating = true
         results.removeAll()
         errors.removeAll()
-        firstResult = nil
-        awaitingConfirm = false
+        inProgressStates.removeAll()
+        stateStartedAt.removeAll()
 
-        let toGen = CharacterState.allCases.filter { selectedStates.contains($0) }
-        guard let firstState = toGen.first else { isGenerating = false; return }
-
-        // 첫 호출 reference = 사용자 첨부 (있으면)
-        let userRefB64 = referenceImage?.pngData()?.base64EncodedString()
-        let success = await runOne(firstState, reference: userRefB64,
-                                    consistencyPrefix: userRefB64 != nil)
-
-        if !success {
-            isGenerating = false
-            return
-        }
-        guard let firstImg = results[firstState] else {
-            isGenerating = false
-            return
-        }
-        firstResult = (firstState, firstImg)
-
-        if confirmAfterFirst {
-            // 사용자 확인 대기 모드
-            awaitingConfirm = true
-            isGenerating = false
-        } else {
-            // 자동 진행
-            await continueRest()
-        }
-    }
-
-    private func continueRest() async {
-        awaitingConfirm = false
-        isGenerating = true
         defer {
             isGenerating = false
-            currentState = nil
-            currentStartedAt = nil
+            inProgressStates.removeAll()
+            stateStartedAt.removeAll()
             showFinishedAlert = true
+            WidgetCenter.shared.reloadAllTimelines()
         }
 
         let toGen = CharacterState.allCases.filter { selectedStates.contains($0) }
-        // 첫 번째는 이미 끝남 — 두 번째부터
-        let rest = toGen.dropFirst()
-
-        // 두 번째부터는: keepConsistency ON → 첫 결과 reference, OFF → 사용자 reference (있으면)
-        let firstImg = firstResult?.image
-        let chainRef: String? = keepConsistency
-            ? firstImg?.pngData()?.base64EncodedString()
-            : referenceImage?.pngData()?.base64EncodedString()
-
-        for state in rest {
-            _ = await runOne(state, reference: chainRef,
-                              consistencyPrefix: keepConsistency || chainRef != nil)
+        for state in toGen {
+            let refB64 = resolveReference(for: state)
+            await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
         }
-        WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func cancelBatch() {
-        awaitingConfirm = false
-        isGenerating = false
-        firstResult = nil
+    /// 실패한 카드 탭 시 재시도. 같은 prompt + reference 그대로.
+    private func retryOne(_ state: CharacterState) async {
+        // 이전 에러 표시 제거 + 진행 표시 시작
+        errors.removeValue(forKey: state)
+        let refB64 = resolveReference(for: state)
+        await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// 한 state 생성 — 성공 시 true. 결과는 results / errors 에 기록.
     @discardableResult
     private func runOne(_ state: CharacterState, reference: String?, consistencyPrefix: Bool) async -> Bool {
-        currentState = state
-        currentStartedAt = .now
+        inProgressStates.insert(state)
+        stateStartedAt[state] = .now
+        defer {
+            inProgressStates.remove(state)
+            stateStartedAt.removeValue(forKey: state)
+        }
         let prefix = consistencyPrefix
             ? "Same exact character as the reference image — only the pose/scene differs. "
             : ""
@@ -439,6 +464,49 @@ struct BatchCharacterGenView: View {
             errors[state] = error.localizedDescription
             return false
         }
+    }
+
+    /// state 별 참고 이미지를 PhotosPickerItem 에서 로드해 dict 에 저장.
+    private func loadStateReference(_ state: CharacterState, item: PhotosPickerItem) async {
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                stateReferenceImages[state] = img
+            }
+        } catch {
+            // 조용히 무시 — 사용자가 다시 선택하면 됨
+        }
+    }
+
+    /// 결과 이미지들을 사진 앱(카메라 롤)에 저장.
+    /// add-only 권한 사용 — 라이브러리 읽기 권한 없이 추가만 가능.
+    private func saveAllToPhotos() async {
+        isSavingPhotos = true
+        defer { isSavingPhotos = false }
+
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → withu 에서 허용해 주세요."
+            showSaveResultAlert = true
+            return
+        }
+
+        // CharacterState 순서대로 정렬 — 사진 앱에서도 같은 순서로 보임
+        let items: [(CharacterState, UIImage)] = CharacterState.allCases.compactMap { s in
+            results[s].map { (s, $0) }
+        }
+
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                for (_, img) in items {
+                    PHAssetChangeRequest.creationRequestForAsset(from: img)
+                }
+            }
+            saveResultMessage = "\(items.count)장 사진 앱에 저장됐어요."
+        } catch {
+            saveResultMessage = "저장 실패: \(error.localizedDescription)"
+        }
+        showSaveResultAlert = true
     }
 
     private func loadReference(_ item: PhotosPickerItem?) async {

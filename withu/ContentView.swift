@@ -21,7 +21,8 @@ struct ContentView: View {
             sleep: health.sleep,
             workouts: health.recentWorkouts,
             todaySteps: health.todaySteps,
-            weather: weather.snapshot
+            weather: weather.snapshot,
+            inSleepSchedule: health.isInBedSchedule
         )
     }
 
@@ -63,6 +64,10 @@ struct ContentView: View {
                 // 날씨 바뀌면 캐릭터 재계산 → 워치/위젯에 새 메시지 푸시
                 sendStateToWatch(characterState)
             }
+            .onChange(of: health.isInBedSchedule) { _, _ in
+                // 수면 일정 진입/이탈 시 캐릭터 재계산
+                sendStateToWatch(characterState)
+            }
         }
     }
 
@@ -73,6 +78,8 @@ struct ContentView: View {
             lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
             todayActiveMinutes: health.todayActiveMinutes,
             todayActiveKcal: health.todayActiveKcal,
+            weatherEmoji: weather.snapshot?.condition.emoji,
+            weatherTempC: weather.snapshot?.temperatureC,
             timestamp: Date()
         )
         // 1) iOS 위젯이 읽을 수 있게 App Group 에 저장 + 위젯 타임라인 리로드
@@ -321,6 +328,7 @@ struct ContentView: View {
         catch { errors.append("활동 분: \(error.localizedDescription)") }
         do { _ = try await health.fetchTodayActiveKcal() }
         catch { errors.append("칼로리: \(error.localizedDescription)") }
+        _ = await health.fetchInBedSchedule()
 
         // 새 데이터로 워치/위젯 즉시 갱신
         sendStateToWatch(characterState)
@@ -345,7 +353,24 @@ struct ContentView: View {
             Text("자동 모드는 HealthKit 데이터 + 현재 시각으로 결정")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            Button {
+                forceRefreshWidgets()
+            } label: {
+                Label("위젯 강제 새로고침", systemImage: "arrow.clockwise.circle.fill")
+            }
         }
+    }
+
+    /// 명시적으로 위젯 데이터 다시 쓰고 모든 위젯 timeline 강제 reload.
+    /// iOS 가 reloadAllTimelines 무시하는 케이스 있어서 kind 별로도 한 번 더.
+    private func forceRefreshWidgets() {
+        // 1) SharedAppState 에 최신 메시지 강제 쓰기 (위젯이 읽는 곳)
+        sendStateToWatch(characterState)
+        // 2) kind 별 명시적 reload (전체 + 개별 시도)
+        WidgetCenter.shared.reloadAllTimelines()
+        WidgetCenter.shared.reloadTimelines(ofKind: "withuWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
     }
 
     // MARK: - Helpers

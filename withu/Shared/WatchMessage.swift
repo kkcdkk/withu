@@ -17,6 +17,10 @@ struct WatchMessage: Codable, Equatable, Sendable {
     let todayActiveMinutes: Double?
     /// 오늘 활성 칼로리
     let todayActiveKcal: Double?
+    /// 현재 날씨 이모지 (예: ☀️)
+    let weatherEmoji: String?
+    /// 현재 기온 (섭씨)
+    let weatherTempC: Double?
     let timestamp: Date
 
     /// 직렬화/역직렬화 키. 양쪽이 같은 이름을 쓰게 명시.
@@ -28,12 +32,16 @@ struct WatchMessage: Codable, Equatable, Sendable {
          lastSleepHours: Double? = nil,
          todayActiveMinutes: Double? = nil,
          todayActiveKcal: Double? = nil,
+         weatherEmoji: String? = nil,
+         weatherTempC: Double? = nil,
          timestamp: Date = Date()) {
         self.state = state
         self.todaySteps = todaySteps
         self.lastSleepHours = lastSleepHours
         self.todayActiveMinutes = todayActiveMinutes
         self.todayActiveKcal = todayActiveKcal
+        self.weatherEmoji = weatherEmoji
+        self.weatherTempC = weatherTempC
         self.timestamp = timestamp
     }
 }

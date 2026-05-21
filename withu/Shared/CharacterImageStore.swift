@@ -57,9 +57,72 @@ enum CharacterImageStore {
         return UIImage(data: data)
     }
 
+    /// 위젯 메모리 절약용 다운샘플 로드.
+    /// CGContext 로 RGBA 명시해서 그려서 alpha 확실히 유지 (iOS/watchOS 둘 다 작동).
+    /// 일시적으로 원본 디코드되긴 하지만, render 후엔 작은 thumbnail 만 메모리에 남음.
+    static func loadThumbnail(_ state: CharacterState,
+                              maxPixelSize: CGFloat) -> UIImage? {
+        guard let url = activeFileURL(for: state),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let original = UIImage(data: data),
+              let originalCG = original.cgImage else { return nil }
+
+        let originalSize = original.size
+        let maxDim = max(originalSize.width, originalSize.height)
+        guard maxDim > 0 else { return original }
+        // 원본이 이미 작으면 그대로
+        if maxDim <= maxPixelSize { return original }
+
+        let scale = maxPixelSize / maxDim
+        let targetWidth = Int(originalSize.width * scale)
+        let targetHeight = Int(originalSize.height * scale)
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        // premultipliedLast = RGBA — alpha 채널 유지 보장
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let context = CGContext(data: nil,
+                                      width: targetWidth,
+                                      height: targetHeight,
+                                      bitsPerComponent: 8,
+                                      bytesPerRow: 0,
+                                      space: colorSpace,
+                                      bitmapInfo: bitmapInfo) else {
+            return original
+        }
+        context.interpolationQuality = .high
+        context.draw(originalCG, in: CGRect(x: 0, y: 0,
+                                            width: targetWidth,
+                                            height: targetHeight))
+        guard let scaledCG = context.makeImage() else { return original }
+        return UIImage(cgImage: scaledCG)
+    }
+
     static func hasImage(for state: CharacterState) -> Bool {
         guard let url = activeFileURL(for: state) else { return false }
         return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    /// PNG 의 alpha 채널 진단 — 워치 디버그용. "RGBA", "RGB(no alpha)" 또는 nil.
+    static func alphaInfoDescription(for state: CharacterState) -> String? {
+        guard let url = activeFileURL(for: state),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let img = UIImage(data: data),
+              let cg = img.cgImage else { return nil }
+        let alphaInfo = cg.alphaInfo
+        let hasAlpha: String
+        switch alphaInfo {
+        case .none, .noneSkipLast, .noneSkipFirst:
+            hasAlpha = "❌ alpha 없음 (RGB only)"
+        case .premultipliedLast, .premultipliedFirst, .last, .first:
+            hasAlpha = "✅ alpha 있음 (RGBA)"
+        case .alphaOnly:
+            hasAlpha = "alpha only"
+        @unknown default:
+            hasAlpha = "?"
+        }
+        return "\(cg.width)x\(cg.height) · \(hasAlpha)"
     }
 
     /// state 의 활성 슬롯 + 갤러리에 동시 저장. (생성 흐름에서 호출)

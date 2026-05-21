@@ -13,17 +13,21 @@ enum CharacterStateResolver {
     private static let energeticStepThreshold: Double = 8000
     private static let sleepHours: Set<Int> = Set(0..<7).union([22, 23])
 
-    /// 우선순위: 운동 진행 중 → 운동 상태. 그 외 → 날씨 기반.
-    /// (수면/활동량은 명시적 무시 — "운동 우선·평소는 날씨" 정책)
+    /// 우선순위: 수면 일정 → 운동 → 날씨.
+    /// (수면 history / 걸음수는 무시 — "수면 일정·운동·날씨" 3단계 정책)
     static func resolve(
         now: Date = Date(),
         sleep: SleepSummary? = nil,           // 현재 정책에서 무시 — 시그니처는 호환용
         workouts: [WorkoutSummary],
         todaySteps: Double? = nil,            // 현재 정책에서 무시
         weather: WeatherSnapshot? = nil,
+        inSleepSchedule: Bool = false,
         calendar: Calendar = .current
     ) -> CharacterState {
-        // 1) 진행 중/방금 끝난 워크아웃이 최우선
+        // 0) Health 앱 수면 일정 안이면 무조건 sleeping
+        if inSleepSchedule { return .sleeping }
+
+        // 1) 진행 중/방금 끝난 워크아웃이 다음 우선
         if let latest = workouts.first {
             let endedAt = latest.start.addingTimeInterval(latest.duration)
             if now.timeIntervalSince(endedAt) <= recentWorkoutWindow {
@@ -31,7 +35,7 @@ enum CharacterStateResolver {
             }
         }
 
-        // 2) 날씨 기반 (운동 안 할 때)
+        // 2) 날씨 기반 (수면도 운동도 아닐 때)
         guard let w = weather else { return .idle }
         if w.isHot { return .beach }
         switch w.condition {
