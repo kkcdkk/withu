@@ -43,7 +43,7 @@ struct WatchCharacterView: View {
     private var animatedCharacter: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { ctx in
             let m = motion(for: state, at: ctx.date)
-            CharacterImageView(state: state)
+            CharacterImageView(state: state, animated: true)
                 .frame(width: 64, height: 64)
                 .scaleEffect(m.scale)
                 .offset(x: m.offsetX, y: m.offsetY)

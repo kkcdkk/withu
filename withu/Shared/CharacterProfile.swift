@@ -26,6 +26,9 @@ struct CharacterProfile: Codable, Equatable {
     /// 저녁 시작. 30분 동안 식사
     var dinnerHour: Int = 18
     var dinnerMinute: Int = 0
+    /// true 면 Focus 모드 / HealthKit 수면 일정을 무시하고 위의 sleepStart/End 시간만으로 sleeping 판정.
+    /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil → false 로 fallback (자동 감지 사용).
+    var manualSleepOnly: Bool?
 }
 
 enum CharacterProfileStore {

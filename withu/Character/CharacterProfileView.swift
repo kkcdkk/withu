@@ -10,6 +10,8 @@ import SwiftUI
 
 struct CharacterProfileView: View {
     @State private var profile: CharacterProfile = CharacterProfileStore.load()
+    @State private var health = HealthKitManager.shared
+    @State private var focus = FocusModeManager.shared
 
     var body: some View {
         Form {
@@ -36,6 +38,14 @@ struct CharacterProfileView: View {
             }
 
             Section {
+                HStack {
+                    Text("지금 기준")
+                    Spacer()
+                    Text(currentSleepSourceLabel)
+                        .foregroundStyle(.secondary)
+                        .font(.callout)
+                }
+                Toggle("수면 자동 감지", isOn: autoDetectBinding)
                 DatePicker("취침", selection: sleepStartBinding,
                            displayedComponents: .hourAndMinute)
                 DatePicker("기상", selection: sleepEndBinding,
@@ -43,7 +53,7 @@ struct CharacterProfileView: View {
             } header: {
                 Text("💤 수면 시간")
             } footer: {
-                Text("이 시간대에 캐릭터가 자고 있어요. 자정 넘김 OK. (Health 수면 일정 있으면 그게 우선)")
+                Text(sleepFooterText)
                     .font(.caption2)
             }
 
@@ -64,6 +74,53 @@ struct CharacterProfileView: View {
         .onChange(of: profile) { _, new in
             CharacterProfileStore.save(new)
         }
+    }
+
+    // MARK: - Sleep source indicator + toggle
+
+    /// 지금 sleeping 을 트리거하는 활성 신호 표시.
+    /// resolver 우선순위: (1) Focus 모드 OR HealthKit inBed → (2) 프로필 시간
+    private var currentSleepSourceLabel: String {
+        let inProfileWindow = isNowInProfileSleepWindow()
+        if profile.manualSleepOnly ?? false {
+            return inProfileWindow ? "프로필 시간 안" : "프로필 시간 밖"
+        }
+        // 1순위 — 외부 신호
+        if focus.isFocused || focus.isFocusFilterSleeping { return "Focus 모드 (1순위)" }
+        if health.isInBedSchedule { return "HealthKit inBed (1순위)" }
+        // 2순위 — 프로필 fallback
+        if inProfileWindow { return "프로필 시간 (2순위)" }
+        return "지금은 안 잠"
+    }
+
+    private func isNowInProfileSleepWindow() -> Bool {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let nowMin = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        let startMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
+        let endMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
+        let s = startMin % (24 * 60)
+        let e = endMin % (24 * 60)
+        return s < e ? (nowMin >= s && nowMin < e) : (nowMin >= s || nowMin < e)
+    }
+
+    /// 토글 켜짐 = 자동 감지 사용 = manualSleepOnly false.
+    private var autoDetectBinding: Binding<Bool> {
+        Binding(
+            get: { !(profile.manualSleepOnly ?? false) },
+            set: { profile.manualSleepOnly = !$0 }
+        )
+    }
+
+    private var sleepFooterText: String {
+        if profile.manualSleepOnly ?? false {
+            return "자동 감지 OFF — 위의 시간대만 기준. iOS Focus / Health 수면 일정과 무관."
+        }
+        return """
+            우선순위:
+              1순위 — iOS 수면 집중 모드 (또는 Health 수면 일정)
+              2순위 — 위의 시간대 (사용자 설정)
+            ※ Sleep Focus 가 켜져 있으면 어떤 시각이든 자고 있는 걸로. 둘 다 없으면 위 시간대를 fallback 으로 사용.
+            """
     }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)

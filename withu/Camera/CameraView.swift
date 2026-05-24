@@ -125,6 +125,8 @@ struct CameraView: View {
             characterPicker
                 .padding(.bottom, 12)
             HStack {
+                // 좌측 placeholder — shutter 가운데 유지
+                Color.clear.frame(width: 50, height: 50)
                 Spacer()
                 Button {
                     Task { await shoot() }
@@ -137,7 +139,19 @@ struct CameraView: View {
                 }
                 .disabled(isCapturing)
                 Spacer()
+                // 우측: 전면/후면 전환
+                Button {
+                    camera.switchCamera()
+                } label: {
+                    Image(systemName: "camera.rotate.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                        .frame(width: 50, height: 50)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .disabled(isCapturing)
             }
+            .padding(.horizontal, 30)
             .padding(.bottom, 50)
         }
     }

@@ -13,6 +13,9 @@ struct ContentView: View {
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
     @State private var weather = WeatherManager.shared
+    @State private var focus = FocusModeManager.shared
+    @State private var motion = MotionActivityManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var overrideState: CharacterState? = nil
     @State private var showSettings: Bool = false
@@ -24,13 +27,19 @@ struct ContentView: View {
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
 
     private var characterState: CharacterState {
-        overrideState ?? CharacterStateResolver.resolve(
+        // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
+        let manualOnly = profile.manualSleepOnly ?? false
+        return overrideState ?? CharacterStateResolver.resolve(
             sleep: health.sleep,
             workouts: health.recentWorkouts,
             todaySteps: health.todaySteps,
             weather: weather.snapshot,
-            inSleepSchedule: health.isInBedSchedule,
-            hasSleepSchedule: health.hasSleepSchedule,
+            inSleepSchedule: manualOnly ? false : health.isInBedSchedule,
+            hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
+            isFocusActive: manualOnly ? false : (focus.isFocused || focus.isFocusFilterSleeping),
+            liveActivity: motion.currentActivity,
+            liveActivityConfidence: motion.confidence,
+            isLikelyInWorkout: health.isLikelyInWorkout,
             profile: profile
         )
     }
@@ -103,6 +112,33 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .characterImageChanged)) { _ in
                 imageRefreshKey &+= 1
             }
+            .onChange(of: scenePhase) { _, newPhase in
+                // Foreground 진입 시 Focus 폴링 + 즉시 sync (iOS 가 Focus 변화를 push 안 함).
+                guard newPhase == .active else { return }
+                focus.refresh()
+                SyncCoordinator.syncNow(override: overrideState)
+            }
+            .onChange(of: focus.isFocused) { _, _ in
+                // Focus 토글이 반영되면 워치/위젯도 즉시 갱신.
+                sendStateToWatch(characterState)
+            }
+            // Control Center 로 Focus 토글하면 scenePhase 가 안 바뀌어서
+            // .onChange 도 안 옴 → 3초마다 직접 폴링. iOS background 진입 시 Timer
+            // 도 자동으로 멈춰서 배터리 영향 작음.
+            .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+                guard scenePhase == .active else { return }
+                focus.refresh()
+            }
+            // Focus API 가 Sleep Focus 를 false 로 거짓말하는 경우 대비 — HealthKit
+            // inBed 샘플도 30초 주기로 catchup 폴링 (HKObserverQuery 가 미스해도 안전).
+            // fetch 자체는 store query 라 3초 폴링은 부담. 30초가 균형.
+            .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+                guard scenePhase == .active else { return }
+                Task {
+                    _ = await health.fetchInBedSchedule()
+                    SyncCoordinator.syncNow(override: overrideState)
+                }
+            }
         }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded },
@@ -162,7 +198,7 @@ struct ContentView: View {
                 Circle()
                     .fill(characterState.tint.opacity(0.22))
                     .frame(width: 240, height: 240)
-                CharacterImageView(state: characterState)
+                CharacterImageView(state: characterState, animated: true)
                     .frame(width: 200, height: 200)
                     .id("\(characterState.rawValue)-\(imageRefreshKey)")  // 이미지 갱신 강제
             }
@@ -379,19 +415,8 @@ struct ContentView: View {
     // MARK: - Logic
 
     private func sendStateToWatch(_ state: CharacterState) {
-        let msg = WatchMessage(
-            state: state,
-            todaySteps: health.todaySteps,
-            lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
-            todayActiveMinutes: health.todayActiveMinutes,
-            todayActiveKcal: health.todayActiveKcal,
-            weatherEmoji: weather.snapshot?.condition.emoji,
-            weatherTempC: weather.snapshot?.temperatureC,
-            timestamp: Date()
-        )
-        SharedAppState.save(msg)
-        WidgetCenter.shared.reloadAllTimelines()
-        connectivity.send(msg)
+        // override 가 살아있을 때만 명시. nil 이면 resolver 가 다시 계산해도 같은 값.
+        SyncCoordinator.syncNow(override: overrideState)
     }
 
     private func loadAll() async {
@@ -413,6 +438,8 @@ struct SettingsView: View {
     @State private var health = HealthKitManager.shared
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
+    @State private var focus = FocusModeManager.shared
+    @State private var motion = MotionActivityManager.shared
 
     @Binding var overrideState: CharacterState?
     let characterState: CharacterState
@@ -427,6 +454,9 @@ struct SettingsView: View {
                 watchSection
                 healthSection
                 notificationsSection
+                focusSection
+                healthSleepSection
+                motionSection
                 debugSection
             }
             .navigationTitle("설정")
@@ -516,6 +546,217 @@ struct SettingsView: View {
         case .provisional: return "자동 허용"
         case .ephemeral: return "일시 허용"
         @unknown default: return "?"
+        }
+    }
+
+    private var focusSection: some View {
+        Section {
+            HStack { Text("권한"); Spacer(); Text(focus.authorizationStatusLabel).foregroundStyle(.secondary) }
+            HStack { Text("현재 Focus"); Spacer(); Text(focus.focusStateLabel).foregroundStyle(.secondary) }
+            HStack {
+                Text("Focus Filter")
+                Spacer()
+                Text(focus.isFocusFilterSleeping ? "✅ sleeping push" : "— 비활성/미연결")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("Filter 마지막 호출")
+                Spacer()
+                Text(focus.focusFilterLastPerformAt.map { $0.formatted(date: .omitted, time: .standard) }
+                     ?? "한 번도 없음")
+                    .foregroundStyle(.secondary)
+            }
+            if !focus.focusFilterPerformLog.isEmpty {
+                DisclosureGroup("perform() 호출 로그 (최근 \(focus.focusFilterPerformLog.count)번)") {
+                    ForEach(Array(focus.focusFilterPerformLog.enumerated()), id: \.offset) { _, entry in
+                        HStack {
+                            Text(entry.date.formatted(date: .omitted, time: .standard))
+                                .font(.caption.monospaced())
+                            Spacer()
+                            Text(entry.sleeping ? "→ sleeping ON" : "→ sleeping OFF")
+                                .font(.caption)
+                                .foregroundStyle(entry.sleeping ? .indigo : .secondary)
+                        }
+                    }
+                }
+            }
+            if let last = focus.lastCheckedAt {
+                HStack {
+                    Text("마지막 폴링")
+                    Spacer()
+                    Text(last.formatted(date: .omitted, time: .standard))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                HStack { Text("마지막 폴링"); Spacer(); Text("아직 없음").foregroundStyle(.secondary) }
+            }
+            if !focus.isAuthorized {
+                Button("Focus 권한 요청") {
+                    Task { await focus.requestAuthorization() }
+                }
+            }
+            Button {
+                focus.refresh()
+                sendStateToWatch(characterState)
+            } label: {
+                Label("지금 다시 폴링", systemImage: "arrow.clockwise.circle.fill")
+            }
+            if focus.isAuthorized && focus.rawFocusedValue == nil {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("iOS 설정 열기", systemImage: "gear")
+                }
+            }
+        } header: {
+            Text("수면/집중 모드")
+        } footer: {
+            Text(focusFooterText).font(.caption2)
+        }
+    }
+
+    /// 현재 진단 상태에 따라 사용자에게 다음 액션을 안내.
+    private var focusFooterText: String {
+        if focus.isFocusFilterSleeping {
+            return "✅ Focus Filter 가 sleeping 을 push 해줬어요. iOS 가 우리 앱을 직접 깨워 호출한 가장 신뢰성 높은 경로."
+        }
+        // Filter 가 한 번도 호출된 적 없다 = manual setup 미완료
+        if focus.focusFilterLastPerformAt == nil {
+            return """
+                Focus Filter 연결 필요 (한 번만):
+                  1) iOS 설정 → 집중 모드 → 수면
+                  2) 화면 아래쪽 "필터" 섹션 → "필터 추가"
+                  3) 앱 목록에서 withu 선택
+                  4) "캐릭터를 자게 하기" 토글 ON → 완료
+                  5) Sleep Focus 한 번 OFF → ON
+                위 "Filter 마지막 호출" 에 시각이 찍히면 연결 성공.
+                """
+        }
+        // Filter 가 한 번이라도 호출됐는데 지금 false → Focus 가 OFF 상태 (정상)
+        return "Focus Filter 연결됨. 마지막 호출 후 sleeping=false 상태 (Sleep Focus OFF 상태). Sleep Focus 켜면 perform() 다시 호출되어 sleeping push."
+    }
+
+    private var healthSleepSection: some View {
+        Section {
+            HStack {
+                Text("최근 48h inBed 샘플")
+                Spacer()
+                Text("\(health.inBedSampleCount24h)개")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("지금 inBed 시간대")
+                Spacer()
+                Text(health.isInBedSchedule ? "✅ 안" : "— 밖")
+                    .foregroundStyle(.secondary)
+            }
+            if let start = health.lastInBedSampleStart {
+                HStack {
+                    Text("마지막 inBed 시작")
+                    Spacer()
+                    Text(start.formatted(date: .omitted, time: .shortened))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Text("최근 7d asleep 샘플")
+                Spacer()
+                Text("\(health.sleep?.sampleCount ?? 0)개")
+                    .foregroundStyle(.secondary)
+            }
+            if let last = health.sleep?.lastNight {
+                HStack {
+                    Text("마지막 asleep 시작")
+                    Spacer()
+                    Text(last.formatted(date: .abbreviated, time: .shortened))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Button {
+                Task {
+                    _ = try? await health.fetchSleep(days: 7)
+                    _ = await health.fetchInBedSchedule()
+                    sendStateToWatch(characterState)
+                }
+            } label: {
+                Label("수면 데이터 다시 가져오기", systemImage: "arrow.clockwise.circle.fill")
+            }
+        } header: {
+            Text("HealthKit 수면 진단")
+        } footer: {
+            Text("""
+                • inBed = "침대에 있음" sample. 건강 앱 수면 일정 + Apple Watch 가 만들어요. iPhone 만 쓰면 자동 생성 안 될 수 있음.
+                • asleep = Watch 가 실제 잠든 걸 감지한 sample. Watch 착용하고 자야 생김.
+                • 둘 다 0이어도 캐릭터는 너의 \"내 캐릭터 설정 → 수면 시간\" 으로 잘 자.
+                """)
+                .font(.caption2)
+        }
+    }
+
+    private var motionSection: some View {
+        Section {
+            // CMMotionActivityManager
+            HStack {
+                Text("실시간 활동")
+                Spacer()
+                Text(motion.isAvailable ? motion.currentActivity.rawValue : "기기 미지원")
+                    .foregroundStyle(.secondary)
+            }
+            if motion.isAvailable {
+                HStack {
+                    Text("Confidence")
+                    Spacer()
+                    Text(motion.confidenceLabel).foregroundStyle(.secondary)
+                }
+                if let last = motion.lastUpdatedAt {
+                    HStack {
+                        Text("마지막 업데이트")
+                        Spacer()
+                        Text(last.formatted(date: .omitted, time: .standard))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Divider()
+            // HR 빈도 기반 워치 운동 추론
+            HStack {
+                Text("워치 운동 추론")
+                Spacer()
+                Text(health.isLikelyInWorkout ? "✅ 운동중일 가능성" : "—")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("최근 90s HR sample")
+                Spacer()
+                Text("\(health.recentHRSampleCount)개")
+                    .foregroundStyle(.secondary)
+            }
+            if health.recentHRAverage > 0 {
+                HStack {
+                    Text("평균 BPM")
+                    Spacer()
+                    Text("\(Int(health.recentHRAverage))")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Button {
+                Task {
+                    await health.refreshWorkoutInference()
+                    sendStateToWatch(characterState)
+                }
+            } label: {
+                Label("HR 추론 다시 계산", systemImage: "arrow.clockwise.circle.fill")
+            }
+        } header: {
+            Text("운동 감지")
+        } footer: {
+            Text("""
+                • 실시간 활동 = iPhone motion 코프로세서 (CMMotionActivityManager). 폰 들고 다닐 때 즉시 walking/running/cycling 감지.
+                • 워치 운동 추론 = HKObserverQuery 가 본 HR sample 빈도 + 평균 BPM 으로 추정 (5+ samples / 90s & ≥95bpm). 워치 운동 앱 시작했어도 HKWorkout 은 종료 후 생기므로 그 사이의 공백을 채워줘요.
+                """)
+                .font(.caption2)
         }
     }
 

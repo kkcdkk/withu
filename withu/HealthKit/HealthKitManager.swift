@@ -6,6 +6,7 @@
 import Foundation
 import HealthKit
 import WidgetKit
+import CoreMotion
 
 enum HealthError: LocalizedError {
     case notAvailable
@@ -48,6 +49,7 @@ final class HealthKitManager {
     @ObservationIgnored private var workoutObserverQuery: HKObserverQuery?
     @ObservationIgnored private var stepObserverQuery: HKObserverQuery?
     @ObservationIgnored private var sleepObserverQuery: HKObserverQuery?
+    @ObservationIgnored private var heartRateObserverQuery: HKObserverQuery?
 
     /// 권한 요청을 한 번이라도 했거나 마지막 fetch 가 성공했는지.
     /// (Apple HealthKit 은 어떤 항목이 허용됐는지 앱에 알리지 않으므로
@@ -66,6 +68,22 @@ final class HealthKitManager {
     /// 사용자가 Health 수면 일정 설정해뒀는지 (= inBed sample 존재 여부).
     /// 없으면 resolver 가 기본 22-07 시간대로 fallback.
     private(set) var hasSleepSchedule: Bool = false
+    /// 진단용 — 최근 24시간 동안 존재한 inBed 샘플 개수.
+    private(set) var inBedSampleCount24h: Int = 0
+    /// 진단용 — 마지막 inBed 샘플의 시작 시각.
+    private(set) var lastInBedSampleStart: Date?
+    /// 진단용 — 마지막 inBed 샘플의 종료 시각.
+    private(set) var lastInBedSampleEnd: Date?
+
+    // MARK: - 워치 운동 추론 (HR 빈도 기반)
+    /// 최근 90초 동안 받은 HR sample 개수.
+    /// 평상시 ~1개, 운동중 워치 stream 모드 ~10-30개.
+    private(set) var recentHRSampleCount: Int = 0
+    /// 최근 90초 HR sample 의 평균 bpm.
+    private(set) var recentHRAverage: Double = 0
+    /// HR 패턴이 "워치 운동 진행 중" 으로 보이는지.
+    /// 조건: 5+ sample / 90s AND avg >= 95 bpm.
+    private(set) var isLikelyInWorkout: Bool = false
 
     private init() {}
 
@@ -84,6 +102,9 @@ final class HealthKitManager {
         }
         if let exercise = HKObjectType.quantityType(forIdentifier: .appleExerciseTime) {
             types.insert(exercise)
+        }
+        if let hr = HKObjectType.quantityType(forIdentifier: .heartRate) {
+            types.insert(hr)
         }
         return types
     }
@@ -177,8 +198,9 @@ final class HealthKitManager {
                 guard error == nil, let self else { return }
                 Task { @MainActor in
                     _ = try? await self.fetchWorkouts(days: 1)
-                    // 위젯/컴플리케이션 즉시 reload — 배경에서 깨어나도 캐릭터 갱신
-                    WidgetCenter.shared.reloadAllTimelines()
+                    // SharedAppState 갱신 + 워치 push + 위젯 reload 한 번에.
+                    // reload 만 부르면 SharedAppState 는 옛 값이라 위젯도 옛 화면.
+                    SyncCoordinator.syncNow()
                 }
             }
             workoutObserverQuery = query
@@ -199,7 +221,7 @@ final class HealthKitManager {
                     _ = try? await self.fetchTodaySteps()
                     _ = try? await self.fetchTodayActiveMinutes()
                     _ = try? await self.fetchTodayActiveKcal()
-                    WidgetCenter.shared.reloadAllTimelines()
+                    SyncCoordinator.syncNow()
                 }
             }
             stepObserverQuery = query
@@ -216,7 +238,7 @@ final class HealthKitManager {
                 guard error == nil, let self else { return }
                 Task { @MainActor in
                     _ = await self.fetchInBedSchedule()
-                    WidgetCenter.shared.reloadAllTimelines()
+                    SyncCoordinator.syncNow()
                 }
             }
             sleepObserverQuery = query
@@ -224,6 +246,57 @@ final class HealthKitManager {
             // sleepAnalysis 는 category type — .immediate 지원
             store.enableBackgroundDelivery(for: sleepType, frequency: .immediate) { _, _ in }
         }
+        // 4) Heart rate 변화 — 워치 운동중일 때 stream sample 빈도 급증으로 추론
+        if heartRateObserverQuery == nil,
+           let hrType = HKObjectType.quantityType(forIdentifier: .heartRate) {
+            let query = HKObserverQuery(sampleType: hrType,
+                                        predicate: nil) { [weak self] _, completionHandler, error in
+                defer { completionHandler() }
+                guard error == nil, let self else { return }
+                Task { @MainActor in
+                    await self.refreshWorkoutInference()
+                    SyncCoordinator.syncNow()
+                }
+            }
+            heartRateObserverQuery = query
+            store.execute(query)
+            // heart rate 는 quantity type — frequency .immediate 가 .hourly 강등 가능하지만,
+            // 워치 운동중 burst 들은 observer 가 forground delivery 로 빨리 옴.
+            store.enableBackgroundDelivery(for: hrType, frequency: .immediate) { _, _ in }
+        }
+    }
+
+    /// 최근 90초 HR sample 통계 + isLikelyInWorkout 판정.
+    func refreshWorkoutInference() async {
+        guard let hrType = HKObjectType.quantityType(forIdentifier: .heartRate) else { return }
+        let now = Date()
+        let start = now.addingTimeInterval(-90)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: now)
+
+        let samples: [HKQuantitySample] = await withCheckedContinuation { cont in
+            let q = HKSampleQuery(
+                sampleType: hrType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                cont.resume(returning: (samples as? [HKQuantitySample]) ?? [])
+            }
+            store.execute(q)
+        }
+
+        recentHRSampleCount = samples.count
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+        let avg: Double
+        if samples.isEmpty {
+            avg = 0
+        } else {
+            avg = samples.map { $0.quantity.doubleValue(for: bpmUnit) }.reduce(0, +) / Double(samples.count)
+        }
+        recentHRAverage = avg
+        // 5+ samples in 90s = 워치가 운동 모드라 stream 중일 가능성
+        // avg >= 95 = 평상시 휴식 (60-80) 보다 명백히 높음
+        isLikelyInWorkout = samples.count >= 5 && avg >= 95
     }
 
     // MARK: - 현재 수면 일정 안인지
@@ -263,6 +336,13 @@ final class HealthKitManager {
             s.startDate <= now && now < s.endDate
         }
         isInBedSchedule = nowInside
+        // 진단 — 마지막 (가장 최근 시작) sample 찾기
+        let last = inBedSamples.max(by: { $0.startDate < $1.startDate })
+        inBedSampleCount24h = inBedSamples.filter {
+            $0.endDate >= now.addingTimeInterval(-24 * 3600)
+        }.count
+        lastInBedSampleStart = last?.startDate
+        lastInBedSampleEnd = last?.endDate
         return nowInside
     }
 
@@ -380,6 +460,70 @@ final class HealthKitManager {
                 continuation.resume(returning: sum)
             }
             store.execute(q)
+        }
+    }
+}
+
+// MARK: - MotionActivityManager (CMMotionActivityManager wrapper)
+
+/// iPhone 의 motion coprocessor (M-series chip) 가 분류한 실시간 활동.
+/// HKWorkout 과 달리 운동 앱 안 켜도, 운동이 끝나기 전에도 즉시 감지.
+/// 권한: NSMotionUsageDescription + startActivityUpdates 시점에 시스템 시트 자동.
+@Observable
+@MainActor
+final class MotionActivityManager {
+    static let shared = MotionActivityManager()
+
+    enum DetectedActivity: String {
+        case stationary, walking, running, cycling, automotive, unknown
+    }
+
+    private(set) var isAvailable: Bool = false
+    private(set) var currentActivity: DetectedActivity = .unknown
+    private(set) var confidence: CMMotionActivityConfidence = .low
+    private(set) var lastUpdatedAt: Date?
+
+    @ObservationIgnored private let manager = CMMotionActivityManager()
+    @ObservationIgnored private var started = false
+
+    private init() {}
+
+    func start() {
+        guard CMMotionActivityManager.isActivityAvailable() else {
+            isAvailable = false
+            return
+        }
+        isAvailable = true
+        guard !started else { return }
+        started = true
+        // 권한 시트는 첫 startActivityUpdates 시점에 자동으로 뜸.
+        manager.startActivityUpdates(to: .main) { [weak self] activity in
+            guard let self, let activity else { return }
+            self.currentActivity = Self.classify(activity)
+            self.confidence = activity.confidence
+            self.lastUpdatedAt = Date()
+            // sync 트리거 — 활동이 바뀌면 캐릭터도 즉시 갱신.
+            SyncCoordinator.syncNow()
+        }
+    }
+
+    /// CMMotionActivity 의 여러 bool 중 가장 결정적인 하나 선택.
+    /// running > walking > cycling > automotive > stationary 순.
+    private static func classify(_ a: CMMotionActivity) -> DetectedActivity {
+        if a.running    { return .running }
+        if a.walking    { return .walking }
+        if a.cycling    { return .cycling }
+        if a.automotive { return .automotive }
+        if a.stationary { return .stationary }
+        return .unknown
+    }
+
+    var confidenceLabel: String {
+        switch confidence {
+        case .low:    return "낮음"
+        case .medium: return "중간"
+        case .high:   return "높음"
+        @unknown default: return "?"
         }
     }
 }

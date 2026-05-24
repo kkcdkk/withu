@@ -27,6 +27,8 @@ struct BatchCharacterGenView: View {
 
     @State private var quality: String = "medium"
     @State private var artStyle: String = "casual"
+    /// 켜져 있으면 state 당 frame 0 + frame 1 두 장 생성 → 메인 화면이 swap 애니메이션
+    @State private var generateAnimated: Bool = false
 
     /// 전체 참고 이미지 (state 별 reference 가 없을 때의 fallback)
     @State private var photoPickerItem: PhotosPickerItem?
@@ -54,6 +56,8 @@ struct BatchCharacterGenView: View {
     @State private var selectedResult: (state: CharacterState, image: UIImage)?
     @State private var revisionText: String = ""
     @State private var isRevising: Bool = false
+    @State private var revisionRefItem: PhotosPickerItem?
+    @State private var revisionRefImage: UIImage?
 
     // 사진 앱 저장 상태
     @State private var isSavingPhotos: Bool = false
@@ -297,10 +301,13 @@ struct BatchCharacterGenView: View {
                 Text("high — $0.17").tag("high")
             }
             .pickerStyle(.menu).disabled(isGenerating)
+
+            Toggle("연속 이미지 (state 당 2장)", isOn: $generateAnimated)
+                .disabled(isGenerating)
         } header: {
             Text("옵션")
         } footer: {
-            Text("모든 state 가 병렬로 동시에 생성돼요. 참고 이미지 우선순위: state 별 > 전체 > 없음.")
+            Text("연속 이미지 ON 시 각 state 가 2회 호출 — 메인 화면에서 swap 애니메이션. 비용 2배.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -431,8 +438,8 @@ struct BatchCharacterGenView: View {
         return referenceImage?.pngData()?.base64EncodedString()
     }
 
-    /// 동시 호출 개수. 3 = 균형 (서버 부담 적당 + 시간 단축).
-    private static let maxConcurrent: Int = 3
+    /// 동시 호출 개수. 1 = 순차 (가장 안정적). 연속 이미지 ON 시도 한 번에 한 호출.
+    private static let maxConcurrent: Int = 1
 
     /// 전체 병렬 시작 — TaskGroup 풀 패턴으로 maxConcurrent 개만 동시 진행.
     private func startBatch() async {
@@ -454,21 +461,30 @@ struct BatchCharacterGenView: View {
         var iterator = toGen.makeIterator()
 
         await withTaskGroup(of: Void.self) { group in
-            // 1차 — 초기 풀 크기만큼 채움
             for _ in 0..<Self.maxConcurrent {
                 guard let state = iterator.next() else { break }
-                let refB64 = resolveReference(for: state)
-                group.addTask { @MainActor in
-                    await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
-                }
+                addStateTask(group: &group, state: state)
             }
-            // 하나 끝나면 즉시 다음 추가 → 풀 유지
             while await group.next() != nil {
                 guard let state = iterator.next() else { continue }
-                let refB64 = resolveReference(for: state)
-                group.addTask { @MainActor in
-                    await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
-                }
+                addStateTask(group: &group, state: state)
+            }
+        }
+    }
+
+    /// state 하나의 task — frame 0 (+ animated 면 frame 1 도 순차) 실행
+    private func addStateTask(group: inout TaskGroup<Void>, state: CharacterState) {
+        let refB64 = resolveReference(for: state)
+        let animated = generateAnimated
+        group.addTask { @MainActor in
+            // frame 0
+            let ok = await runOne(state, reference: refB64,
+                                  consistencyPrefix: refB64 != nil, frame: 0)
+            // frame 1 — frame 0 성공 시에만, 그 결과를 reference 로 체이닝
+            if ok, animated, let f0 = results[state],
+               let f0Ref = f0.pngData()?.base64EncodedString() {
+                await runOne(state, reference: f0Ref,
+                             consistencyPrefix: true, frame: 1)
             }
         }
     }
@@ -483,8 +499,10 @@ struct BatchCharacterGenView: View {
     }
 
     /// 한 state 생성 — 성공 시 true. 결과는 results / errors 에 기록.
+    /// frame == 0: 기본. frame == 1: 애니메이션용 (이전 결과를 reference 로 chain + 다른 포즈).
     @discardableResult
-    private func runOne(_ state: CharacterState, reference: String?, consistencyPrefix: Bool) async -> Bool {
+    private func runOne(_ state: CharacterState, reference: String?,
+                        consistencyPrefix: Bool, frame: Int = 0) async -> Bool {
         inProgressStates.insert(state)
         stateStartedAt[state] = .now
         defer {
@@ -494,7 +512,10 @@ struct BatchCharacterGenView: View {
         let prefix = consistencyPrefix
             ? "Same exact character as the reference image — only the pose/scene differs. "
             : ""
-        let prompt = "\(prefix)\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
+        var prompt = "\(prefix)\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
+        if frame == 1 {
+            prompt += ". Animation frame 2: same character, slightly different pose for frame-by-frame animation."
+        }
         do {
             let req = GenerateImageRequest(
                 prompt: prompt,
@@ -513,10 +534,13 @@ struct BatchCharacterGenView: View {
                 return false
             }
             let transparent = await ImageProcessing.bestEffortTransparent(img)
-            results[state] = transparent
-            CharacterImageStore.save(transparent, for: state)
-            // 워치도 함께 (백그라운드 file transfer, 워치 안 보고 있어도 OS 가 큐잉)
-            ConnectivityManager.shared.sendCharacterImage(transparent, for: state)
+            // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
+            let small = transparent.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? transparent
+            if frame == 0 {
+                results[state] = small
+            }
+            CharacterImageStore.save(small, for: state, frame: frame)
+            ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
             return true
         } catch {
             errors[state] = error.localizedDescription
@@ -543,8 +567,36 @@ struct BatchCharacterGenView: View {
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
                             .lineLimit(2...4)
                             .textFieldStyle(.roundedBorder)
+                        HStack(spacing: 10) {
+                            if let ref = revisionRefImage {
+                                Image(uiImage: ref).resizable().scaledToFill()
+                                    .frame(width: 36, height: 36)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            } else {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(.secondary.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                    .overlay(Image(systemName: "photo")
+                                        .foregroundStyle(.secondary).font(.caption))
+                            }
+                            PhotosPicker(revisionRefImage == nil ? "참고 이미지" : "변경",
+                                         selection: $revisionRefItem,
+                                         matching: .images)
+                                .font(.footnote)
+                            if revisionRefImage != nil {
+                                Button("제거", role: .destructive) {
+                                    revisionRefImage = nil
+                                    revisionRefItem = nil
+                                }
+                                .font(.caption2)
+                            }
+                            Spacer()
+                        }
                     }
                     .padding(.horizontal)
+                    .onChange(of: revisionRefItem) { _, item in
+                        Task { await loadRevisionRef(item) }
+                    }
 
                     HStack(spacing: 12) {
                         Button {
@@ -602,16 +654,17 @@ struct BatchCharacterGenView: View {
         showSaveResultAlert = true
     }
 
-    /// 기존 결과 + 자연어 수정 요청으로 재생성. 현재 결과를 reference 로.
+    /// 기존 결과 + 자연어 수정 요청으로 재생성.
+    /// reference 우선순위: 사용자 첨부 > 기존 결과
     private func reviseOne(_ state: CharacterState, text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isRevising = true
         defer { isRevising = false }
 
-        // 현재 결과 reference + 기존 prompt + 수정 요청
-        let currentImage = results[state]
-        let refB64 = currentImage?.pngData()?.base64EncodedString()
+        // reference: 사용자가 새로 첨부한 거 우선, 없으면 기존 결과
+        let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
+            ?? results[state]?.pngData()?.base64EncodedString()
         let basePrompt = "\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
         let modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
 
@@ -636,15 +689,31 @@ struct BatchCharacterGenView: View {
             if let data = Data(base64Encoded: resp.imageBase64),
                let img = UIImage(data: data) {
                 let transparent = await ImageProcessing.bestEffortTransparent(img)
-                results[state] = transparent
-                CharacterImageStore.save(transparent, for: state)
-                ConnectivityManager.shared.sendCharacterImage(transparent, for: state)
-                // sheet 의 image 도 갱신 — 새 결과 즉시 표시
-                selectedResult = (state, transparent)
+                let small = transparent.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? transparent
+                results[state] = small
+                CharacterImageStore.save(small, for: state)
+                ConnectivityManager.shared.sendCharacterImage(small, for: state)
+                selectedResult = (state, small)
                 WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
             errors[state] = error.localizedDescription
+        }
+    }
+
+    /// 수정 sheet 의 참고 이미지 로드
+    private func loadRevisionRef(_ item: PhotosPickerItem?) async {
+        guard let item else {
+            revisionRefImage = nil
+            return
+        }
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let img = UIImage(data: data) {
+                revisionRefImage = img
+            }
+        } catch {
+            // 조용히 무시
         }
     }
 

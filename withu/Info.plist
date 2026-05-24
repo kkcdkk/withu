@@ -23,6 +23,10 @@
 	<array>
 		<string>_http._tcp</string>
 	</array>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>수면/집중 모드를 감지해 캐릭터 상태(예: 자는 모습)에 반영해요.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>걷기/뛰기/자전거 활동을 실시간 감지해 캐릭터에 반영해요. 모션 데이터는 기기 안에만 머무르고 외부로 전송하지 않아요.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

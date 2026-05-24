@@ -45,6 +45,7 @@ final class CameraSession: NSObject {
     private(set) var isConfigured: Bool = false
     private(set) var isRunning: Bool = false
     private(set) var lastError: String?
+    private(set) var currentPosition: AVCaptureDevice.Position = .back
 
     private override init() { super.init() }
 
@@ -91,9 +92,10 @@ final class CameraSession: NSObject {
                     self.session.removeOutput(output)
                 }
 
+                let initialPosition: AVCaptureDevice.Position = .back
                 guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                             for: .video,
-                                                            position: .back),
+                                                            position: initialPosition),
                       let input = try? AVCaptureDeviceInput(device: device),
                       self.session.canAddInput(input) else {
                     self.session.commitConfiguration()
@@ -113,6 +115,35 @@ final class CameraSession: NSObject {
             }
         }
         isConfigured = true
+        #endif
+    }
+
+    // MARK: - 카메라 전환 (전면/후면)
+
+    func switchCamera() {
+        #if targetEnvironment(simulator)
+        return
+        #else
+        let newPosition: AVCaptureDevice.Position = (currentPosition == .back) ? .front : .back
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                self.session.removeInput(input)
+            }
+            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
+                                                       for: .video,
+                                                       position: newPosition),
+                  let input = try? AVCaptureDeviceInput(device: device),
+                  self.session.canAddInput(input) else {
+                self.session.commitConfiguration()
+                Task { @MainActor in self.lastError = "카메라 전환 실패" }
+                return
+            }
+            self.session.addInput(input)
+            self.session.commitConfiguration()
+            Task { @MainActor in self.currentPosition = newPosition }
+        }
         #endif
     }
 

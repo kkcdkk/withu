@@ -53,13 +53,31 @@ enum CharacterImageStore {
         ensureFolder(activeFolder)?.appendingPathComponent("\(state.rawValue).png")
     }
 
+    /// 애니메이션 frame 별 파일 URL. frame 0 = 기존 base 파일.
+    private static func activeFileURL(for state: CharacterState, frame: Int) -> URL? {
+        guard frame > 0 else { return activeFileURL(for: state) }
+        return ensureFolder(activeFolder)?
+            .appendingPathComponent("\(state.rawValue)_f\(frame).png")
+    }
+
     #if canImport(UIKit)
     /// 활성 슬롯 로드 (위젯/워치가 호출).
     static func load(_ state: CharacterState) -> UIImage? {
-        guard let url = activeFileURL(for: state),
+        loadFrame(state, frame: 0)
+    }
+
+    /// frame 별 로드. frame > 0 인데 없으면 nil. caller 가 frame 0 fallback.
+    static func loadFrame(_ state: CharacterState, frame: Int) -> UIImage? {
+        guard let url = activeFileURL(for: state, frame: frame),
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else { return nil }
         return UIImage(data: data)
+    }
+
+    /// 애니메이션 frame 존재 여부 (frame >= 1)
+    static func hasAnimationFrames(for state: CharacterState) -> Bool {
+        guard let url = activeFileURL(for: state, frame: 1) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
     }
 
     /// 위젯 메모리 절약용 다운샘플 로드.
@@ -133,16 +151,16 @@ enum CharacterImageStore {
     /// state 의 활성 슬롯 + 갤러리에 동시 저장. (생성 흐름에서 호출)
     /// 반환: 갤러리에 저장된 GalleryItem (재선택용 id).
     @discardableResult
-    static func save(_ image: UIImage, for state: CharacterState) -> GalleryItem? {
+    static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
-        // 1) 활성 슬롯 (위젯이 보는 곳)
-        if let activeURL = activeFileURL(for: state) {
+        // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
+        if let activeURL = activeFileURL(for: state, frame: frame) {
             try? data.write(to: activeURL, options: .atomic)
         }
-        // 2) 갤러리에도 같은 데이터 저장 + 메타 등록
-        let item = addToGalleryInternal(data: data, sourceState: state)
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
-        return item
+        // 2) 갤러리에는 frame 0 (대표) 만 저장 — frame 1 은 애니메이션 전용
+        guard frame == 0 else { return nil }
+        return addToGalleryInternal(data: data, sourceState: state)
     }
 
     /// 활성 슬롯 삭제 → asset / SF Symbol fallback 으로 돌아감.

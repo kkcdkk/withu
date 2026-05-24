@@ -83,19 +83,20 @@ extension ConnectivityManager: WCSessionDelegate {
     /// 같은 키 (characterImageMetadataKey) 의 metadata 에 state.rawValue 가 들어있어야 함.
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {
         let metadata = file.metadata ?? [:]
-        let key = "withu.characterImage.state"   // iOS 의 characterImageMetadataKey 와 같아야 함
+        let key = "withu.characterImage.state"
+        let frameKey = "withu.characterImage.frame"
         guard let stateRaw = metadata[key] as? String,
               let state = CharacterState(rawValue: stateRaw) else {
             Task { @MainActor in self.lastError = "수신 파일 metadata 누락" }
             return
         }
+        let frame = (metadata[frameKey] as? Int) ?? 0
 
-        // file.fileURL 은 시스템 임시 경로 — 빨리 옮기지 않으면 사라짐. 동기 처리.
         #if canImport(UIKit)
         if let data = try? Data(contentsOf: file.fileURL),
            let img = UIImage(data: data) {
             Task { @MainActor in
-                CharacterImageStore.save(img, for: state)
+                CharacterImageStore.save(img, for: state, frame: frame)
                 self.lastReceivedImageState = stateRaw
                 self.characterImageVersion &+= 1
 

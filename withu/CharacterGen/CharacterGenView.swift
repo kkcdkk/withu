@@ -35,6 +35,8 @@ struct CharacterGenView: View {
 
     @State private var isGenerating: Bool = false
     @State private var resultImage: UIImage?
+    @State private var resultFrame2: UIImage?    // frame 1 (애니메이션용)
+    @State private var generateAnimated: Bool = false
     @State private var revisedPrompt: String?
     @State private var lastError: String?
     @State private var showAppliedAlert: Bool = false
@@ -245,6 +247,9 @@ struct CharacterGenView: View {
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)
+
+            Toggle("연속 이미지 (2장 생성)", isOn: $generateAnimated)
+                .disabled(isGenerating)
         }
     }
 
@@ -362,12 +367,19 @@ struct CharacterGenView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
+        resultFrame2 = nil
         defer {
             isGenerating = false
             generationStartedAt = nil
         }
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
-        await send(prompt: prompt, reference: referenceB64)
+        await send(prompt: prompt, reference: referenceB64, frame: 0)
+        // 연속 이미지 — frame 0 성공 시 그 결과를 reference 로 frame 1 추가
+        if generateAnimated, let f0 = resultImage,
+           let f0Ref = f0.pngData()?.base64EncodedString() {
+            let animPrompt = "\(prompt). Animation frame 2: same character, slightly different pose for frame-by-frame animation."
+            await send(prompt: animPrompt, reference: f0Ref, frame: 1)
+        }
     }
 
     private func refine() async {
@@ -388,7 +400,7 @@ struct CharacterGenView: View {
         refinementPrompt = ""
     }
 
-    private func send(prompt: String, reference: String?) async {
+    private func send(prompt: String, reference: String?, frame: Int = 0) async {
         do {
             let req = GenerateImageRequest(
                 prompt: prompt,
@@ -406,9 +418,15 @@ struct CharacterGenView: View {
                 lastError = "이미지 디코드 실패"
                 return
             }
-            // AI 출력의 가짜 체커보드를 진짜 alpha 로 후처리 (Vision 실패 시 원본)
-            resultImage = await ImageProcessing.bestEffortTransparent(img)
-            revisedPrompt = resp.revisedPrompt
+            let transparent = await ImageProcessing.bestEffortTransparent(img)
+            // 128px 로 다운샘플 — 메인 화면 200, 워치 64, 위젯 60 다 커버 + 디스크 절약
+            let small = transparent.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? transparent
+            if frame == 0 {
+                resultImage = small
+                revisedPrompt = resp.revisedPrompt
+            } else {
+                resultFrame2 = small
+            }
         } catch {
             lastError = "❌ \(error.localizedDescription)"
         }
@@ -458,10 +476,14 @@ struct CharacterGenView: View {
     // MARK: - Common actions
 
     private func apply(_ image: UIImage, to state: CharacterState) {
-        if CharacterImageStore.save(image, for: state) != nil {
+        if CharacterImageStore.save(image, for: state, frame: 0) != nil {
+            ConnectivityManager.shared.sendCharacterImage(image, for: state, frame: 0)
+            // frame 1 있으면 같이
+            if let f2 = resultFrame2 {
+                CharacterImageStore.save(f2, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(f2, for: state, frame: 1)
+            }
             WidgetCenter.shared.reloadAllTimelines()
-            // 워치도 같이 갱신 — file transfer (백그라운드, OS 가 안정적 처리)
-            ConnectivityManager.shared.sendCharacterImage(image, for: state)
             showAppliedAlert = true
         } else {
             lastError = "❌ App Group 저장 실패"
