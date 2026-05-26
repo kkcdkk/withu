@@ -32,7 +32,7 @@ struct CharacterImageView: View {
 
     var body: some View {
         #if canImport(UIKit)
-        if animated, CharacterImageStore.hasAnimationFrames(for: state) {
+        if shouldAnimate {
             TimelineView(.periodic(from: .now, by: 0.7)) { ctx in
                 let frame = Int(ctx.date.timeIntervalSinceReferenceDate / 0.7) % 2
                 singleFrameView(frameIndex: frame)
@@ -43,6 +43,16 @@ struct CharacterImageView: View {
         #else
         sfSymbolFallback
         #endif
+    }
+
+    /// 세 조건 모두 만족해야 swap 애니메이션:
+    ///   1) caller 가 animated: true 로 호출
+    ///   2) frame 1 파일이 활성 슬롯에 존재
+    ///   3) 사용자 토글 (CharacterImageStore.animationEnabled, default true)
+    private var shouldAnimate: Bool {
+        guard animated else { return false }
+        guard CharacterImageStore.hasAnimationFrames(for: state) else { return false }
+        return CharacterImageStore.animationEnabled
     }
 
     #if canImport(UIKit)

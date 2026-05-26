@@ -29,6 +29,7 @@ struct CharacterProfile: Codable, Equatable {
     /// true 면 Focus 모드 / HealthKit 수면 일정을 무시하고 위의 sleepStart/End 시간만으로 sleeping 판정.
     /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil → false 로 fallback (자동 감지 사용).
     var manualSleepOnly: Bool?
+    // 애니메이션 사용 토글은 CharacterImageStore.animationEnabled 로 분리 — widget target 도 읽어야 함.
 }
 
 enum CharacterProfileStore {

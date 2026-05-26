@@ -30,8 +30,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             HealthKitManager.shared.startObservingChanges()
             // Focus 권한 — 처음이면 시스템 시트, 이후엔 즉시 status 갱신.
             await FocusModeManager.shared.requestAuthorization()
-            // CoreMotion 권한 시트는 startActivityUpdates 첫 호출 시 자동.
-            MotionActivityManager.shared.start()
             // 권한 결과 반영해서 즉시 한 번 sync.
             SyncCoordinator.syncNow()
         }

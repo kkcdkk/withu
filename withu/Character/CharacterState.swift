@@ -96,6 +96,39 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         }
     }
 
+    /// 연속 이미지 생성 시 frame 2 변화 힌트.
+    /// frame 1 (= frame 0) 과 명백히 다른 pose 를 만들어야 swap 했을 때 애니메이션이 살아남.
+    /// "slightly different pose" 같은 모호한 표현은 OpenAI 가 거의 같은 그림으로 만들어 버림.
+    /// 그래서 state 별로 구체적인 변화 방향을 미리 정의.
+    var animationFrame2Hint: String {
+        switch self {
+        case .idle:
+            return "eyes blinking (closed eyelids) instead of open, or head tilted to the opposite side. Keep everything else identical."
+        case .sleeping:
+            return "breathing in (slightly puffed chest / cheeks) instead of out, or 'z' bubble in a different position. Same closed eyes, same pillow."
+        case .wakingUp:
+            return "yawning with wide open mouth, or one eye fully open. Same messy hair and pillow."
+        case .walking:
+            return "the OPPOSITE foot stepping forward (mirror the leg/arm swing). Same direction of walking, same outfit."
+        case .running:
+            return "arms and legs in the OPPOSITE swing phase — if frame 1 had right arm forward, frame 2 has left arm forward. Same speed, same expression."
+        case .cycling:
+            return "pedals rotated half a turn — opposite foot at the top. Same helmet, same direction, same bicycle."
+        case .energetic:
+            return "jumping at the higher peak with arms wider, or sparkles in a different position. Same big smile."
+        case .eating:
+            return "spoon/fork at a different position — mid-bite vs after-bite. Same table, same food, same outfit."
+        case .beach:
+            return "waving one hand, or sunglasses pushed slightly up — small but visible change. Same beach towel, same sun overhead."
+        case .cloudy:
+            return "small cloud floating to the other side above the head. Same calm expression, same background."
+        case .rainyShelter:
+            return "umbrella tilted to the opposite angle, or rain drops in different positions. Same boots and outfit."
+        case .snowPlay:
+            return "snowball mid-toss (in the air) instead of in hands, or scarf flowing the other direction. Same mittens, same snow ground."
+        }
+    }
+
     /// 인라인 위젯/짧은 슬롯용 표시 이모지.
     var symbolEmoji: String {
         switch self {

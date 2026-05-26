@@ -178,14 +178,36 @@ struct CharacterGalleryView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 320)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        // frame 1 있으면 frame 1/2 나란히, 없으면 단일
+                        if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(spacing: 4) {
+                                    Image(uiImage: img).resizable().scaledToFit()
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    Text("frame 1").font(.caption2).foregroundStyle(.secondary)
+                                }
+                                VStack(spacing: 4) {
+                                    Image(uiImage: f1).resizable().scaledToFit()
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    Text("frame 2").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.horizontal)
+                        } else {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 320)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
                         HStack {
                             Text(stateEmoji(item.sourceState))
                             Text(item.sourceState).font(.subheadline.weight(.medium))
+                            if item.hasFrame1 ?? false {
+                                Text("· 🎬 연속")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             Spacer()
                             Text(item.createdAt, format: .relative(presentation: .named))
                                 .font(.caption2).foregroundStyle(.secondary)
@@ -261,6 +283,7 @@ struct CharacterGalleryView: View {
     private func card(for item: GalleryItem) -> some View {
         let img = CharacterImageStore.loadGalleryImage(id: item.id)
         let isSelected = selectedIDs.contains(item.id)
+        let hasFrame1 = item.hasFrame1 ?? false
         return VStack(spacing: 6) {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .tertiarySystemBackground))
@@ -280,6 +303,15 @@ struct CharacterGalleryView: View {
                         .background(Circle().fill(.regularMaterial))
                         .padding(6)
                 }
+                // 연속 이미지 (frame 1 있음) 배지 — 우상단
+                if hasFrame1 {
+                    Text("🎬")
+                        .font(.caption)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .padding(6)
+                        .frame(maxWidth: .infinity, alignment: .topTrailing)
+                }
             }
             .aspectRatio(1, contentMode: .fit)
             .overlay(
@@ -291,6 +323,19 @@ struct CharacterGalleryView: View {
                 Text(stateEmoji(item.sourceState)).font(.caption2)
                 Text(item.sourceState).font(.caption2).lineLimit(1)
                 Spacer(minLength: 0)
+            }
+            // 이 갤러리 항목이 현재 활성으로 적용된 state 들의 이모지 chip
+            let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
+            if !activeStates.isEmpty {
+                HStack(spacing: 2) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.green)
+                    ForEach(activeStates, id: \.self) { s in
+                        Text(s.symbolEmoji).font(.system(size: 11))
+                    }
+                    Spacer(minLength: 0)
+                }
             }
             Text(item.createdAt, format: .relative(presentation: .named))
                 .font(.system(size: 9))
@@ -351,9 +396,12 @@ struct CharacterGalleryView: View {
         let ok = CharacterImageStore.applyGalleryItem(item.id, to: state)
         if ok {
             WidgetCenter.shared.reloadAllTimelines()
-            // 워치도 같은 이미지로 갱신
+            // 워치도 같은 이미지로 갱신 — frame 0 + (있으면) frame 1
             if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
-                ConnectivityManager.shared.sendCharacterImage(img, for: state)
+                ConnectivityManager.shared.sendCharacterImage(img, for: state, frame: 0)
+            }
+            if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
+                ConnectivityManager.shared.sendCharacterImage(f1, for: state, frame: 1)
             }
             withAnimation { toastText = "\(state.rawValue) 자리에 적용됨" }
             hideToastAfter(1.6)

@@ -7,11 +7,13 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 struct CharacterProfileView: View {
     @State private var profile: CharacterProfile = CharacterProfileStore.load()
     @State private var health = HealthKitManager.shared
     @State private var focus = FocusModeManager.shared
+    @State private var animationEnabled: Bool = CharacterImageStore.animationEnabled
 
     var body: some View {
         Form {
@@ -68,11 +70,72 @@ struct CharacterProfileView: View {
                 Text("설정한 시각 ~ 30분 후까지 식사 캐릭터로 표시돼요.")
                     .font(.caption2)
             }
+
+            statesOverviewSection
+
+            Section {
+                Toggle("연속 이미지 사용 (있을 때)", isOn: $animationEnabled)
+            } header: {
+                Text("🎬 캐릭터 표시")
+            } footer: {
+                Text("""
+                    ON — 연속 이미지를 생성한 캐릭터는 0.7초 간격으로 swap 애니메이션.
+                    OFF — frame 1 이 있어도 정적 (frame 0 만). 배터리/시각 부담 줄이고 싶을 때.
+                    ※ 갤러리의 frame 1 데이터는 유지됨 — 이 토글은 표시 방식만 바꿔요.
+                    """)
+                    .font(.caption2)
+            }
         }
         .navigationTitle("내 캐릭터 설정")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: animationEnabled) { _, new in
+            CharacterImageStore.setAnimationEnabled(new)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         .onChange(of: profile) { _, new in
             CharacterProfileStore.save(new)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    // MARK: - States overview
+
+    /// 9개 state 각각 현재 적용된 캐릭터 이미지 + 이름. 적용 안 된 곳은 placeholder.
+    private var statesOverviewSection: some View {
+        Section {
+            ForEach(CharacterState.allCases, id: \.self) { state in
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(state.tint.opacity(0.12))
+                        CharacterImageView(state: state)
+                            .padding(4)
+                    }
+                    .frame(width: 44, height: 44)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(state.symbolEmoji).font(.caption)
+                            Text(state.rawValue).font(.callout.weight(.medium))
+                            if CharacterImageStore.hasAnimationFrames(for: state) {
+                                Text("🎬").font(.caption2)
+                            }
+                        }
+                        Text(CharacterImageStore.hasImage(for: state)
+                             ? "사용자 캐릭터"
+                             : "기본 (placeholder)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+            }
+        } header: {
+            Text("📚 상태별 현재 캐릭터")
+        } footer: {
+            Text("각 상태에 어떤 캐릭터가 적용돼 있는지. 비어 있으면 placeholder (SF Symbol 또는 기본 일러스트). 캐릭터 갤러리 / 캐릭터 생성 화면에서 교체.")
+                .font(.caption2)
         }
     }
 

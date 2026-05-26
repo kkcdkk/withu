@@ -5,7 +5,6 @@
 
 import Foundation
 import HealthKit
-import CoreMotion
 
 /// HealthKit + 날씨 데이터를 보고 현재 캐릭터 상태를 정해주는 순수 함수 모음.
 /// 시간/데이터/날씨를 인자로 받으면 같은 결과를 내는 deterministic 한 로직.
@@ -14,7 +13,9 @@ enum CharacterStateResolver {
     private static let energeticStepThreshold: Double = 8000
     private static let sleepHours: Set<Int> = Set(0..<7).union([22, 23])
 
-    /// 우선순위: live motion → HR 추론 → HKWorkout → 프로필 수면 → Focus/inBed → 기상 → 식사 → 날씨.
+    /// 우선순위: HR 추론 → HKWorkout → 프로필 수면 → Focus/inBed → 기상 → 식사 → 날씨.
+    /// 운동 감지는 Apple 워치 운동 앱 (HR stream 또는 HKWorkout sample) 에서만 받음.
+    /// 캐주얼한 걸음 (CMMotion) 은 무시 — "운동 모드 = 명시적 시작" 정책.
     static func resolve(
         now: Date = Date(),
         sleep: SleepSummary? = nil,           // 현재 정책에서 무시 — 시그니처는 호환용
@@ -24,34 +25,24 @@ enum CharacterStateResolver {
         inSleepSchedule: Bool = false,
         hasSleepSchedule: Bool = false,
         isFocusActive: Bool = false,
-        liveActivity: MotionActivityManager.DetectedActivity = .unknown,
-        liveActivityConfidence: CMMotionActivityConfidence = .low,
         isLikelyInWorkout: Bool = false,
         profile: CharacterProfile = CharacterProfile(),
         calendar: Calendar = .current
     ) -> CharacterState {
-        // 0) iPhone motion coprocessor 실시간 분류 — 가장 빠른 신호.
-        //    low confidence 는 무시 (false positive 방지).
-        if liveActivityConfidence != .low {
-            switch liveActivity {
-            case .running:    return .running
-            case .walking:    return .walking
-            case .cycling:    return .cycling
-            case .automotive, .stationary, .unknown: break
-            }
-        }
-
-        // 0.5) 워치 HR stream 패턴이 운동중으로 보이면 — 타입 모르므로 .energetic
-        if isLikelyInWorkout {
-            return .energetic
-        }
-
-        // 1) HKWorkout 종료 후 1시간 윈도우 — 사용자가 Apple 운동 앱에서 정식 종료한 케이스
+        // 0) HKWorkout 종료 후 1시간 윈도우 — 가장 신뢰성 있는 신호 (실제 운동 끝남 확정).
+        //    HR 추론보다 앞에 둠 — 운동 종료 후에도 HR 이 일시적으로 stream 되면서
+        //    isLikelyInWorkout 이 stale true 인 상황 대응.
         if let latest = workouts.first {
             let endedAt = latest.start.addingTimeInterval(latest.duration)
             if now.timeIntervalSince(endedAt) <= recentWorkoutWindow {
                 return mapWorkout(latest.activity)
             }
+        }
+
+        // 1) 워치 HR stream 패턴이 운동중으로 보이면 — 진행 중인 운동, 아직 HKWorkout 미commit.
+        //    타입 모르므로 .energetic.
+        if isLikelyInWorkout {
+            return .energetic
         }
 
         let hour = calendar.component(.hour, from: now)

@@ -25,10 +25,19 @@ struct BatchCharacterGenView: View {
 
     @State private var selectedStates: Set<CharacterState> = Set(CharacterState.allCases)
 
-    @State private var quality: String = "medium"
+    @State private var quality: String = "low"
     @State private var artStyle: String = "casual"
     /// 켜져 있으면 state 당 frame 0 + frame 1 두 장 생성 → 메인 화면이 swap 애니메이션
     @State private var generateAnimated: Bool = false
+    /// frame 2 변화 힌트 (영어, 전체 state 공통). 비우면 각 state 의 animationFrame2Hint 자동 사용.
+    @State private var animationHintOverride: String = ""
+    /// Vision 처리된 transparent 버전 캐시 (per-state).
+    /// bulk "투명 모두 적용" 또는 detail sheet per-state 토글로 채워짐.
+    @State private var transparentResults: [CharacterState: UIImage] = [:]
+    @State private var transparentResultsFrame1: [CharacterState: UIImage] = [:]
+    /// 표시 모드 (per-state). true 면 transparent (있을 때), false 면 raw.
+    @State private var displayTransparentByState: [CharacterState: Bool] = [:]
+    @State private var isProcessingTransparentBulk: Bool = false
 
     /// 전체 참고 이미지 (state 별 reference 가 없을 때의 fallback)
     @State private var photoPickerItem: PhotosPickerItem?
@@ -46,6 +55,8 @@ struct BatchCharacterGenView: View {
     @State private var stateStartedAt: [CharacterState: Date] = [:]
 
     @State private var results: [CharacterState: UIImage] = [:]
+    /// 연속 이미지 ON 일 때 state 의 frame 1 결과. 카드에 우하단 미니 썸네일로 표시.
+    @State private var resultsFrame1: [CharacterState: UIImage] = [:]
     @State private var errors: [CharacterState: String] = [:]
 
     @State private var showFinishedAlert: Bool = false
@@ -304,6 +315,20 @@ struct BatchCharacterGenView: View {
 
             Toggle("연속 이미지 (state 당 2장)", isOn: $generateAnimated)
                 .disabled(isGenerating)
+            if generateAnimated {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Frame 2 변화 힌트 — 전체 공통 (영어)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $animationHintOverride)
+                        .frame(minHeight: 60)
+                        .font(.callout)
+                        .disabled(isGenerating)
+                    Text("비우면 각 state 의 기본 힌트 자동 사용 (걷기=다른 발 앞으로, 자기=호흡 등).")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
         } header: {
             Text("옵션")
         } footer: {
@@ -350,7 +375,7 @@ struct BatchCharacterGenView: View {
             let columns = [GridItem(.flexible()), GridItem(.flexible())]
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(CharacterState.allCases, id: \.self) { state in
-                    if let img = results[state] {
+                    if let img = displayedImage(for: state) {
                         resultCard(state: state, image: img)
                     } else if let err = errors[state] {
                         errorCard(state: state, error: err)
@@ -359,6 +384,27 @@ struct BatchCharacterGenView: View {
             }
 
             if !results.isEmpty {
+                // 투명 처리 bulk 토글 — gallery 원본은 raw 유지, active slot 만 갱신.
+                HStack(spacing: 12) {
+                    Button {
+                        Task { await applyTransparentToAll() }
+                    } label: {
+                        if isProcessingTransparentBulk {
+                            HStack { ProgressView(); Text("처리 중…") }
+                        } else {
+                            Label("투명 모두 적용", systemImage: "wand.and.sparkles")
+                        }
+                    }
+                    .disabled(isProcessingTransparentBulk)
+                    Button(role: .destructive) {
+                        Task { await restoreOriginalToAll() }
+                    } label: {
+                        Label("모두 원본", systemImage: "arrow.uturn.backward")
+                    }
+                    .disabled(isProcessingTransparentBulk)
+                }
+                .font(.callout)
+
                 Button {
                     Task { await saveAllToPhotos() }
                 } label: {
@@ -377,14 +423,93 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// per-state 현재 표시 이미지 — toggle 따라 raw 또는 transparent.
+    private func displayedImage(for state: CharacterState) -> UIImage? {
+        let useTransparent = displayTransparentByState[state] ?? false
+        if useTransparent, let t = transparentResults[state] { return t }
+        return results[state]
+    }
+
+    /// bulk — 모든 state 의 raw 를 Vision 처리, active slot 에 적용 + 워치 push.
+    /// gallery 항목은 raw 유지 (원본 보존).
+    @MainActor
+    private func applyTransparentToAll() async {
+        isProcessingTransparentBulk = true
+        defer { isProcessingTransparentBulk = false }
+        for state in CharacterState.allCases {
+            guard let raw = results[state] else { continue }
+            let transparent: UIImage
+            if let cached = transparentResults[state] {
+                transparent = cached
+            } else {
+                transparent = await ImageProcessing.bestEffortTransparent(raw)
+                transparentResults[state] = transparent
+            }
+            CharacterImageStore.saveActiveSlotOnly(transparent, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(transparent, for: state, frame: 0)
+            // frame 1 도 있으면 같이
+            if let rawF1 = resultsFrame1[state] {
+                let tF1: UIImage
+                if let cachedF1 = transparentResultsFrame1[state] {
+                    tF1 = cachedF1
+                } else {
+                    tF1 = await ImageProcessing.bestEffortTransparent(rawF1)
+                    transparentResultsFrame1[state] = tF1
+                }
+                CharacterImageStore.saveActiveSlotOnly(tF1, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(tF1, for: state, frame: 1)
+            }
+            displayTransparentByState[state] = true
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// bulk — raw 로 active slot 복원.
+    @MainActor
+    private func restoreOriginalToAll() async {
+        for state in CharacterState.allCases {
+            guard let raw = results[state] else { continue }
+            CharacterImageStore.saveActiveSlotOnly(raw, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(raw, for: state, frame: 0)
+            if let rawF1 = resultsFrame1[state] {
+                CharacterImageStore.saveActiveSlotOnly(rawF1, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(rawF1, for: state, frame: 1)
+            }
+            displayTransparentByState[state] = false
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
         Button {
             selectedResult = (state, image)
             revisionText = ""
         } label: {
             VStack(spacing: 6) {
-                Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                ZStack(alignment: .bottomTrailing) {
+                    Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    // 연속 이미지 ON 일 때 frame 1 우하단 미니. 메인 화면이 0.7s 간격으로 swap.
+                    if let f1 = resultsFrame1[state] {
+                        Image(uiImage: f1)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white, lineWidth: 2)
+                            )
+                            .overlay(alignment: .topTrailing) {
+                                Text("🎬")
+                                    .font(.system(size: 10))
+                                    .padding(2)
+                                    .background(Capsule().fill(.ultraThinMaterial))
+                                    .offset(x: 4, y: -4)
+                            }
+                            .padding(6)
+                    }
+                }
                 HStack {
                     Text(state.symbolEmoji)
                     Text(state.rawValue).font(.caption).lineLimit(1)
@@ -445,6 +570,7 @@ struct BatchCharacterGenView: View {
     private func startBatch() async {
         isGenerating = true
         results.removeAll()
+        resultsFrame1.removeAll()
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
@@ -455,6 +581,14 @@ struct BatchCharacterGenView: View {
             stateStartedAt.removeAll()
             showFinishedAlert = true
             WidgetCenter.shared.reloadAllTimelines()
+        }
+
+        // 사전 reachability 체크 — 18+ 호출 실패하면서 시간만 가는 거 방지.
+        do {
+            try await APIClient.shared.preflightPing()
+        } catch {
+            errors[.idle] = "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해 주세요."
+            return
         }
 
         let toGen = CharacterState.allCases.filter { selectedStates.contains($0) }
@@ -514,8 +648,12 @@ struct BatchCharacterGenView: View {
             : ""
         var prompt = "\(prefix)\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
         if frame == 1 {
-            prompt += ". Animation frame 2: same character, slightly different pose for frame-by-frame animation."
+            let trimmed = animationHintOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hint = trimmed.isEmpty ? state.animationFrame2Hint : trimmed
+            prompt += ". Animation frame 2 (for a 2-frame swap loop): \(hint)"
         }
+        // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
+        prompt += ". Solid clean WHITE background, no shadows, no gradients."
         do {
             let req = GenerateImageRequest(
                 prompt: prompt,
@@ -533,11 +671,13 @@ struct BatchCharacterGenView: View {
                 errors[state] = "이미지 디코드 실패"
                 return false
             }
-            let transparent = await ImageProcessing.bestEffortTransparent(img)
+            // raw (white BG) 그대로 저장. Vision 처리는 사용자가 post-gen 에 선택.
             // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
-            let small = transparent.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? transparent
+            let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
             if frame == 0 {
                 results[state] = small
+            } else {
+                resultsFrame1[state] = small
             }
             CharacterImageStore.save(small, for: state, frame: frame)
             ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)

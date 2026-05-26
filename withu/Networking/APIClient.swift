@@ -61,6 +61,29 @@ actor APIClient {
         }
     }
 
+    /// 빠른 reachability 체크 — 5초 timeout, 별도 ephemeral session.
+    /// 기존 `session` 은 30분 timeout + waitsForConnectivity 라서 연결 끊김 시 한참 매달림.
+    /// generate 전에 이 메서드로 먼저 확인하면 연결 안 됐을 때 즉시 에러.
+    func preflightPing() async throws {
+        let url = APIConfig.baseURL.appendingPathComponent("/health")
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 5
+        config.timeoutIntervalForResource = 5
+        config.waitsForConnectivity = false
+        let fastSession = URLSession(configuration: config)
+        do {
+            let (_, response) = try await fastSession.data(from: url)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode) else {
+                throw APIError.invalidResponse
+            }
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.transport(error)
+        }
+    }
+
     func generateImage(_ request: GenerateImageRequest) async throws -> GenerateImageResponse {
         let url = APIConfig.baseURL.appendingPathComponent("/generate")
         var req = URLRequest(url: url)

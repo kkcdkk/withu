@@ -331,7 +331,6 @@ enum SyncCoordinator {
         let health = HealthKitManager.shared
         let weather = WeatherManager.shared
         let focus = FocusModeManager.shared
-        let motion = MotionActivityManager.shared
         let profile = CharacterProfileStore.load()
 
         // Focus 는 push 알림이 안 와서 매번 폴링.
@@ -354,8 +353,6 @@ enum SyncCoordinator {
             inSleepSchedule: inSleepSchedule,
             hasSleepSchedule: hasSleepSchedule,
             isFocusActive: isFocusActive,
-            liveActivity: motion.currentActivity,
-            liveActivityConfidence: motion.confidence,
             isLikelyInWorkout: health.isLikelyInWorkout,
             profile: profile
         )

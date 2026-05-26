@@ -6,7 +6,6 @@
 import Foundation
 import HealthKit
 import WidgetKit
-import CoreMotion
 
 enum HealthError: LocalizedError {
     case notAvailable
@@ -198,8 +197,10 @@ final class HealthKitManager {
                 guard error == nil, let self else { return }
                 Task { @MainActor in
                     _ = try? await self.fetchWorkouts(days: 1)
+                    // HKWorkout 이 commit 됐다 = 운동 종료. HR 추론은 stale 가능성 → 즉시 클리어.
+                    // resolver 가 HKWorkout 우선이라 이론상 무관하지만 진단/일관성 위해 명시.
+                    self.isLikelyInWorkout = false
                     // SharedAppState 갱신 + 워치 push + 위젯 reload 한 번에.
-                    // reload 만 부르면 SharedAppState 는 옛 값이라 위젯도 옛 화면.
                     SyncCoordinator.syncNow()
                 }
             }
@@ -460,70 +461,6 @@ final class HealthKitManager {
                 continuation.resume(returning: sum)
             }
             store.execute(q)
-        }
-    }
-}
-
-// MARK: - MotionActivityManager (CMMotionActivityManager wrapper)
-
-/// iPhone 의 motion coprocessor (M-series chip) 가 분류한 실시간 활동.
-/// HKWorkout 과 달리 운동 앱 안 켜도, 운동이 끝나기 전에도 즉시 감지.
-/// 권한: NSMotionUsageDescription + startActivityUpdates 시점에 시스템 시트 자동.
-@Observable
-@MainActor
-final class MotionActivityManager {
-    static let shared = MotionActivityManager()
-
-    enum DetectedActivity: String {
-        case stationary, walking, running, cycling, automotive, unknown
-    }
-
-    private(set) var isAvailable: Bool = false
-    private(set) var currentActivity: DetectedActivity = .unknown
-    private(set) var confidence: CMMotionActivityConfidence = .low
-    private(set) var lastUpdatedAt: Date?
-
-    @ObservationIgnored private let manager = CMMotionActivityManager()
-    @ObservationIgnored private var started = false
-
-    private init() {}
-
-    func start() {
-        guard CMMotionActivityManager.isActivityAvailable() else {
-            isAvailable = false
-            return
-        }
-        isAvailable = true
-        guard !started else { return }
-        started = true
-        // 권한 시트는 첫 startActivityUpdates 시점에 자동으로 뜸.
-        manager.startActivityUpdates(to: .main) { [weak self] activity in
-            guard let self, let activity else { return }
-            self.currentActivity = Self.classify(activity)
-            self.confidence = activity.confidence
-            self.lastUpdatedAt = Date()
-            // sync 트리거 — 활동이 바뀌면 캐릭터도 즉시 갱신.
-            SyncCoordinator.syncNow()
-        }
-    }
-
-    /// CMMotionActivity 의 여러 bool 중 가장 결정적인 하나 선택.
-    /// running > walking > cycling > automotive > stationary 순.
-    private static func classify(_ a: CMMotionActivity) -> DetectedActivity {
-        if a.running    { return .running }
-        if a.walking    { return .walking }
-        if a.cycling    { return .cycling }
-        if a.automotive { return .automotive }
-        if a.stationary { return .stationary }
-        return .unknown
-    }
-
-    var confidenceLabel: String {
-        switch confidence {
-        case .low:    return "낮음"
-        case .medium: return "중간"
-        case .high:   return "높음"
-        @unknown default: return "?"
         }
     }
 }

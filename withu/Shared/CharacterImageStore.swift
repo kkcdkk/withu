@@ -24,6 +24,9 @@ struct GalleryItem: Identifiable, Codable, Equatable {
     let id: String              // UUID().uuidString
     let sourceState: String     // 처음 만들 때의 CharacterState.rawValue
     let createdAt: Date
+    /// 연속 이미지 (frame 1) 도 같이 저장됐는지. nil/false 면 frame 0 만.
+    /// Optional 인 이유: 옛 메타엔 이 키가 없어 nil → false 로 fallback.
+    var hasFrame1: Bool?
 
     /// 사용자 친화적 표시용. 필요 시 추가 필드.
 }
@@ -33,6 +36,62 @@ enum CharacterImageStore {
     private static let activeFolder = "characters"
     private static let galleryFolder = "gallery"
     private static let metadataName = "metadata.json"
+    private static let animationEnabledKey = "withu.animationEnabled.v1"
+    private static let activeSourceMapKey = "withu.activeSourceMap.v1"
+
+    // MARK: - active slot ↔ gallery id 매핑 (어떤 state 가 어떤 갤러리 항목 사용 중인지)
+
+    /// [state.rawValue: gallery_id] 로 어떤 state 슬롯이 어떤 갤러리 항목을 쓰고 있는지 저장.
+    /// save(frame:0) / applyGalleryItem 이 갱신, deleteGalleryItem 이 정리.
+    private static func loadActiveSourceMap() -> [String: String] {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        return defaults?.dictionary(forKey: activeSourceMapKey) as? [String: String] ?? [:]
+    }
+
+    private static func saveActiveSourceMap(_ map: [String: String]) {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        defaults?.set(map, forKey: activeSourceMapKey)
+    }
+
+    private static func setActiveSource(state: CharacterState, galleryId: String?) {
+        var map = loadActiveSourceMap()
+        if let id = galleryId {
+            map[state.rawValue] = id
+        } else {
+            map.removeValue(forKey: state.rawValue)
+        }
+        saveActiveSourceMap(map)
+    }
+
+    /// 특정 state 슬롯에 현재 적용된 갤러리 id (없으면 nil).
+    static func currentGalleryItemId(for state: CharacterState) -> String? {
+        loadActiveSourceMap()[state.rawValue]
+    }
+
+    /// 한 갤러리 항목이 어떤 state 슬롯들에 적용 중인지 (역검색).
+    static func statesUsingGalleryItem(_ id: String) -> [CharacterState] {
+        let map = loadActiveSourceMap()
+        return map.compactMap { (k, v) -> CharacterState? in
+            guard v == id else { return nil }
+            return CharacterState(rawValue: k)
+        }
+    }
+
+    // MARK: - 애니메이션 표시 토글 (4개 타겟 공통)
+
+    /// frame 1 이 있어도 swap 애니메이션을 재생할지. 사용자 토글.
+    /// 기본 true. CharacterImageView 가 이 값을 읽어 정적/애니메이션 결정.
+    static var animationEnabled: Bool {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        return (defaults?.object(forKey: animationEnabledKey) as? Bool) ?? true
+    }
+
+    static func setAnimationEnabled(_ enabled: Bool) {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        defaults?.set(enabled, forKey: animationEnabledKey)
+        // 모든 state 갱신 트리거 — object: nil 로 broadcast.
+        NotificationCenter.default.post(name: .characterImageChanged, object: nil)
+    }
 
     // MARK: - App Group container
 
@@ -121,6 +180,15 @@ enum CharacterImageStore {
         return UIImage(cgImage: scaledCG)
     }
 
+    /// 활성 슬롯 파일만 덮어쓰기 (갤러리 항목/매핑 건드리지 않음).
+    /// 사용자가 결과 보고 transparent 토글했을 때 등 — 갤러리 원본은 유지하면서 표시만 바꾸는 용도.
+    static func saveActiveSlotOnly(_ image: UIImage, for state: CharacterState, frame: Int = 0) {
+        guard let data = image.pngData(),
+              let activeURL = activeFileURL(for: state, frame: frame) else { return }
+        try? data.write(to: activeURL, options: .atomic)
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+    }
+
     static func hasImage(for state: CharacterState) -> Bool {
         guard let url = activeFileURL(for: state) else { return false }
         return FileManager.default.fileExists(atPath: url.path)
@@ -150,6 +218,8 @@ enum CharacterImageStore {
 
     /// state 의 활성 슬롯 + 갤러리에 동시 저장. (생성 흐름에서 호출)
     /// 반환: 갤러리에 저장된 GalleryItem (재선택용 id).
+    /// - frame 0: 새 갤러리 항목 생성
+    /// - frame 1: 같은 state 의 가장 최근 갤러리 항목에 frame 1 파일 추가 + hasFrame1=true
     @discardableResult
     static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
@@ -158,9 +228,50 @@ enum CharacterImageStore {
             try? data.write(to: activeURL, options: .atomic)
         }
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
-        // 2) 갤러리에는 frame 0 (대표) 만 저장 — frame 1 은 애니메이션 전용
-        guard frame == 0 else { return nil }
-        return addToGalleryInternal(data: data, sourceState: state)
+        // 2) 갤러리 — frame 별 분기
+        if frame == 0 {
+            let item = addToGalleryInternal(data: data, sourceState: state)
+            if let id = item?.id {
+                // 새로 만든 갤러리 항목이 이 state 의 현재 활성 source.
+                setActiveSource(state: state, galleryId: id)
+            }
+            return item
+        } else {
+            return attachFrame1ToLatestGalleryItem(data: data, sourceState: state)
+        }
+    }
+
+    /// frame 1 을 같은 state 의 가장 최근 갤러리 항목에 추가.
+    /// 없으면 nil (frame 0 없이 frame 1 만 만든 케이스 — 정상 흐름엔 없음).
+    @discardableResult
+    private static func attachFrame1ToLatestGalleryItem(data: Data,
+                                                         sourceState: CharacterState) -> GalleryItem? {
+        var all = loadGalleryMetadata()  // createdAt desc 로 정렬됨
+        guard let idx = all.firstIndex(where: { $0.sourceState == sourceState.rawValue }) else {
+            return nil
+        }
+        let item = all[idx]
+        guard let url = galleryFrame1URL(id: item.id) else { return nil }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            return nil
+        }
+        all[idx].hasFrame1 = true
+        saveGalleryMetadata(all)
+        return all[idx]
+    }
+
+    private static func galleryFrame1URL(id: String) -> URL? {
+        ensureFolder(galleryFolder)?.appendingPathComponent("\(id)_f1.png")
+    }
+
+    /// 갤러리 항목의 frame 1 이미지 로드. 없으면 nil.
+    static func loadGalleryFrame1(id: String) -> UIImage? {
+        guard let url = galleryFrame1URL(id: id),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
     }
 
     /// 활성 슬롯 삭제 → asset / SF Symbol fallback 으로 돌아감.
@@ -224,6 +335,7 @@ enum CharacterImageStore {
     }
 
     /// 갤러리 항목을 지정 state 의 활성 슬롯으로 적용.
+    /// frame 1 있는 갤러리 항목이면 frame 1 도 같이 복사. 없으면 기존 frame 1 잔재 제거.
     @discardableResult
     static func applyGalleryItem(_ id: String, to state: CharacterState) -> Bool {
         guard let img = loadGalleryImage(id: id),
@@ -231,22 +343,40 @@ enum CharacterImageStore {
               let activeURL = activeFileURL(for: state) else { return false }
         do {
             try data.write(to: activeURL, options: .atomic)
-            NotificationCenter.default.post(name: .characterImageChanged, object: state)
-            return true
         } catch {
             return false
         }
+        // frame 1 처리 — 갤러리에 있으면 복사, 없으면 기존 active frame 1 지움 (다른 캐릭터 잔재 방지)
+        if let f1 = loadGalleryFrame1(id: id),
+           let f1Data = f1.pngData(),
+           let f1URL = activeFileURL(for: state, frame: 1) {
+            try? f1Data.write(to: f1URL, options: .atomic)
+        } else if let f1URL = activeFileURL(for: state, frame: 1) {
+            try? FileManager.default.removeItem(at: f1URL)
+        }
+        // 이 state 슬롯의 활성 source 갱신.
+        setActiveSource(state: state, galleryId: id)
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+        return true
     }
 
-    /// 갤러리 항목 삭제 (이미지 + 메타).
+    /// 갤러리 항목 삭제 (frame 0 + frame 1 + 메타 + 활성 source 매핑 정리).
     @discardableResult
     static func deleteGalleryItem(_ id: String) -> Bool {
         if let url = galleryFileURL(id: id) {
             try? FileManager.default.removeItem(at: url)
         }
+        if let f1URL = galleryFrame1URL(id: id) {
+            try? FileManager.default.removeItem(at: f1URL)
+        }
         var all = loadGalleryMetadata()
         all.removeAll { $0.id == id }
         saveGalleryMetadata(all)
+        // 활성 source 매핑에서 이 id 가리키던 state 들 제거.
+        var map = loadActiveSourceMap()
+        let staleKeys = map.compactMap { $1 == id ? $0 : nil }
+        for k in staleKeys { map.removeValue(forKey: k) }
+        if !staleKeys.isEmpty { saveActiveSourceMap(map) }
         return true
     }
     #endif

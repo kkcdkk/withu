@@ -14,7 +14,6 @@ struct ContentView: View {
     @State private var notifications = NotificationManager.shared
     @State private var weather = WeatherManager.shared
     @State private var focus = FocusModeManager.shared
-    @State private var motion = MotionActivityManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var overrideState: CharacterState? = nil
@@ -37,8 +36,6 @@ struct ContentView: View {
             inSleepSchedule: manualOnly ? false : health.isInBedSchedule,
             hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
             isFocusActive: manualOnly ? false : (focus.isFocused || focus.isFocusFilterSleeping),
-            liveActivity: motion.currentActivity,
-            liveActivityConfidence: motion.confidence,
             isLikelyInWorkout: health.isLikelyInWorkout,
             profile: profile
         )
@@ -439,7 +436,6 @@ struct SettingsView: View {
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
     @State private var focus = FocusModeManager.shared
-    @State private var motion = MotionActivityManager.shared
 
     @Binding var overrideState: CharacterState?
     let characterState: CharacterState
@@ -697,30 +693,6 @@ struct SettingsView: View {
 
     private var motionSection: some View {
         Section {
-            // CMMotionActivityManager
-            HStack {
-                Text("실시간 활동")
-                Spacer()
-                Text(motion.isAvailable ? motion.currentActivity.rawValue : "기기 미지원")
-                    .foregroundStyle(.secondary)
-            }
-            if motion.isAvailable {
-                HStack {
-                    Text("Confidence")
-                    Spacer()
-                    Text(motion.confidenceLabel).foregroundStyle(.secondary)
-                }
-                if let last = motion.lastUpdatedAt {
-                    HStack {
-                        Text("마지막 업데이트")
-                        Spacer()
-                        Text(last.formatted(date: .omitted, time: .standard))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Divider()
-            // HR 빈도 기반 워치 운동 추론
             HStack {
                 Text("워치 운동 추론")
                 Spacer()
@@ -752,10 +724,7 @@ struct SettingsView: View {
         } header: {
             Text("운동 감지")
         } footer: {
-            Text("""
-                • 실시간 활동 = iPhone motion 코프로세서 (CMMotionActivityManager). 폰 들고 다닐 때 즉시 walking/running/cycling 감지.
-                • 워치 운동 추론 = HKObserverQuery 가 본 HR sample 빈도 + 평균 BPM 으로 추정 (5+ samples / 90s & ≥95bpm). 워치 운동 앱 시작했어도 HKWorkout 은 종료 후 생기므로 그 사이의 공백을 채워줘요.
-                """)
+            Text("Apple 워치 운동 앱 시작 시 HR sample 이 1-5초 간격으로 stream — 빈도 + 평균 BPM 으로 운동중 여부 추정 (5+ samples / 90s & ≥95bpm). 운동 종료 후엔 HKWorkout sample 로 정식 타입 매핑. 캐주얼한 걷기는 감지 안 함 (운동 = 명시적 시작).")
                 .font(.caption2)
         }
     }
