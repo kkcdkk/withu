@@ -40,6 +40,8 @@ final class ConnectivityManager: NSObject {
     static let characterImageMetadataKey = "withu.characterImage.state"
     /// 애니메이션 frame index metadata (0/1)
     static let characterFrameMetadataKey = "withu.characterImage.frame"
+    /// 날씨 배경 이미지 파일 transfer 시 metadata 키 — 워치 쪽이 어느 condition 인지 알 수 있게.
+    static let weatherBackgroundMetadataKey = "withu.weatherBackground.condition"
 
     private override init() { super.init() }
 
@@ -120,6 +122,34 @@ final class ConnectivityManager: NSObject {
             }
         } catch {
             lastImageTransferState = "❌ 파일 쓰기 실패: \(error.localizedDescription)"
+        }
+    }
+
+    /// 날씨 배경 이미지를 워치로 전송 (file transfer). 캐릭터와 별도 metadata key.
+    /// 워치 쪽 background storage 에 저장됨.
+    func sendWeatherBackground(_ image: UIImage, for cond: WeatherBackgroundCondition) {
+        guard let session,
+              session.activationState == .activated,
+              session.isPaired,
+              session.isWatchAppInstalled else { return }
+        // 워치 화면 ~ 410px 이내라 256 정도면 충분. 더 작게 200 으로 다운샘플.
+        let resized = Self.downsampled(image, maxPixelSize: 200)
+        guard let data = resized.pngData() else {
+            lastImageTransferState = "❌ 배경 PNG 인코딩 실패"
+            return
+        }
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bg_\(cond.rawValue)_\(UUID().uuidString).png")
+        do {
+            try data.write(to: tmpURL, options: .atomic)
+            session.transferFile(
+                tmpURL,
+                metadata: [Self.weatherBackgroundMetadataKey: cond.rawValue]
+            )
+            lastImageTransferState = "📤 bg \(cond.rawValue) 전송 시작 (\(data.count / 1024)KB)"
+            outstandingTransfers = session.outstandingFileTransfers.count
+        } catch {
+            lastImageTransferState = "❌ 배경 파일 쓰기 실패: \(error.localizedDescription)"
         }
     }
 

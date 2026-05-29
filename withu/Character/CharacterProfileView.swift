@@ -73,6 +73,8 @@ struct CharacterProfileView: View {
 
             statesOverviewSection
 
+            weatherBackgroundsSection
+
             Section {
                 Toggle("연속 이미지 사용 (있을 때)", isOn: $animationEnabled)
             } header: {
@@ -95,6 +97,52 @@ struct CharacterProfileView: View {
         .onChange(of: profile) { _, new in
             CharacterProfileStore.save(new)
             WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    // MARK: - Weather backgrounds
+
+    /// 4 날씨 배경의 현재 상태 + 각 condition 의 생성 화면 진입.
+    private var weatherBackgroundsSection: some View {
+        Section {
+            ForEach(WeatherBackgroundCondition.allCases, id: \.self) { cond in
+                NavigationLink {
+                    WeatherBackgroundGenView(initialCondition: cond)
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(uiColor: .tertiarySystemBackground))
+                            if let img = CharacterImageStore.loadBackground(cond) {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            } else {
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(cond.displayName).font(.callout.weight(.medium))
+                            Text(CharacterImageStore.hasBackground(cond)
+                                 ? "사용자 생성"
+                                 : "기본 (없음)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        } header: {
+            Text("🌤 날씨 배경")
+        } footer: {
+            Text("현재 날씨에 따라 메인 화면 · 위젯 · 워치 의 캐릭터 뒤에 자동으로 배경이 합성돼요. 비어 있는 날씨는 배경 없이 캐릭터만 표시. 행을 탭하면 해당 날씨 배경 생성 화면으로.")
+                .font(.caption2)
         }
     }
 

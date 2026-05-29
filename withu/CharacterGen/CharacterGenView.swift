@@ -72,6 +72,11 @@ struct CharacterGenView: View {
                 } label: {
                     Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
                 }
+                NavigationLink {
+                    WeatherBackgroundGenView()
+                } label: {
+                    Label("날씨 배경 만들기", systemImage: "cloud.sun.fill")
+                }
             }
         }
         .navigationTitle("함께할 캐릭터 생성하기")
@@ -607,4 +612,207 @@ struct CharacterGenView: View {
 
 #Preview {
     NavigationStack { CharacterGenView() }
+}
+
+// MARK: - WeatherBackgroundGenView
+
+/// 날씨 배경 (4가지) 을 AI 로 생성. 캐릭터 없이 풍경만.
+/// 한 번 생성하면 App Group 에 저장 — 메인 화면 / 워치 / 위젯의 배경 layer 로 사용됨.
+struct WeatherBackgroundGenView: View {
+    /// 진입 시점에 미리 선택할 condition. CharacterProfileView 에서 특정 날씨 탭 시 사용.
+    let initialCondition: WeatherBackgroundCondition
+
+    @State private var condition: WeatherBackgroundCondition
+    @State private var prompt: String
+    @State private var quality: String = "low"
+    @State private var artStyle: String = "casual"
+    @State private var isGenerating: Bool = false
+    @State private var generationStartedAt: Date?
+    @State private var resultImage: UIImage?
+    @State private var lastError: String?
+    @State private var showAppliedAlert: Bool = false
+
+    init(initialCondition: WeatherBackgroundCondition = .sunny) {
+        self.initialCondition = initialCondition
+        _condition = State(initialValue: initialCondition)
+        _prompt = State(initialValue: initialCondition.generationHint)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("날씨", selection: $condition) {
+                    ForEach(WeatherBackgroundCondition.allCases, id: \.self) { c in
+                        Text(c.displayName).tag(c)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(isGenerating)
+                HStack {
+                    Text("현재 적용된 배경")
+                    Spacer()
+                    Text(CharacterImageStore.hasBackground(condition) ? "사용자 생성" : "없음")
+                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                }
+            } header: {
+                Text("어떤 날씨?")
+            }
+
+            Section("옵션") {
+                Picker("그림체", selection: $artStyle) {
+                    Text("일반 (파스텔)").tag("casual")
+                    Text("픽셀 (8/16-bit)").tag("pixel")
+                }
+                .pickerStyle(.segmented).disabled(isGenerating)
+                Picker("품질", selection: $quality) {
+                    Text("low — $0.011").tag("low")
+                    Text("medium — $0.04").tag("medium")
+                    Text("high — $0.17").tag("high")
+                }
+                .pickerStyle(.menu).disabled(isGenerating)
+            }
+
+            Section {
+                TextEditor(text: $prompt)
+                    .frame(minHeight: 100)
+                    .font(.callout)
+                Button {
+                    Task { await generate() }
+                } label: {
+                    if isGenerating {
+                        generatingLabel
+                    } else {
+                        Label("배경 생성", systemImage: "wand.and.stars")
+                    }
+                }
+                .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } header: {
+                Text("프롬프트")
+            } footer: {
+                Text("""
+                    자유롭게 적어도 돼요. "NO character, NO person — Empty landscape only" 가 자동으로 뒤에 붙어요.
+                    ※ 그래도 캐릭터가 그려진다면 서버(FastAPI)의 SYSTEM_PROMPT 가 캐릭터를 강제하고 있어서 — 서버에 "type=background" 같은 분기를 추가해야 완전 해결.
+                    """)
+                    .font(.caption2)
+            }
+
+            if let img = resultImage {
+                Section {
+                    // 단독 — 생성된 배경 자체
+                    Image(uiImage: img).resizable().scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    // 합성 미리보기 — 실제 메인 화면처럼 idle 캐릭터 올림
+                    VStack(spacing: 4) {
+                        Text("메인 화면에서 보이는 모습").font(.caption2).foregroundStyle(.secondary)
+                        ZStack {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 200, height: 200)
+                                .clipShape(Circle())
+                            Circle().fill(CharacterState.idle.tint.opacity(0.18))
+                                .frame(width: 200, height: 200)
+                            CharacterImageView(state: .idle, animated: true)
+                                .frame(width: 160, height: 160)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    Button {
+                        apply(img, for: condition)
+                    } label: {
+                        Label("'\(condition.displayName)' 배경으로 적용", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                    }
+                    .buttonStyle(.borderedProminent)
+                } header: {
+                    Text("결과")
+                }
+            }
+
+            if let err = lastError {
+                Section { Text(err).foregroundStyle(.red) }
+            }
+        }
+        .navigationTitle("날씨 배경 생성")
+        .scrollDismissesKeyboard(.interactively)
+        .alert("적용됨", isPresented: $showAppliedAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("\(condition.displayName) 배경이 적용됐어요. 메인 화면/위젯/워치에서 해당 날씨일 때 보여요.")
+        }
+        .onChange(of: condition) { _, new in
+            prompt = new.generationHint
+            resultImage = nil
+        }
+    }
+
+    @ViewBuilder
+    private var generatingLabel: some View {
+        if let start = generationStartedAt {
+            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                let elapsed = Int(ctx.date.timeIntervalSince(start))
+                HStack { ProgressView(); Text("생성 중… \(elapsed)초") }
+            }
+        } else {
+            HStack { ProgressView(); Text("생성 중…") }
+        }
+    }
+
+    private func generate() async {
+        isGenerating = true
+        generationStartedAt = .now
+        lastError = nil
+        defer {
+            isGenerating = false
+            generationStartedAt = nil
+        }
+        do { try await APIClient.shared.preflightPing() }
+        catch {
+            lastError = "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해주세요."
+            return
+        }
+        // 서버의 SYSTEM_PROMPT 가 매번 캐릭터 가드레일을 prepend 함 (FastAPI proxy).
+        // 사용자 prompt 가 "밤하늘" 처럼 짧으면 캐릭터 가 그려짐.
+        // → send 시점에 "NO character" 가드레일 강제 append. 그래도 캐릭터 가 나오면 서버 SYSTEM_PROMPT 수정 필요.
+        let finalPrompt = "\(prompt). Background scene ONLY — NO character, NO person, NO mascot, NO creature, NO animal. Empty landscape / sky illustration only."
+        do {
+            let req = GenerateImageRequest(
+                prompt: finalPrompt,
+                referenceImageBase64: nil,
+                steps: 30,
+                width: 1024,
+                height: 1024,
+                quality: quality,
+                artStyle: artStyle,
+                style: "auto",
+                kind: "background"   // 서버가 SYSTEM_PROMPT 건너뜀
+            )
+            let resp = try await APIClient.shared.generateImage(req)
+            guard let data = Data(base64Encoded: resp.imageBase64),
+                  let img = UIImage(data: data) else {
+                lastError = "이미지 디코드 실패"
+                return
+            }
+            // 배경은 256px 면 충분 (메인 hero 240, 위젯 small ~150). 디스크 절약.
+            let small = img.preparingThumbnail(of: CGSize(width: 256, height: 256)) ?? img
+            resultImage = small
+        } catch {
+            lastError = "❌ \(error.localizedDescription)"
+        }
+    }
+
+    private func apply(_ image: UIImage, for cond: WeatherBackgroundCondition) {
+        if CharacterImageStore.saveBackground(image, for: cond) {
+            WidgetCenter.shared.reloadAllTimelines()
+            ConnectivityManager.shared.sendWeatherBackground(image, for: cond)
+            showAppliedAlert = true
+        } else {
+            lastError = "❌ App Group 저장 실패"
+        }
+    }
+}
+
+#Preview("WeatherBg") {
+    NavigationStack { WeatherBackgroundGenView() }
 }

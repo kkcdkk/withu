@@ -17,6 +17,52 @@ import UIKit
 extension Notification.Name {
     /// 활성 슬롯 캐릭터 이미지가 변경됨 — ContentView 등이 재로드 트리거에 사용.
     static let characterImageChanged = Notification.Name("withu.characterImageChanged")
+    /// 날씨 배경 이미지가 변경됨.
+    static let weatherBackgroundChanged = Notification.Name("withu.weatherBackgroundChanged")
+}
+
+/// 배경 레이어용 날씨 카테고리 — 4 날씨 + 야간.
+/// .night 는 시간 기반 (날씨 무관) — 야간엔 어둠이 가장 강한 시각 신호라 다른 조건 다 누름.
+enum WeatherBackgroundCondition: String, CaseIterable, Codable {
+    case sunny, cloudy, rainy, snowy, night
+
+    var displayName: String {
+        switch self {
+        case .sunny:  return "맑음 ☀️"
+        case .cloudy: return "흐림 ☁️"
+        case .rainy:  return "비 🌧"
+        case .snowy:  return "눈 ❄️"
+        case .night:  return "밤하늘 🌙"
+        }
+    }
+
+    var generationHint: String {
+        switch self {
+        case .sunny:
+            return "Bright sunny sky background, soft white clouds, warm sunlight, clean pastel landscape, illustration. NO character, NO person — empty scene only."
+        case .cloudy:
+            return "Soft overcast cloudy sky background, gray pastel atmosphere, calm empty landscape, illustration. NO character, NO person — empty scene only."
+        case .rainy:
+            return "Rainy weather background scene, light rain falling, wet pavement, soft gray sky, pastel illustration, cinematic. NO character, NO person — empty scene only."
+        case .snowy:
+            return "Snowy winter background, gentle snowflakes falling, snow on ground, soft cold pastel colors, illustration. NO character, NO person — empty scene only."
+        case .night:
+            return "Calm night sky background, dark blue / deep purple, scattered stars, soft crescent moon, dreamy pastel illustration. NO character, NO person — empty scene only."
+        }
+    }
+
+    /// 위젯/워치 메시지에 담긴 emoji 로부터 매핑.
+    /// WeatherCondition.emoji 와 일치해야 — sunny=☀️, cloudy=☁️, rainy=🌧, snowy=❄️, thunder=⛈ (→ rainy 로).
+    /// 야간 (.night) 은 시간 기반이라 emoji 매핑 없음.
+    static func from(emoji: String?) -> WeatherBackgroundCondition? {
+        switch emoji {
+        case "☀️":      return .sunny
+        case "☁️":      return .cloudy
+        case "🌧", "⛈": return .rainy
+        case "❄️":      return .snowy
+        default:        return nil
+        }
+    }
 }
 
 /// 갤러리 한 항목.
@@ -38,6 +84,50 @@ enum CharacterImageStore {
     private static let metadataName = "metadata.json"
     private static let animationEnabledKey = "withu.animationEnabled.v1"
     private static let activeSourceMapKey = "withu.activeSourceMap.v1"
+    private static let backgroundsFolder = "backgrounds"
+
+    // MARK: - 야간 시간 체크 (간단 fallback)
+
+    /// 시간 기반 야간 판정 (20:00~06:00). 4 타깃 공통 fallback.
+    /// iOS app 은 profile sleep window 로 더 정확하게 별도 분기 사용 가능.
+    static func isCurrentlyNight(at date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        let hour = calendar.component(.hour, from: date)
+        return hour >= 20 || hour < 6
+    }
+
+    // MARK: - 날씨 배경 (per condition × 4 = 4 PNG)
+
+    private static func backgroundFileURL(for cond: WeatherBackgroundCondition) -> URL? {
+        ensureFolder(backgroundsFolder)?.appendingPathComponent("\(cond.rawValue).png")
+    }
+
+    static func hasBackground(_ cond: WeatherBackgroundCondition) -> Bool {
+        guard let url = backgroundFileURL(for: cond) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    #if canImport(UIKit)
+    /// 사용자 생성 배경 로드 — 없으면 nil.
+    static func loadBackground(_ cond: WeatherBackgroundCondition) -> UIImage? {
+        guard let url = backgroundFileURL(for: cond),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
+    }
+
+    @discardableResult
+    static func saveBackground(_ image: UIImage, for cond: WeatherBackgroundCondition) -> Bool {
+        guard let data = image.pngData(),
+              let url = backgroundFileURL(for: cond) else { return false }
+        do {
+            try data.write(to: url, options: .atomic)
+            NotificationCenter.default.post(name: .weatherBackgroundChanged, object: cond)
+            return true
+        } catch {
+            return false
+        }
+    }
+    #endif
 
     // MARK: - active slot ↔ gallery id 매핑 (어떤 state 가 어떤 갤러리 항목 사용 중인지)
 

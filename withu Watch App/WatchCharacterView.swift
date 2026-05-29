@@ -14,12 +14,24 @@ struct WatchCharacterView: View {
     /// 새 이미지 도착 시 부모가 ++ 해서 전달. 같은 state 의 이미지만 바뀌어도
     /// .id() 가 강제 재생성을 트리거해 disk 에서 새 PNG 를 다시 읽음.
     var imageReloadKey: Int = 0
+    /// 현재 날씨 emoji — WatchMessage.weatherEmoji 그대로. 배경 layer 매핑에 사용.
+    var weatherEmoji: String? = nil
+
+    /// 야간이면 .night, 아니면 emoji 매핑.
+    private var effectiveBackgroundCondition: WeatherBackgroundCondition? {
+        if CharacterImageStore.isCurrentlyNight() { return .night }
+        return WeatherBackgroundCondition.from(emoji: weatherEmoji)
+    }
 
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
+                // 가장 뒤 — 날씨 배경 (사용자 생성 PNG 있을 때만)
+                WeatherBackgroundView(condition: effectiveBackgroundCondition)
+                    .frame(width: 80, height: 80)
+                    .clipShape(Circle())
                 Circle()
-                    .fill(state.tint.opacity(0.20))
+                    .fill(state.tint.opacity(0.18))
                     .frame(width: 80, height: 80)
                 animatedCharacter
                     .id(imageReloadKey)
@@ -142,6 +154,19 @@ private func motion(for state: CharacterState, at date: Date) -> MotionFrame {
         let p = phase(period: 3.0)
         return MotionFrame(scale: 1.0 + 0.025 * p,
                            rotation: 1.0 * p)
+
+    // MARK: - 운동 × 날씨 조합 (resolver 가 자동 반환 안 함, manual override 시만)
+    // 같은 base 운동의 모션 그대로 사용.
+    case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy:
+        let b = bounce(period: 0.9)
+        let p = phase(period: 0.9)
+        return MotionFrame(offsetY: -3 * b, rotation: 2 * p)
+    case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy:
+        let b = bounce(period: 0.5)
+        return MotionFrame(offsetY: -6 * b)
+    case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy:
+        let p = phase(period: 0.7)
+        return MotionFrame(offsetX: 2 * p, offsetY: -2 * abs(p), rotation: 3 * p)
     }
 }
 

@@ -32,6 +32,7 @@ enum CharacterStateResolver {
         // 0) HKWorkout 종료 후 1시간 윈도우 — 가장 신뢰성 있는 신호 (실제 운동 끝남 확정).
         //    HR 추론보다 앞에 둠 — 운동 종료 후에도 HR 이 일시적으로 stream 되면서
         //    isLikelyInWorkout 이 stale true 인 상황 대응.
+        //    날씨는 background layer 가 별도로 처리하므로 여기선 base state 만 반환.
         if let latest = workouts.first {
             let endedAt = latest.start.addingTimeInterval(latest.duration)
             if now.timeIntervalSince(endedAt) <= recentWorkoutWindow {
@@ -80,17 +81,9 @@ enum CharacterStateResolver {
             return .eating
         }
 
-        // 5) 날씨 기반
-        guard let w = weather else { return .idle }
-        if w.isHot { return .beach }
-        switch w.condition {
-        case .rainy, .thunder: return .rainyShelter
-        case .snowy:           return .snowPlay
-        case .sunny:           return .idle         // 날씨 좋다고 자동으로 산책 X — walking 은 운동 분기에서만
-        case .cloudy:          return .cloudy       // 캐릭터 위에 작은 구름
-        case .foggy:           return .idle
-        case .unknown:         return .idle
-        }
+        // 5) 비운동 / 비수면 / 비기상 / 비식사 시간은 모두 idle.
+        //    날씨는 운동 중일 때만 매핑에 사용 (mapWorkout 안에서).
+        return .idle
     }
 
     /// 현재 분(0~1439) 이 [start, end) 안에 있는지. start > end 면 자정 넘김.
@@ -104,12 +97,14 @@ enum CharacterStateResolver {
         }
     }
 
+    /// 운동 타입 → base state. 날씨는 background layer 가 별도 표시.
+    /// 12 combo case (.walkingSunny 등) 는 enum 에 남아있지만 resolver 가 안 반환.
     private static func mapWorkout(_ type: HKWorkoutActivityType) -> CharacterState {
         switch type {
-        case .running: return .running
-        case .cycling: return .cycling
+        case .running:          return .running
+        case .cycling:          return .cycling
         case .walking, .hiking: return .walking
-        default: return .energetic
+        default:                return .energetic
         }
     }
 }

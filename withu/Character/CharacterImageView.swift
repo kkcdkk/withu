@@ -58,7 +58,7 @@ struct CharacterImageView: View {
     #if canImport(UIKit)
     @ViewBuilder
     private func singleFrameView(frameIndex: Int) -> some View {
-        if let userImage = loadFrame(frameIndex) {
+        if let userImage = loadFrameWithFallback(frameIndex) {
             if outlineOnly {
                 Image(uiImage: Self.outlineImage(from: userImage))
                     .renderingMode(.template)
@@ -70,13 +70,55 @@ struct CharacterImageView: View {
                     .resizable()
                     .scaledToFit()
             }
-        } else if UIImage(named: state.imageAssetName) != nil {
-            Image(state.imageAssetName)
+        } else if let assetName = assetNameWithFallback() {
+            Image(assetName)
                 .resizable()
                 .scaledToFit()
         } else {
             sfSymbolFallback
         }
+    }
+
+    /// 사용자 PNG 로드. 현재 state 에 없으면 baseFallback state (조합 → 운동 base) 도 시도.
+    private func loadFrameWithFallback(_ frameIndex: Int) -> UIImage? {
+        if let img = loadFrame(frameIndex, state: state) {
+            return img
+        }
+        // 조합 state (예: walkingRainy) 이미지 없으면 base (walking) 시도
+        if let base = state.baseFallback,
+           let img = loadFrame(frameIndex, state: base) {
+            return img
+        }
+        return nil
+    }
+
+    /// Asset Catalog 이름 결정. 현재 state asset 없으면 baseFallback asset 시도.
+    private func assetNameWithFallback() -> String? {
+        if UIImage(named: state.imageAssetName) != nil {
+            return state.imageAssetName
+        }
+        if let base = state.baseFallback,
+           UIImage(named: base.imageAssetName) != nil {
+            return base.imageAssetName
+        }
+        return nil
+    }
+
+    private func loadFrame(_ frameIndex: Int, state: CharacterState) -> UIImage? {
+        if frameIndex == 0 {
+            return loadFrame0(state: state)
+        }
+        if let img = CharacterImageStore.loadFrame(state, frame: frameIndex) {
+            return maybeDownsample(img)
+        }
+        return loadFrame0(state: state)
+    }
+
+    private func loadFrame0(state: CharacterState) -> UIImage? {
+        if let maxPixelSize {
+            return CharacterImageStore.loadThumbnail(state, maxPixelSize: maxPixelSize)
+        }
+        return CharacterImageStore.load(state)
     }
 
     /// 지정 frame 로드. 다운샘플 옵션 + frame 0 fallback.
@@ -187,4 +229,40 @@ struct CharacterImageView: View {
     CharacterImageView(state: .idle)
         .frame(width: 120, height: 120)
         .background(Circle().fill(CharacterState.idle.tint.opacity(0.18)))
+}
+
+// MARK: - WeatherBackgroundView (4 타깃 공유)
+
+/// 현재 날씨에 맞는 배경 이미지 표시. 사용자 생성 PNG → Asset Catalog → Color.clear 순.
+/// 호출자는 condition 직접 (iOS app) 또는 emoji (watch/widget) 로 전달.
+struct WeatherBackgroundView: View {
+    let condition: WeatherBackgroundCondition?
+
+    /// emoji 로 초기화 — 워치 / 위젯에서 사용 (WatchMessage.weatherEmoji).
+    init(emoji: String?) {
+        self.condition = WeatherBackgroundCondition.from(emoji: emoji)
+    }
+
+    /// condition 으로 직접 초기화 — iOS app 에서 WeatherCondition 매핑 후 사용.
+    init(condition: WeatherBackgroundCondition?) {
+        self.condition = condition
+    }
+
+    var body: some View {
+        #if canImport(UIKit)
+        if let condition, let img = CharacterImageStore.loadBackground(condition) {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFill()
+        } else if let condition, UIImage(named: "background_\(condition.rawValue)") != nil {
+            Image("background_\(condition.rawValue)")
+                .resizable()
+                .scaledToFill()
+        } else {
+            Color.clear
+        }
+        #else
+        Color.clear
+        #endif
+    }
 }

@@ -192,9 +192,15 @@ struct ContentView: View {
     private var characterHero: some View {
         VStack(spacing: 14) {
             ZStack {
-                Circle()
-                    .fill(characterState.tint.opacity(0.22))
+                // 가장 뒤 — 날씨 배경 (사용자 생성 이미지 있을 때만 표시).
+                WeatherBackgroundView(condition: weatherBackgroundCondition)
                     .frame(width: 240, height: 240)
+                    .clipShape(Circle())
+                // 중간 — 캐릭터 tint 원 (살짝 옅게)
+                Circle()
+                    .fill(characterState.tint.opacity(0.18))
+                    .frame(width: 240, height: 240)
+                // 앞 — 캐릭터 (투명 PNG 가정)
                 CharacterImageView(state: characterState, animated: true)
                     .frame(width: 200, height: 200)
                     .id("\(characterState.rawValue)-\(imageRefreshKey)")  // 이미지 갱신 강제
@@ -206,6 +212,32 @@ struct ContentView: View {
                 .transition(.opacity)
         }
         .animation(.snappy, value: characterState)
+    }
+
+    /// 현재 시각 + 날씨 → 배경 condition 매핑.
+    /// 야간 (프로필 sleep window) 우선 — 날씨 무관하게 .night.
+    private var weatherBackgroundCondition: WeatherBackgroundCondition? {
+        if isNightByProfile { return .night }
+        guard let c = weather.snapshot?.condition else { return nil }
+        switch c {
+        case .sunny:           return .sunny
+        case .cloudy:          return .cloudy
+        case .rainy, .thunder: return .rainy
+        case .snowy:           return .snowy
+        default:               return nil
+        }
+    }
+
+    /// 현재 시각이 프로필 sleep window (예: 22:00-07:00) 안인지.
+    private var isNightByProfile: Bool {
+        let cal = Calendar.current
+        let now = Date()
+        let nowMin = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        let startMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
+        let endMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
+        let s = startMin % (24 * 60)
+        let e = endMin % (24 * 60)
+        return s < e ? (nowMin >= s && nowMin < e) : (nowMin >= s || nowMin < e)
     }
 
     private var metricsCard: some View {

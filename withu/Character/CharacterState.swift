@@ -16,10 +16,29 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
     case cycling
     case energetic       // 활동량 많음 (워크아웃은 아니지만 걸음 많은 날)
     case eating          // 식사 시간 (12:00-12:30, 18:00-18:30)
-    case beach           // 매우 더운 날 — 해변 일광욕
-    case cloudy          // 흐림 — 캐릭터 위에 작은 구름
-    case rainyShelter    // 비 + 휴식 — 우산
-    case snowPlay        // 눈 + 활동 — 눈사람/스노우보드
+    case beach           // 매우 더운 날 — 해변 일광욕 (legacy, resolver 가 자동 반환 안 함)
+    case cloudy          // 흐림 — 캐릭터 위에 작은 구름 (legacy)
+    case rainyShelter    // 비 + 휴식 — 우산 (legacy)
+    case snowPlay        // 눈 + 활동 — 눈사람/스노우보드 (legacy)
+
+    // MARK: - 운동 × 날씨 조합 (테마)
+    // resolver 가 active workout + weather 알 때 자동 반환.
+    // 이미지 없으면 baseFallback 으로 폴백.
+
+    case walkingSunny
+    case walkingCloudy
+    case walkingRainy
+    case walkingSnowy
+
+    case runningSunny
+    case runningCloudy
+    case runningRainy
+    case runningSnowy
+
+    case cyclingSunny
+    case cyclingCloudy
+    case cyclingRainy
+    case cyclingSnowy
 
     /// SF Symbols 이름. 실제 캐릭터 이미지로 교체될 placeholder.
     var symbolName: String {
@@ -36,6 +55,20 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .cloudy:         return "cloud.fill"
         case .rainyShelter:   return "umbrella.fill"
         case .snowPlay:       return "snowflake"
+        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy: return "figure.walk"
+        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy: return "figure.run"
+        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy: return "bicycle"
+        }
+    }
+
+    /// 조합 state 의 기본 운동 state (이미지 폴백 + 매핑용).
+    /// 조합 아닌 case 는 nil.
+    var baseFallback: CharacterState? {
+        switch self {
+        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy: return .walking
+        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy: return .running
+        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy: return .cycling
+        default: return nil
         }
     }
 
@@ -53,6 +86,18 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .cloudy:         return "구름 낀 하루 ☁️"
         case .rainyShelter:   return "우산 쓰고 비 구경 ☔️"
         case .snowPlay:       return "눈 속에서 신나게 ❄️"
+        case .walkingSunny:   return "햇살 받으며 산책 🚶☀️"
+        case .walkingCloudy:  return "흐린 날 산책 🚶☁️"
+        case .walkingRainy:   return "비 오는데 산책 🚶☔"
+        case .walkingSnowy:   return "눈길 산책 🚶❄️"
+        case .runningSunny:   return "햇살 아래 달리기 🏃☀️"
+        case .runningCloudy:  return "흐린 날 달리기 🏃☁️"
+        case .runningRainy:   return "비 맞으며 달리기 🏃☔"
+        case .runningSnowy:   return "눈 속 달리기 🏃❄️"
+        case .cyclingSunny:   return "햇살 자전거 🚴☀️"
+        case .cyclingCloudy:  return "흐린 날 자전거 🚴☁️"
+        case .cyclingRainy:   return "비 오는데 자전거 🚴☔"
+        case .cyclingSnowy:   return "눈 속 자전거 🚴❄️"
         }
     }
 
@@ -70,6 +115,10 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .cloudy:         return .gray
         case .rainyShelter:   return .teal
         case .snowPlay:       return .cyan
+        case .walkingSunny, .runningSunny, .cyclingSunny:   return .yellow
+        case .walkingCloudy, .runningCloudy, .cyclingCloudy: return .gray
+        case .walkingRainy, .runningRainy, .cyclingRainy:    return .blue
+        case .walkingSnowy, .runningSnowy, .cyclingSnowy:    return .cyan
         }
     }
 
@@ -93,6 +142,18 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .cloudy:       return "standing calmly with small fluffy clouds floating above the head, soft cloudy sky background, peaceful expression"
         case .rainyShelter: return "holding an umbrella, wearing rain boots, raindrops around"
         case .snowPlay:     return "standing in snow, making a snowball, wearing mittens and scarf"
+        case .walkingSunny: return "walking happily under bright sunshine, sunny clear sky background, motion lines"
+        case .walkingCloudy: return "walking calmly with soft cloudy sky background, motion lines"
+        case .walkingRainy: return "walking while holding an umbrella, light rain falling, wet pavement reflection"
+        case .walkingSnowy: return "walking in snow wearing a scarf and mittens, snowflakes around, snow on ground"
+        case .runningSunny: return "running energetically under bright sunshine, sunny clear sky, motion blur"
+        case .runningCloudy: return "running with arms swinging under cloudy sky, motion blur"
+        case .runningRainy: return "running in light rain, raindrops around, wet pavement"
+        case .runningSnowy: return "running through snow, scarf flowing, snowflakes falling"
+        case .cyclingSunny: return "riding a small bicycle under bright sunshine, sunny clear sky, helmet on"
+        case .cyclingCloudy: return "riding a bicycle under cloudy sky, helmet on, calm expression"
+        case .cyclingRainy: return "riding a bicycle in light rain wearing a raincoat or hood, raindrops around"
+        case .cyclingSnowy: return "riding a bicycle through light snow, bundled up with scarf and mittens"
         }
     }
 
@@ -126,6 +187,13 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
             return "umbrella tilted to the opposite angle, or rain drops in different positions. Same boots and outfit."
         case .snowPlay:
             return "snowball mid-toss (in the air) instead of in hands, or scarf flowing the other direction. Same mittens, same snow ground."
+        // 조합 — 운동 base 의 hint 와 동일한 변화 패턴 사용
+        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy:
+            return "the OPPOSITE foot stepping forward (mirror the leg/arm swing). Same direction of walking, same outfit, same weather conditions."
+        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy:
+            return "arms and legs in the OPPOSITE swing phase. Same speed, same expression, same weather conditions."
+        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy:
+            return "pedals rotated half a turn — opposite foot at the top. Same helmet, same direction, same bicycle, same weather conditions."
         }
     }
 
@@ -144,6 +212,18 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .cloudy:         return "☁️"
         case .rainyShelter:   return "☔️"
         case .snowPlay:       return "❄️"
+        case .walkingSunny:   return "🚶☀️"
+        case .walkingCloudy:  return "🚶☁️"
+        case .walkingRainy:   return "🚶☔"
+        case .walkingSnowy:   return "🚶❄️"
+        case .runningSunny:   return "🏃☀️"
+        case .runningCloudy:  return "🏃☁️"
+        case .runningRainy:   return "🏃☔"
+        case .runningSnowy:   return "🏃❄️"
+        case .cyclingSunny:   return "🚴☀️"
+        case .cyclingCloudy:  return "🚴☁️"
+        case .cyclingRainy:   return "🚴☔"
+        case .cyclingSnowy:   return "🚴❄️"
         }
     }
 }

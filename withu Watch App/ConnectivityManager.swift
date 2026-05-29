@@ -79,13 +79,33 @@ extension ConnectivityManager: WCSessionDelegate {
         }
     }
 
-    /// iPhone 이 보낸 캐릭터 이미지 PNG 파일 수신 → App Group 의 character_<state>.png 로 저장.
-    /// 같은 키 (characterImageMetadataKey) 의 metadata 에 state.rawValue 가 들어있어야 함.
+    /// iPhone 이 보낸 PNG 파일 수신. metadata 키에 따라:
+    ///   - withu.characterImage.state → 캐릭터 active slot 저장
+    ///   - withu.weatherBackground.condition → 배경 저장
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {
         let metadata = file.metadata ?? [:]
-        let key = "withu.characterImage.state"
+        let characterKey = "withu.characterImage.state"
         let frameKey = "withu.characterImage.frame"
-        guard let stateRaw = metadata[key] as? String,
+        let backgroundKey = "withu.weatherBackground.condition"
+
+        // 1) 날씨 배경 파일?
+        #if canImport(UIKit)
+        if let condRaw = metadata[backgroundKey] as? String,
+           let cond = WeatherBackgroundCondition(rawValue: condRaw),
+           let data = try? Data(contentsOf: file.fileURL),
+           let img = UIImage(data: data) {
+            Task { @MainActor in
+                CharacterImageStore.saveBackground(img, for: cond)
+                WidgetCenter.shared.reloadAllTimelines()
+                WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
+                self.lastComplicationReloadAt = Date()
+            }
+            return
+        }
+        #endif
+
+        // 2) 캐릭터 이미지 (기존)
+        guard let stateRaw = metadata[characterKey] as? String,
               let state = CharacterState(rawValue: stateRaw) else {
             Task { @MainActor in self.lastError = "수신 파일 metadata 누락" }
             return

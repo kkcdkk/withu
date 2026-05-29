@@ -144,7 +144,10 @@ struct withuComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             CharacterComplicationView(entry: entry)
-                .containerBackground(for: .widget) { Color.clear }
+                .containerBackground(for: .widget) {
+                    // 워치 컴플리케이션은 모노톤 강제라 효과 작지만 일관성 위해 동일 처리.
+                    Color.clear
+                }
                 .widgetURL(URL(string: "withu://main"))   // 컴플리케이션 탭 → 워치 앱 열림
         }
         .configurationDisplayName("withu 캐릭터")

@@ -314,9 +314,12 @@ struct withuWidget: Widget {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             WidgetView(entry: entry)
                 .containerBackground(for: .widget) {
-                    // 투명 배경 — 호스트 wallpaper 비치게.
-                    // (iOS 17+ containerBackground 는 의무라 비워둘 수 없음, Color.clear 명시.)
-                    Color.clear
+                    // 날씨 배경 layer. 야간 (entry.date 기준 20-06) 면 .night 우선.
+                    // 사용자 생성 이미지 없으면 Color.clear (호스트 wallpaper 비침).
+                    let cond = CharacterImageStore.isCurrentlyNight(at: entry.date)
+                        ? .night
+                        : WeatherBackgroundCondition.from(emoji: entry.weatherEmoji)
+                    WeatherBackgroundView(condition: cond)
                 }
                 .widgetURL(URL(string: "withu://main"))   // 위젯 탭 → 앱 열림
         }
