@@ -137,8 +137,8 @@ struct CharacterGenView: View {
 
     private var stateSection: some View {
         Section {
-            Picker("어떤 상태?", selection: $targetState) {
-                ForEach(CharacterState.allCases, id: \.self) { s in
+            Picker("상태", selection: $targetState) {
+                ForEach(CharacterState.userFacing, id: \.self) { s in
                     HStack {
                         Text(s.symbolEmoji)
                         Text(s.rawValue)
@@ -157,7 +157,7 @@ struct CharacterGenView: View {
                     .font(.footnote)
             }
         } header: {
-            Text("어떤 상태용 이미지?")
+            Text("상태")
         }
     }
 
@@ -537,7 +537,7 @@ struct CharacterGenView: View {
                 resultFrame2 = small
             }
         } catch {
-            lastError = "❌ \(error.localizedDescription)"
+            lastError = error.koreanizedDescription
         }
     }
 
@@ -552,7 +552,7 @@ struct CharacterGenView: View {
                 referenceImage = img
             }
         } catch {
-            lastError = "참고 이미지 로드 실패: \(error.localizedDescription)"
+            lastError = "참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요."
         }
     }
 
@@ -577,7 +577,7 @@ struct CharacterGenView: View {
             let processed = try await ImageProcessing.prepareForCharacter(raw)
             importedProcessedImage = processed
         } catch {
-            lastError = "❌ \(error.localizedDescription)"
+            lastError = error.koreanizedDescription
             importedProcessedImage = nil
         }
     }
@@ -595,7 +595,7 @@ struct CharacterGenView: View {
             WidgetCenter.shared.reloadAllTimelines()
             showAppliedAlert = true
         } else {
-            lastError = "❌ App Group 저장 실패"
+            lastError = "캐릭터 저장에 실패했어요. 다시 시도해 주세요."
         }
     }
 
@@ -605,7 +605,7 @@ struct CharacterGenView: View {
             lastError = nil
             showSavedAlert = true
         } catch {
-            lastError = "❌ \(error.localizedDescription)"
+            lastError = error.koreanizedDescription
         }
     }
 }
@@ -656,7 +656,7 @@ struct WeatherBackgroundGenView: View {
                         .font(.footnote)
                 }
             } header: {
-                Text("어떤 날씨?")
+                Text("날씨")
             }
 
             Section("옵션") {
@@ -798,7 +798,7 @@ struct WeatherBackgroundGenView: View {
             let small = img.preparingThumbnail(of: CGSize(width: 256, height: 256)) ?? img
             resultImage = small
         } catch {
-            lastError = "❌ \(error.localizedDescription)"
+            lastError = error.koreanizedDescription
         }
     }
 
@@ -808,7 +808,7 @@ struct WeatherBackgroundGenView: View {
             ConnectivityManager.shared.sendWeatherBackground(image, for: cond)
             showAppliedAlert = true
         } else {
-            lastError = "❌ App Group 저장 실패"
+            lastError = "캐릭터 저장에 실패했어요. 다시 시도해 주세요."
         }
     }
 }

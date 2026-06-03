@@ -151,7 +151,7 @@ struct CharacterProfileView: View {
     /// 9개 state 각각 현재 적용된 캐릭터 이미지 + 이름. 적용 안 된 곳은 placeholder.
     private var statesOverviewSection: some View {
         Section {
-            ForEach(CharacterState.allCases, id: \.self) { state in
+            ForEach(CharacterState.userFacing, id: \.self) { state in
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)

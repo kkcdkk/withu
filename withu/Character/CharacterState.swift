@@ -61,6 +61,15 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         }
     }
 
+    /// 사용자 픽커에 보여줄 핵심 state 들 — resolver 가 실제로 자동 반환하는 것.
+    /// 레거시 4 (.beach/.cloudy/.rainyShelter/.snowPlay) 와 12 운동×날씨 조합은 제외 —
+    /// 자동으로 안 잡히고, 날씨는 배경 layer 가 따로 처리.
+    /// 디버그 / 내부 iteration 은 allCases 그대로 사용.
+    static let userFacing: [CharacterState] = [
+        .idle, .sleeping, .wakingUp, .eating,
+        .walking, .running, .cycling, .energetic,
+    ]
+
     /// 조합 state 의 기본 운동 state (이미지 폴백 + 매핑용).
     /// 조합 아닌 case 는 nil.
     var baseFallback: CharacterState? {

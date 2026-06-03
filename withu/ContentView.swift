@@ -7,6 +7,8 @@ import SwiftUI
 import Combine
 import HealthKit
 import WidgetKit
+import CoreLocation
+import WatchConnectivity
 
 struct ContentView: View {
     @State private var health = HealthKitManager.shared
@@ -45,6 +47,7 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    permissionBanner    // 권한 거절돼있을 때만 노출 (이전 layout 위에 얹음)
                     weatherHeader
                     characterHero
                     metricsCard
@@ -76,10 +79,9 @@ struct ContentView: View {
             .task {
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()
+                // 권한 요청은 OnboardingView 에서 단계별로 처리.
+                // 여기선 이미 허용된 권한 status 만 갱신 + 데이터 fetch.
                 weather.refresh()
-                if !health.isAuthorized {
-                    try? await health.requestAuthorization()
-                }
                 await loadAll()
                 activityMessage = computeActivityMessage()
                 health.startObservingChanges()
@@ -198,7 +200,7 @@ struct ContentView: View {
                     .clipShape(Circle())
                 // 중간 — 캐릭터 tint 원 (살짝 옅게)
                 Circle()
-                    .fill(characterState.tint.opacity(0.18))
+                    .fill(characterState.tint.opacity(0.22))
                     .frame(width: 240, height: 240)
                 // 앞 — 캐릭터 (투명 PNG 가정)
                 CharacterImageView(state: characterState, animated: true)
@@ -289,6 +291,15 @@ struct ContentView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
+    private func metricItem(emoji: String, value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(emoji).font(.subheadline)
+            Text(value).font(.callout.weight(.semibold))
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     /// Slack 새로고침 메시지 같은 가벼운 격려/안내. 시간대 + 활동량 기반.
     /// 메시지 문구 수정: 이 함수 안 morningMessages / lazyMessages / 활동량 분기 메시지.
     private func computeActivityMessage() -> String {
@@ -317,18 +328,9 @@ struct ContentView: View {
         }
         // 잔잔한 날
         let lazyMessages = [
-            "가벼운 산책 할까요?"
+            "가벼운 산책 어때요 🌿"
         ]
         return lazyMessages.randomElement() ?? ""
-    }
-
-    private func metricItem(emoji: String, value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(emoji).font(.subheadline)
-            Text(value).font(.callout.weight(.semibold))
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private var sleepHoursText: String {
@@ -342,7 +344,7 @@ struct ContentView: View {
             actionLink(title: "함께할 캐릭터 생성하기",
                        subtitle: "AI/사진 첨부로 함께할 캐릭터를 만들어요",
                        icon: "wand.and.stars",
-                       tint: Color(red: 1.0, green: 0.78, blue: 0.85)) {  // soft pastel pink
+                       tint: Color(red: 1.0, green: 0.78, blue: 0.85)) {
                 CharacterGenView()
             }
             actionLink(title: "함께 사진 찍기",
@@ -441,6 +443,52 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Permission banner
+
+    /// 거절돼있어서 해당 기능이 막힌 권한 목록.
+    private var deniedPermissions: [String] {
+        var list: [String] = []
+        if !health.isAuthorized { list.append("건강") }
+        if weather.authorizationStatus == .denied || weather.authorizationStatus == .restricted {
+            list.append("위치")
+        }
+        if notifications.authorizationStatus == .denied { list.append("알림") }
+        return list
+    }
+
+    @ViewBuilder
+    private var permissionBanner: some View {
+        if !deniedPermissions.isEmpty {
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(deniedPermissions.joined(separator: " · ")) 권한이 꺼져 있어요")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("기능이 제한될 수 있어요. 탭해서 iOS 설정에서 켤 수 있어요.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     // MARK: - Logic
 
     private func sendStateToWatch(_ state: CharacterState) {
@@ -482,10 +530,34 @@ struct SettingsView: View {
                 watchSection
                 healthSection
                 notificationsSection
-                focusSection
-                healthSleepSection
-                motionSection
-                debugSection
+                Section {
+                    NavigationLink {
+                        AdvancedDiagnosticsView(
+                            health: $health,
+                            focus: $focus,
+                            connectivity: $connectivity,
+                            overrideState: $overrideState,
+                            characterState: characterState,
+                            sendStateToWatch: sendStateToWatch
+                        )
+                    } label: {
+                        Label("고급 / 진단", systemImage: "gauge.with.dots.needle.50percent")
+                    }
+                } footer: {
+                    Text("Focus 모드, HealthKit 수면 데이터, 운동 추론, 백그라운드 새로고침 등의 진단 정보. 일반 사용엔 필요 없어요.")
+                        .font(.caption2)
+                }
+                Section {
+                    // ⚠️ 호스팅 후 URL 갱신 — GitHub Pages 등에 legal/ 의 두 markdown 을 HTML 로 배포.
+                    Link(destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!) {
+                        Label("개인정보처리방침", systemImage: "lock.shield")
+                    }
+                    Link(destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!) {
+                        Label("이용약관", systemImage: "doc.text")
+                    }
+                } header: {
+                    Text("법적 정보")
+                }
             }
             .navigationTitle("설정")
             .navigationBarTitleDisplayMode(.inline)
@@ -577,6 +649,50 @@ struct SettingsView: View {
         }
     }
 
+
+    private func reloadHealth() async {
+        healthLoading = true
+        defer { healthLoading = false }
+        var errors: [String] = []
+        do { _ = try await health.fetchSleep(days: 7) } catch { errors.append("수면") }
+        do { _ = try await health.fetchWorkouts(days: 7) } catch { errors.append("운동") }
+        do { _ = try await health.fetchTodaySteps() } catch { errors.append("걸음") }
+        do { _ = try await health.fetchTodayActiveMinutes() } catch { errors.append("활동") }
+        do { _ = try await health.fetchTodayActiveKcal() } catch { errors.append("칼로리") }
+        _ = await health.fetchInBedSchedule()
+        sendStateToWatch(characterState)
+        healthMessage = errors.isEmpty ? "최신화 완료" : "실패: \(errors.joined(separator: ", "))"
+    }
+}
+
+#Preview {
+    ContentView()
+}
+
+// MARK: - AdvancedDiagnosticsView
+
+/// 일반 사용자에겐 노이즈인 진단 화면들. Settings → "고급 / 진단" 로 격리.
+struct AdvancedDiagnosticsView: View {
+    @Binding var health: HealthKitManager
+    @Binding var focus: FocusModeManager
+    @Binding var connectivity: ConnectivityManager
+    @Binding var overrideState: CharacterState?
+    let characterState: CharacterState
+    let sendStateToWatch: (CharacterState) -> Void
+
+    var body: some View {
+        Form {
+            focusSection
+            healthSleepSection
+            motionSection
+            debugSection
+        }
+        .navigationTitle("고급 / 진단")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Sections (옮겨옴)
+
     private var focusSection: some View {
         Section {
             HStack { Text("권한"); Spacer(); Text(focus.authorizationStatusLabel).foregroundStyle(.secondary) }
@@ -594,6 +710,14 @@ struct SettingsView: View {
                      ?? "한 번도 없음")
                     .foregroundStyle(.secondary)
             }
+            if let last = focus.lastCheckedAt {
+                HStack {
+                    Text("마지막 폴링")
+                    Spacer()
+                    Text(last.formatted(date: .omitted, time: .standard))
+                        .foregroundStyle(.secondary)
+                }
+            }
             if !focus.focusFilterPerformLog.isEmpty {
                 DisclosureGroup("perform() 호출 로그 (최근 \(focus.focusFilterPerformLog.count)번)") {
                     ForEach(Array(focus.focusFilterPerformLog.enumerated()), id: \.offset) { _, entry in
@@ -607,16 +731,6 @@ struct SettingsView: View {
                         }
                     }
                 }
-            }
-            if let last = focus.lastCheckedAt {
-                HStack {
-                    Text("마지막 폴링")
-                    Spacer()
-                    Text(last.formatted(date: .omitted, time: .standard))
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                HStack { Text("마지막 폴링"); Spacer(); Text("아직 없음").foregroundStyle(.secondary) }
             }
             if !focus.isAuthorized {
                 Button("Focus 권한 요청") {
@@ -640,30 +754,7 @@ struct SettingsView: View {
             }
         } header: {
             Text("수면/집중 모드")
-        } footer: {
-            Text(focusFooterText).font(.caption2)
         }
-    }
-
-    /// 현재 진단 상태에 따라 사용자에게 다음 액션을 안내.
-    private var focusFooterText: String {
-        if focus.isFocusFilterSleeping {
-            return "✅ Focus Filter 가 sleeping 을 push 해줬어요. iOS 가 우리 앱을 직접 깨워 호출한 가장 신뢰성 높은 경로."
-        }
-        // Filter 가 한 번도 호출된 적 없다 = manual setup 미완료
-        if focus.focusFilterLastPerformAt == nil {
-            return """
-                Focus Filter 연결 필요 (한 번만):
-                  1) iOS 설정 → 집중 모드 → 수면
-                  2) 화면 아래쪽 "필터" 섹션 → "필터 추가"
-                  3) 앱 목록에서 withu 선택
-                  4) "캐릭터를 자게 하기" 토글 ON → 완료
-                  5) Sleep Focus 한 번 OFF → ON
-                위 "Filter 마지막 호출" 에 시각이 찍히면 연결 성공.
-                """
-        }
-        // Filter 가 한 번이라도 호출됐는데 지금 false → Focus 가 OFF 상태 (정상)
-        return "Focus Filter 연결됨. 마지막 호출 후 sleeping=false 상태 (Sleep Focus OFF 상태). Sleep Focus 켜면 perform() 다시 호출되어 sleeping push."
     }
 
     private var healthSleepSection: some View {
@@ -713,13 +804,6 @@ struct SettingsView: View {
             }
         } header: {
             Text("HealthKit 수면 진단")
-        } footer: {
-            Text("""
-                • inBed = "침대에 있음" sample. 건강 앱 수면 일정 + Apple Watch 가 만들어요. iPhone 만 쓰면 자동 생성 안 될 수 있음.
-                • asleep = Watch 가 실제 잠든 걸 감지한 sample. Watch 착용하고 자야 생김.
-                • 둘 다 0이어도 캐릭터는 너의 \"내 캐릭터 설정 → 수면 시간\" 으로 잘 자.
-                """)
-                .font(.caption2)
         }
     }
 
@@ -755,14 +839,17 @@ struct SettingsView: View {
             }
         } header: {
             Text("운동 감지")
-        } footer: {
-            Text("Apple 워치 운동 앱 시작 시 HR sample 이 1-5초 간격으로 stream — 빈도 + 평균 BPM 으로 운동중 여부 추정 (5+ samples / 90s & ≥95bpm). 운동 종료 후엔 HKWorkout sample 로 정식 타입 매핑. 캐주얼한 걷기는 감지 안 함 (운동 = 명시적 시작).")
-                .font(.caption2)
         }
     }
 
     private var debugSection: some View {
-        Section("디버그") {
+        Section {
+            HStack {
+                Text("마지막 BG refresh")
+                Spacer()
+                Text(lastBgRefreshLabel)
+                    .foregroundStyle(.secondary)
+            }
             Picker("상태 강제", selection: $overrideState) {
                 Text("자동").tag(CharacterState?.none)
                 ForEach(CharacterState.allCases, id: \.self) { state in
@@ -778,24 +865,19 @@ struct SettingsView: View {
             } label: {
                 Label("위젯 강제 새로고침", systemImage: "arrow.clockwise.circle.fill")
             }
+        } header: {
+            Text("디버그")
+        } footer: {
+            Text("BG refresh = iOS 가 백그라운드에서 우리 앱을 잠깐 깨운 시각. 30분~수시간 간격으로 iOS 가 결정.")
+                .font(.caption2)
         }
     }
 
-    private func reloadHealth() async {
-        healthLoading = true
-        defer { healthLoading = false }
-        var errors: [String] = []
-        do { _ = try await health.fetchSleep(days: 7) } catch { errors.append("수면") }
-        do { _ = try await health.fetchWorkouts(days: 7) } catch { errors.append("운동") }
-        do { _ = try await health.fetchTodaySteps() } catch { errors.append("걸음") }
-        do { _ = try await health.fetchTodayActiveMinutes() } catch { errors.append("활동") }
-        do { _ = try await health.fetchTodayActiveKcal() } catch { errors.append("칼로리") }
-        _ = await health.fetchInBedSchedule()
-        sendStateToWatch(characterState)
-        healthMessage = errors.isEmpty ? "최신화 완료" : "실패: \(errors.joined(separator: ", "))"
+    private var lastBgRefreshLabel: String {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        guard let date = defaults?.object(forKey: "withu.lastBackgroundRefreshAt") as? Date else {
+            return "한 번도 없음"
+        }
+        return date.formatted(date: .omitted, time: .standard)
     }
-}
-
-#Preview {
-    ContentView()
 }

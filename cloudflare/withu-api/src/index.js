@@ -2,6 +2,43 @@ const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_ENDPOINT = "https://api.openai.com/v1/images/edits";
 
+// FastAPI server.py 와 parity — art_style 별 다른 [Style guidelines].
+// 캐릭터 일관성을 위해 클라이언트엔 노출되지 않는 고정 prompt.
+const STYLE_SECTIONS = {
+  casual: `[Style guidelines]
+- Cute, round, chibi-style mascot character
+- Soft pastel colors, warm and approachable
+- Large head, small body, simple expressive features
+- Flat 2D illustration, clean lines, no harsh shading
+- Transparent background, full body visible, character centered
+- Keep the same character identity across requests
+`,
+  pixel: `[Style guidelines]
+- 8-bit / 16-bit pixel art style mascot character
+- Retro video game sprite feel, limited palette (8~16 colors)
+- Clear pixel boundaries (no anti-aliasing, no smooth gradients)
+- Chibi proportions, large head, small body
+- Transparent background, character centered
+- Keep the same character identity across requests
+`,
+};
+
+const COMMON_PROMPT = `You are illustrating mascot characters for the iOS app "withu".
+
+{styleSection}
+[Content guidelines]
+- Family-friendly, wholesome content only
+- No realistic humans, no violence, no inappropriate content
+- The image must work as a small icon — keep composition simple
+
+[User request]
+`;
+
+function systemPromptFor(artStyle) {
+  const styleSection = STYLE_SECTIONS[artStyle] ?? STYLE_SECTIONS.casual;
+  return COMMON_PROMPT.replace("{styleSection}", styleSection);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -78,6 +115,16 @@ async function generateImage(request, env) {
   });
 }
 
+/// kind 별 prompt 구성:
+///   character (default): SYSTEM_PROMPT (style + content guardrails) + 사용자 prompt
+///   background:          raw 사용자 prompt (풍경/하늘만, 캐릭터 가드레일 없음)
+function buildFullPrompt(input) {
+  if (input.kind === "background") {
+    return input.prompt;
+  }
+  return systemPromptFor(input.art_style) + input.prompt;
+}
+
 function generateImageFromPrompt(input, apiKey) {
   return fetch(OPENAI_IMAGE_GENERATIONS_ENDPOINT, {
     method: "POST",
@@ -87,7 +134,7 @@ function generateImageFromPrompt(input, apiKey) {
     },
     body: JSON.stringify({
       model: OPENAI_IMAGE_MODEL,
-      prompt: input.prompt,
+      prompt: buildFullPrompt(input),
       quality: normalizeQuality(input.quality),
       size: normalizeSize(input.width, input.height),
       n: 1
@@ -98,7 +145,7 @@ function generateImageFromPrompt(input, apiKey) {
 function editImage(input, apiKey) {
   const form = new FormData();
   form.append("model", OPENAI_IMAGE_MODEL);
-  form.append("prompt", input.prompt);
+  form.append("prompt", buildFullPrompt(input));
   form.append("quality", normalizeQuality(input.quality));
   form.append("size", normalizeSize(input.width, input.height));
   form.append("n", "1");

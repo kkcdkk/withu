@@ -77,14 +77,14 @@ struct CharacterGalleryView: View {
             isPresented: $showApplySheet,
             presenting: selectedItem
         ) { item in
-            ForEach(CharacterState.allCases, id: \.self) { state in
+            ForEach(CharacterState.userFacing, id: \.self) { state in
                 Button("\(state.symbolEmoji) \(state.rawValue) 자리에") {
                     apply(item, to: state)
                 }
             }
             Button("취소", role: .cancel) {}
         }
-        .alert("삭제할까요?", isPresented: $showDeleteConfirm, presenting: selectedItem) { item in
+        .alert("캐릭터 삭제", isPresented: $showDeleteConfirm, presenting: selectedItem) { item in
             Button("삭제", role: .destructive) {
                 CharacterImageStore.deleteGalleryItem(item.id)
                 selectedItem = nil
@@ -99,7 +99,7 @@ struct CharacterGalleryView: View {
         } message: {
             Text(saveResultMessage ?? "")
         }
-        .alert("\(selectedIDs.count)개 삭제할까요?", isPresented: $showBulkDeleteConfirm) {
+        .alert("\(selectedIDs.count)개 캐릭터 삭제", isPresented: $showBulkDeleteConfirm) {
             Button("삭제", role: .destructive) { deleteSelected() }
             Button("취소", role: .cancel) {}
         }

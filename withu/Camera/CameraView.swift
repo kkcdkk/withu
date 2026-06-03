@@ -165,7 +165,7 @@ struct CameraView: View {
                 .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(CharacterState.allCases, id: \.self) { state in
+                    ForEach(CharacterState.userFacing, id: \.self) { state in
                         Button {
                             addCharacter(state)
                         } label: {
@@ -267,7 +267,7 @@ struct CameraView: View {
         } catch let err as CameraError {
             statusText = err.errorDescription ?? "에러"
         } catch {
-            statusText = error.localizedDescription
+            statusText = error.koreanizedDescription
         }
     }
 
@@ -279,7 +279,7 @@ struct CameraView: View {
             let composed = PhotoCompositor.compose(photo: raw, placed: placed)
             previewCaptured = composed
         } catch {
-            statusText = "❌ \(error.localizedDescription)"
+            statusText = error.koreanizedDescription
         }
     }
 
@@ -291,7 +291,7 @@ struct CameraView: View {
             try? await Task.sleep(for: .seconds(1.6))
             withAnimation { showSavedToast = false }
         } catch {
-            statusText = "❌ \(error.localizedDescription)"
+            statusText = error.koreanizedDescription
         }
     }
 }

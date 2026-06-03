@@ -20,10 +20,10 @@ struct BatchCharacterGenView: View {
     }()
 
     @State private var stateHints: [CharacterState: String] = Dictionary(
-        uniqueKeysWithValues: CharacterState.allCases.map { ($0, $0.generationHint) }
+        uniqueKeysWithValues: CharacterState.userFacing.map { ($0, $0.generationHint) }
     )
 
-    @State private var selectedStates: Set<CharacterState> = Set(CharacterState.allCases)
+    @State private var selectedStates: Set<CharacterState> = Set(CharacterState.userFacing)
 
     @State private var quality: String = "low"
     @State private var artStyle: String = "casual"
@@ -136,11 +136,11 @@ struct BatchCharacterGenView: View {
 
     private var stateListSection: some View {
         Section {
-            ForEach(CharacterState.allCases, id: \.self) { state in
+            ForEach(CharacterState.userFacing, id: \.self) { state in
                 stateRow(state)
             }
             HStack {
-                Button("모두 켜기") { selectedStates = Set(CharacterState.allCases) }
+                Button("모두 켜기") { selectedStates = Set(CharacterState.userFacing) }
                 Spacer()
                 Button("모두 끄기", role: .destructive) { selectedStates = [] }
             }
@@ -683,7 +683,7 @@ struct BatchCharacterGenView: View {
             ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
             return true
         } catch {
-            errors[state] = error.localizedDescription
+            errors[state] = error.koreanizedDescription
             return false
         }
     }
@@ -789,7 +789,7 @@ struct BatchCharacterGenView: View {
             }
             saveResultMessage = "사진 앱에 저장됐어요."
         } catch {
-            saveResultMessage = "저장 실패: \(error.localizedDescription)"
+            saveResultMessage = "저장에 실패했어요: \(error.koreanizedDescription)"
         }
         showSaveResultAlert = true
     }
@@ -837,7 +837,7 @@ struct BatchCharacterGenView: View {
                 WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
-            errors[state] = error.localizedDescription
+            errors[state] = error.koreanizedDescription
         }
     }
 
@@ -895,7 +895,7 @@ struct BatchCharacterGenView: View {
             }
             saveResultMessage = "\(items.count)장 사진 앱에 저장됐어요."
         } catch {
-            saveResultMessage = "저장 실패: \(error.localizedDescription)"
+            saveResultMessage = "저장에 실패했어요: \(error.koreanizedDescription)"
         }
         showSaveResultAlert = true
     }
@@ -911,7 +911,7 @@ struct BatchCharacterGenView: View {
                 referenceImage = img
             }
         } catch {
-            errors[.idle] = "참고 이미지 로드 실패: \(error.localizedDescription)"
+            errors[.idle] = "참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요."
         }
     }
 

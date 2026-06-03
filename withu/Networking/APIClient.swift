@@ -25,6 +25,46 @@ enum APIError: Error, LocalizedError {
     }
 }
 
+/// 모든 Error 를 사용자 친화 한국어 메시지로 변환.
+/// catch 블록의 `error.localizedDescription` 대신 사용.
+extension Error {
+    var koreanizedDescription: String {
+        if let api = self as? APIError {
+            switch api {
+            case .invalidResponse:
+                return "서버 응답이 이상해요. 잠시 후 다시 시도해 주세요."
+            case .server(let status, _):
+                if status == 429 { return "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." }
+                if status >= 500 { return "서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요." }
+                if status == 422 { return "프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요." }
+                return "서버 오류 (\(status)). 잠시 후 다시 시도해 주세요."
+            case .decoding:
+                return "결과를 읽을 수 없어요. 다시 시도해 주세요."
+            case .transport(let inner):
+                return (inner as Error).koreanizedDescription
+            }
+        }
+        if let urlErr = self as? URLError {
+            switch urlErr.code {
+            case .notConnectedToInternet:
+                return "인터넷에 연결돼 있지 않아요. Wi-Fi 또는 셀룰러를 확인해 주세요."
+            case .timedOut:
+                return "응답이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요."
+            case .cannotConnectToHost, .cannotFindHost:
+                return "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인해 주세요."
+            case .networkConnectionLost:
+                return "연결이 끊겼어요. 다시 시도해 주세요."
+            case .cancelled:
+                return "요청이 취소됐어요."
+            default:
+                return "네트워크 오류가 발생했어요. 다시 시도해 주세요."
+            }
+        }
+        // 기본 — 시스템 로컬라이즈된 메시지 (영문일 수 있음) 보다 깔끔한 한국어 폴백
+        return "오류가 발생했어요. 잠시 후 다시 시도해 주세요."
+    }
+}
+
 actor APIClient {
     static let shared = APIClient()
 
