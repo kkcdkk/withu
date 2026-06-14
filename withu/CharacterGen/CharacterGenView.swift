@@ -34,6 +34,7 @@ struct CharacterGenView: View {
     @State private var isProcessing: Bool = false
 
     @State private var isGenerating: Bool = false
+    @State private var generateTask: Task<Void, Never>?  // cancel 가능하도록 핸들 보관
     @State private var resultImage: UIImage?
     @State private var resultFrame2: UIImage?    // frame 1 (애니메이션용)
     @State private var generateAnimated: Bool = false
@@ -168,21 +169,30 @@ struct CharacterGenView: View {
             TextEditor(text: $prompt)
                 .frame(minHeight: 100)
                 .font(.callout)
-            Button {
-                Task { await generate() }
-            } label: {
-                if isGenerating {
-                    generatingLabel
-                } else {
+            if isGenerating {
+                generatingLabel
+                Button(role: .destructive) {
+                    generateTask?.cancel()
+                    generateTask = nil
+                    isGenerating = false
+                    generationStartedAt = nil
+                    lastError = "생성을 중단했어요."
+                } label: {
+                    Label("중단", systemImage: "stop.circle.fill")
+                }
+            } else {
+                Button {
+                    generateTask = Task { await generate() }
+                } label: {
                     Label("이미지 생성", systemImage: "wand.and.stars")
                 }
+                .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } header: {
             Text("프롬프트")
         } footer: {
             if isGenerating {
-                Text("⚠️ 생성 중엔 앱을 그대로 켜둬 주세요.")
+                Text("백그라운드로 가도 30초까지 보존돼요. 그 후엔 결과가 손실될 수 있어요.")
                     .foregroundStyle(.orange)
             } else {
                 Text("그림체/가드레일은 서버가 자동으로 붙입니다.\n실측: low ~20초 · medium ~50초 · high 1~2분")
@@ -466,9 +476,15 @@ struct CharacterGenView: View {
         generationStartedAt = .now
         lastError = nil
         resultFrame2 = nil
+        // 백그라운드 진입해도 30초까지 살아남게 background task assertion.
+        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "withu.generate")
         defer {
             isGenerating = false
             generationStartedAt = nil
+            generateTask = nil
+            if bgTask != .invalid {
+                UIApplication.shared.endBackgroundTask(bgTask)
+            }
         }
         // 사전 reachability 체크 — 30분 timeout 매달리지 않도록.
         do {
@@ -593,9 +609,11 @@ struct CharacterGenView: View {
                 ConnectivityManager.shared.sendCharacterImage(f2, for: state, frame: 1)
             }
             WidgetCenter.shared.reloadAllTimelines()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             showAppliedAlert = true
         } else {
             lastError = "캐릭터 저장에 실패했어요. 다시 시도해 주세요."
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
 
@@ -603,9 +621,11 @@ struct CharacterGenView: View {
         do {
             try await PhotoSaver.save(image)
             lastError = nil
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             showSavedAlert = true
         } catch {
             lastError = error.koreanizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
 }

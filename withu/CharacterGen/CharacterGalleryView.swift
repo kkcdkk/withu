@@ -373,16 +373,23 @@ struct CharacterGalleryView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "photo.stack")
-                .font(.system(size: 50)).foregroundStyle(.secondary)
-            Text("아직 만든 캐릭터가 없어요")
-                .foregroundStyle(.secondary)
-            Text("\"캐릭터 만들기\" 또는 \"여러 상태 한 번에 만들기\" 에서 만든 이미지가 여기에 모여요.")
-                .font(.caption)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 32)
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.withuPinkSoft.opacity(0.5))
+                    .frame(width: 120, height: 120)
+                Text("🎨")
+                    .font(.system(size: 56))
+            }
+            VStack(spacing: 6) {
+                Text("아직 만든 캐릭터가 없어요")
+                    .font(.headline)
+                Text("AI 로 만들거나 사진을 첨부해서\n나만의 캐릭터를 시작해 봐요.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
         }
     }
 

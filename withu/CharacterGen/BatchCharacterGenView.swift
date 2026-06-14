@@ -581,6 +581,12 @@ struct BatchCharacterGenView: View {
             stateStartedAt.removeAll()
             showFinishedAlert = true
             WidgetCenter.shared.reloadAllTimelines()
+            // 결과 종합 알림 — 모두 성공이면 success, 일부 실패면 warning.
+            if errors.isEmpty {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            }
         }
 
         // 사전 reachability 체크 — 18+ 호출 실패하면서 시간만 가는 거 방지.
@@ -894,8 +900,10 @@ struct BatchCharacterGenView: View {
                 }
             }
             saveResultMessage = "\(items.count)장 사진 앱에 저장됐어요."
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
             saveResultMessage = "저장에 실패했어요: \(error.koreanizedDescription)"
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         showSaveResultAlert = true
     }

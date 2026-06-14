@@ -116,7 +116,7 @@ struct OnboardingView: View {
                 Text("🐰")
                     .font(.system(size: 100))
                     .frame(width: 160, height: 160)
-                    .background(Circle().fill(Color(red: 1.0, green: 0.85, blue: 0.92)))
+                    .background(Circle().fill(Color.withuPinkSoft))
                 VStack(spacing: 8) {
                     Text("with U")
                         .font(.largeTitle.weight(.bold))
@@ -127,7 +127,7 @@ struct OnboardingView: View {
             }
             Spacer()
             VStack(alignment: .leading, spacing: 14) {
-                featureRow(icon: "wand.and.stars", tint: Color(red: 1.0, green: 0.78, blue: 0.85),
+                featureRow(icon: "wand.and.stars", tint: .withuPink,
                            title: "AI 캐릭터 생성",
                            description: "원하는 외형 / 성격으로 내 캐릭터 만들기")
                 featureRow(icon: "heart.text.square.fill", tint: .mint,
@@ -479,7 +479,7 @@ struct OnboardingView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color(red: 1.0, green: 0.78, blue: 0.85))
+                .background(Color.withuPink)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
@@ -487,7 +487,7 @@ struct OnboardingView: View {
 
     private var backgroundGradient: LinearGradient {
         LinearGradient(
-            colors: [Color(red: 1.0, green: 0.95, blue: 0.97), Color(.systemBackground)],
+            colors: [Color.withuPinkBackground, Color(.systemBackground)],
             startPoint: .top, endPoint: .bottom
         )
     }
@@ -503,4 +503,29 @@ private extension Task where Success == Never, Failure == Never {
 
 #Preview {
     OnboardingView(onComplete: {})
+}
+
+// MARK: - withu Theme colors (light/dark adaptive)
+
+extension Color {
+    /// withu 의 메인 핑크. 라이트 = 파스텔, 다크 = 채도 낮은 와인.
+    static let withuPink = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.55, green: 0.32, blue: 0.42, alpha: 1.0)
+            : UIColor(red: 1.0,  green: 0.78, blue: 0.85, alpha: 1.0)
+    })
+
+    /// 캐릭터 원 배경, soft chip 배경 등 더 옅은 톤.
+    static let withuPinkSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.45, green: 0.28, blue: 0.36, alpha: 1.0)
+            : UIColor(red: 1.0,  green: 0.85, blue: 0.92, alpha: 1.0)
+    })
+
+    /// 온보딩 배경 gradient 의 상단 — 거의 흰색-핑크 / 다크 모드 매우 어두운 와인.
+    static let withuPinkBackground = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.12, green: 0.08, blue: 0.10, alpha: 1.0)
+            : UIColor(red: 1.0,  green: 0.95, blue: 0.97, alpha: 1.0)
+    })
 }

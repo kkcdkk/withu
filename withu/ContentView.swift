@@ -53,6 +53,7 @@ struct ContentView: View {
                     metricsCard
                     actionButtons
                     watchStatusCard
+                    lastUpdateFooter
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 20)
@@ -344,7 +345,7 @@ struct ContentView: View {
             actionLink(title: "함께할 캐릭터 생성하기",
                        subtitle: "AI/사진 첨부로 함께할 캐릭터를 만들어요",
                        icon: "wand.and.stars",
-                       tint: Color(red: 1.0, green: 0.78, blue: 0.85)) {
+                       tint: .withuPink) {
                 CharacterGenView()
             }
             actionLink(title: "함께 사진 찍기",
@@ -443,6 +444,27 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Last update footer
+
+    /// 메인 하단 작은 footer — BG refresh 가 정상 작동 중인지 한눈에.
+    private var lastUpdateFooter: some View {
+        let bgDate = UserDefaults(suiteName: SharedAppState.groupID)?
+            .object(forKey: "withu.lastBackgroundRefreshAt") as? Date
+        return HStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 9))
+            if let date = bgDate {
+                Text("마지막 갱신 \(date.formatted(date: .omitted, time: .shortened))")
+            } else {
+                Text("백그라운드 갱신 대기 중")
+            }
+        }
+        .font(.system(size: 10))
+        .foregroundStyle(.tertiary)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+
     // MARK: - Permission banner
 
     /// 거절돼있어서 해당 기능이 막힌 권한 목록.
@@ -523,6 +545,9 @@ struct SettingsView: View {
 
     @State private var healthMessage: String = ""
     @State private var healthLoading: Bool = false
+    @State private var showWidgetGuide: Bool = false
+    @State private var showOnboardingConfirm: Bool = false
+    @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -548,6 +573,20 @@ struct SettingsView: View {
                         .font(.caption2)
                 }
                 Section {
+                    Button {
+                        showWidgetGuide = true
+                    } label: {
+                        Label("위젯 · 컴플리케이션 추가하기", systemImage: "rectangle.stack.badge.plus")
+                    }
+                    Button {
+                        showOnboardingConfirm = true
+                    } label: {
+                        Label("온보딩 다시 보기", systemImage: "arrow.counterclockwise.circle")
+                    }
+                } header: {
+                    Text("도움말")
+                }
+                Section {
                     // ⚠️ 호스팅 후 URL 갱신 — GitHub Pages 등에 legal/ 의 두 markdown 을 HTML 로 배포.
                     Link(destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!) {
                         Label("개인정보처리방침", systemImage: "lock.shield")
@@ -565,6 +604,18 @@ struct SettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("완료") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showWidgetGuide) {
+                WidgetGuideView()
+            }
+            .alert("온보딩 다시 보기", isPresented: $showOnboardingConfirm) {
+                Button("다시 보기") {
+                    onboarded = false
+                    dismiss()
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("권한 안내 화면을 처음부터 다시 봐요. 거절한 권한도 다시 시도할 수 있어요.")
             }
         }
     }
@@ -667,6 +718,95 @@ struct SettingsView: View {
 
 #Preview {
     ContentView()
+}
+
+// MARK: - WidgetGuideView
+
+/// 사용자가 위젯 / 컴플리케이션을 어떻게 추가하는지 단계별 안내.
+struct WidgetGuideView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    guideSection(
+                        icon: "iphone",
+                        tint: .pink,
+                        title: "iPhone 홈 화면 위젯",
+                        steps: [
+                            "홈 화면 빈 공간 길게 누르기",
+                            "좌상단 [＋] 버튼 탭",
+                            "검색에서 \"withu\" 입력",
+                            "원하는 크기 (작음/중간/큼) 선택 → 추가",
+                        ]
+                    )
+                    guideSection(
+                        icon: "lock.iphone",
+                        tint: .indigo,
+                        title: "iPhone 잠금 화면 위젯",
+                        steps: [
+                            "잠금 화면 길게 누르기 → [맞춤 설정] 탭",
+                            "잠금 화면 선택 → 위젯 영역 탭",
+                            "[위젯 추가] → \"withu\" 검색",
+                            "원형 / 사각형 / 인라인 중 선택 → 완료",
+                        ]
+                    )
+                    guideSection(
+                        icon: "applewatch",
+                        tint: .cyan,
+                        title: "Apple Watch 컴플리케이션",
+                        steps: [
+                            "워치 페이스 길게 누르기 → [편집]",
+                            "[컴플리케이션] 화면까지 스와이프",
+                            "원하는 자리 탭 → \"withu\" 검색",
+                            "선택 → 디지털 크라운 눌러서 완료",
+                        ]
+                    )
+                }
+                .padding(20)
+            }
+            .navigationTitle("위젯 추가하기")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("완료") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func guideSection(icon: String, tint: Color, title: String,
+                               steps: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(tint.opacity(0.18))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: icon)
+                        .font(.title3)
+                        .foregroundStyle(tint)
+                }
+                Text(title).font(.headline)
+                Spacer()
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(i + 1).")
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(tint)
+                            .frame(width: 20, alignment: .leading)
+                        Text(step).font(.callout)
+                    }
+                }
+            }
+            .padding(.leading, 50)
+        }
+        .padding(14)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
 }
 
 // MARK: - AdvancedDiagnosticsView
@@ -865,10 +1005,29 @@ struct AdvancedDiagnosticsView: View {
             } label: {
                 Label("위젯 강제 새로고침", systemImage: "arrow.clockwise.circle.fill")
             }
+            Button {
+                ConnectivityManager.shared.sendAllToWatch()
+            } label: {
+                Label("워치로 모든 이미지 다시 동기화", systemImage: "applewatch.radiowaves.left.and.right")
+            }
+            HStack {
+                Text("워치 전송 대기 중")
+                Spacer()
+                Text("\(connectivity.outstandingTransfers)개")
+                    .foregroundStyle(.secondary)
+            }
+            if let s = connectivity.lastImageTransferState {
+                HStack {
+                    Text("워치 마지막 전송")
+                    Spacer()
+                    Text(s).font(.caption2).foregroundStyle(.secondary)
+                        .lineLimit(2).multilineTextAlignment(.trailing)
+                }
+            }
         } header: {
             Text("디버그")
         } footer: {
-            Text("BG refresh = iOS 가 백그라운드에서 우리 앱을 잠깐 깨운 시각. 30분~수시간 간격으로 iOS 가 결정.")
+            Text("BG refresh = iOS 가 백그라운드에서 우리 앱을 잠깐 깨운 시각. 30분~수시간 간격으로 iOS 가 결정. 워치 동기화는 앱 첫 실행 / 워치 앱 새로 설치 시 자동으로 한 번 수행돼요.")
                 .font(.caption2)
         }
     }

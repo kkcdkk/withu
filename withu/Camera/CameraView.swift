@@ -18,27 +18,74 @@ struct CameraView: View {
     @State private var previewCaptured: UIImage?
     @State private var showSavedToast: Bool = false
     @State private var showDeleteHint: Bool = false
+    /// 카메라 권한 거절돼서 사용 불가 — 정식 회복 화면 표시.
+    @State private var isPermissionDenied: Bool = false
 
     init() {}
 
     var body: some View {
         ZStack {
-            cameraLayer
-            overlayLayer
-            controlsLayer
-            if let img = previewCaptured {
-                preview(img)
-            }
-            if showSavedToast {
-                toast("📚 사진에 저장됐어요")
-            }
-            if showDeleteHint {
-                toast("길게 눌러서 삭제 · 탭해서 선택 · 드래그해서 이동")
+            if isPermissionDenied {
+                permissionDeniedView
+            } else {
+                cameraLayer
+                overlayLayer
+                controlsLayer
+                if let img = previewCaptured {
+                    preview(img)
+                }
+                if showSavedToast {
+                    toast("📚 사진에 저장됐어요")
+                }
+                if showDeleteHint {
+                    toast("길게 눌러서 삭제 · 탭해서 선택 · 드래그해서 이동")
+                }
             }
         }
         .ignoresSafeArea()
         .task { await setupCamera() }
         .onDisappear { camera.stop() }
+    }
+
+    // MARK: - Permission denied recovery
+
+    private var permissionDeniedView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.18))
+                    .frame(width: 130, height: 130)
+                Image(systemName: "camera.fill.badge.ellipsis")
+                    .font(.system(size: 56))
+                    .foregroundStyle(.orange)
+            }
+            VStack(spacing: 8) {
+                Text("카메라 권한이 필요해요")
+                    .font(.title2.weight(.semibold))
+                Text("캐릭터와 함께 사진을 찍으려면 카메라 접근을\n허용해 주세요.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Spacer()
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("iOS 설정 열기", systemImage: "gear")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.withuPink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
     }
 
     // MARK: - Camera preview
@@ -264,6 +311,9 @@ struct CameraView: View {
             try await camera.configure()
             camera.start()
             statusText = "준비됨"
+        } catch CameraError.notAuthorized {
+            // 권한 거절 → 정식 회복 화면
+            isPermissionDenied = true
         } catch let err as CameraError {
             statusText = err.errorDescription ?? "에러"
         } catch {

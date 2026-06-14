@@ -35,6 +35,9 @@ final class ConnectivityManager: NSObject {
 
     // 마지막으로 보낸 메시지를 기억해두고 같으면 안 보냄 (중복 트래픽 방지)
     @ObservationIgnored private var lastSentMessage: WatchMessage?
+    /// 이번 앱 launch 동안 초기 sync (모든 캐릭터/배경 일괄 전송) 한 적 있는지.
+    /// 워치 앱이 새로 설치된 직후 / iPhone 앱 첫 실행 시 1회만 수행.
+    @ObservationIgnored private var hasInitialSyncedThisLaunch: Bool = false
 
     /// 캐릭터 이미지 파일 전송 시 metadata 키 — 워치 쪽이 어느 state 의 이미지인지 알 수 있게.
     static let characterImageMetadataKey = "withu.characterImage.state"
@@ -62,29 +65,62 @@ final class ConnectivityManager: NSObject {
     /// 100 이면 충분. 원본 1024×1024 (~4MB) → 100×100 (~40KB) 로 압축.
     private static let watchImageMaxPixelSize: CGFloat = 100
 
+    /// 모든 캐릭터 이미지 + 날씨 배경을 워치로 일괄 전송.
+    /// 사용 시점:
+    ///   1) 워치 앱이 새로 설치된 시점 (sessionWatchStateDidChange — 자동)
+    ///   2) iPhone 앱 첫 실행 시 워치가 이미 연결돼 있으면 (activate — 자동)
+    ///   3) Settings → 고급/진단 → "워치로 다시 동기화" (수동)
+    func sendAllToWatch() {
+        for state in CharacterState.userFacing {
+            if let img = CharacterImageStore.load(state) {
+                sendCharacterImage(img, for: state, frame: 0)
+            }
+            if CharacterImageStore.hasAnimationFrames(for: state),
+               let img1 = CharacterImageStore.loadFrame(state, frame: 1) {
+                sendCharacterImage(img1, for: state, frame: 1)
+            }
+        }
+        for cond in WeatherBackgroundCondition.allCases {
+            if let img = CharacterImageStore.loadBackground(cond) {
+                sendWeatherBackground(img, for: cond)
+            }
+        }
+    }
+
+    /// 한 launch 당 1회만 자동 sync. 자동 트리거 (activate / state change) 에서 사용.
+    func triggerInitialSyncIfNeeded() {
+        guard !hasInitialSyncedThisLaunch,
+              let session,
+              session.activationState == .activated,
+              session.isPaired,
+              session.isWatchAppInstalled else { return }
+        hasInitialSyncedThisLaunch = true
+        sendAllToWatch()
+    }
+
     /// 사용자가 적용한 캐릭터 이미지를 워치로 전송 (file transfer).
     /// 다운샘플링 후 보내서 워치 메모리 + 네트워크 부담 최소화.
     /// frame 0 = 기본 / frame 1 = 애니메이션 frame.
     func sendCharacterImage(_ image: UIImage, for state: CharacterState, frame: Int = 0) {
         guard let session else {
-            lastImageTransferState = "❌ WCSession 미지원"
+            lastImageTransferState = "이 기기에선 Apple Watch 연동을 쓸 수 없어요."
             return
         }
         guard session.activationState == .activated else {
-            lastImageTransferState = "❌ WCSession 활성화 안 됨"
+            lastImageTransferState = "Apple Watch 연결을 준비 중이에요. 잠시 후 다시 시도해 주세요."
             return
         }
         guard session.isPaired else {
-            lastImageTransferState = "❌ 워치 페어링 안 됨"
+            lastImageTransferState = "Apple Watch 가 페어링돼 있지 않아요."
             return
         }
         guard session.isWatchAppInstalled else {
-            lastImageTransferState = "❌ 워치 앱 설치 안 됨"
+            lastImageTransferState = "Apple Watch 에 withu 앱이 설치돼 있지 않아요."
             return
         }
         let resized = Self.downsampled(image, maxPixelSize: Self.watchImageMaxPixelSize)
         guard let data = resized.pngData() else {
-            lastImageTransferState = "❌ PNG 인코딩 실패"
+            lastImageTransferState = "이미지 변환에 실패했어요. 다시 시도해 주세요."
             return
         }
         let tmpURL = FileManager.default.temporaryDirectory
@@ -98,7 +134,7 @@ final class ConnectivityManager: NSObject {
                     Self.characterFrameMetadataKey: frame
                 ]
             )
-            lastImageTransferState = "📤 \(state.rawValue) f\(frame) 전송 시작 (\(data.count / 1024)KB)"
+            lastImageTransferState = "워치로 \(state.rawValue) 전송 중 (\(data.count / 1024)KB)"
             outstandingTransfers = session.outstandingFileTransfers.count
 
             // 컴플리케이션이 SharedAppState 메시지로 state 를 결정하니까,
@@ -121,7 +157,7 @@ final class ConnectivityManager: NSObject {
                 }
             }
         } catch {
-            lastImageTransferState = "❌ 파일 쓰기 실패: \(error.localizedDescription)"
+            lastImageTransferState = "워치 전송 준비에 실패했어요. 다시 시도해 주세요."
         }
     }
 
@@ -135,7 +171,7 @@ final class ConnectivityManager: NSObject {
         // 워치 화면 ~ 410px 이내라 256 정도면 충분. 더 작게 200 으로 다운샘플.
         let resized = Self.downsampled(image, maxPixelSize: 200)
         guard let data = resized.pngData() else {
-            lastImageTransferState = "❌ 배경 PNG 인코딩 실패"
+            lastImageTransferState = "배경 이미지 변환에 실패했어요."
             return
         }
         let tmpURL = FileManager.default.temporaryDirectory
@@ -146,10 +182,10 @@ final class ConnectivityManager: NSObject {
                 tmpURL,
                 metadata: [Self.weatherBackgroundMetadataKey: cond.rawValue]
             )
-            lastImageTransferState = "📤 bg \(cond.rawValue) 전송 시작 (\(data.count / 1024)KB)"
+            lastImageTransferState = "워치로 \(cond.rawValue) 배경 전송 중 (\(data.count / 1024)KB)"
             outstandingTransfers = session.outstandingFileTransfers.count
         } catch {
-            lastImageTransferState = "❌ 배경 파일 쓰기 실패: \(error.localizedDescription)"
+            lastImageTransferState = "배경 전송 준비에 실패했어요. 다시 시도해 주세요."
         }
     }
 
@@ -203,6 +239,8 @@ extension ConnectivityManager: WCSessionDelegate {
             self.isWatchAppInstalled = session.isWatchAppInstalled
             self.isReachable = session.isReachable
             if let error { self.lastError = error.localizedDescription }
+            // 활성화 직후 워치가 이미 연결돼 있으면 초기 sync (앱 launch 당 1회).
+            self.triggerInitialSyncIfNeeded()
         }
     }
 
@@ -215,8 +253,16 @@ extension ConnectivityManager: WCSessionDelegate {
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         Task { @MainActor in
+            let wasInstalled = self.isWatchAppInstalled
             self.isPaired = session.isPaired
             self.isWatchAppInstalled = session.isWatchAppInstalled
+            // 워치 앱이 새로 설치됨 → 모든 캐릭터/배경 자동 전송.
+            // hasInitialSyncedThisLaunch flag 가 있으니 중복 호출 안전.
+            if !wasInstalled && session.isWatchAppInstalled {
+                // 신규 설치 케이스는 무조건 한 번 더 — 위 flag 가 이미 true 라도.
+                self.hasInitialSyncedThisLaunch = false
+                self.triggerInitialSyncIfNeeded()
+            }
         }
     }
 
