@@ -1,0 +1,78 @@
+{
+  "identifier" : "withu-storekit-config",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "1500",
+      "familyShareable" : false,
+      "internalID" : "withu-credits-30",
+      "localizations" : [
+        {
+          "description" : "AI 캐릭터를 30번 더 만들 수 있어요. 만료 없이 계속 사용.",
+          "displayName" : "30회 충전",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.seoyoung.withu.credits.30",
+      "referenceName" : "Credits 30",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4500",
+      "familyShareable" : false,
+      "internalID" : "withu-credits-100",
+      "localizations" : [
+        {
+          "description" : "AI 캐릭터를 100번 더 만들 수 있어요. 만료 없이 계속 사용.",
+          "displayName" : "100회 충전",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.seoyoung.withu.credits.100",
+      "referenceName" : "Credits 100",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "withu",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "withu-subscriptions",
+      "localizations" : [],
+      "name" : "withu 구독",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "3900",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "withu-sub-monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "매일 100번씩 AI 캐릭터를 만들 수 있어요.",
+              "displayName" : "withu 구독 (월간)",
+              "locale" : "ko_KR"
+            }
+          ],
+          "productID" : "com.seoyoung.withu.subscription.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly Subscription",
+          "subscriptionGroupID" : "withu-subscriptions",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

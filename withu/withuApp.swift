@@ -71,6 +71,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         Task { @MainActor in
             ConnectivityManager.shared.activate()
             HealthKitManager.shared.startObservingChanges()
+            // 인앱 결제 — 상품 로드 + 구독 상태 동기화 + 트랜잭션 감시
+            StoreManager.shared.start()
             // Focus 권한 — 처음이면 시스템 시트, 이후엔 즉시 status 갱신.
             await FocusModeManager.shared.requestAuthorization()
             // 권한 결과 반영해서 즉시 한 번 sync.
