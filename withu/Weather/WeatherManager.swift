@@ -114,16 +114,33 @@ private struct OpenMeteoResponse: Decodable {
         let temperature_2m: Double
         let weather_code: Int
     }
+    struct Daily: Decodable {
+        let time: [String]?
+        let sunrise: [String]?
+        let sunset: [String]?
+    }
     let current: Current
+    let daily: Daily?
 }
 
 extension WeatherManager {
+    /// Open-Meteo 의 일출/일몰은 "yyyy-MM-dd'T'HH:mm" (위치 local TZ, no offset).
+    /// `timezone=auto` 로 요청했으니 위치 로컬 시각. user TZ 와 같다고 가정 (대부분 케이스).
+    private static let openMeteoLocalFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        f.timeZone = TimeZone.current
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     private func fetchOpenMeteo(lat: Double, lon: Double) async {
         defer { isFetching = false }
         let urlString =
             "https://api.open-meteo.com/v1/forecast" +
             "?latitude=\(lat)&longitude=\(lon)" +
-            "&current=temperature_2m,weather_code&timezone=auto"
+            "&current=temperature_2m,weather_code" +
+            "&daily=sunrise,sunset&timezone=auto"
 
         guard let url = URL(string: urlString) else {
             lastError = "URL 생성 실패"
@@ -132,10 +149,14 @@ extension WeatherManager {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+            let sunriseStr = decoded.daily?.sunrise?.first
+            let sunsetStr = decoded.daily?.sunset?.first
             let snap = WeatherSnapshot(
                 condition: WeatherCondition(wmoCode: decoded.current.weather_code),
                 temperatureC: decoded.current.temperature_2m,
-                timestamp: Date()
+                timestamp: Date(),
+                sunrise: sunriseStr.flatMap { Self.openMeteoLocalFormatter.date(from: $0) },
+                sunset: sunsetStr.flatMap { Self.openMeteoLocalFormatter.date(from: $0) }
             )
             self.snapshot = snap
             self.lastError = nil

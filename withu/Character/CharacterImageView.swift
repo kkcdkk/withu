@@ -231,7 +231,145 @@ struct CharacterImageView: View {
         .background(Circle().fill(CharacterState.idle.tint.opacity(0.18)))
 }
 
-// MARK: - WeatherBackgroundView (4 타깃 공유)
+// MARK: - WeatherDecorationView (4 타깃 공유)
+
+/// 캐릭터 옆에 띄우는 작은 날씨 표현.
+///   - 해/달/구름: 우상단에 정적 emoji (고정, 모션 X)
+///   - 비/눈: 영역 전체에 진짜 떨어지는 입자
+struct WeatherDecorationView: View {
+    let condition: WeatherBackgroundCondition?
+    /// emoji 기본 크기. 메인 = 44, 워치 = 18, 위젯 medium = 18.
+    var size: CGFloat = 44
+
+    var body: some View {
+        if let condition {
+            decoration(for: condition)
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func decoration(for cond: WeatherBackgroundCondition) -> some View {
+        #if canImport(UIKit)
+        // Asset Catalog 에 박아둔 고정 PNG → 없으면 emoji fallback.
+        let assetExists = UIImage(named: cond.decorationAssetName) != nil
+        switch cond {
+        case .sunny, .cloudy, .night:
+            cornerElement(assetName: assetExists ? cond.decorationAssetName : nil,
+                          fallback: cond.fallbackEmoji)
+        case .rainy:
+            FallingParticles(assetName: assetExists ? cond.decorationAssetName : nil,
+                             fallbackSymbol: "💧",
+                             count: 7,
+                             particleSize: size * 0.35,
+                             fallPeriod: 1.0, drift: false)
+        case .snowy:
+            FallingParticles(assetName: assetExists ? cond.decorationAssetName : nil,
+                             fallbackSymbol: "❄️",
+                             count: 7,
+                             particleSize: size * 0.38,
+                             fallPeriod: 2.6, drift: true)
+        }
+        #else
+        EmptyView()
+        #endif
+    }
+
+    #if canImport(UIKit)
+    /// 해/달/구름 아이콘은 캐릭터 대비 작게 — size 의 일부만 사용 (캐릭터의 ~1/4.5).
+    private var cornerScale: CGFloat { 0.66 }
+
+    /// 우상단 정적 — Asset Catalog 이미지 있으면 그걸, 없으면 emoji.
+    @ViewBuilder
+    private func cornerElement(assetName: String?, fallback: String) -> some View {
+        let elementSize = size * cornerScale
+        VStack {
+            HStack {
+                Spacer()
+                Group {
+                    if let assetName {
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: elementSize, height: elementSize)
+                    } else {
+                        Text(fallback)
+                            .font(.system(size: elementSize))
+                    }
+                }
+                .padding(.top, size * 0.08)
+                .padding(.trailing, size * 0.08)
+            }
+            Spacer()
+        }
+    }
+    #endif
+}
+
+/// 영역 전체에 떨어지는 입자 — 비/눈.
+/// Asset Catalog 이미지 있으면 그게 입자, 없으면 emoji symbol.
+/// `count` 개 입자가 staggered phase 로 위→아래 반복. drift=true 면 수평 sine 흔들림.
+private struct FallingParticles: View {
+    let assetName: String?
+    let fallbackSymbol: String
+    let count: Int
+    let particleSize: CGFloat
+    let fallPeriod: Double
+    var drift: Bool = false
+
+    var body: some View {
+        GeometryReader { geo in
+            TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { ctx in
+                let t = ctx.date.timeIntervalSinceReferenceDate
+                ZStack {
+                    ForEach(0..<count, id: \.self) { i in
+                        particle(i: i, t: t, size: geo.size)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func particleContent() -> some View {
+        if let assetName {
+            Image(assetName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: particleSize, height: particleSize)
+        } else {
+            Text(fallbackSymbol).font(.system(size: particleSize))
+        }
+    }
+
+    private func particle(i: Int, t: TimeInterval, size: CGSize) -> some View {
+        let startOffset = Double(i) / Double(count)
+        let phase = (t / fallPeriod + startOffset)
+            .truncatingRemainder(dividingBy: 1.0)
+        let baseX = size.width * CGFloat((Double(i) + 0.5) / Double(count))
+        let jitter = CGFloat(sin(Double(i) * 7.31) * 12)
+        let driftX: CGFloat = drift
+            ? CGFloat(sin(t * 1.2 + Double(i) * 1.7) * 10)
+            : 0
+        let yStart: CGFloat = -particleSize
+        let yEnd: CGFloat = size.height + particleSize
+        let y = yStart + CGFloat(phase) * (yEnd - yStart)
+        let opacity: Double
+        if phase < 0.08 {
+            opacity = phase / 0.08
+        } else if phase > 0.92 {
+            opacity = (1 - phase) / 0.08
+        } else {
+            opacity = 1
+        }
+        return particleContent()
+            .position(x: baseX + jitter + driftX, y: y)
+            .opacity(opacity)
+    }
+}
+
+// MARK: - WeatherBackgroundView (legacy, AI 풀배경 — 현재 entry 숨김)
 
 /// 현재 날씨에 맞는 배경 이미지 표시. 사용자 생성 PNG → Asset Catalog → Color.clear 순.
 /// 호출자는 condition 직접 (iOS app) 또는 emoji (watch/widget) 로 전달.

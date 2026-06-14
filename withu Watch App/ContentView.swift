@@ -15,7 +15,9 @@ struct ContentView: View {
                     WatchCharacterView(state: msg.state,
                                        lastReceivedAt: connectivity.lastReceivedAt,
                                        imageReloadKey: connectivity.characterImageVersion,
-                                       weatherEmoji: msg.weatherEmoji)
+                                       weatherEmoji: msg.weatherEmoji,
+                                       weatherSunrise: msg.weatherSunrise,
+                                       weatherSunset: msg.weatherSunset)
                     if let steps = msg.todaySteps {
                         Text("👟 \(Int(steps))보")
                             .font(.system(size: 11))

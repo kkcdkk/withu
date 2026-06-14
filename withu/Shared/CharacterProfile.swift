@@ -29,7 +29,15 @@ struct CharacterProfile: Codable, Equatable {
     /// true 면 Focus 모드 / HealthKit 수면 일정을 무시하고 위의 sleepStart/End 시간만으로 sleeping 판정.
     /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil → false 로 fallback (자동 감지 사용).
     var manualSleepOnly: Bool?
+    /// 야간 fallback 시작 (분, midnight 기준). 위치 권한 없거나 일출/일몰 못 받았을 때 사용.
+    /// nil → 20:00 (1200) 기본값.
+    var nightFallbackStartMinute: Int?
+    /// 야간 fallback 종료 (분, midnight 기준). nil → 06:00 (360) 기본값.
+    var nightFallbackEndMinute: Int?
     // 애니메이션 사용 토글은 CharacterImageStore.animationEnabled 로 분리 — widget target 도 읽어야 함.
+
+    var effectiveNightFallbackStart: Int { nightFallbackStartMinute ?? 20 * 60 }
+    var effectiveNightFallbackEnd: Int { nightFallbackEndMinute ?? 6 * 60 }
 }
 
 enum CharacterProfileStore {

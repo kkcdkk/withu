@@ -21,6 +21,10 @@ struct WatchMessage: Codable, Equatable, Sendable {
     let weatherEmoji: String?
     /// 현재 기온 (섭씨)
     let weatherTempC: Double?
+    /// 오늘 일출 (위치 local time). 옵셔널.
+    var weatherSunrise: Date? = nil
+    /// 오늘 일몰 (위치 local time). 옵셔널.
+    var weatherSunset: Date? = nil
     let timestamp: Date
 
     /// 직렬화/역직렬화 키. 양쪽이 같은 이름을 쓰게 명시.
@@ -34,6 +38,8 @@ struct WatchMessage: Codable, Equatable, Sendable {
          todayActiveKcal: Double? = nil,
          weatherEmoji: String? = nil,
          weatherTempC: Double? = nil,
+         weatherSunrise: Date? = nil,
+         weatherSunset: Date? = nil,
          timestamp: Date = Date()) {
         self.state = state
         self.todaySteps = todaySteps
@@ -42,6 +48,8 @@ struct WatchMessage: Codable, Equatable, Sendable {
         self.todayActiveKcal = todayActiveKcal
         self.weatherEmoji = weatherEmoji
         self.weatherTempC = weatherTempC
+        self.weatherSunrise = weatherSunrise
+        self.weatherSunset = weatherSunset
         self.timestamp = timestamp
     }
 }

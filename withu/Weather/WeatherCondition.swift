@@ -77,6 +77,10 @@ struct WeatherSnapshot: Codable, Equatable {
     let condition: WeatherCondition
     let temperatureC: Double
     let timestamp: Date
+    /// 오늘 일출 (위치 local time). 옵셔널 — 이전 캐시 호환.
+    var sunrise: Date? = nil
+    /// 오늘 일몰 (위치 local time). 옵셔널 — 이전 캐시 호환.
+    var sunset: Date? = nil
 
     /// 매우 더운 상태 판정 (해변 캐릭터용)
     var isHot: Bool { temperatureC >= 30 }

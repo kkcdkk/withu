@@ -87,6 +87,7 @@ extension ConnectivityManager: WCSessionDelegate {
         let characterKey = "withu.characterImage.state"
         let frameKey = "withu.characterImage.frame"
         let backgroundKey = "withu.weatherBackground.condition"
+        let decorationKey = "withu.weatherDecoration.condition"
 
         // 1) 날씨 배경 파일?
         #if canImport(UIKit)
@@ -96,6 +97,19 @@ extension ConnectivityManager: WCSessionDelegate {
            let img = UIImage(data: data) {
             Task { @MainActor in
                 CharacterImageStore.saveBackground(img, for: cond)
+                WidgetCenter.shared.reloadAllTimelines()
+                WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
+                self.lastComplicationReloadAt = Date()
+            }
+            return
+        }
+        // 2) 날씨 표현 (작은 아이콘) 파일?
+        if let condRaw = metadata[decorationKey] as? String,
+           let cond = WeatherBackgroundCondition(rawValue: condRaw),
+           let data = try? Data(contentsOf: file.fileURL),
+           let img = UIImage(data: data) {
+            Task { @MainActor in
+                CharacterImageStore.saveDecoration(img, for: cond)
                 WidgetCenter.shared.reloadAllTimelines()
                 WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
                 self.lastComplicationReloadAt = Date()
@@ -133,6 +147,8 @@ extension ConnectivityManager: WCSessionDelegate {
                         todayActiveKcal: last.todayActiveKcal,
                         weatherEmoji: last.weatherEmoji,
                         weatherTempC: last.weatherTempC,
+                        weatherSunrise: last.weatherSunrise,
+                        weatherSunset: last.weatherSunset,
                         timestamp: Date()
                     )
                     SharedAppState.save(refreshed)

@@ -17,6 +17,8 @@ struct CharacterEntry: TimelineEntry {
     let lastSleepHours: Double?
     let weatherEmoji: String?
     let weatherTempC: Double?
+    let weatherSunrise: Date?
+    let weatherSunset: Date?
     let isPlaceholder: Bool
 
     static let placeholder = CharacterEntry(
@@ -40,6 +42,8 @@ struct CharacterEntry: TimelineEntry {
         self.lastSleepHours = message.lastSleepHours
         self.weatherEmoji = message.weatherEmoji
         self.weatherTempC = message.weatherTempC
+        self.weatherSunrise = message.weatherSunrise
+        self.weatherSunset = message.weatherSunset
         self.isPlaceholder = false
     }
 
@@ -51,6 +55,8 @@ struct CharacterEntry: TimelineEntry {
          lastSleepHours: Double? = nil,
          weatherEmoji: String? = nil,
          weatherTempC: Double? = nil,
+         weatherSunrise: Date? = nil,
+         weatherSunset: Date? = nil,
          isPlaceholder: Bool = false) {
         self.date = date
         self.state = state
@@ -60,6 +66,8 @@ struct CharacterEntry: TimelineEntry {
         self.lastSleepHours = lastSleepHours
         self.weatherEmoji = weatherEmoji
         self.weatherTempC = weatherTempC
+        self.weatherSunrise = weatherSunrise
+        self.weatherSunset = weatherSunset
         self.isPlaceholder = isPlaceholder
     }
 }
@@ -91,6 +99,8 @@ struct CharacterProvider: TimelineProvider {
                 lastSleepHours: base.lastSleepHours,
                 weatherEmoji: base.weatherEmoji,
                 weatherTempC: base.weatherTempC,
+                weatherSunrise: base.weatherSunrise,
+                weatherSunset: base.weatherSunset,
                 isPlaceholder: false
             ))
         }
@@ -203,8 +213,13 @@ private struct SmallView: View {
                     .font(.system(size: 11)).bold()
                     .lineLimit(1)
             }
-            CharacterImageView(state: entry.state, maxPixelSize: 256)
-                .frame(width: 46, height: 46)
+            ZStack {
+                CharacterImageView(state: entry.state, maxPixelSize: 256)
+                WeatherDecorationView(condition: widgetWeatherCondition(from: entry),
+                                      size: 16)
+                    .offset(y: -3)
+            }
+            .frame(width: 46, height: 46)
             // 핵심 metric 들 한 줄에 압축. small 은 좁아서 가장 큰 2개만.
             Text(smallMetricLine(entry))
                 .font(.system(size: 9))
@@ -220,8 +235,13 @@ private struct MediumView: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(spacing: 4) {
-                CharacterImageView(state: entry.state, maxPixelSize: 256)
-                    .frame(width: 64, height: 64)
+                ZStack {
+                    CharacterImageView(state: entry.state, maxPixelSize: 256)
+                    WeatherDecorationView(condition: widgetWeatherCondition(from: entry),
+                                          size: 22)
+                        .offset(y: -4)
+                }
+                .frame(width: 64, height: 64)
                 Text(entry.state.caption).font(.caption2).bold().lineLimit(1)
             }
             VStack(alignment: .leading, spacing: 3) {
@@ -246,8 +266,13 @@ private struct LargeView: View {
                 Text(weather)
                     .font(.headline)
             }
-            CharacterImageView(state: entry.state, maxPixelSize: 512)
-                .frame(width: 120, height: 120)
+            ZStack {
+                CharacterImageView(state: entry.state, maxPixelSize: 512)
+                WeatherDecorationView(condition: widgetWeatherCondition(from: entry),
+                                      size: 40)
+                    .offset(y: -7)
+            }
+            .frame(width: 120, height: 120)
             Text(entry.state.caption).font(.subheadline).bold()
             Divider().padding(.horizontal, 40)
             fitnessRows(entry, layout: .expanded)
@@ -255,6 +280,20 @@ private struct LargeView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+/// 위젯에서 표시할 날씨 condition.
+/// 1순위: 일출/일몰 기준 야간이면 .night
+/// 2순위: entry.weatherEmoji → sunny/cloudy/rainy/snowy
+/// 잠금화면 (accessory*) 에선 호출 안 함 — 모노톤이라 어울리지 않음.
+private func widgetWeatherCondition(from entry: CharacterEntry) -> WeatherBackgroundCondition? {
+    let isNight = CharacterImageStore.isCurrentlyNight(
+        at: entry.date,
+        sunrise: entry.weatherSunrise,
+        sunset: entry.weatherSunset
+    )
+    if isNight { return .night }
+    return WeatherBackgroundCondition.from(emoji: entry.weatherEmoji)
 }
 
 // MARK: - Fitness 표시 helpers
@@ -314,12 +353,8 @@ struct withuWidget: Widget {
         StaticConfiguration(kind: kind, provider: CharacterProvider()) { entry in
             WidgetView(entry: entry)
                 .containerBackground(for: .widget) {
-                    // 날씨 배경 layer. 야간 (entry.date 기준 20-06) 면 .night 우선.
-                    // 사용자 생성 이미지 없으면 Color.clear (호스트 wallpaper 비침).
-                    let cond = CharacterImageStore.isCurrentlyNight(at: entry.date)
-                        ? .night
-                        : WeatherBackgroundCondition.from(emoji: entry.weatherEmoji)
-                    WeatherBackgroundView(condition: cond)
+                    // 풀배경 X — 호스트 wallpaper 비치게. 날씨 표현은 WidgetView 안에서.
+                    Color.clear
                 }
                 .widgetURL(URL(string: "withu://main"))   // 위젯 탭 → 앱 열림
         }

@@ -45,6 +45,8 @@ final class ConnectivityManager: NSObject {
     static let characterFrameMetadataKey = "withu.characterImage.frame"
     /// 날씨 배경 이미지 파일 transfer 시 metadata 키 — 워치 쪽이 어느 condition 인지 알 수 있게.
     static let weatherBackgroundMetadataKey = "withu.weatherBackground.condition"
+    /// 날씨 표현 (작은 아이콘) 파일 transfer 시 metadata 키.
+    static let weatherDecorationMetadataKey = "withu.weatherDecoration.condition"
 
     private override init() { super.init() }
 
@@ -65,6 +67,32 @@ final class ConnectivityManager: NSObject {
     /// 100 이면 충분. 원본 1024×1024 (~4MB) → 100×100 (~40KB) 로 압축.
     private static let watchImageMaxPixelSize: CGFloat = 100
 
+    /// 날씨 표현 이미지를 워치로 전송. 작은 사이즈라 100 으로 다운샘플.
+    func sendWeatherDecoration(_ image: UIImage, for cond: WeatherBackgroundCondition) {
+        guard let session,
+              session.activationState == .activated,
+              session.isPaired,
+              session.isWatchAppInstalled else { return }
+        let resized = Self.downsampled(image, maxPixelSize: 100)
+        guard let data = resized.pngData() else {
+            lastImageTransferState = "날씨 표현 이미지 변환 실패"
+            return
+        }
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("deco_\(cond.rawValue)_\(UUID().uuidString).png")
+        do {
+            try data.write(to: tmpURL, options: .atomic)
+            session.transferFile(
+                tmpURL,
+                metadata: [Self.weatherDecorationMetadataKey: cond.rawValue]
+            )
+            lastImageTransferState = "워치로 \(cond.rawValue) 표현 전송 중 (\(data.count / 1024)KB)"
+            outstandingTransfers = session.outstandingFileTransfers.count
+        } catch {
+            lastImageTransferState = "날씨 표현 전송 준비에 실패했어요."
+        }
+    }
+
     /// 모든 캐릭터 이미지 + 날씨 배경을 워치로 일괄 전송.
     /// 사용 시점:
     ///   1) 워치 앱이 새로 설치된 시점 (sessionWatchStateDidChange — 자동)
@@ -83,6 +111,9 @@ final class ConnectivityManager: NSObject {
         for cond in WeatherBackgroundCondition.allCases {
             if let img = CharacterImageStore.loadBackground(cond) {
                 sendWeatherBackground(img, for: cond)
+            }
+            if let img = CharacterImageStore.loadDecoration(cond) {
+                sendWeatherDecoration(img, for: cond)
             }
         }
     }
@@ -149,6 +180,8 @@ final class ConnectivityManager: NSObject {
                     todayActiveKcal: last.todayActiveKcal,
                     weatherEmoji: last.weatherEmoji,
                     weatherTempC: last.weatherTempC,
+                    weatherSunrise: last.weatherSunrise,
+                    weatherSunset: last.weatherSunset,
                     timestamp: Date()
                 )
                 if let encoded = try? JSONEncoder().encode(refreshed) {
@@ -441,6 +474,8 @@ enum SyncCoordinator {
             todayActiveKcal: health.todayActiveKcal,
             weatherEmoji: weather.snapshot?.condition.emoji,
             weatherTempC: weather.snapshot?.temperatureC,
+            weatherSunrise: weather.snapshot?.sunrise,
+            weatherSunset: weather.snapshot?.sunset,
             timestamp: Date()
         )
 

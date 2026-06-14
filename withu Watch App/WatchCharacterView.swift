@@ -16,25 +16,31 @@ struct WatchCharacterView: View {
     var imageReloadKey: Int = 0
     /// 현재 날씨 emoji — WatchMessage.weatherEmoji 그대로. 배경 layer 매핑에 사용.
     var weatherEmoji: String? = nil
+    /// 오늘 일출 (iPhone 에서 sync). nil 이면 hardcoded 야간 시간 fallback.
+    var weatherSunrise: Date? = nil
+    /// 오늘 일몰 (iPhone 에서 sync). nil 이면 hardcoded 야간 시간 fallback.
+    var weatherSunset: Date? = nil
 
     /// 야간이면 .night, 아니면 emoji 매핑.
     private var effectiveBackgroundCondition: WeatherBackgroundCondition? {
-        if CharacterImageStore.isCurrentlyNight() { return .night }
+        if CharacterImageStore.isCurrentlyNight(sunrise: weatherSunrise, sunset: weatherSunset) {
+            return .night
+        }
         return WeatherBackgroundCondition.from(emoji: weatherEmoji)
     }
 
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
-                // 가장 뒤 — 날씨 배경 (사용자 생성 PNG 있을 때만)
-                WeatherBackgroundView(condition: effectiveBackgroundCondition)
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
                 Circle()
-                    .fill(state.tint.opacity(0.18))
+                    .fill(state.tint.opacity(0.20))
                     .frame(width: 80, height: 80)
                 animatedCharacter
                     .id(imageReloadKey)
+                // 날씨 표현 — 작은 크기로
+                WeatherDecorationView(condition: effectiveBackgroundCondition, size: 18)
+                    .frame(width: 80, height: 80)
+                    .allowsHitTesting(false)
             }
             Text(state.caption)
                 .font(.caption)
