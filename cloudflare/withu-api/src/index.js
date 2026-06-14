@@ -66,7 +66,43 @@ export default {
   }
 };
 
+// 공유 시크릿 토큰 검증. 점진 배포: env.WITHU_API_TOKEN 이 설정돼 있을 때만 강제.
+// 설정 전엔 통과시켜 기존 앱 빌드 호환 유지. 설정 후엔 헤더 없는 호출 401.
+//   wrangler secret put WITHU_API_TOKEN  (앱 APIConfig.apiToken 과 동일 값)
+function checkAuth(request, env) {
+  if (!env.WITHU_API_TOKEN) return null;
+  const token = request.headers.get("X-Withu-Token");
+  if (token !== env.WITHU_API_TOKEN) {
+    return jsonError("Unauthorized", 401);
+  }
+  return null;
+}
+
+// IP 기준 일일 생성 상한. 점진 배포: RATE_KV 바인딩이 있을 때만 동작.
+//   wrangler kv namespace create RATE_KV  → wrangler.toml 의 id 채우고 deploy
+const DAILY_IP_LIMIT = 60;
+
+async function checkRateLimit(request, env) {
+  if (!env.RATE_KV) return null;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const day = new Date().toISOString().slice(0, 10); // yyyy-mm-dd (UTC)
+  const key = `rl:${ip}:${day}`;
+  const used = parseInt((await env.RATE_KV.get(key)) || "0", 10);
+  if (used >= DAILY_IP_LIMIT) {
+    return jsonError("오늘 만들 수 있는 횟수를 넘었어요. 내일 다시 시도해 주세요.", 429);
+  }
+  // 카운트 증가 (48시간 후 자동 만료)
+  await env.RATE_KV.put(key, String(used + 1), { expirationTtl: 60 * 60 * 48 });
+  return null;
+}
+
 async function generateImage(request, env) {
+  const authError = checkAuth(request, env);
+  if (authError) return authError;
+
+  const rateError = await checkRateLimit(request, env);
+  if (rateError) return rateError;
+
   if (!env.OPENAI_API_KEY) {
     return jsonError("OPENAI_API_KEY secret is not configured.", 503);
   }

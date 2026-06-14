@@ -5,3 +5,20 @@ workers_dev = true
 
 [observability]
 enabled = true
+
+# --- 비용/남용 방어 (선택, 점진 배포) ---
+#
+# 1) OpenAI 키 (필수):
+#      npx wrangler secret put OPENAI_API_KEY
+#
+# 2) 공유 토큰 (앱만 호출 허용). 설정하면 X-Withu-Token 헤더 없는 호출은 401:
+#      npx wrangler secret put WITHU_API_TOKEN
+#    → 같은 값을 앱 withu/Networking/APIConfig.swift 의 apiToken 에 넣어야 함.
+#
+# 3) IP 일일 상한 (rate limit). KV namespace 를 만들고 아래 주석을 풀어 id 를 채운 뒤 deploy:
+#      npx wrangler kv namespace create RATE_KV
+#    그러면 출력된 id 를 여기에:
+#
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "여기에_생성된_namespace_id"

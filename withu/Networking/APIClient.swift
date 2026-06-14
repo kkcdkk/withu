@@ -129,6 +129,9 @@ actor APIClient {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = APIConfig.apiToken, !token.isEmpty {
+            req.setValue(token, forHTTPHeaderField: "X-Withu-Token")
+        }
         req.httpBody = try encoder.encode(request)
 
         do {

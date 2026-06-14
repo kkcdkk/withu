@@ -4,8 +4,8 @@
 <dict>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<!-- 전면 평문 허용(NSAllowsArbitraryLoads)은 제거 — 프로덕션은 HTTPS(workers.dev)만 사용. -->
+		<!-- Debug 로컬 FastAPI(Tailscale, 평문)만 아래 예외로 허용. Release 는 이 예외를 쓰지 않음. -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 		<key>NSExceptionDomains</key>
