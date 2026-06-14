@@ -81,6 +81,27 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         }
     }
 
+    /// UI picker/리스트에 쓰는 짧고 깔끔한 한글 라벨. 이모지 없음.
+    var koreanShortLabel: String {
+        switch self {
+        case .idle:           return "기본"
+        case .sleeping:       return "수면"
+        case .wakingUp:       return "기상"
+        case .eating:         return "식사"
+        case .walking:        return "산책"
+        case .running:        return "달리기"
+        case .cycling:        return "자전거"
+        case .energetic:      return "Energetic"
+        case .beach:          return "해변"
+        case .cloudy:         return "흐림"
+        case .rainyShelter:   return "우산"
+        case .snowPlay:       return "눈놀이"
+        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy: return "산책"
+        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy: return "달리기"
+        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy: return "자전거"
+        }
+    }
+
     var caption: String {
         switch self {
         case .idle:           return "느긋한 하루"

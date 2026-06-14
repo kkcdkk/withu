@@ -15,78 +15,100 @@ struct CharacterProfileView: View {
     @State private var focus = FocusModeManager.shared
     @State private var animationEnabled: Bool = CharacterImageStore.animationEnabled
 
+    /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
+    private var heroState: CharacterState {
+        SharedAppState.loadMessage()?.state ?? .idle
+    }
+
     var body: some View {
-        Form {
-            Section {
-                TextField("예: 코코, 모찌", text: $profile.name)
-                TextField("성격/말투 등 (선택)", text: $profile.description, axis: .vertical)
-                    .lineLimit(2...5)
-            } header: {
-                Text("프로필")
-            } footer: {
-                Text("이름은 캐릭터를 부르거나 위젯에 표시될 때 사용돼요.")
-                    .font(.caption2)
-            }
-
-            Section {
-                TextField("예: round chibi mascot, pink rabbit with big eyes",
-                          text: $profile.aiPrompt, axis: .vertical)
-                    .lineLimit(2...5)
-            } header: {
-                Text("🎨 AI 기본 프롬프트")
-            } footer: {
-                Text("\"함께할 캐릭터 생성하기\" 진입 시 자동으로 채워져요. 외형 한 줄로 정의 (영어 권장).")
-                    .font(.caption2)
-            }
-
-            Section {
-                HStack {
-                    Text("지금 기준")
-                    Spacer()
-                    Text(currentSleepSourceLabel)
-                        .foregroundStyle(.secondary)
-                        .font(.callout)
+        ZStack {
+            backgroundGradient(for: heroState).ignoresSafeArea()
+            Form {
+                Section {
+                    heroCard
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                 }
-                Toggle("수면 자동 감지", isOn: autoDetectBinding)
-                DatePicker("취침", selection: sleepStartBinding,
-                           displayedComponents: .hourAndMinute)
-                DatePicker("기상", selection: sleepEndBinding,
-                           displayedComponents: .hourAndMinute)
-            } header: {
-                Text("💤 수면 시간")
-            } footer: {
-                Text(sleepFooterText)
-                    .font(.caption2)
+
+                Section {
+                    TextField("예: 코코, 모찌", text: $profile.name)
+                    TextField("성격이나 말투 (선택)", text: $profile.description, axis: .vertical)
+                        .lineLimit(2...5)
+                } header: {
+                    Text("이름과 성격")
+                } footer: {
+                    Text("이름은 캐릭터를 부를 때나 위젯에 표시될 때 쓰여요.")
+                        .font(.caption2)
+                }
+
+                Section {
+                    HStack {
+                        Text("지금은")
+                        Spacer()
+                        Text(currentSleepSourceLabel)
+                            .foregroundStyle(.secondary)
+                            .font(.callout)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
+                    DatePicker("잠드는 시간", selection: sleepStartBinding,
+                               displayedComponents: .hourAndMinute)
+                    DatePicker("일어나는 시간", selection: sleepEndBinding,
+                               displayedComponents: .hourAndMinute)
+                } header: {
+                    Text("수면 시간")
+                } footer: {
+                    Text(sleepFooterText)
+                        .font(.caption2)
+                }
+
+                Section {
+                    DatePicker("점심 시간", selection: lunchBinding,
+                               displayedComponents: .hourAndMinute)
+                    DatePicker("저녁 시간", selection: dinnerBinding,
+                               displayedComponents: .hourAndMinute)
+                } header: {
+                    Text("식사 시간")
+                } footer: {
+                    Text("정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.")
+                        .font(.caption2)
+                }
+
+                Section {
+                    DatePicker("밤이 시작되는 시각", selection: nightStartBinding,
+                               displayedComponents: .hourAndMinute)
+                    DatePicker("밤이 끝나는 시각", selection: nightEndBinding,
+                               displayedComponents: .hourAndMinute)
+                } header: {
+                    Text("밤하늘 시간")
+                } footer: {
+                    Text("날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.")
+                        .font(.caption2)
+                }
+
+                statesOverviewSection
+
+                Section {
+                    Toggle("캐릭터 움직이게 하기", isOn: $animationEnabled)
+                } header: {
+                    Text("움직임")
+                } footer: {
+                    Text("움직이는 캐릭터로 만든 경우, 살짝살짝 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리에 더 가벼워요. 만들어 둔 그림은 그대로 남아요.")
+                        .font(.caption2)
+                }
+
+                Section {
+                    DisclosureGroup("캐릭터 외형 한 줄 (고급)") {
+                        TextField("예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터",
+                                  text: $profile.aiPrompt, axis: .vertical)
+                            .lineLimit(2...5)
+                        Text("캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
-
-            Section {
-                DatePicker("점심 시작", selection: lunchBinding,
-                           displayedComponents: .hourAndMinute)
-                DatePicker("저녁 시작", selection: dinnerBinding,
-                           displayedComponents: .hourAndMinute)
-            } header: {
-                Text("🍽️ 식사 시간")
-            } footer: {
-                Text("설정한 시각 ~ 30분 후까지 식사 캐릭터로 표시돼요.")
-                    .font(.caption2)
-            }
-
-            statesOverviewSection
-
-            weatherBackgroundsSection
-
-            Section {
-                Toggle("연속 이미지 사용 (있을 때)", isOn: $animationEnabled)
-            } header: {
-                Text("🎬 캐릭터 표시")
-            } footer: {
-                Text("""
-                    ON — 연속 이미지를 생성한 캐릭터는 0.7초 간격으로 swap 애니메이션.
-                    OFF — frame 1 이 있어도 정적 (frame 0 만). 배터리/시각 부담 줄이고 싶을 때.
-                    ※ 갤러리의 frame 1 데이터는 유지됨 — 이 토글은 표시 방식만 바꿔요.
-                    """)
-                    .font(.caption2)
-            }
+            .scrollContentBackground(.hidden)
         }
         .navigationTitle("내 캐릭터 설정")
         .navigationBarTitleDisplayMode(.inline)
@@ -98,6 +120,23 @@ struct CharacterProfileView: View {
             CharacterProfileStore.save(new)
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    private var heroCard: some View {
+        HStack(spacing: 14) {
+            KoreanStateChip(state: heroState, size: 64)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(profile.name.isEmpty ? "내 캐릭터" : profile.name)
+                    .font(.title3.weight(.semibold))
+                Text(heroState.caption)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .frostedCard(cornerRadius: 18)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Weather backgrounds
@@ -148,60 +187,50 @@ struct CharacterProfileView: View {
 
     // MARK: - States overview
 
-    /// 9개 state 각각 현재 적용된 캐릭터 이미지 + 이름. 적용 안 된 곳은 placeholder.
+    /// 상태마다 적용된 캐릭터 미리보기. 탭하면 그 상태의 갤러리 폴더로.
     private var statesOverviewSection: some View {
         Section {
             ForEach(CharacterState.userFacing, id: \.self) { state in
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(state.tint.opacity(0.12))
-                        CharacterImageView(state: state)
-                            .padding(4)
-                    }
-                    .frame(width: 44, height: 44)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text(state.symbolEmoji).font(.caption)
-                            Text(state.rawValue).font(.callout.weight(.medium))
-                            if CharacterImageStore.hasAnimationFrames(for: state) {
-                                Text("🎬").font(.caption2)
-                            }
+                NavigationLink {
+                    StateFolderView(state: state)
+                } label: {
+                    HStack(spacing: 12) {
+                        KoreanStateChip(state: state, size: 44)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(state.koreanShortLabel)
+                                .font(.callout.weight(.medium))
+                            Text(CharacterImageStore.hasImage(for: state)
+                                 ? "내 캐릭터가 적용됐어요"
+                                 : "아직 기본 모습이에요")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
-                        Text(CharacterImageStore.hasImage(for: state)
-                             ? "사용자 캐릭터"
-                             : "기본 (placeholder)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                        Spacer()
                     }
-                    Spacer()
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 2)
             }
         } header: {
-            Text("📚 상태별 현재 캐릭터")
+            Text("상태별 캐릭터")
         } footer: {
-            Text("각 상태에 어떤 캐릭터가 적용돼 있는지. 비어 있으면 placeholder (SF Symbol 또는 기본 일러스트). 캐릭터 갤러리 / 캐릭터 생성 화면에서 교체.")
+            Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
                 .font(.caption2)
         }
     }
 
     // MARK: - Sleep source indicator + toggle
 
-    /// 지금 sleeping 을 트리거하는 활성 신호 표시.
-    /// resolver 우선순위: (1) Focus 모드 OR HealthKit inBed → (2) 프로필 시간
+    /// 지금 자는 상태로 판정되는 이유를 평서형으로.
+    /// 우선순위: (1) 집중 모드 OR 건강 앱 수면 일정 → (2) 설정한 시간
     private var currentSleepSourceLabel: String {
         let inProfileWindow = isNowInProfileSleepWindow()
         if profile.manualSleepOnly ?? false {
-            return inProfileWindow ? "프로필 시간 안" : "프로필 시간 밖"
+            return inProfileWindow ? "자는 시간이에요" : "깨어 있는 시간이에요"
         }
-        // 1순위 — 외부 신호
-        if focus.isFocused || focus.isFocusFilterSleeping { return "Focus 모드 (1순위)" }
-        if health.isInBedSchedule { return "HealthKit inBed (1순위)" }
-        // 2순위 — 프로필 fallback
-        if inProfileWindow { return "프로필 시간 (2순위)" }
-        return "지금은 안 잠"
+        if focus.isFocused || focus.isFocusFilterSleeping { return "집중 모드라서 자고 있어요" }
+        if health.isInBedSchedule { return "건강 앱 수면 일정이라서 자고 있어요" }
+        if inProfileWindow { return "설정한 시간이라서 자고 있어요" }
+        return "깨어 있어요"
     }
 
     private func isNowInProfileSleepWindow() -> Bool {
@@ -224,14 +253,9 @@ struct CharacterProfileView: View {
 
     private var sleepFooterText: String {
         if profile.manualSleepOnly ?? false {
-            return "자동 감지 OFF — 위의 시간대만 기준. iOS Focus / Health 수면 일정과 무관."
+            return "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요."
         }
-        return """
-            우선순위:
-              1순위 — iOS 수면 집중 모드 (또는 Health 수면 일정)
-              2순위 — 위의 시간대 (사용자 설정)
-            ※ Sleep Focus 가 켜져 있으면 어떤 시각이든 자고 있는 걸로. 둘 다 없으면 위 시간대를 fallback 으로 사용.
-            """
+        return "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 언제든 자는 걸로 봐요."
     }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)
@@ -276,6 +300,32 @@ struct CharacterProfileView: View {
                 let c = hourMinute(from: new)
                 profile.dinnerHour = c.h
                 profile.dinnerMinute = c.m
+            }
+        )
+    }
+
+    private var nightStartBinding: Binding<Date> {
+        Binding(
+            get: {
+                let m = profile.effectiveNightFallbackStart
+                return dateFor(m / 60, m % 60)
+            },
+            set: { new in
+                let c = hourMinute(from: new)
+                profile.nightFallbackStartMinute = c.h * 60 + c.m
+            }
+        )
+    }
+
+    private var nightEndBinding: Binding<Date> {
+        Binding(
+            get: {
+                let m = profile.effectiveNightFallbackEnd
+                return dateFor(m / 60, m % 60)
+            },
+            set: { new in
+                let c = hourMinute(from: new)
+                profile.nightFallbackEndMinute = c.h * 60 + c.m
             }
         )
     }

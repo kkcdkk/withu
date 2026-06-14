@@ -8,8 +8,15 @@ import PhotosUI
 import WidgetKit
 
 enum GenerationMode: String, CaseIterable, Hashable {
-    case aiGenerate = "AI 생성"
-    case importPhoto = "이미지 첨부"
+    case aiGenerate = "AI로 캐릭터 생성하기"
+    case importPhoto = "내 이미지로 캐릭터 생성하기"
+
+    var sfSymbol: String {
+        switch self {
+        case .aiGenerate:  return "wand.and.stars"
+        case .importPhoto: return "photo.on.rectangle.angled"
+        }
+    }
 }
 
 struct CharacterGenView: View {
@@ -52,45 +59,48 @@ struct CharacterGenView: View {
     @State private var showAppliedAlert: Bool = false
     @State private var showSavedAlert: Bool = false
     @State private var generationStartedAt: Date?
+    @State private var remainingGenerations: Int = GenerationQuota.remainingToday()
+    @State private var showPaywall: Bool = false
 
     var body: some View {
-        Form {
-            modeSection
-            stateSection
-            if mode == .aiGenerate {
-                optionsSection
-                referenceSection
-                promptSection
-                resultSection
-                refinementSection
-            } else {
-                importSection
-                importResultSection
-            }
-            Section {
-                NavigationLink {
-                    BatchCharacterGenView()
-                } label: {
-                    Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
-                }
-                NavigationLink {
-                    WeatherBackgroundGenView()
-                } label: {
-                    Label("날씨 배경 만들기", systemImage: "cloud.sun.fill")
+        ZStack {
+            backgroundGradient(for: targetState).ignoresSafeArea()
+                .animation(.snappy, value: targetState)
+            Form {
+                batchSection
+                modeSection
+                stateSection
+                if mode == .aiGenerate {
+                    optionsSection
+                    referenceSection
+                    promptSection
+                    resultSection
+                    refinementSection
+                } else {
+                    importSection
+                    importResultSection
                 }
             }
+            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("함께할 캐릭터 생성하기")
+        .navigationTitle("캐릭터 만들기")
         .scrollDismissesKeyboard(.interactively)
-        .alert("적용됨", isPresented: $showAppliedAlert) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text("\(targetState.rawValue) 상태의 캐릭터가 교체됐어요. 메인 화면/위젯/워치에 즉시 반영됩니다.")
+        .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(onClose: {
+                showPaywall = false
+                remainingGenerations = GenerationQuota.remainingToday()
+            })
         }
-        .alert("저장됨", isPresented: $showSavedAlert) {
+        .alert("적용했어요", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text("사진 앱에 추가됐어요.")
+            Text("\(targetState.koreanShortLabel) 자리의 캐릭터를 바꿨어요. 홈 화면·위젯·워치에 바로 반영돼요.")
+        }
+        .alert("저장했어요", isPresented: $showSavedAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("사진 앱에 저장했어요.")
         }
         .onChange(of: targetState) { _, new in
             prompt = new.generationHint
@@ -115,22 +125,53 @@ struct CharacterGenView: View {
 
     // MARK: - Common sections
 
-    private var modeSection: some View {
+    /// 처음 시작하는 사용자가 가장 먼저 보게 — 9개 state 일괄 생성.
+    private var batchSection: some View {
         Section {
-            Picker("방식", selection: $mode) {
-                ForEach(GenerationMode.allCases, id: \.self) { m in
-                    Text(m.rawValue).tag(m)
+            NavigationLink {
+                BatchCharacterGenView()
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("여러 상태 한 번에 만들기")
+                        .font(.callout.weight(.semibold))
+                    Text("식사·산책·수면… 모든 상태의 모습을 한번에 만들어요")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .pickerStyle(.segmented)
-            .disabled(isGenerating || isProcessing)
+        } footer: {
+            Text("처음이라면 이걸 추천해요. 한 가지씩 만들고 싶으면 아래에서 골라요.")
+                .font(.caption2)
+        }
+    }
+
+    private var modeSection: some View {
+        Section {
+            ForEach(GenerationMode.allCases, id: \.self) { m in
+                Button {
+                    mode = m
+                } label: {
+                    HStack {
+                        Text(m.rawValue)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if mode == m {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                }
+                .disabled(isGenerating || isProcessing)
+            }
+        } header: {
+            Text("생성 옵션")
         } footer: {
             switch mode {
             case .aiGenerate:
-                Text("프롬프트로 캐릭터를 새로 만듭니다 (OpenAI 호출, 비용 발생).")
+                Text("프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 약간의 비용이 들어요.")
                     .foregroundStyle(.secondary)
             case .importPhoto:
-                Text("내가 가진 사진/그림을 그대로 사용. 자동으로 배경 제거 + 정사각형 정규화 (무료, 로컬 처리).")
+                Text("가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -140,23 +181,11 @@ struct CharacterGenView: View {
         Section {
             Picker("상태", selection: $targetState) {
                 ForEach(CharacterState.userFacing, id: \.self) { s in
-                    HStack {
-                        Text(s.symbolEmoji)
-                        Text(s.rawValue)
-                    }
-                    .tag(s)
+                    Text(s.koreanShortLabel).tag(s)
                 }
             }
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
-
-            HStack {
-                Text("현재 적용된 이미지")
-                Spacer()
-                Text(CharacterImageStore.hasImage(for: targetState) ? "사용자 생성" : "placeholder")
-                    .foregroundStyle(.secondary)
-                    .font(.footnote)
-            }
         } header: {
             Text("상태")
         }
@@ -176,27 +205,42 @@ struct CharacterGenView: View {
                     generateTask = nil
                     isGenerating = false
                     generationStartedAt = nil
-                    lastError = "생성을 중단했어요."
+                    lastError = "이미지 생성을 그만뒀어요."
                 } label: {
-                    Label("중단", systemImage: "stop.circle.fill")
+                    Label("그만두기", systemImage: "stop.circle.fill")
+                }
+            } else if remainingGenerations == 0 {
+                Button {
+                    showPaywall = true
+                } label: {
+                    Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
             } else {
                 Button {
                     generateTask = Task { await generate() }
                 } label: {
-                    Label("이미지 생성", systemImage: "wand.and.stars")
+                    Label("이 모습으로 만들기", systemImage: "wand.and.stars")
                 }
                 .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         } header: {
-            Text("프롬프트")
+            Text("캐릭터 생성")
         } footer: {
-            if isGenerating {
-                Text("백그라운드로 가도 30초까지 보존돼요. 그 후엔 결과가 손실될 수 있어요.")
-                    .foregroundStyle(.orange)
-            } else {
-                Text("그림체/가드레일은 서버가 자동으로 붙입니다.\n실측: low ~20초 · medium ~50초 · high 1~2분")
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                if isGenerating {
+                    Text("다른 앱으로 잠깐 넘어가도 괜찮아요. 너무 오래 떠나 있으면 결과가 사라질 수 있어요.")
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("그림 스타일과 안전 설정은 자동으로 챙겨요. 보통 빠르게 20초, 보통 50초, 선명하게 1~2분 정도 걸려요.")
+                        .foregroundStyle(.secondary)
+                }
+                if remainingGenerations == 0 {
+                    Text("오늘은 더 만들 수 없어요. 내일 다시 만들 수 있어요.")
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("오늘 \(remainingGenerations)번 더 만들 수 있어요.")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -208,11 +252,11 @@ struct CharacterGenView: View {
                 let elapsed = Int(ctx.date.timeIntervalSince(start))
                 HStack {
                     ProgressView()
-                    Text("생성 중… \(elapsed)초")
+                    Text("그리는 중… \(elapsed)초")
                 }
             }
         } else {
-            HStack { ProgressView(); Text("생성 중…") }
+            HStack { ProgressView(); Text("그리는 중…") }
         }
     }
 
@@ -240,7 +284,7 @@ struct CharacterGenView: View {
                                  matching: .images)
                         .disabled(isGenerating)
                     if referenceImage != nil {
-                        Button("참고 이미지 제거", role: .destructive) {
+                        Button("사진 빼기", role: .destructive) {
                             referenceImage = nil
                             photoPickerItem = nil
                         }
@@ -249,42 +293,42 @@ struct CharacterGenView: View {
                 }
             }
         } header: {
-            Text("참고 이미지 (선택)")
+            Text("참고용 사진 (선택)")
         } footer: {
-            Text("첨부하면 이 이미지를 참고해 새 캐릭터를 만들어요. 비워두면 텍스트만으로 생성.")
+            Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요.")
                 .foregroundStyle(.secondary)
         }
     }
 
     private var optionsSection: some View {
-        Section("옵션") {
-            Picker("그림체", selection: $artStyle) {
-                Text("일반 (파스텔)").tag("casual")
-                Text("픽셀 (8/16-bit)").tag("pixel")
+        Section("스타일") {
+            Picker("그림 스타일", selection: $artStyle) {
+                Text("Soft").tag("casual")
+                Text("Pixel").tag("pixel")
             }
             .pickerStyle(.segmented)
             .disabled(isGenerating)
 
-            Picker("품질", selection: $quality) {
-                Text("low — $0.011").tag("low")
-                Text("medium — $0.04").tag("medium")
-                Text("high — $0.17").tag("high")
+            Picker("퀄리티", selection: $quality) {
+                Text("빠르게 (약 20초 · 15원)").tag("low")
+                Text("보통 (약 50초 · 55원)").tag("medium")
+                Text("선명하게 (1~2분 · 230원)").tag("high")
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)
 
-            Toggle("연속 이미지 (2장 생성)", isOn: $generateAnimated)
+            Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                 .disabled(isGenerating)
             if generateAnimated {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Frame 2 변화 힌트 (영어)")
+                    Text("두 번째 장면")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     TextEditor(text: $animationHint)
                         .frame(minHeight: 70)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("Frame 1 과 어떻게 다를지. 비워두면 위 state 의 기본 힌트 자동 사용.")
+                    Text("첫 장면과 어떻게 다를지 적어요. 영어로 적으면 더 정확해요. 비워두면 알아서 채워져요.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -304,12 +348,12 @@ struct CharacterGenView: View {
                         VStack(spacing: 4) {
                             Image(uiImage: f0).resizable().scaledToFit()
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                            Text("frame 1").font(.caption2).foregroundStyle(.secondary)
+                            Text("1번째").font(.caption2).foregroundStyle(.secondary)
                         }
                         VStack(spacing: 4) {
                             Image(uiImage: f1).resizable().scaledToFit()
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                            Text("frame 2").font(.caption2).foregroundStyle(.secondary)
+                            Text("2번째").font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                 } else if let f0 {
@@ -319,10 +363,10 @@ struct CharacterGenView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
-                // 원본 / 투명 토글
-                Picker("표시", selection: $displayTransparent) {
-                    Text("원본 (흰 배경)").tag(false)
-                    Text("투명 적용").tag(true)
+                // 흰 배경 / 배경 빼기 토글
+                Picker("배경", selection: $displayTransparent) {
+                    Text("흰 배경").tag(false)
+                    Text("배경 빼기").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .disabled(isProcessingTransparent)
@@ -332,13 +376,13 @@ struct CharacterGenView: View {
                     }
                 }
                 if isProcessingTransparent {
-                    HStack { ProgressView(); Text("Vision 으로 배경 추출 중…") }
+                    HStack { ProgressView(); Text("배경 빼는 중…") }
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 if let revised = revisedPrompt {
-                    DisclosureGroup("OpenAI 가 사용한 실제 프롬프트") {
+                    DisclosureGroup("실제로 사용한 설명 보기") {
                         Text(revised).font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -346,19 +390,25 @@ struct CharacterGenView: View {
                     Button {
                         applyCurrentSelection()
                     } label: {
-                        Label("'\(targetState.rawValue)' 자리에 적용", systemImage: "checkmark.circle.fill")
+                        Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
                             .font(.headline)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.withuPink)
                     .disabled(isProcessingTransparent)
                     Button("사진 앱에 저장") {
                         Task { await saveToPhotos(f0) }
                     }
+                    .tint(.secondary)
                 }
             }
         }
         if let err = lastError {
-            Section { Text(err).foregroundStyle(.red) }
+            Section {
+                WarningBanner(text: err)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
         }
     }
 
@@ -404,14 +454,14 @@ struct CharacterGenView: View {
                     if isGenerating {
                         HStack { ProgressView(); Text("다듬는 중…") }
                     } else {
-                        Label("이어서 다듬기", systemImage: "sparkles")
+                        Label("이대로 바꾸기", systemImage: "sparkles")
                     }
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: {
                 Text("이어서 다듬기")
             } footer: {
-                Text("위 결과를 참고해 새 이미지로 변형. 매 호출은 동일 비용.")
+                Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 같은 비용이 들어요.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -421,19 +471,19 @@ struct CharacterGenView: View {
 
     private var importSection: some View {
         Section {
-            PhotosPicker(importedRawImage == nil ? "사진 선택" : "다른 사진으로 변경",
+            PhotosPicker(importedRawImage == nil ? "사진 고르기" : "다른 사진으로 바꾸기",
                          selection: $importPickerItem,
                          matching: .images)
                 .disabled(isProcessing)
             if isProcessing {
-                HStack { ProgressView(); Text("배경 제거 + 정규화 중…") }
+                HStack { ProgressView(); Text("배경 빼고 다듬는 중…") }
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("사진 선택")
+            Text("사진 고르기")
         } footer: {
-            Text("선택하면 자동으로 배경 제거 + 정사각형 1024×1024 정규화. OpenAI 호출 없음 (무료, 로컬 처리).")
+            Text("사진을 고르면 배경을 자동으로 빼고 정사각형으로 다듬어요. 모두 기기 안에서 처리하고 비용은 들지 않아요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -441,10 +491,10 @@ struct CharacterGenView: View {
     @ViewBuilder
     private var importResultSection: some View {
         if let processed = importedProcessedImage {
-            Section("처리 결과") {
+            Section("다듬은 결과") {
                 ZStack {
                     // 투명 배경 시각화: 체커보드 같은 회색
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color(uiColor: .tertiarySystemBackground))
                     Image(uiImage: processed)
                         .resizable()
@@ -455,23 +505,33 @@ struct CharacterGenView: View {
                 Button {
                     apply(processed, to: targetState)
                 } label: {
-                    Label("'\(targetState.rawValue)' 자리에 적용", systemImage: "checkmark.circle.fill")
+                    Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
                 Button("사진 앱에 저장") {
                     Task { await saveToPhotos(processed) }
                 }
+                .tint(.secondary)
             }
         }
         if let err = lastError {
-            Section { Text(err).foregroundStyle(.red) }
+            Section {
+                WarningBanner(text: err)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
         }
     }
 
     // MARK: - Actions (AI generate)
 
     private func generate() async {
+        guard GenerationQuota.canGenerate() else {
+            lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
+            return
+        }
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
@@ -482,6 +542,7 @@ struct CharacterGenView: View {
             isGenerating = false
             generationStartedAt = nil
             generateTask = nil
+            remainingGenerations = GenerationQuota.remainingToday()
             if bgTask != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTask)
             }
@@ -490,11 +551,13 @@ struct CharacterGenView: View {
         do {
             try await APIClient.shared.preflightPing()
         } catch {
-            lastError = "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해 주세요."
+            lastError = "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요."
             return
         }
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         await send(prompt: prompt, reference: referenceB64, frame: 0)
+        // 성공한 장만 횟수 차감
+        if resultImage != nil { GenerationQuota.record() }
         // 연속 이미지 — frame 0 성공 시 그 결과를 reference 로 frame 1 추가
         if generateAnimated, let f0 = resultImage,
            let f0Ref = f0.pngData()?.base64EncodedString() {
@@ -502,13 +565,18 @@ struct CharacterGenView: View {
             let hint = trimmedHint.isEmpty ? targetState.animationFrame2Hint : trimmedHint
             let animPrompt = "\(prompt). Animation frame 2 (for a 2-frame swap loop): \(hint)"
             await send(prompt: animPrompt, reference: f0Ref, frame: 1)
+            if resultFrame2 != nil { GenerationQuota.record() }
         }
     }
 
     private func refine() async {
+        guard GenerationQuota.canGenerate() else {
+            lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
+            return
+        }
         guard let current = resultImage,
               let pngData = current.pngData() else {
-            lastError = "기존 이미지를 base64 로 변환 실패"
+            lastError = "기존 이미지를 다시 불러오지 못했어요. 다시 시도해 주세요."
             return
         }
         let referenceB64 = pngData.base64EncodedString()
@@ -518,8 +586,10 @@ struct CharacterGenView: View {
         defer {
             isGenerating = false
             generationStartedAt = nil
+            remainingGenerations = GenerationQuota.remainingToday()
         }
         await send(prompt: refinementPrompt, reference: referenceB64)
+        if resultImage != nil { GenerationQuota.record() }
         refinementPrompt = ""
     }
 
@@ -540,7 +610,7 @@ struct CharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
-                lastError = "이미지 디코드 실패"
+                lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
                 return
             }
             // raw (white BG) 그대로 저장 — Vision 처리는 사용자가 post-gen 에 선택.
@@ -568,7 +638,7 @@ struct CharacterGenView: View {
                 referenceImage = img
             }
         } catch {
-            lastError = "참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요."
+            lastError = "사진을 불러오지 못했어요."
         }
     }
 
@@ -586,7 +656,7 @@ struct CharacterGenView: View {
         do {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let raw = UIImage(data: data) else {
-                lastError = "사진 로드 실패"
+                lastError = "사진을 불러오지 못했어요."
                 return
             }
             importedRawImage = raw
@@ -612,7 +682,7 @@ struct CharacterGenView: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             showAppliedAlert = true
         } else {
-            lastError = "캐릭터 저장에 실패했어요. 다시 시도해 주세요."
+            lastError = "저장하지 못했어요. 다시 시도해 주세요."
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
@@ -659,7 +729,9 @@ struct WeatherBackgroundGenView: View {
     }
 
     var body: some View {
-        Form {
+        ZStack {
+            backgroundGradient(for: .idle).ignoresSafeArea()
+            Form {
             Section {
                 Picker("날씨", selection: $condition) {
                     ForEach(WeatherBackgroundCondition.allCases, id: \.self) { c in
@@ -669,9 +741,9 @@ struct WeatherBackgroundGenView: View {
                 .pickerStyle(.menu)
                 .disabled(isGenerating)
                 HStack {
-                    Text("현재 적용된 배경")
+                    Text("지금 적용된 배경")
                     Spacer()
-                    Text(CharacterImageStore.hasBackground(condition) ? "사용자 생성" : "없음")
+                    Text(CharacterImageStore.hasBackground(condition) ? "생성한 그림" : "없음")
                         .foregroundStyle(.secondary)
                         .font(.footnote)
                 }
@@ -679,16 +751,16 @@ struct WeatherBackgroundGenView: View {
                 Text("날씨")
             }
 
-            Section("옵션") {
-                Picker("그림체", selection: $artStyle) {
-                    Text("일반 (파스텔)").tag("casual")
-                    Text("픽셀 (8/16-bit)").tag("pixel")
+            Section("스타일") {
+                Picker("그림 스타일", selection: $artStyle) {
+                    Text("soft").tag("casual")
+                    Text("pixel").tag("pixel")
                 }
                 .pickerStyle(.segmented).disabled(isGenerating)
-                Picker("품질", selection: $quality) {
-                    Text("low — $0.011").tag("low")
-                    Text("medium — $0.04").tag("medium")
-                    Text("high — $0.17").tag("high")
+                Picker("퀄리티", selection: $quality) {
+                    Text("빠르게 (약 20초 · 15원)").tag("low")
+                    Text("보통 (약 50초 · 55원)").tag("medium")
+                    Text("선명하게 (1~2분 · 230원)").tag("high")
                 }
                 .pickerStyle(.menu).disabled(isGenerating)
             }
@@ -703,17 +775,14 @@ struct WeatherBackgroundGenView: View {
                     if isGenerating {
                         generatingLabel
                     } else {
-                        Label("배경 생성", systemImage: "wand.and.stars")
+                        Label("배경 만들기", systemImage: "wand.and.stars")
                     }
                 }
                 .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: {
-                Text("프롬프트")
+                Text("배경")
             } footer: {
-                Text("""
-                    자유롭게 적어도 돼요. "NO character, NO person — Empty landscape only" 가 자동으로 뒤에 붙어요.
-                    ※ 그래도 캐릭터가 그려진다면 서버(FastAPI)의 SYSTEM_PROMPT 가 캐릭터를 강제하고 있어서 — 서버에 "type=background" 같은 분기를 추가해야 완전 해결.
-                    """)
+                Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
                     .font(.caption2)
             }
 
@@ -721,10 +790,10 @@ struct WeatherBackgroundGenView: View {
                 Section {
                     // 단독 — 생성된 배경 자체
                     Image(uiImage: img).resizable().scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     // 합성 미리보기 — 실제 메인 화면처럼 idle 캐릭터 올림
                     VStack(spacing: 4) {
-                        Text("메인 화면에서 보이는 모습").font(.caption2).foregroundStyle(.secondary)
+                        Text("홈 화면에서 보이는 모습").font(.caption2).foregroundStyle(.secondary)
                         ZStack {
                             Image(uiImage: img)
                                 .resizable()
@@ -741,25 +810,32 @@ struct WeatherBackgroundGenView: View {
                     Button {
                         apply(img, for: condition)
                     } label: {
-                        Label("'\(condition.displayName)' 배경으로 적용", systemImage: "checkmark.circle.fill")
+                        Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "checkmark.circle.fill")
                             .font(.headline)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.withuPink)
                 } header: {
                     Text("결과")
                 }
             }
 
             if let err = lastError {
-                Section { Text(err).foregroundStyle(.red) }
+                Section {
+                    WarningBanner(text: err)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
             }
+            }
+            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("날씨 배경 생성")
+        .navigationTitle("날씨 배경 만들기")
         .scrollDismissesKeyboard(.interactively)
-        .alert("적용됨", isPresented: $showAppliedAlert) {
+        .alert("적용했어요", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text("\(condition.displayName) 배경이 적용됐어요. 메인 화면/위젯/워치에서 해당 날씨일 때 보여요.")
+            Text("\(condition.displayName) 배경을 적용했어요. 그 날씨일 때 홈 화면·위젯·워치에 보여요.")
         }
         .onChange(of: condition) { _, new in
             prompt = new.generationHint
@@ -772,7 +848,7 @@ struct WeatherBackgroundGenView: View {
         if let start = generationStartedAt {
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 let elapsed = Int(ctx.date.timeIntervalSince(start))
-                HStack { ProgressView(); Text("생성 중… \(elapsed)초") }
+                HStack { ProgressView(); Text("그리는 중… \(elapsed)초") }
             }
         } else {
             HStack { ProgressView(); Text("생성 중…") }
@@ -789,7 +865,7 @@ struct WeatherBackgroundGenView: View {
         }
         do { try await APIClient.shared.preflightPing() }
         catch {
-            lastError = "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해주세요."
+            lastError = "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요."
             return
         }
         // 서버의 SYSTEM_PROMPT 가 매번 캐릭터 가드레일을 prepend 함 (FastAPI proxy).
@@ -811,7 +887,7 @@ struct WeatherBackgroundGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
-                lastError = "이미지 디코드 실패"
+                lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
                 return
             }
             // 배경은 256px 면 충분 (메인 hero 240, 위젯 small ~150). 디스크 절약.
@@ -828,7 +904,7 @@ struct WeatherBackgroundGenView: View {
             ConnectivityManager.shared.sendWeatherBackground(image, for: cond)
             showAppliedAlert = true
         } else {
-            lastError = "캐릭터 저장에 실패했어요. 다시 시도해 주세요."
+            lastError = "저장하지 못했어요. 다시 시도해 주세요."
         }
     }
 }

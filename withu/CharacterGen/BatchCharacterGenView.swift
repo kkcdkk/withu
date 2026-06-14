@@ -75,25 +75,40 @@ struct BatchCharacterGenView: View {
     @State private var saveResultMessage: String?
     @State private var showSaveResultAlert: Bool = false
 
+    // 오늘 남은 생성 횟수 (App Group quota)
+    @State private var remainingGenerations: Int = GenerationQuota.remainingToday()
+    @State private var showPaywall: Bool = false
+
     // MARK: - Body
 
     var body: some View {
-        Form {
-            identitySection
-            stateListSection
-            referenceSection
-            optionsSection
-            startSection
-            if !results.isEmpty || !errors.isEmpty {
-                resultsSection
+        ZStack {
+            backgroundGradient(for: .idle).ignoresSafeArea()
+            Form {
+                identitySection
+                stateListSection
+                referenceSection
+                optionsSection
+                startSection
+                if !results.isEmpty || !errors.isEmpty {
+                    resultsSection
+                }
             }
+            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("일괄 생성")
+        .navigationTitle("여러 모습 만들기")
         .scrollDismissesKeyboard(.interactively)
-        .alert("완료", isPresented: $showFinishedAlert) {
+        .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(onClose: {
+                showPaywall = false
+                remainingGenerations = GenerationQuota.remainingToday()
+            })
+        }
+        .alert("다 만들었어요", isPresented: $showFinishedAlert) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text("\(results.count)개 생성 성공, \(errors.count)개 실패. 성공한 캐릭터는 자동으로 적용됐어요.")
+            Text("\(results.count)개 완성, \(errors.count)개 못 만들었어요. 잘 만들어진 모습은 바로 적용됐어요.")
         }
         .alert("사진 저장", isPresented: $showSaveResultAlert) {
             Button("확인", role: .cancel) {}
@@ -127,9 +142,9 @@ struct BatchCharacterGenView: View {
                 .font(.callout)
                 .disabled(isGenerating)
         } header: {
-            Text("캐릭터 정체성 (모든 상태 공통)")
+            Text("우리 캐릭터의 모습")
         } footer: {
-            Text("매 호출에 이 문장이 앞에 붙어요. 캐릭터 외형·성격을 한 번에 정의.\n예: \"주근깨 많은 분홍 토끼, 큰 머리에 작은 몸\"")
+            Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 큰 머리에 작은 몸\"")
                 .foregroundStyle(.secondary)
         }
     }
@@ -146,14 +161,13 @@ struct BatchCharacterGenView: View {
             }
             .disabled(isGenerating)
         } header: {
-            Text("생성할 상태 (\(selectedStates.count)개)")
+            Text("만들고 싶은 순간 (\(selectedStates.count)개)")
         } footer: {
             let count = selectedStates.count
             let cost = costPer(quality: quality) * Double(count)
-            let parallel = min(count, Self.maxConcurrent)
             VStack(alignment: .leading, spacing: 2) {
-                Text("선택 \(count)개 · 병렬 실행 \(parallel)개 동시")
-                Text("예상 비용: \(count) × \(String(format: "$%.3f", costPer(quality: quality))) = \(String(format: "$%.2f", cost))")
+                Text("\(count)개의 순간을 만들어요")
+                Text("드는 비용은 약 \(Int(cost * 1380))원이에요 (한 장당 약 \(Int(costPer(quality: quality) * 1380))원)")
             }
             .foregroundStyle(.secondary)
         }
@@ -189,8 +203,7 @@ struct BatchCharacterGenView: View {
                 .labelsHidden()
                 .disabled(isGenerating)
 
-                Text(state.symbolEmoji)
-                Text(state.rawValue)
+                Text(state.koreanShortLabel)
                     .strikethrough(!selectedStates.contains(state))
                 Spacer()
                 resultBadge(state)
@@ -215,7 +228,7 @@ struct BatchCharacterGenView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 PhotosPicker(
-                    stateReferenceImages[state] == nil ? "참고 이미지 추가" : "변경",
+                    stateReferenceImages[state] == nil ? "이 순간에 쓸 사진 넣기" : "변경",
                     selection: Binding(
                         get: { stateReferencePickerItems[state] },
                         set: { item in
@@ -234,7 +247,7 @@ struct BatchCharacterGenView: View {
                 .disabled(isGenerating)
 
                 if stateReferenceImages[state] != nil {
-                    Button("이 state 참고 제거", role: .destructive) {
+                    Button("이 순간 사진 빼기", role: .destructive) {
                         stateReferenceImages.removeValue(forKey: state)
                         stateReferencePickerItems.removeValue(forKey: state)
                     }
@@ -257,9 +270,9 @@ struct BatchCharacterGenView: View {
                 }
             }
         } else if results[state] != nil {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            Image(systemName: "checkmark").foregroundStyle(.secondary)
         } else if errors[state] != nil {
-            Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
         }
     }
 
@@ -282,7 +295,7 @@ struct BatchCharacterGenView: View {
                                  matching: .images)
                         .disabled(isGenerating)
                     if referenceImage != nil {
-                        Button("참고 이미지 제거", role: .destructive) {
+                        Button("사진 빼기", role: .destructive) {
                             referenceImage = nil
                             photoPickerItem = nil
                         }
@@ -291,48 +304,48 @@ struct BatchCharacterGenView: View {
                 }
             }
         } header: {
-            Text("참고 이미지 (선택)")
+            Text("이미 있는 캐릭터 사진 (선택)")
         } footer: {
-            Text("첨부하면 첫 호출의 reference 로 사용 — 그 캐릭터의 다양한 포즈로 만들어져요. 비워두면 텍스트만으로 첫 캐릭터 생성.")
+            Text("사진을 넣으면 그 캐릭터의 여러 모습으로 만들어 줘요. 비워두면 위에 적은 설명만으로 새로 그려요.")
                 .foregroundStyle(.secondary)
         }
     }
 
     private var optionsSection: some View {
         Section {
-            Picker("그림체", selection: $artStyle) {
-                Text("일반 (파스텔)").tag("casual")
-                Text("픽셀 (8/16-bit)").tag("pixel")
+            Picker("그림 스타일", selection: $artStyle) {
+                Text("Soft").tag("casual")
+                Text("Pixel").tag("pixel")
             }
             .pickerStyle(.segmented).disabled(isGenerating)
 
-            Picker("품질", selection: $quality) {
-                Text("low — $0.011").tag("low")
-                Text("medium — $0.04").tag("medium")
-                Text("high — $0.17").tag("high")
+            Picker("선명함", selection: $quality) {
+                Text("빠르게 (약 20초 · 15원)").tag("low")
+                Text("보통 (약 50초 · 55원)").tag("medium")
+                Text("선명하게 (1~2분 · 230원)").tag("high")
             }
             .pickerStyle(.menu).disabled(isGenerating)
 
-            Toggle("연속 이미지 (state 당 2장)", isOn: $generateAnimated)
+            Toggle("움직이는 캐릭터 만들기 (한 모습당 2장)", isOn: $generateAnimated)
                 .disabled(isGenerating)
             if generateAnimated {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Frame 2 변화 힌트 — 전체 공통 (영어)")
+                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 (모든 모습에 함께 쓰여요)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     TextEditor(text: $animationHintOverride)
                         .frame(minHeight: 60)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("비우면 각 state 의 기본 힌트 자동 사용 (걷기=다른 발 앞으로, 자기=호흡 등).")
+                    Text("비워두면 각 모습에 어울리게 알아서 움직여요 (걷기는 다른 발을 앞으로, 자기는 숨 쉬듯이).")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
         } header: {
-            Text("옵션")
+            Text("분위기 정하기")
         } footer: {
-            Text("연속 이미지 ON 시 각 state 가 2회 호출 — 메인 화면에서 swap 애니메이션. 비용 2배.")
+            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 살아 움직여요. 그만큼 비용은 두 배예요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -345,33 +358,50 @@ struct BatchCharacterGenView: View {
                 if isGenerating {
                     HStack {
                         ProgressView()
-                        Text("생성 중… \(results.count + errors.count)/\(selectedStates.count)")
+                        Text("만드는 중… \(results.count + errors.count)/\(selectedStates.count)")
                     }
                 } else {
-                    Label("전체 생성 시작", systemImage: "wand.and.stars")
-                        .font(.headline)
+                    Label("만들기 시작", systemImage: "wand.and.stars")
+                        .font(.callout.weight(.semibold))
                 }
             }
             .buttonStyle(.borderedProminent)
+            .tint(.withuPink)
             .disabled(isGenerating || selectedStates.isEmpty
-                      || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                      || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      || remainingGenerations < selectedStates.count)
 
             if isGenerating {
-                Text("⚠️ 진행 중엔 앱을 그대로 켜둬 주세요. 병렬로 \(inProgressStates.count)개 동시 진행 중.")
+                Text("만드는 동안엔 앱을 그대로 켜둬 주세요. 지금 \(inProgressStates.count)개를 만들고 있어요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button(role: .destructive) {
                     batchTask?.cancel()
                     batchTask = nil
                 } label: {
-                    Label("중단", systemImage: "stop.circle.fill")
+                    Label("그만두기", systemImage: "stop.circle.fill")
                 }
+                .tint(.secondary)
+            } else if remainingGenerations < selectedStates.count {
+                Text("오늘 남은 \(remainingGenerations)회로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 순간을 줄이거나 더 충전해 주세요.")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                Button {
+                    showPaywall = true
+                } label: {
+                    Label("더 만들기 (구독·충전)", systemImage: "sparkles")
+                }
+                .tint(.withuPink)
+            } else {
+                Text("오늘 \(remainingGenerations)번 더 만들 수 있어요.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     private var resultsSection: some View {
-        Section("결과") {
+        Section("만들어진 모습") {
             let columns = [GridItem(.flexible()), GridItem(.flexible())]
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(CharacterState.allCases, id: \.self) { state in
@@ -390,17 +420,19 @@ struct BatchCharacterGenView: View {
                         Task { await applyTransparentToAll() }
                     } label: {
                         if isProcessingTransparentBulk {
-                            HStack { ProgressView(); Text("처리 중…") }
+                            HStack { ProgressView(); Text("다듬는 중…") }
                         } else {
-                            Label("투명 모두 적용", systemImage: "wand.and.sparkles")
+                            Label("배경 모두 지우기", systemImage: "wand.and.sparkles")
                         }
                     }
+                    .tint(.secondary)
                     .disabled(isProcessingTransparentBulk)
                     Button(role: .destructive) {
                         Task { await restoreOriginalToAll() }
                     } label: {
-                        Label("모두 원본", systemImage: "arrow.uturn.backward")
+                        Label("처음 그림으로", systemImage: "arrow.uturn.backward")
                     }
+                    .tint(.secondary)
                     .disabled(isProcessingTransparentBulk)
                 }
                 .font(.callout)
@@ -411,13 +443,14 @@ struct BatchCharacterGenView: View {
                     if isSavingPhotos {
                         HStack {
                             ProgressView()
-                            Text("저장 중…")
+                            Text("저장하는 중…")
                         }
                     } else {
                         Label("사진 앱에 모두 저장 (\(results.count)장)",
                               systemImage: "square.and.arrow.down")
                     }
                 }
+                .tint(.secondary)
                 .disabled(isSavingPhotos)
             }
         }
@@ -500,21 +533,13 @@ struct BatchCharacterGenView: View {
                                 RoundedRectangle(cornerRadius: 6)
                                     .stroke(Color.white, lineWidth: 2)
                             )
-                            .overlay(alignment: .topTrailing) {
-                                Text("🎬")
-                                    .font(.system(size: 10))
-                                    .padding(2)
-                                    .background(Capsule().fill(.ultraThinMaterial))
-                                    .offset(x: 4, y: -4)
-                            }
                             .padding(6)
                     }
                 }
                 HStack {
-                    Text(state.symbolEmoji)
-                    Text(state.rawValue).font(.caption).lineLimit(1)
+                    Text(state.koreanShortLabel).font(.caption).lineLimit(1)
                     Spacer()
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                    Image(systemName: "checkmark").foregroundStyle(.secondary).font(.caption)
                 }
             }
         }
@@ -526,23 +551,22 @@ struct BatchCharacterGenView: View {
             Task { await retryOne(state) }
         } label: {
             VStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: 12).fill(.red.opacity(0.15)).frame(height: 120)
+                RoundedRectangle(cornerRadius: 12).fill(.orange.opacity(0.12)).frame(height: 120)
                     .overlay(
                         VStack(spacing: 4) {
                             Image(systemName: "arrow.clockwise.circle.fill")
-                                .foregroundStyle(.red).font(.title)
-                            Text("탭해서 재시도")
-                                .font(.caption2).foregroundStyle(.red)
+                                .foregroundStyle(.orange).font(.title)
+                            Text("눌러서 다시 만들기")
+                                .font(.caption2).foregroundStyle(.orange)
                         }
                     )
                 HStack {
-                    Text(state.symbolEmoji)
-                    Text(state.rawValue).font(.caption).lineLimit(1)
+                    Text(state.koreanShortLabel).font(.caption).lineLimit(1)
                     Spacer()
                 }
                 Text(error)
                     .font(.caption2)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -580,6 +604,9 @@ struct BatchCharacterGenView: View {
             inProgressStates.removeAll()
             stateStartedAt.removeAll()
             showFinishedAlert = true
+            // 성공한 장수만큼 오늘 횟수 차감 (frame 0 + 연속 frame 1)
+            GenerationQuota.record(results.count + resultsFrame1.count)
+            remainingGenerations = GenerationQuota.remainingToday()
             WidgetCenter.shared.reloadAllTimelines()
             // 결과 종합 알림 — 모두 성공이면 success, 일부 실패면 warning.
             if errors.isEmpty {
@@ -674,7 +701,7 @@ struct BatchCharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
-                errors[state] = "이미지 디코드 실패"
+                errors[state] = "이미지를 받지 못했어요"
                 return false
             }
             // raw (white BG) 그대로 저장. Vision 처리는 사용자가 post-gen 에 선택.
@@ -705,11 +732,11 @@ struct BatchCharacterGenView: View {
                         .scaledToFit()
                         .frame(maxHeight: 320)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                    Text("\(state.symbolEmoji) \(state.caption)")
-                        .font(.headline)
+                    Text(state.koreanShortLabel)
+                        .font(.callout.weight(.semibold))
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("수정 요청 (자연어)").font(.caption).foregroundStyle(.secondary)
+                        Text("어떻게 바꿀까요").font(.caption).foregroundStyle(.secondary)
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
                             .lineLimit(2...4)
                             .textFieldStyle(.roundedBorder)
@@ -725,7 +752,7 @@ struct BatchCharacterGenView: View {
                                     .overlay(Image(systemName: "photo")
                                         .foregroundStyle(.secondary).font(.caption))
                             }
-                            PhotosPicker(revisionRefImage == nil ? "참고 이미지" : "변경",
+                            PhotosPicker(revisionRefImage == nil ? "사진 넣기" : "변경",
                                          selection: $revisionRefItem,
                                          matching: .images)
                                 .font(.footnote)
@@ -752,6 +779,7 @@ struct BatchCharacterGenView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
+                        .tint(.secondary)
 
                         Button {
                             Task { await reviseOne(state, text: revisionText) }
@@ -760,18 +788,19 @@ struct BatchCharacterGenView: View {
                                 ProgressView()
                                     .frame(maxWidth: .infinity)
                             } else {
-                                Label("수정", systemImage: "wand.and.stars")
+                                Label("바꾸기", systemImage: "wand.and.stars")
                                     .frame(maxWidth: .infinity)
                             }
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(.withuPink)
                         .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(.horizontal)
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("결과 보기")
+            .navigationTitle("자세히 보기")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -795,7 +824,7 @@ struct BatchCharacterGenView: View {
             }
             saveResultMessage = "사진 앱에 저장됐어요."
         } catch {
-            saveResultMessage = "저장에 실패했어요: \(error.koreanizedDescription)"
+            saveResultMessage = "저장하지 못했어요. 다시 시도해 주세요."
         }
         showSaveResultAlert = true
     }
@@ -902,7 +931,7 @@ struct BatchCharacterGenView: View {
             saveResultMessage = "\(items.count)장 사진 앱에 저장됐어요."
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
-            saveResultMessage = "저장에 실패했어요: \(error.koreanizedDescription)"
+            saveResultMessage = "저장하지 못했어요. 다시 시도해 주세요."
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         showSaveResultAlert = true

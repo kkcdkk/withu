@@ -51,6 +51,22 @@ enum WeatherBackgroundCondition: String, CaseIterable, Codable {
         }
     }
 
+    /// Asset Catalog 에 박아둔 고정 PNG 이름. 모든 사용자 동일.
+    /// 4 타깃 (앱/워치/위젯/컴플) 각자 Assets.xcassets 에 같은 이름의 imageset 으로 추가 필요.
+    /// 없으면 WeatherDecorationView 가 emoji fallback.
+    var decorationAssetName: String { "weather_\(rawValue)" }
+
+    /// 기본 emoji (Asset 없을 때 fallback).
+    var fallbackEmoji: String {
+        switch self {
+        case .sunny:  return "☀️"
+        case .cloudy: return "☁️"
+        case .rainy:  return "🌧"
+        case .snowy:  return "❄️"
+        case .night:  return "🌙"
+        }
+    }
+
     /// 위젯/워치 메시지에 담긴 emoji 로부터 매핑.
     /// WeatherCondition.emoji 와 일치해야 — sunny=☀️, cloudy=☁️, rainy=🌧, snowy=❄️, thunder=⛈ (→ rainy 로).
     /// 야간 (.night) 은 시간 기반이라 emoji 매핑 없음.
@@ -85,14 +101,78 @@ enum CharacterImageStore {
     private static let animationEnabledKey = "withu.animationEnabled.v1"
     private static let activeSourceMapKey = "withu.activeSourceMap.v1"
     private static let backgroundsFolder = "backgrounds"
+    private static let decorationsFolder = "decorations"
+
+    // MARK: - 날씨 표현 데코 (per condition × 5 = 5 PNG, 작은 아이콘)
+
+    /// 사용자가 첨부한 작은 날씨 아이콘 PNG (캐릭터 옆에 표시).
+    /// 없으면 WeatherDecorationView 가 emoji fallback.
+    private static func decorationFileURL(for cond: WeatherBackgroundCondition) -> URL? {
+        ensureFolder(decorationsFolder)?.appendingPathComponent("\(cond.rawValue).png")
+    }
+
+    static func hasDecoration(_ cond: WeatherBackgroundCondition) -> Bool {
+        guard let url = decorationFileURL(for: cond) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    #if canImport(UIKit)
+    static func loadDecoration(_ cond: WeatherBackgroundCondition) -> UIImage? {
+        guard let url = decorationFileURL(for: cond),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
+    }
+
+    @discardableResult
+    static func saveDecoration(_ image: UIImage, for cond: WeatherBackgroundCondition) -> Bool {
+        guard let data = image.pngData(),
+              let url = decorationFileURL(for: cond) else { return false }
+        do {
+            try data.write(to: url, options: .atomic)
+            NotificationCenter.default.post(name: .weatherBackgroundChanged, object: cond)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    @discardableResult
+    static func clearDecoration(_ cond: WeatherBackgroundCondition) -> Bool {
+        guard let url = decorationFileURL(for: cond) else { return false }
+        try? FileManager.default.removeItem(at: url)
+        NotificationCenter.default.post(name: .weatherBackgroundChanged, object: cond)
+        return true
+    }
+    #endif
 
     // MARK: - 야간 시간 체크 (간단 fallback)
 
-    /// 시간 기반 야간 판정 (20:00~06:00). 4 타깃 공통 fallback.
-    /// iOS app 은 profile sleep window 로 더 정확하게 별도 분기 사용 가능.
-    static func isCurrentlyNight(at date: Date = Date(), calendar: Calendar = .current) -> Bool {
-        let hour = calendar.component(.hour, from: date)
-        return hour >= 20 || hour < 6
+    /// 시간 기반 야간 판정. 4 타깃 공통.
+    /// 우선순위:
+    ///   1) sunrise/sunset 둘 다 있으면 그 시각 기준 (해시계 정확).
+    ///   2) 없으면 fallbackStartMinute~fallbackEndMinute (분, midnight 기준).
+    /// `now` 와 sunrise/sunset 의 절대시각이 다를 수 있으므로 시-분 만 비교 → staleness 안전.
+    static func isCurrentlyNight(at date: Date = Date(),
+                                 sunrise: Date? = nil,
+                                 sunset: Date? = nil,
+                                 fallbackStartMinute: Int = 20 * 60,
+                                 fallbackEndMinute: Int = 6 * 60,
+                                 calendar: Calendar = .current) -> Bool {
+        let nowM = minuteOfDay(date, calendar: calendar)
+        if let sunrise, let sunset {
+            let riseM = minuteOfDay(sunrise, calendar: calendar)
+            let setM = minuteOfDay(sunset, calendar: calendar)
+            return nowM < riseM || nowM >= setM
+        }
+        let s = fallbackStartMinute % (24 * 60)
+        let e = fallbackEndMinute % (24 * 60)
+        return s < e ? (nowM >= s && nowM < e) : (nowM >= s || nowM < e)
+    }
+
+    private static func minuteOfDay(_ d: Date, calendar: Calendar) -> Int {
+        let c = calendar.dateComponents([.hour, .minute], from: d)
+        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
     }
 
     // MARK: - 날씨 배경 (per condition × 4 = 4 PNG)
@@ -391,6 +471,24 @@ enum CharacterImageStore {
             return []
         }
         return items.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// 갤러리 폴더(상태별) 전용 그룹핑. 디스크 포맷/키 변경 없이 메모리 그룹핑만.
+    ///   - byState: userFacing 상태별 항목 (각 버킷 createdAt 내림차순 유지)
+    ///   - legacy:  더 이상 노출 안 하는 옛 상태(rawValue) 항목 → "기타" 버킷
+    static func loadGalleryGrouped() -> (byState: [CharacterState: [GalleryItem]], legacy: [GalleryItem]) {
+        let all = loadGalleryMetadata()  // 이미 createdAt desc 정렬
+        let facing = Set(CharacterState.userFacing)
+        var byState: [CharacterState: [GalleryItem]] = [:]
+        var legacy: [GalleryItem] = []
+        for item in all {
+            if let st = CharacterState(rawValue: item.sourceState), facing.contains(st) {
+                byState[st, default: []].append(item)
+            } else {
+                legacy.append(item)
+            }
+        }
+        return (byState, legacy)
     }
 
     private static func saveGalleryMetadata(_ items: [GalleryItem]) {
