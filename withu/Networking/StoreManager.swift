@@ -78,7 +78,7 @@ final class StoreManager {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
-                await grant(for: transaction)
+                await grant(for: transaction, jws: verification.jwsRepresentation)
                 await transaction.finish()
                 lastError = nil
             case .userCancelled:
@@ -125,15 +125,29 @@ final class StoreManager {
             for await result in Transaction.updates {
                 guard let self else { continue }
                 guard let transaction = try? await self.checkVerified(result) else { continue }
-                await self.grant(for: transaction)
+                await self.grant(for: transaction, jws: result.jwsRepresentation)
                 await transaction.finish()
                 await self.refreshEntitlements()
             }
         }
     }
 
-    /// 검증된 트랜잭션에 따라 크레딧 적립 또는 구독 갱신.
-    private func grant(for transaction: Transaction) async {
+    /// 검증된 트랜잭션에 따라 적립.
+    /// 로그인 상태면 서버 권위(/iap/verify)로 — 크레딧이 계정에 귀속돼 재설치에도 유지.
+    /// 로그인 전이면 로컬 fallback(점진).
+    private func grant(for transaction: Transaction, jws: String) async {
+        if KeychainStore.sessionToken() != nil {
+            if let ent = try? await APIClient.shared.verifyPurchase(
+                signedTransaction: jws
+            ) {
+                AuthManager.shared.applyEntitlement(ent)
+                isSubscriber = ent.subActive
+                GenerationQuota.isSubscriber = ent.subActive
+                return
+            }
+            // 서버 적립 실패 — 다음 앱 시작 시 currentEntitlements 재전송으로 복구 시도
+        }
+        // 로그인 전 / 서버 실패 — 로컬 fallback
         if let amount = ProductID.creditAmount[transaction.productID] {
             GenerationQuota.addCredits(amount)
         } else if transaction.productID == ProductID.monthlySub {

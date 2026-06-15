@@ -152,6 +152,19 @@ actor APIClient {
         return try await send(req, decode: MeResponse.self).entitlement
     }
 
+    /// StoreKit 결제 JWS 를 서버에 제출해 멱등 적립 (Bearer 필요).
+    func verifyPurchase(signedTransaction: String) async throws -> Entitlement {
+        let url = APIConfig.baseURL.appendingPathComponent("/iap/verify")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        req.httpBody = try encoder.encode(IapVerifyRequest(signedTransaction: signedTransaction))
+        return try await send(req, decode: MeResponse.self).entitlement
+    }
+
     /// 공통 요청 → 디코드.
     private func send<T: Decodable>(_ request: URLRequest, decode: T.Type) async throws -> T {
         do {

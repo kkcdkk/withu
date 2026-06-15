@@ -135,6 +135,16 @@ export async function subFromRequest(request, env) {
   return verifySession(auth.slice(7), env);
 }
 
+/// StoreKit JWS 트랜잭션의 payload 디코드.
+/// ⚠️ 현재 서명/인증서 체인 검증은 안 함 — 출시 전 강화 필요
+///    (App Store Server Library 또는 x5c 체인 검증을 Apple root CA 까지).
+///    1차 방어는 멱등(original_transaction_id) + 온디바이스 StoreKit2 검증.
+export function decodeJwsPayload(jws) {
+  const parts = jws.split(".");
+  if (parts.length !== 3) throw new Error("JWS 형식 오류");
+  return JSON.parse(b64urlToString(parts[1]));
+}
+
 /// 짧은 추천 코드 생성 (혼동 문자 제외).
 export function makeReferralCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

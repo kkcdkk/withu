@@ -110,6 +110,52 @@ export async function refundGeneration(env, sub, chargedFrom, idemKey) {
   // subscription / free_batch_session 은 무차감이라 복원 불필요
 }
 
+// 상품 ID → 적립 (클라 StoreManager.ProductID 와 일치)
+const PRODUCT_CREDITS = {
+  "com.seoyoung.withu.credits.30": 30,
+  "com.seoyoung.withu.credits.100": 100,
+};
+const SUBSCRIPTION_PRODUCT = "com.seoyoung.withu.subscription.monthly";
+
+/// StoreKit 결제 멱등 적립. payload 는 JWS 트랜잭션 디코드 결과.
+export async function applyPurchase(env, sub, payload) {
+  if (!env.DB) return { ok: false, status: 503 };
+  const transactionId = payload.transactionId;
+  const productId = payload.productId;
+  if (!transactionId || !productId) return { ok: false, status: 400 };
+
+  // 멱등 — 이미 적용한 트랜잭션이면 skip
+  const existing = await env.DB
+    .prepare("SELECT 1 FROM iap_transactions WHERE transaction_id = ?")
+    .bind(transactionId).first();
+  if (existing) return { ok: true, alreadyApplied: true };
+
+  const now = Math.floor(Date.now() / 1000);
+  let kind;
+  let expiresAt = null;
+
+  if (PRODUCT_CREDITS[productId]) {
+    kind = "credits";
+    await env.DB.prepare(
+      "UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?"
+    ).bind(PRODUCT_CREDITS[productId], now, sub).run();
+  } else if (productId === SUBSCRIPTION_PRODUCT) {
+    kind = "subscription";
+    expiresAt = payload.expiresDate ? Math.floor(payload.expiresDate / 1000) : null;
+    await env.DB.prepare(
+      "UPDATE entitlements SET sub_active = 1, sub_expires_at = ?, updated_at = ? WHERE sub = ?"
+    ).bind(expiresAt, now, sub).run();
+  } else {
+    return { ok: false, status: 400 };   // 알 수 없는 상품
+  }
+
+  await env.DB.prepare(
+    "INSERT INTO iap_transactions (transaction_id, original_transaction_id, sub, product_id, kind, expires_at, applied_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).bind(transactionId, payload.originalTransactionId || null, sub, productId, kind, expiresAt, now).run();
+
+  return { ok: true };
+}
+
 /// 사용자 권리 스냅샷 (앱이 캐시할 형태). 없으면 null.
 export async function getEntitlement(env, sub) {
   if (!env.DB) return null;

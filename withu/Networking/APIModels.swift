@@ -67,3 +67,8 @@ struct AppleAuthResponse: Codable {
 struct MeResponse: Codable {
     let entitlement: Entitlement
 }
+
+/// POST /iap/verify 요청 (convertToSnakeCase → signed_transaction).
+struct IapVerifyRequest: Codable {
+    let signedTransaction: String
+}
