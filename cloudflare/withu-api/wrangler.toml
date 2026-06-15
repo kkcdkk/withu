@@ -22,3 +22,28 @@ enabled = true
 # [[kv_namespaces]]
 # binding = "RATE_KV"
 # id = "여기에_생성된_namespace_id"
+
+# --- Phase 1: 계정/권리 D1 + Apple 로그인 ---
+#
+# 4) D1 데이터베이스 (계정·무료잔액·크레딧·구독 저장):
+#      npx wrangler d1 create withu-prod
+#    출력된 database_id 를 아래 binding 에 채우고 주석 해제:
+#
+[[d1_databases]]
+binding = "DB"
+database_name = "withu-prod"
+database_id = "1fa6ac78-220c-4b34-8547-bed6d4115077"
+
+#    마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+#
+# 5) 세션 토큰 서명 시크릿 (강한 랜덤):
+#      npx wrangler secret put SESSION_SECRET
+#
+# 6) 인증 강제 플래그 (Phase 2 끝나면 "true" 로). 미설정/false 면 /generate 는
+#    기존 X-Withu-Token 경로로 통과 (shadow 배포 — 기존 앱 호환):
+#      npx wrangler secret put ENFORCE_AUTH   (값: true)
+#
+# 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
+[vars]
+APPLE_BUNDLE_ID = "com.seoyoung.withu"

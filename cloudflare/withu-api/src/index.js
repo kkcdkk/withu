@@ -1,3 +1,6 @@
+import { verifyAppleIdentityToken, signSession, subFromRequest } from "./auth.js";
+import { upsertAccount, getEntitlement } from "./db.js";
+
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_ENDPOINT = "https://api.openai.com/v1/images/edits";
@@ -10,7 +13,7 @@ const STYLE_SECTIONS = {
 - Soft pastel colors, warm and approachable
 - Large head, small body, simple expressive features
 - Flat 2D illustration, clean lines, no harsh shading
-- Transparent background, full body visible, character centered
+- Plain solid white background (never a checkerboard or transparency grid), full body visible, character centered
 - Keep the same character identity across requests
 `,
   pixel: `[Style guidelines]
@@ -18,7 +21,7 @@ const STYLE_SECTIONS = {
 - Retro video game sprite feel, limited palette (8~16 colors)
 - Clear pixel boundaries (no anti-aliasing, no smooth gradients)
 - Chibi proportions, large head, small body
-- Transparent background, character centered
+- Plain solid white background (never a checkerboard or transparency grid), character centered
 - Keep the same character identity across requests
 `,
 };
@@ -47,8 +50,21 @@ export default {
       return Response.json({
         ok: true,
         service: "withu-api",
-        openai_configured: Boolean(env.OPENAI_API_KEY)
+        openai_configured: Boolean(env.OPENAI_API_KEY),
+        db_configured: Boolean(env.DB),
+        auth_enforced: env.ENFORCE_AUTH === "true"
       });
+    }
+
+    // Phase 1 — Sign in with Apple 로그인 핸드셰이크
+    if (url.pathname === "/auth/apple") {
+      if (request.method !== "POST") return jsonError("Method not allowed", 405);
+      return authApple(request, env);
+    }
+
+    // Phase 1 — 권리 스냅샷 조회 (앱 시작/포그라운드 동기화)
+    if (url.pathname === "/me") {
+      return meHandler(request, env);
     }
 
     if (url.pathname === "/generate") {
@@ -65,6 +81,39 @@ export default {
     );
   }
 };
+
+// POST /auth/apple { identityToken } → { sessionToken, expiresAt, entitlement }
+async function authApple(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  if (!env.SESSION_SECRET) return jsonError("SESSION_SECRET 미설정", 503);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
+  if (!body.identityToken) return jsonError("identityToken 필요", 400);
+
+  let claims;
+  try {
+    claims = await verifyAppleIdentityToken(body.identityToken, env);
+  } catch (e) {
+    return jsonError("Apple 토큰 검증 실패: " + e.message, 401);
+  }
+
+  await upsertAccount(env, claims.sub, claims.email);
+  const sessionToken = await signSession(claims.sub, env);
+  const entitlement = await getEntitlement(env, claims.sub);
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60;
+  return Response.json({ sessionToken, expiresAt, entitlement });
+}
+
+// GET /me (Bearer) → { entitlement }
+async function meHandler(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+  const entitlement = await getEntitlement(env, sub);
+  if (!entitlement) return jsonError("계정을 찾을 수 없어요.", 404);
+  return Response.json({ entitlement });
+}
 
 // 공유 시크릿 토큰 검증. 점진 배포: env.WITHU_API_TOKEN 이 설정돼 있을 때만 강제.
 // 설정 전엔 통과시켜 기존 앱 빌드 호환 유지. 설정 후엔 헤더 없는 호출 401.
