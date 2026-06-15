@@ -199,6 +199,40 @@ export async function redeemCode(env, sub, codeRaw) {
   return { ok: true };
 }
 
+// 추천 보상량 (운영 정책에 맞게 조정)
+const REFERRER_REWARD_CREDITS = 5;   // 추천한 사람
+const REFEREE_REWARD_FREE_SINGLE = 3; // 추천받은 사람
+
+/// 친구 추천코드 적용. 자기추천/중복 차단, 양쪽 보상.
+export async function applyReferral(env, sub, codeRaw) {
+  if (!env.DB) return { ok: false, status: 503 };
+  const code = (codeRaw || "").trim().toUpperCase();
+  if (!code) return { ok: false, status: 400, reason: "invalid" };
+  const now = Math.floor(Date.now() / 1000);
+
+  const referrer = await env.DB
+    .prepare("SELECT sub FROM accounts WHERE my_referral_code = ?")
+    .bind(code).first();
+  if (!referrer) return { ok: false, status: 400, reason: "invalid" };
+  if (referrer.sub === sub) return { ok: false, status: 400, reason: "self" };
+
+  // 피추천인 평생 1회 — referee_sub PK 로 중복 차단
+  try {
+    await env.DB.prepare("INSERT INTO referrals (referrer_sub, referee_sub, rewarded, at) VALUES (?, ?, 1, ?)")
+      .bind(referrer.sub, sub, now).run();
+  } catch {
+    return { ok: false, status: 409, reason: "already" };
+  }
+
+  await env.DB.batch([
+    env.DB.prepare("UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?")
+      .bind(REFERRER_REWARD_CREDITS, now, referrer.sub),
+    env.DB.prepare("UPDATE entitlements SET free_single_remaining = free_single_remaining + ?, updated_at = ? WHERE sub = ?")
+      .bind(REFEREE_REWARD_FREE_SINGLE, now, sub),
+  ]);
+  return { ok: true };
+}
+
 /// 사용자 권리 스냅샷 (앱이 캐시할 형태). 없으면 null.
 export async function getEntitlement(env, sub) {
   if (!env.DB) return null;

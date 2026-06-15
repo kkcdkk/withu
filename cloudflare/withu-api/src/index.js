@@ -1,5 +1,5 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest, decodeJwsPayload } from "./auth.js";
-import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode } from "./db.js";
+import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
@@ -77,6 +77,12 @@ export default {
     if (url.pathname === "/redeem") {
       if (request.method !== "POST") return jsonError("Method not allowed", 405);
       return redeemHandler(request, env);
+    }
+
+    // Phase 6 — 친구추천
+    if (url.pathname === "/referral/apply") {
+      if (request.method !== "POST") return jsonError("Method not allowed", 405);
+      return referralHandler(request, env);
     }
 
     if (url.pathname === "/generate") {
@@ -163,6 +169,26 @@ async function redeemHandler(request, env) {
   const result = await redeemCode(env, sub, body.code);
   if (!result.ok) {
     if (result.status === 409) return jsonError("이미 사용한 코드예요.", 409);
+    return jsonError("사용할 수 없는 코드예요.", result.status || 400);
+  }
+
+  const entitlement = await getEntitlement(env, sub);
+  return Response.json({ entitlement });
+}
+
+// POST /referral/apply (Bearer) { code } → { entitlement } | 409
+async function referralHandler(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
+
+  const result = await applyReferral(env, sub, body.code);
+  if (!result.ok) {
+    if (result.status === 409) return jsonError("이미 추천을 받았어요.", 409);
+    if (result.reason === "self") return jsonError("자기 코드는 쓸 수 없어요.", 400);
     return jsonError("사용할 수 없는 코드예요.", result.status || 400);
   }
 

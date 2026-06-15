@@ -18,6 +18,10 @@ struct PaywallView: View {
     @State private var redeemMessage: String?
     @State private var isRedeeming = false
 
+    @State private var referralInput = ""
+    @State private var referralMessage: String?
+    @State private var isApplyingReferral = false
+
     /// 닫힐 때 호출 — 호출 측이 남은 횟수 등을 새로고침하도록.
     var onClose: () -> Void = {}
 
@@ -47,6 +51,8 @@ struct PaywallView: View {
                     }
 
                     redeemSection
+
+                    referralSection
 
                     Button("구매 복원") {
                         Task { await store.restore(); onClose() }
@@ -113,6 +119,71 @@ struct PaywallView: View {
             redeemInput = ""
         } catch {
             redeemMessage = error.koreanizedDescription
+        }
+    }
+
+    @ViewBuilder
+    private var referralSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("친구 초대")
+
+            if let myCode = auth.entitlement?.referralCode {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("내 초대 코드")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(myCode)
+                            .font(.title3.weight(.semibold))
+                    }
+                    Spacer()
+                    ShareLink(item: "withu 같이 해요! 초대 코드 \(myCode) 를 입력하면 둘 다 보너스를 받아요.") {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                            .foregroundStyle(Color.withuPink)
+                    }
+                }
+                .frostedCard()
+            }
+
+            HStack(spacing: 10) {
+                TextField("받은 초대 코드", text: $referralInput)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                Button {
+                    Task { await applyReferral() }
+                } label: {
+                    if isApplyingReferral {
+                        ProgressView()
+                    } else {
+                        Text("적용").font(.callout.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
+                .disabled(referralInput.trimmingCharacters(in: .whitespaces).isEmpty || isApplyingReferral)
+            }
+            .frostedCard()
+
+            if let msg = referralMessage {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private func applyReferral() async {
+        isApplyingReferral = true
+        defer { isApplyingReferral = false }
+        do {
+            let ent = try await APIClient.shared.applyReferral(code: referralInput)
+            auth.applyEntitlement(ent)
+            referralMessage = "초대 코드가 적용됐어요! 보너스를 받았어요."
+            referralInput = ""
+        } catch {
+            referralMessage = error.koreanizedDescription
         }
     }
 
