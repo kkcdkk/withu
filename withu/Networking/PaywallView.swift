@@ -11,7 +11,12 @@ import StoreKit
 
 struct PaywallView: View {
     @State private var store = StoreManager.shared
+    @State private var auth = AuthManager.shared
     @Environment(\.dismiss) private var dismiss
+
+    @State private var redeemInput = ""
+    @State private var redeemMessage: String?
+    @State private var isRedeeming = false
 
     /// 닫힐 때 호출 — 호출 측이 남은 횟수 등을 새로고침하도록.
     var onClose: () -> Void = {}
@@ -41,6 +46,8 @@ struct PaywallView: View {
                         WarningBanner(text: err)
                     }
 
+                    redeemSection
+
                     Button("구매 복원") {
                         Task { await store.restore(); onClose() }
                     }
@@ -63,6 +70,49 @@ struct PaywallView: View {
                 }
             }
             .task { await store.loadProducts() }
+        }
+    }
+
+    private var redeemSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("할인코드")
+            HStack(spacing: 10) {
+                TextField("코드 입력", text: $redeemInput)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                Button {
+                    Task { await redeem() }
+                } label: {
+                    if isRedeeming {
+                        ProgressView()
+                    } else {
+                        Text("적용").font(.callout.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
+                .disabled(redeemInput.trimmingCharacters(in: .whitespaces).isEmpty || isRedeeming)
+            }
+            .frostedCard()
+            if let msg = redeemMessage {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private func redeem() async {
+        isRedeeming = true
+        defer { isRedeeming = false }
+        do {
+            let ent = try await APIClient.shared.redeem(code: redeemInput)
+            auth.applyEntitlement(ent)
+            redeemMessage = "적용됐어요! 잔액에 반영됐어요."
+            redeemInput = ""
+        } catch {
+            redeemMessage = error.koreanizedDescription
         }
     }
 

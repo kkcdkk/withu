@@ -165,6 +165,28 @@ actor APIClient {
         return try await send(req, decode: MeResponse.self).entitlement
     }
 
+    /// 할인코드 적용 (Bearer 필요).
+    func redeem(code: String) async throws -> Entitlement {
+        try await postCode(path: "/redeem", body: RedeemRequest(code: code))
+    }
+
+    /// 친구 추천코드 적용 (Bearer 필요).
+    func applyReferral(code: String) async throws -> Entitlement {
+        try await postCode(path: "/referral/apply", body: ReferralRequest(code: code))
+    }
+
+    private func postCode<B: Encodable>(path: String, body: B) async throws -> Entitlement {
+        let url = APIConfig.baseURL.appendingPathComponent(path)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        req.httpBody = try encoder.encode(body)
+        return try await send(req, decode: MeResponse.self).entitlement
+    }
+
     /// 공통 요청 → 디코드.
     private func send<T: Decodable>(_ request: URLRequest, decode: T.Type) async throws -> T {
         do {

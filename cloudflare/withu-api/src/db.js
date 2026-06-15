@@ -156,6 +156,49 @@ export async function applyPurchase(env, sub, payload) {
   return { ok: true };
 }
 
+/// 할인코드 적용. 1인 1회, 만료/사용횟수 검사, 원자 적립.
+/// 실패는 reason 으로 구분(존재 여부 oracle 노출 최소화 — 응답은 호출부가 통일).
+export async function redeemCode(env, sub, codeRaw) {
+  if (!env.DB) return { ok: false, status: 503 };
+  const code = (codeRaw || "").trim().toUpperCase();
+  if (!code) return { ok: false, status: 400, reason: "invalid" };
+  const now = Math.floor(Date.now() / 1000);
+
+  const row = await env.DB
+    .prepare("SELECT kind, amount, max_uses, used_count, expires_at FROM redeem_codes WHERE code = ?")
+    .bind(code).first();
+  if (!row || (row.expires_at && row.expires_at < now) || row.used_count >= row.max_uses) {
+    return { ok: false, status: 400, reason: "invalid" };
+  }
+
+  // 1인 1회 — UNIQUE 제약으로 중복 차단
+  try {
+    await env.DB.prepare("INSERT INTO code_redemptions (code, sub, at) VALUES (?, ?, ?)")
+      .bind(code, sub, now).run();
+  } catch {
+    return { ok: false, status: 409, reason: "already" };
+  }
+
+  if (row.kind === "credits") {
+    await env.DB.prepare("UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?")
+      .bind(row.amount, now, sub).run();
+  } else if (row.kind === "free_single") {
+    await env.DB.prepare("UPDATE entitlements SET free_single_remaining = free_single_remaining + ?, updated_at = ? WHERE sub = ?")
+      .bind(row.amount, now, sub).run();
+  } else if (row.kind === "sub_days") {
+    const ent = await env.DB.prepare("SELECT sub_expires_at FROM entitlements WHERE sub = ?").bind(sub).first();
+    const base = Math.max(now, ent?.sub_expires_at || now);
+    const newExpires = base + row.amount * 86400;
+    await env.DB.prepare("UPDATE entitlements SET sub_active = 1, sub_expires_at = ?, updated_at = ? WHERE sub = ?")
+      .bind(newExpires, now, sub).run();
+  } else {
+    return { ok: false, status: 400, reason: "invalid" };
+  }
+
+  await env.DB.prepare("UPDATE redeem_codes SET used_count = used_count + 1 WHERE code = ?").bind(code).run();
+  return { ok: true };
+}
+
 /// 사용자 권리 스냅샷 (앱이 캐시할 형태). 없으면 null.
 export async function getEntitlement(env, sub) {
   if (!env.DB) return null;

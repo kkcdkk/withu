@@ -72,3 +72,13 @@ struct MeResponse: Codable {
 struct IapVerifyRequest: Codable {
     let signedTransaction: String
 }
+
+/// POST /redeem 요청.
+struct RedeemRequest: Codable {
+    let code: String
+}
+
+/// POST /referral/apply 요청.
+struct ReferralRequest: Codable {
+    let code: String
+}

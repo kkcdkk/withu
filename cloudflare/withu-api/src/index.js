@@ -1,5 +1,5 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest, decodeJwsPayload } from "./auth.js";
-import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase } from "./db.js";
+import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
@@ -73,6 +73,12 @@ export default {
       return iapVerify(request, env);
     }
 
+    // Phase 5 — 할인코드
+    if (url.pathname === "/redeem") {
+      if (request.method !== "POST") return jsonError("Method not allowed", 405);
+      return redeemHandler(request, env);
+    }
+
     if (url.pathname === "/generate") {
       if (request.method !== "POST") {
         return jsonError("Method not allowed", 405);
@@ -140,6 +146,25 @@ async function iapVerify(request, env) {
 
   const result = await applyPurchase(env, sub, payload);
   if (!result.ok) return jsonError("적립에 실패했어요.", result.status || 500);
+
+  const entitlement = await getEntitlement(env, sub);
+  return Response.json({ entitlement });
+}
+
+// POST /redeem (Bearer) { code } → { entitlement } | 409
+async function redeemHandler(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
+
+  const result = await redeemCode(env, sub, body.code);
+  if (!result.ok) {
+    if (result.status === 409) return jsonError("이미 사용한 코드예요.", 409);
+    return jsonError("사용할 수 없는 코드예요.", result.status || 400);
+  }
 
   const entitlement = await getEntitlement(env, sub);
   return Response.json({ entitlement });
