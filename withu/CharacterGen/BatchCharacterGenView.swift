@@ -686,7 +686,8 @@ struct BatchCharacterGenView: View {
             prompt += ". Animation frame 2 (for a 2-frame swap loop): \(hint)"
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
-        prompt += ". Solid clean WHITE background, no shadows, no gradients."
+        // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
+        prompt += ". Solid clean WHITE background, no shadows, no gradients. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
         do {
             let req = GenerateImageRequest(
                 prompt: prompt,

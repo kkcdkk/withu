@@ -39,6 +39,8 @@ struct CharacterGenView: View {
     @State private var importedRawImage: UIImage?
     @State private var importedProcessedImage: UIImage?
     @State private var isProcessing: Bool = false
+    /// 배경 빼기 스위치 (ON: 배경 제거본, OFF: 원본 그대로)
+    @State private var removeBackground: Bool = true
 
     @State private var isGenerating: Bool = false
     @State private var generateTask: Task<Void, Never>?  // cancel 가능하도록 핸들 보관
@@ -483,35 +485,53 @@ struct CharacterGenView: View {
         } header: {
             Text("사진 고르기")
         } footer: {
-            Text("사진을 고르면 배경을 자동으로 빼고 정사각형으로 다듬어요. 모두 기기 안에서 처리하고 비용은 들지 않아요.")
+            Text("사진을 고르면 정사각형으로 다듬어요. 배경을 뺄지는 아래에서 고를 수 있어요. 모두 기기 안에서 처리하고 비용은 들지 않아요.")
                 .foregroundStyle(.secondary)
         }
     }
 
+    /// 미리보기/적용에 쓸 이미지 — 토글에 따라 배경 제거본 또는 원본.
+    private var displayedImport: UIImage? {
+        guard let raw = importedRawImage else { return nil }
+        if removeBackground { return importedProcessedImage ?? raw }
+        return raw
+    }
+
     @ViewBuilder
     private var importResultSection: some View {
-        if let processed = importedProcessedImage {
-            Section("다듬은 결과") {
+        if let raw = importedRawImage {
+            let display = displayedImport ?? raw
+            Section("미리보기") {
+                Toggle("배경 빼기", isOn: $removeBackground)
+                    .disabled(isProcessing)
+
                 ZStack {
-                    // 투명 배경 시각화: 체커보드 같은 회색
+                    // 배경 제거본은 투명 — 체커보드로 투명 영역 표시.
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color(uiColor: .tertiarySystemBackground))
-                    Image(uiImage: processed)
+                    Image(uiImage: display)
                         .resizable()
                         .scaledToFit()
                 }
                 .frame(maxHeight: 300)
 
+                if isProcessing {
+                    HStack { ProgressView(); Text("배경 빼는 중…") }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 Button {
-                    apply(processed, to: targetState)
+                    apply(display, to: targetState)
                 } label: {
                     Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.withuPink)
+                .disabled(removeBackground && isProcessing)
                 Button("사진 앱에 저장") {
-                    Task { await saveToPhotos(processed) }
+                    Task { await saveToPhotos(display) }
                 }
                 .tint(.secondary)
             }
@@ -595,7 +615,8 @@ struct CharacterGenView: View {
 
     private func send(prompt: String, reference: String?, frame: Int = 0) async {
         // AI 에 흰 배경 강제 — 결과를 사용자가 post-gen 에 Vision 으로 정제할 수 있음.
-        let finalPrompt = "\(prompt). Solid clean WHITE background, no shadows, no gradients, no other elements behind the character."
+        // 격자(체커보드) 방지: 일부 모델이 "투명"을 격자 무늬로 그려버림 → 단색 흰배경 명시.
+        let finalPrompt = "\(prompt). Solid clean WHITE background, no shadows, no gradients, no other elements behind the character. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
         do {
             let req = GenerateImageRequest(
                 prompt: finalPrompt,
