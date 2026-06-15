@@ -29,3 +29,33 @@ struct GenerateImageResponse: Codable {
 struct APIErrorDetail: Codable {
     let detail: String
 }
+
+// MARK: - 계정 / 권리 (Phase 2)
+
+/// 서버가 보유한 사용자 권리 스냅샷. 표시용 캐시.
+/// 서버는 snake_case 로 반환 → convertFromSnakeCase 로 디코드.
+struct Entitlement: Codable, Equatable {
+    let freeBatchRemaining: Int
+    let freeSingleRemaining: Int
+    let credits: Int
+    let subActive: Bool
+    let subExpiresAt: Int?
+    let referralCode: String?
+}
+
+/// POST /auth/apple 요청 (convertToSnakeCase → identity_token).
+struct AppleAuthRequest: Codable {
+    let identityToken: String
+}
+
+/// POST /auth/apple 응답.
+struct AppleAuthResponse: Codable {
+    let sessionToken: String
+    let expiresAt: Int
+    let entitlement: Entitlement?
+}
+
+/// GET /me 응답.
+struct MeResponse: Codable {
+    let entitlement: Entitlement
+}

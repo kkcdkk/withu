@@ -89,11 +89,13 @@ async function authApple(request, env) {
 
   let body;
   try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
-  if (!body.identityToken) return jsonError("identityToken 필요", 400);
+  // 클라가 convertToSnakeCase 로 보냄 → identity_token.
+  const identityToken = body.identity_token || body.identityToken;
+  if (!identityToken) return jsonError("identity_token 필요", 400);
 
   let claims;
   try {
-    claims = await verifyAppleIdentityToken(body.identityToken, env);
+    claims = await verifyAppleIdentityToken(identityToken, env);
   } catch (e) {
     return jsonError("Apple 토큰 검증 실패: " + e.message, 401);
   }
@@ -102,7 +104,7 @@ async function authApple(request, env) {
   const sessionToken = await signSession(claims.sub, env);
   const entitlement = await getEntitlement(env, claims.sub);
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60;
-  return Response.json({ sessionToken, expiresAt, entitlement });
+  return Response.json({ session_token: sessionToken, expires_at: expiresAt, entitlement });
 }
 
 // GET /me (Bearer) → { entitlement }

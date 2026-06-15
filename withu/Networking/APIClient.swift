@@ -124,6 +124,47 @@ actor APIClient {
         }
     }
 
+    // MARK: - 인증 (Phase 2)
+
+    /// Sign in with Apple identityToken 으로 서버 세션 발급.
+    func authenticateApple(identityToken: String) async throws -> AppleAuthResponse {
+        let url = APIConfig.baseURL.appendingPathComponent("/auth/apple")
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try encoder.encode(AppleAuthRequest(identityToken: identityToken))
+        return try await send(req, decode: AppleAuthResponse.self)
+    }
+
+    /// 서버 권리 스냅샷 (Bearer 필요).
+    func fetchMe() async throws -> Entitlement {
+        let url = APIConfig.baseURL.appendingPathComponent("/me")
+        var req = URLRequest(url: url)
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        return try await send(req, decode: MeResponse.self).entitlement
+    }
+
+    /// 공통 요청 → 디코드.
+    private func send<T: Decodable>(_ request: URLRequest, decode: T.Type) async throws -> T {
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else {
+                let detail = (try? decoder.decode(APIErrorDetail.self, from: data))?.detail
+                    ?? String(data: data, encoding: .utf8) ?? ""
+                throw APIError.server(status: http.statusCode, detail: detail)
+            }
+            do { return try decoder.decode(T.self, from: data) }
+            catch { throw APIError.decoding(error) }
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.transport(error)
+        }
+    }
+
     func generateImage(_ request: GenerateImageRequest) async throws -> GenerateImageResponse {
         let url = APIConfig.baseURL.appendingPathComponent("/generate")
         var req = URLRequest(url: url)
@@ -131,6 +172,9 @@ actor APIClient {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token = APIConfig.apiToken, !token.isEmpty {
             req.setValue(token, forHTTPHeaderField: "X-Withu-Token")
+        }
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
         }
         req.httpBody = try encoder.encode(request)
 

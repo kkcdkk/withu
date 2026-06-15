@@ -37,12 +37,13 @@ export async function getEntitlement(env, sub) {
   ).bind(sub).first();
   const acc = await env.DB.prepare("SELECT my_referral_code FROM accounts WHERE sub = ?").bind(sub).first();
   if (!ent) return null;
+  // snake_case — 클라가 convertFromSnakeCase 로 디코드.
   return {
-    freeBatchRemaining: ent.free_batch_remaining,
-    freeSingleRemaining: ent.free_single_remaining,
+    free_batch_remaining: ent.free_batch_remaining,
+    free_single_remaining: ent.free_single_remaining,
     credits: ent.credits,
-    subActive: ent.sub_active === 1,
-    subExpiresAt: ent.sub_expires_at || null,
-    referralCode: acc?.my_referral_code || null,
+    sub_active: ent.sub_active === 1,
+    sub_expires_at: ent.sub_expires_at || null,
+    referral_code: acc?.my_referral_code || null,
   };
 }

@@ -30,6 +30,7 @@ struct ContentView: View {
     @AppStorage("withu.showWeatherDecoration.v1",
                 store: UserDefaults(suiteName: SharedAppState.groupID))
     private var showWeather: Bool = true
+    @State private var auth = AuthManager.shared
 
     private var characterState: CharacterState {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
@@ -150,6 +151,13 @@ struct ContentView: View {
         )) {
             OnboardingView(onComplete: { onboarded = true })
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { onboarded && auth.state == .signedOut },
+            set: { _ in }
+        )) {
+            LoginGateView()
+        }
+        .task { await auth.restore() }
     }
 
     // MARK: - Sections

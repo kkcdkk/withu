@@ -12,6 +12,7 @@ import BackgroundTasks
 @main
 struct withuApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
 
     /// BGTaskScheduler identifier — Info.plist BGTaskSchedulerPermittedIdentifiers 와 일치해야 함.
     static let backgroundRefreshTaskID = "com.seoyoung.withu.refresh"
@@ -19,6 +20,12 @@ struct withuApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+        }
+        // 포그라운드 복귀 시 Apple 로그인 권한 철회/계정 삭제 감지
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await AuthManager.shared.checkCredentialState() }
+            }
         }
         // iOS 가 ~30분 ~ 수 시간 마다 깨워서 호출. 사용자 습관 따라 자동 조정.
         .backgroundTask(.appRefresh(Self.backgroundRefreshTaskID)) {
