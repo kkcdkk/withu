@@ -26,6 +26,10 @@ struct ContentView: View {
     /// 활동 종합 메시지 — task / 새로고침 시 갱신
     @State private var activityMessage: String = ""
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
+    /// 캐릭터 옆 날씨 그림(해/달/구름/비/눈) 표시 여부. App Group 저장.
+    @AppStorage("withu.showWeatherDecoration.v1",
+                store: UserDefaults(suiteName: SharedAppState.groupID))
+    private var showWeather: Bool = true
 
     private var characterState: CharacterState {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
@@ -179,6 +183,10 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            Toggle("날씨 그림 표시", isOn: $showWeather)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
             Button {
                 weather.refresh(force: true)
             } label: {
@@ -203,10 +211,13 @@ struct ContentView: View {
                 CharacterImageView(state: characterState, animated: true)
                     .frame(width: 200, height: 200)
                     .id("\(characterState.rawValue)-\(imageRefreshKey)")
-                // 날씨 표현 — 해/달/구름은 우상단 고정, 비/눈은 영역 전체 떨어짐
-                WeatherDecorationView(condition: weatherBackgroundCondition, size: 44)
-                    .frame(width: 240, height: 240)
-                    .allowsHitTesting(false)
+                // 날씨 표현 — 해/달/구름은 우상단 고정, 비/눈은 영역 전체 떨어짐.
+                // 메인 스위치(showWeather)로 켜고 끌 수 있음.
+                if showWeather {
+                    WeatherDecorationView(condition: weatherBackgroundCondition, size: 44)
+                        .frame(width: 240, height: 240)
+                        .allowsHitTesting(false)
+                }
             }
             Text(characterState.caption)
                 .font(.title3.weight(.semibold))
