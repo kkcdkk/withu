@@ -1,5 +1,5 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest } from "./auth.js";
-import { upsertAccount, getEntitlement } from "./db.js";
+import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
@@ -158,6 +158,12 @@ async function generateImage(request, env) {
     return jsonError("OPENAI_API_KEY secret is not configured.", 503);
   }
 
+  // 로그인 인증 (점진 — ENFORCE_AUTH=true 면 토큰 필수)
+  const sub = await subFromRequest(request, env);
+  if (env.ENFORCE_AUTH === "true" && !sub) {
+    return jsonError("로그인이 필요해요.", 401);
+  }
+
   let input;
   try {
     input = await request.json();
@@ -169,12 +175,29 @@ async function generateImage(request, env) {
     return jsonError("prompt is required.", 400);
   }
 
+  // 서버 권위 차감 (로그인된 경우만). 잔액 없으면 402.
+  const idemKey = request.headers.get("Idempotency-Key") || crypto.randomUUID();
+  const kind = request.headers.get("X-Withu-Kind") === "batch" ? "batch" : "single";
+  const batchId = request.headers.get("X-Withu-Batch") || null;
+  let charge = { ok: true, chargedFrom: null };
+  if (sub) {
+    charge = await chargeGeneration(env, sub, kind, batchId, idemKey);
+    if (!charge.ok && charge.status === 402) {
+      return Response.json(
+        { detail: "무료 횟수를 다 썼어요. 충전하거나 구독해 주세요.", balance: charge.balance },
+        { status: 402 }
+      );
+    }
+    if (!charge.ok) return jsonError("권리 확인에 실패했어요.", charge.status || 500);
+  }
+
   let openAIResponse;
   try {
     openAIResponse = input.reference_image_base64
       ? await editImage(input, env.OPENAI_API_KEY)
       : await generateImageFromPrompt(input, env.OPENAI_API_KEY);
   } catch (error) {
+    if (sub) await refundGeneration(env, sub, charge.chargedFrom, idemKey);
     return jsonError(error.message, 400);
   }
 
@@ -187,18 +210,23 @@ async function generateImage(request, env) {
   }
 
   if (!openAIResponse.ok) {
+    if (sub) await refundGeneration(env, sub, charge.chargedFrom, idemKey);
     return jsonError(payload?.error?.message ?? text, openAIResponse.status);
   }
 
   const image = payload?.data?.[0];
   if (!image?.b64_json) {
+    if (sub) await refundGeneration(env, sub, charge.chargedFrom, idemKey);
     return jsonError("OpenAI response did not include image data.", 502);
   }
 
+  // 성공 — 갱신된 잔액 동봉(앱 캐시 갱신용)
+  const entitlement = sub ? await getEntitlement(env, sub) : null;
   return Response.json({
     image_base64: image.b64_json,
     seed: 0,
-    revised_prompt: image.revised_prompt ?? null
+    revised_prompt: image.revised_prompt ?? null,
+    entitlement
   });
 }
 

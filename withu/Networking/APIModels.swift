@@ -24,6 +24,14 @@ struct GenerateImageResponse: Codable {
     let imageBase64: String
     let seed: Int
     let revisedPrompt: String?
+    /// 차감 후 갱신된 잔액(로그인 시). 앱 캐시 갱신용.
+    var entitlement: Entitlement? = nil
+}
+
+/// 402 응답 — 무료/크레딧 소진.
+struct PaymentRequiredResponse: Codable {
+    let detail: String?
+    let balance: Entitlement?
 }
 
 struct APIErrorDetail: Codable {

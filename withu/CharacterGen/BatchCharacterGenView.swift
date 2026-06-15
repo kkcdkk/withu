@@ -78,6 +78,8 @@ struct BatchCharacterGenView: View {
     // 오늘 남은 생성 횟수 (App Group quota)
     @State private var remainingGenerations: Int = GenerationQuota.remainingToday()
     @State private var showPaywall: Bool = false
+    /// 이번 일괄 세션 식별자 — 서버가 같은 세션의 장을 무료(free_batch)로 묶음.
+    @State private var batchSessionId: String = UUID().uuidString
 
     // MARK: - Body
 
@@ -593,6 +595,7 @@ struct BatchCharacterGenView: View {
     /// 전체 병렬 시작 — TaskGroup 풀 패턴으로 maxConcurrent 개만 동시 진행.
     private func startBatch() async {
         isGenerating = true
+        batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
         results.removeAll()
         resultsFrame1.removeAll()
         errors.removeAll()
@@ -699,7 +702,7 @@ struct BatchCharacterGenView: View {
                 artStyle: artStyle,
                 style: "auto"
             )
-            let resp = try await APIClient.shared.generateImage(req)
+            let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
                 errors[state] = "이미지를 받지 못했어요"
@@ -715,7 +718,12 @@ struct BatchCharacterGenView: View {
             }
             CharacterImageStore.save(small, for: state, frame: frame)
             ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
+            if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
             return true
+        } catch APIError.paymentRequired {
+            showPaywall = true
+            errors[state] = "무료 횟수를 다 썼어요"
+            return false
         } catch {
             errors[state] = error.koreanizedDescription
             return false

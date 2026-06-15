@@ -643,6 +643,9 @@ struct CharacterGenView: View {
             } else {
                 resultFrame2 = small
             }
+            if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+        } catch APIError.paymentRequired {
+            showPaywall = true
         } catch {
             lastError = error.koreanizedDescription
         }

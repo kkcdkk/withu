@@ -59,7 +59,7 @@ export async function verifyAppleIdentityToken(identityToken, env) {
   // 1) claims 1차 검증
   const now = Math.floor(Date.now() / 1000);
   if (payload.iss !== APPLE_ISSUER) throw new Error("iss 불일치");
-  const expectedAud = env.APPLE_BUNDLE_ID || "com.seoyoung.withu";
+  const expectedAud = env.APPLE_BUNDLE_ID || "sy.withu";
   if (payload.aud !== expectedAud) throw new Error("aud 불일치");
   if (typeof payload.exp !== "number" || payload.exp < now) throw new Error("토큰 만료");
   if (!payload.sub) throw new Error("sub 없음");

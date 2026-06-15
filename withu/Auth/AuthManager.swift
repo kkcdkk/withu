@@ -71,6 +71,11 @@ final class AuthManager {
         }
     }
 
+    /// 생성 응답 등에 동봉돼 온 최신 잔액을 캐시에 반영.
+    func applyEntitlement(_ ent: Entitlement) {
+        entitlement = ent
+    }
+
     /// 서버 권리 스냅샷 갱신. 401 이면 토큰 만료로 보고 로그아웃.
     func refreshEntitlement() async {
         do {

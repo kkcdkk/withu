@@ -10,6 +10,8 @@ enum APIError: Error, LocalizedError {
     case server(status: Int, detail: String)
     case decoding(Error)
     case transport(Error)
+    /// 402 — 무료/크레딧 소진. balance 는 갱신된 잔액(있으면).
+    case paymentRequired(balance: Entitlement?)
 
     var errorDescription: String? {
         switch self {
@@ -21,6 +23,8 @@ enum APIError: Error, LocalizedError {
             return "디코딩 실패: \(err.localizedDescription)"
         case .transport(let err):
             return "통신 실패: \(err.localizedDescription)"
+        case .paymentRequired:
+            return "무료 횟수를 다 썼어요."
         }
     }
 }
@@ -42,6 +46,8 @@ extension Error {
                 return "결과를 읽을 수 없어요. 다시 시도해 주세요."
             case .transport(let inner):
                 return (inner as Error).koreanizedDescription
+            case .paymentRequired:
+                return "무료 횟수를 다 썼어요. 충전하거나 구독해 주세요."
             }
         }
         if let urlErr = self as? URLError {
@@ -165,7 +171,10 @@ actor APIClient {
         }
     }
 
-    func generateImage(_ request: GenerateImageRequest) async throws -> GenerateImageResponse {
+    /// 이미지 생성. kind: "single"|"batch" (서버 무료 버킷 구분), batchId: 일괄 세션 묶음.
+    func generateImage(_ request: GenerateImageRequest,
+                       kind: String = "single",
+                       batchId: String? = nil) async throws -> GenerateImageResponse {
         let url = APIConfig.baseURL.appendingPathComponent("/generate")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -176,12 +185,24 @@ actor APIClient {
         if let sessionToken = KeychainStore.sessionToken() {
             req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
         }
+        // 재시도 이중차감 방지 키 + 무료 버킷 구분
+        req.setValue(UUID().uuidString, forHTTPHeaderField: "Idempotency-Key")
+        req.setValue(kind, forHTTPHeaderField: "X-Withu-Kind")
+        if let batchId {
+            req.setValue(batchId, forHTTPHeaderField: "X-Withu-Batch")
+        }
         req.httpBody = try encoder.encode(request)
 
         do {
             let (data, response) = try await session.data(for: req)
             guard let http = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
+            }
+
+            // 402 — 무료/크레딧 소진
+            if http.statusCode == 402 {
+                let balance = (try? decoder.decode(PaymentRequiredResponse.self, from: data))?.balance
+                throw APIError.paymentRequired(balance: balance)
             }
 
             guard (200..<300).contains(http.statusCode) else {
