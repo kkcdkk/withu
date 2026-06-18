@@ -83,10 +83,19 @@ kind: `credits` | `free_single` | `sub_days`.
 
 ---
 
-## 7. 출시 전 보안 강화 (P1 — 권장)
-- [ ] **JWS 서명 검증** — `cloudflare/withu-api/src/auth.js` 의 `decodeJwsPayload` TODO. 현재 멱등+온디바이스만. 위조 결제 완전 차단하려면 x5c 인증서 체인 검증.
-- [ ] **구독 일일 상한** — `db.js` chargeGeneration 의 subscription 분기(현재 무제한) 에 일일 카운터.
+## 7. 유료 출시 전 보안 강화 (코드리뷰 지적 — 유료 결제 켜기 전 필수)
+- [ ] 🔴 **StoreKit JWS 서명 검증** — `cloudflare/withu-api/src/auth.js` 의 `decodeJwsPayload` 가 payload만 디코드(서명 미검증). 위조 JWS로 크레딧 무단 적립 가능. x5c 인증서 체인을 Apple root CA까지 검증해야 함. (현재 bundleId 1차 확인 + 멱등 + 온디바이스 검증만 — 무료/베타는 가능, 유료 출시는 이거 먼저.)
+- [ ] 🔴 **Idempotency 완전 멱등** — 현재 `APIClient.generateImage` 가 호출마다 키 발급. 네트워크 응답 유실 시 재시도 이중차감 가능. 생성 시도 단위 영속 키 + 서버 멱등 응답(결과 재반환) 필요.
+- [ ] **구독 일일 상한** — `db.js` chargeGeneration 의 subscription 분기(현재 무제한)에 일일 카운터. (만료일 체크는 반영 완료.)
 - [ ] **OpenAI 월 사용 한도** — platform.openai.com 대시보드 (코드 밖, 비용 안전망).
+
+### 코드리뷰에서 이미 반영한 것
+- [x] 서버 구독 **만료일 체크** (만료 후 무제한 생성 방지) — db.js
+- [x] JWS payload **bundleId 1차 확인** — db.js
+- [x] refine 시 이전 연속 프레임 잔상 제거 — CharacterGenView
+- [x] 온보딩 슬라이드 트랜지션 → opacity (VibeKit) — OnboardingView
+- [x] `.headline` 5곳 → `.callout.semibold` (VibeKit 타이포) — 생성/갤러리/온보딩
+- [x] PaywallView 배경 동적 tint + 크레딧 서버 잔액 표시
 
 ---
 

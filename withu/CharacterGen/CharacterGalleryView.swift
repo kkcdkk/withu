@@ -179,7 +179,7 @@ struct CharacterGalleryView: View {
             }
             VStack(spacing: 6) {
                 Text("아직 만든 캐릭터가 없어요")
-                    .font(.headline)
+                    .font(.callout.weight(.semibold))
                 Text("캐릭터를 만들면 상태별 폴더에\n차곡차곡 모여요.")
                     .font(.callout)
                     .foregroundStyle(.secondary)

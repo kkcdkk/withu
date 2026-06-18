@@ -25,6 +25,11 @@ struct PaywallView: View {
     /// 닫힐 때 호출 — 호출 측이 남은 횟수 등을 새로고침하도록.
     var onClose: () -> Void = {}
 
+    /// 배경 톤 — 지금 적용 중인 캐릭터 state (홈과 연속감).
+    private var heroState: CharacterState {
+        SharedAppState.loadMessage()?.state ?? .idle
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -67,7 +72,7 @@ struct PaywallView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 24)
             }
-            .background(backgroundGradient(for: .energetic).ignoresSafeArea())
+            .background(backgroundGradient(for: heroState).ignoresSafeArea())
             .navigationTitle("더 만들기")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -249,7 +254,7 @@ struct PaywallView: View {
     private var creditSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("횟수 충전") {
-                Text("지금 \(GenerationQuota.credits())회 보유")
+                Text("지금 \(auth.entitlement?.credits ?? GenerationQuota.credits())회 보유")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

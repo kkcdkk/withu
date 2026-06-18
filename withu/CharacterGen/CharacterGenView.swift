@@ -438,7 +438,7 @@ struct CharacterGenView: View {
                         applyCurrentSelection()
                     } label: {
                         Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
-                            .font(.headline)
+                            .font(.callout.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.withuPink)
@@ -570,7 +570,7 @@ struct CharacterGenView: View {
                     apply(display, to: targetState)
                 } label: {
                     Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
-                        .font(.headline)
+                        .font(.callout.weight(.semibold))
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.withuPink)
@@ -648,6 +648,9 @@ struct CharacterGenView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
+        // 다듬기는 단일 이미지 — 이전 연속(frame 1) 잔상 제거해 짝 불일치 방지
+        resultFrame2 = nil
+        transparentResultFrame2 = nil
         defer {
             isGenerating = false
             generationStartedAt = nil
@@ -895,7 +898,7 @@ struct WeatherBackgroundGenView: View {
                         apply(img, for: condition)
                     } label: {
                         Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "checkmark.circle.fill")
-                            .font(.headline)
+                            .font(.callout.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.withuPink)

@@ -45,9 +45,12 @@ export async function chargeGeneration(env, sub, kind, batchId, idemKey) {
   if (existing) return { ok: true, chargedFrom: existing.charged_from };
 
   const ent = await env.DB
-    .prepare("SELECT free_batch_remaining, free_single_remaining, credits, sub_active FROM entitlements WHERE sub = ?")
+    .prepare("SELECT free_batch_remaining, free_single_remaining, credits, sub_active, sub_expires_at FROM entitlements WHERE sub = ?")
     .bind(sub).first();
   if (!ent) return { ok: false, status: 404 };
+
+  // 구독 활성 판정 — 만료일 지났으면 무효 (만료 후 무제한 생성 방지)
+  const subValid = ent.sub_active === 1 && (!ent.sub_expires_at || ent.sub_expires_at > now);
 
   let chargedFrom = null;
 
@@ -71,8 +74,8 @@ export async function chargeGeneration(env, sub, kind, batchId, idemKey) {
       ).bind(now, sub).run();
       if (r.meta.changes > 0) chargedFrom = "free_single";
     }
-    // 무료 소진 → 구독 → 크레딧
-    if (!chargedFrom && ent.sub_active === 1) {
+    // 무료 소진 → 구독(유효할 때만) → 크레딧
+    if (!chargedFrom && subValid) {
       chargedFrom = "subscription";   // 구독은 잔액 무차감(일일상한은 추후)
     }
     if (!chargedFrom && ent.credits > 0) {
@@ -123,6 +126,10 @@ export async function applyPurchase(env, sub, payload) {
   const transactionId = payload.transactionId;
   const productId = payload.productId;
   if (!transactionId || !productId) return { ok: false, status: 400 };
+  // 1차 방어 — 우리 앱 트랜잭션만 (JWS 서명 체인 검증은 출시 전 강화 TODO)
+  if (payload.bundleId && payload.bundleId !== "sy.withu") {
+    return { ok: false, status: 400 };
+  }
 
   // 멱등 — 이미 적용한 트랜잭션이면 skip
   const existing = await env.DB

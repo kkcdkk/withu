@@ -69,10 +69,7 @@ struct OnboardingView: View {
             ZStack {
                 content
                     .id(step)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
+                    .transition(.opacity)
             }
             .frame(maxHeight: .infinity)
             bottomBar
@@ -474,7 +471,7 @@ struct OnboardingView: View {
     private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.headline)
+                .font(.callout.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(Color.withuPink)
