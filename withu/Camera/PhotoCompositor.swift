@@ -17,12 +17,23 @@ enum PhotoCompositor {
         let size = photo.size
         let renderer = UIGraphicsImageRenderer(size: size)
 
-        return renderer.image { _ in
+        return renderer.image { context in
             photo.draw(in: CGRect(origin: .zero, size: size))
 
             for character in placed {
                 let rect = character.rect(in: size)
-                drawCharacter(state: character.state, in: rect)
+                if character.rotation != 0 {
+                    // 캐릭터 중심 기준 회전
+                    let cg = context.cgContext
+                    cg.saveGState()
+                    cg.translateBy(x: rect.midX, y: rect.midY)
+                    cg.rotate(by: character.rotation)
+                    cg.translateBy(x: -rect.midX, y: -rect.midY)
+                    drawCharacter(state: character.state, in: rect)
+                    cg.restoreGState()
+                } else {
+                    drawCharacter(state: character.state, in: rect)
+                }
             }
         }
     }
