@@ -80,6 +80,8 @@ struct BatchCharacterGenView: View {
     @State private var showPaywall: Bool = false
     /// 이번 일괄 세션 식별자 — 서버가 같은 세션의 장을 무료(free_batch)로 묶음.
     @State private var batchSessionId: String = UUID().uuidString
+    /// 사진 선택 후 정사각 자르기 시트
+    @State private var cropTarget: CropTarget?
 
     // MARK: - Body
 
@@ -106,6 +108,11 @@ struct BatchCharacterGenView: View {
                 showPaywall = false
                 remainingGenerations = GenerationQuota.remainingToday()
             })
+        }
+        .fullScreenCover(item: $cropTarget) { target in
+            SquareCropView(image: target.image,
+                           onDone: { cropped in target.onDone(cropped); cropTarget = nil },
+                           onCancel: { cropTarget = nil })
         }
         .alert("다 만들었어요", isPresented: $showFinishedAlert) {
             Button("확인", role: .cancel) {}
@@ -144,9 +151,9 @@ struct BatchCharacterGenView: View {
                 .font(.callout)
                 .disabled(isGenerating)
         } header: {
-            Text("우리 캐릭터의 모습")
+            Text("내 캐릭터의 모습")
         } footer: {
-            Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 큰 머리에 작은 몸\"")
+            Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"")
                 .foregroundStyle(.secondary)
         }
     }
@@ -308,7 +315,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("이미 있는 캐릭터 사진 (선택)")
         } footer: {
-            Text("사진을 넣으면 그 캐릭터의 여러 모습으로 만들어 줘요. 비워두면 위에 적은 설명만으로 새로 그려요.")
+            Text("사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -321,10 +328,10 @@ struct BatchCharacterGenView: View {
             }
             .pickerStyle(.segmented).disabled(isGenerating)
 
-            Picker("선명함", selection: $quality) {
-                Text("빠르게 (약 20초 · 15원)").tag("low")
-                Text("보통 (약 50초 · 55원)").tag("medium")
-                Text("선명하게 (1~2분 · 230원)").tag("high")
+            Picker("품질", selection: $quality) {
+                Text("low (약 20초 · 15원)").tag("low")
+                Text("medium (약 50초 · 55원)").tag("medium")
+                Text("high (1~2분 · 230원)").tag("high")
             }
             .pickerStyle(.menu).disabled(isGenerating)
 
@@ -332,14 +339,14 @@ struct BatchCharacterGenView: View {
                 .disabled(isGenerating)
             if generateAnimated {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 (모든 모습에 함께 쓰여요)")
+                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 ?(모든 모습에 함께 쓰여요)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     TextEditor(text: $animationHintOverride)
                         .frame(minHeight: 60)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("비워두면 각 모습에 어울리게 알아서 움직여요 (걷기는 다른 발을 앞으로, 자기는 숨 쉬듯이).")
+                    Text("비워두면 각 모습에 어울리게 알아서 움직여요.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -347,7 +354,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("분위기 정하기")
         } footer: {
-            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 살아 움직여요. 그만큼 비용은 두 배예요.")
+            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -374,7 +381,7 @@ struct BatchCharacterGenView: View {
                       || remainingGenerations < selectedStates.count)
 
             if isGenerating {
-                Text("만드는 동안엔 앱을 그대로 켜둬 주세요. 지금 \(inProgressStates.count)개를 만들고 있어요.")
+                Text("만드는 동안엔 앱을 그대로 켜 주세요. 지금 \(inProgressStates.count)개를 만들고 있어요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button(role: .destructive) {
@@ -894,7 +901,9 @@ struct BatchCharacterGenView: View {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
-                revisionRefImage = img
+                cropTarget = CropTarget(image: img) { cropped in
+                    revisionRefImage = cropped
+                }
             }
         } catch {
             // 조용히 무시
@@ -906,7 +915,9 @@ struct BatchCharacterGenView: View {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
-                stateReferenceImages[state] = img
+                cropTarget = CropTarget(image: img) { cropped in
+                    stateReferenceImages[state] = cropped
+                }
             }
         } catch {
             // 조용히 무시 — 사용자가 다시 선택하면 됨
@@ -954,7 +965,9 @@ struct BatchCharacterGenView: View {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
-                referenceImage = img
+                cropTarget = CropTarget(image: img) { cropped in
+                    referenceImage = cropped
+                }
             }
         } catch {
             errors[.idle] = "참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요."

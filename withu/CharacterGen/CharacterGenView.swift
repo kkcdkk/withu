@@ -63,6 +63,8 @@ struct CharacterGenView: View {
     @State private var generationStartedAt: Date?
     @State private var remainingGenerations: Int = GenerationQuota.remainingToday()
     @State private var showPaywall: Bool = false
+    /// 사진 선택 후 정사각 자르기 시트
+    @State private var cropTarget: CropTarget?
 
     var body: some View {
         ZStack {
@@ -93,6 +95,11 @@ struct CharacterGenView: View {
                 showPaywall = false
                 remainingGenerations = GenerationQuota.remainingToday()
             })
+        }
+        .fullScreenCover(item: $cropTarget) { target in
+            SquareCropView(image: target.image,
+                           onDone: { cropped in target.onDone(cropped); cropTarget = nil },
+                           onCancel: { cropTarget = nil })
         }
         .alert("적용했어요", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
@@ -136,7 +143,7 @@ struct CharacterGenView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("여러 상태 한 번에 만들기")
                         .font(.callout.weight(.semibold))
-                    Text("식사·산책·수면… 모든 상태의 모습을 한번에 만들어요")
+                    Text("모든 상태의 모습을 한번에 만들어요")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -170,7 +177,7 @@ struct CharacterGenView: View {
         } footer: {
             switch mode {
             case .aiGenerate:
-                Text("프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 약간의 비용이 들어요.")
+                Text("프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 선택한 옵션에 따라 비용이 들어요.")
                     .foregroundStyle(.secondary)
             case .importPhoto:
                 Text("가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.")
@@ -230,10 +237,10 @@ struct CharacterGenView: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 if isGenerating {
-                    Text("다른 앱으로 잠깐 넘어가도 괜찮아요. 너무 오래 떠나 있으면 결과가 사라질 수 있어요.")
+                    Text("너무 오래 떠나 있으면 결과가 사라질 수 있으니, 화면에 머무르는 것을 권장해요.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("그림 스타일과 안전 설정은 자동으로 챙겨요. 보통 빠르게 20초, 보통 50초, 선명하게 1~2분 정도 걸려요.")
+                    Text("평균 low 20초, medium 50초, high 1~2분 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
                 if remainingGenerations == 0 {
@@ -312,12 +319,18 @@ struct CharacterGenView: View {
             .disabled(isGenerating)
 
             Picker("퀄리티", selection: $quality) {
-                Text("빠르게 (약 20초 · 15원)").tag("low")
-                Text("보통 (약 50초 · 55원)").tag("medium")
-                Text("선명하게 (1~2분 · 230원)").tag("high")
+                Text("low (약 20초 · 15원)").tag("low")
+                Text("medium (약 50초 · 55원)").tag("medium")
+                Text("high (1~2분 · 230원)").tag("high")
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)
+
+            DisclosureGroup("퀄리티별 미리보기") {
+                qualityPreviewRow(label: "low", asset: "quality_low")
+                qualityPreviewRow(label: "medium", asset: "quality_medium")
+                qualityPreviewRow(label: "high", asset: "quality_high")
+            }
 
             Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                 .disabled(isGenerating)
@@ -336,6 +349,38 @@ struct CharacterGenView: View {
                 }
             }
         }
+    }
+
+    /// 퀄리티별 예시 한 줄. Assets.xcassets 에 quality_low/medium/high 추가하면 그 사진,
+    /// 없으면 "사진 넣기" placeholder.
+    private func qualityPreviewRow(label: String, asset: String) -> some View {
+        HStack(spacing: 12) {
+            Group {
+                if UIImage(named: asset) != nil {
+                    Image(asset)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    ZStack {
+                        Rectangle().fill(Color(uiColor: .tertiarySystemBackground))
+                        VStack(spacing: 2) {
+                            Image(systemName: "photo")
+                                .foregroundStyle(.secondary)
+                            Text("사진 넣기")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            Text(label)
+                .font(.callout)
+            Spacer()
+        }
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
@@ -659,7 +704,10 @@ struct CharacterGenView: View {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let img = UIImage(data: data) {
-                referenceImage = img
+                // 선택 후 정사각 자르기 → 결과를 참고 이미지로
+                cropTarget = CropTarget(image: img) { cropped in
+                    referenceImage = cropped
+                }
             }
         } catch {
             lastError = "사진을 불러오지 못했어요."
@@ -674,17 +722,29 @@ struct CharacterGenView: View {
             importedProcessedImage = nil
             return
         }
-        isProcessing = true
-        lastError = nil
-        defer { isProcessing = false }
         do {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let raw = UIImage(data: data) else {
                 lastError = "사진을 불러오지 못했어요."
                 return
             }
-            importedRawImage = raw
-            let processed = try await ImageProcessing.prepareForCharacter(raw)
+            // 선택 후 정사각 자르기 → 자른 이미지로 배경 제거 처리
+            cropTarget = CropTarget(image: raw) { cropped in
+                Task { await processImport(cropped) }
+            }
+        } catch {
+            lastError = "사진을 불러오지 못했어요."
+        }
+    }
+
+    /// 자른 이미지 배경 제거 + 정규화.
+    private func processImport(_ image: UIImage) async {
+        isProcessing = true
+        lastError = nil
+        defer { isProcessing = false }
+        importedRawImage = image
+        do {
+            let processed = try await ImageProcessing.prepareForCharacter(image)
             importedProcessedImage = processed
         } catch {
             lastError = error.koreanizedDescription
