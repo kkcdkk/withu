@@ -93,6 +93,18 @@ final class AuthManager {
         state = .signedOut
     }
 
+    /// 계정 삭제 — 서버 데이터 삭제 후 로컬 로그아웃. 성공 시 true.
+    func deleteAccount() async -> Bool {
+        do {
+            try await APIClient.shared.deleteAccount()
+            signOut()
+            return true
+        } catch {
+            lastError = "계정 삭제에 실패했어요. 잠시 후 다시 시도해 주세요."
+            return false
+        }
+    }
+
     #if DEBUG
     /// 개발용 — 로그인 없이 메인 둘러보기. capability 추가 전이나 시뮬레이터 테스트에.
     /// 세션 토큰이 없어 서버는 ENFORCE_AUTH=false 경로로 통과(생성 가능).

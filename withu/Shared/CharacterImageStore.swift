@@ -290,6 +290,36 @@ enum CharacterImageStore {
     }
 
     #if canImport(UIKit)
+    // MARK: - 디코드 캐시
+    // 활성 슬롯 PNG 를 매 표시마다 디스크에서 다시 읽고/디코드하던 것을 캐시.
+    // (홈 hero 의 0.7초 frame swap·갤러리 스크롤에서 메인스레드 재디코드 렉 제거)
+    // 쓰기는 드물고 읽기가 hot → 쓰기 때 전체 비움(단순/안전). NSCache 는 thread-safe + 메모리압박 시 자동 evict.
+    // 상한: 위젯/컴플리케이션(메모리 ~50MB) 보호 — 개수/총비용(byte) 둘 다 제한.
+    private static let imageCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 24
+        cache.totalCostLimit = 24 * 1024 * 1024   // 24MB
+        return cache
+    }()
+
+    private static func imageCacheKey(_ state: CharacterState, frame: Int, maxPixelSize: CGFloat?) -> NSString {
+        if let maxPixelSize {
+            return "\(state.rawValue)#\(frame)#t\(Int(maxPixelSize))" as NSString
+        }
+        return "\(state.rawValue)#\(frame)#full" as NSString
+    }
+
+    /// 디코드된 비트맵 대략 바이트 — totalCostLimit 산정용.
+    private static func imageCost(_ image: UIImage) -> Int {
+        guard let cg = image.cgImage else { return 0 }
+        return cg.bytesPerRow * cg.height
+    }
+
+    /// 활성 슬롯 이미지가 바뀌면 호출 — 다음 load 가 디스크에서 새로 읽도록.
+    private static func evictImageCache() {
+        imageCache.removeAllObjects()
+    }
+
     /// 활성 슬롯 로드 (위젯/워치가 호출).
     static func load(_ state: CharacterState) -> UIImage? {
         loadFrame(state, frame: 0)
@@ -297,10 +327,14 @@ enum CharacterImageStore {
 
     /// frame 별 로드. frame > 0 인데 없으면 nil. caller 가 frame 0 fallback.
     static func loadFrame(_ state: CharacterState, frame: Int) -> UIImage? {
+        let key = imageCacheKey(state, frame: frame, maxPixelSize: nil)
+        if let cached = imageCache.object(forKey: key) { return cached }
         guard let url = activeFileURL(for: state, frame: frame),
               FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return UIImage(data: data)
+              let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else { return nil }
+        imageCache.setObject(image, forKey: key, cost: imageCost(image))
+        return image
     }
 
     /// 애니메이션 frame 존재 여부 (frame >= 1)
@@ -314,6 +348,15 @@ enum CharacterImageStore {
     /// 일시적으로 원본 디코드되긴 하지만, render 후엔 작은 thumbnail 만 메모리에 남음.
     static func loadThumbnail(_ state: CharacterState,
                               maxPixelSize: CGFloat) -> UIImage? {
+        let key = imageCacheKey(state, frame: 0, maxPixelSize: maxPixelSize)
+        if let cached = imageCache.object(forKey: key) { return cached }
+        guard let image = computeThumbnail(state, maxPixelSize: maxPixelSize) else { return nil }
+        imageCache.setObject(image, forKey: key, cost: imageCost(image))
+        return image
+    }
+
+    private static func computeThumbnail(_ state: CharacterState,
+                                         maxPixelSize: CGFloat) -> UIImage? {
         guard let url = activeFileURL(for: state),
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
@@ -356,6 +399,7 @@ enum CharacterImageStore {
         guard let data = image.pngData(),
               let activeURL = activeFileURL(for: state, frame: frame) else { return }
         try? data.write(to: activeURL, options: .atomic)
+        evictImageCache()
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
     }
 
@@ -397,6 +441,7 @@ enum CharacterImageStore {
         if let activeURL = activeFileURL(for: state, frame: frame) {
             try? data.write(to: activeURL, options: .atomic)
         }
+        evictImageCache()
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
         // 2) 갤러리 — frame 별 분기
         if frame == 0 {
@@ -449,6 +494,7 @@ enum CharacterImageStore {
     static func clearActive(_ state: CharacterState) -> Bool {
         guard let url = activeFileURL(for: state) else { return false }
         try? FileManager.default.removeItem(at: url)
+        evictImageCache()
         return true
     }
 
@@ -544,6 +590,7 @@ enum CharacterImageStore {
         }
         // 이 state 슬롯의 활성 source 갱신.
         setActiveSource(state: state, galleryId: id)
+        evictImageCache()
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
         return true
     }

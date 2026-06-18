@@ -1,5 +1,5 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest, decodeJwsPayload } from "./auth.js";
-import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral } from "./db.js";
+import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
 const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
@@ -63,7 +63,9 @@ export default {
     }
 
     // Phase 1 — 권리 스냅샷 조회 (앱 시작/포그라운드 동기화)
+    //   DELETE → 계정 삭제 (Apple 5.1.1(v))
     if (url.pathname === "/me") {
+      if (request.method === "DELETE") return deleteAccountHandler(request, env);
       return meHandler(request, env);
     }
 
@@ -133,6 +135,16 @@ async function meHandler(request, env) {
   const entitlement = await getEntitlement(env, sub);
   if (!entitlement) return jsonError("계정을 찾을 수 없어요.", 404);
   return Response.json({ entitlement });
+}
+
+// DELETE /me (Bearer) → { ok: true }. 계정+서버 이용기록 전체 삭제.
+async function deleteAccountHandler(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+  const result = await deleteAccount(env, sub);
+  if (!result.ok) return jsonError("계정 삭제에 실패했어요.", result.status || 500);
+  return Response.json({ ok: true });
 }
 
 // POST /iap/verify (Bearer) { signed_transaction } → { entitlement }

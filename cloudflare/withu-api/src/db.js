@@ -258,3 +258,24 @@ export async function getEntitlement(env, sub) {
     referral_code: acc?.my_referral_code || null,
   };
 }
+
+/// 계정 삭제 (Apple 5.1.1(v) — 앱 내 계정 삭제 의무).
+/// 이 sub 가 참조된 모든 테이블 행을 원자적으로 제거.
+/// 주의: accounts 행이 사라지므로 같은 Apple ID 로 재가입 시 무료체험이 다시 시드됨
+///       (재설치와 달리 계정 삭제는 의도적 행위). 악용 차단이 필요하면 sub 해시 tombstone 을 별도 도입.
+export async function deleteAccount(env, sub) {
+  if (!env.DB) return { ok: false, status: 503 };
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM generation_log WHERE sub = ?").bind(sub),
+      env.DB.prepare("DELETE FROM iap_transactions WHERE sub = ?").bind(sub),
+      env.DB.prepare("DELETE FROM code_redemptions WHERE sub = ?").bind(sub),
+      env.DB.prepare("DELETE FROM referrals WHERE referee_sub = ? OR referrer_sub = ?").bind(sub, sub),
+      env.DB.prepare("DELETE FROM entitlements WHERE sub = ?").bind(sub),
+      env.DB.prepare("DELETE FROM accounts WHERE sub = ?").bind(sub),
+    ]);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 500 };   // batch 는 원자적 — 실패 시 아무 것도 안 지워짐
+  }
+}

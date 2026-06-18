@@ -142,6 +142,18 @@ actor APIClient {
         return try await send(req, decode: AppleAuthResponse.self)
     }
 
+    /// 계정 삭제 (Bearer 필요). 서버의 이 사용자 데이터 전체 삭제.
+    func deleteAccount() async throws {
+        let url = APIConfig.baseURL.appendingPathComponent("/me")
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.timeoutInterval = 30   // 삭제는 짧게 — 생성용 session 의 30분 timeout 상속 방지
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        try await sendDiscardingBody(req)
+    }
+
     /// 서버 권리 스냅샷 (Bearer 필요).
     func fetchMe() async throws -> Entitlement {
         let url = APIConfig.baseURL.appendingPathComponent("/me")
@@ -185,6 +197,23 @@ actor APIClient {
         }
         req.httpBody = try encoder.encode(body)
         return try await send(req, decode: MeResponse.self).entitlement
+    }
+
+    /// 공통 요청 → 본문 무시 (성공 status 만 확인). 계정 삭제 등 빈 응답용.
+    private func sendDiscardingBody(_ request: URLRequest) async throws {
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else {
+                let detail = (try? decoder.decode(APIErrorDetail.self, from: data))?.detail
+                    ?? String(data: data, encoding: .utf8) ?? ""
+                throw APIError.server(status: http.statusCode, detail: detail)
+            }
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.transport(error)
+        }
     }
 
     /// 공통 요청 → 디코드.

@@ -96,10 +96,19 @@ kind: `credits` | `free_single` | `sub_days`.
 - [x] 온보딩 슬라이드 트랜지션 → opacity (VibeKit) — OnboardingView
 - [x] `.headline` 5곳 → `.callout.semibold` (VibeKit 타이포) — 생성/갤러리/온보딩
 - [x] PaywallView 배경 동적 tint + 크레딧 서버 잔액 표시
+- [x] **계정 삭제(회원탈퇴)** — 설정 > 계정 (로그아웃·삭제), 서버 `DELETE /me` 가 sub 참조 6테이블 삭제. **Apple 5.1.1(v) 충족** (단 토큰 revoke 는 아래 9 참고)
+- [x] **렉 제거** — CharacterImageStore 디코드 캐시(홈 0.7초 swap·갤러리 스크롤) + ImageProcessing CIContext 재사용
+- [x] **Info.plist 정리** — ATS 평문 예외(개인 Tailscale IP) 제거, `ITSAppUsesNonExemptEncryption=false`. ⚠️ 로컬 FastAPI 를 HTTP 로 직접 붙는 디버그는 이제 ATS 에 막힘 → 디버그도 HTTPS Worker(APIConfig) 사용.
 
 ---
 
-## 8. 아카이브 → 심사
+## 8. 감사로 새로 발견한 출시 차단 (문서에 없던 것)
+- [ ] 🔴 **watchOS 앱 아이콘** — `withu Watch App/Assets.xcassets/AppIcon.appiconset` 에 PNG 0개(`Contents.json` 만). Watch 앱 아카이브/업로드 실패. 1024 아이콘 추가 필요 (user-action).
+- [ ] 🔴 **Sign in with Apple 토큰 revoke** — 계정 삭제 시 Apple REST API 로 토큰 폐기까지 해야 5.1.1(v) 완전 충족(심사 요구 가능). 현재는 서버 데이터 삭제 + 로컬 로그아웃까지만 구현. Apple `.p8` 키(team id/key id/client secret JWT) 설정 후 `/me` DELETE 핸들러에 revoke 호출 추가 — 유료 가입 후 자격 생기면 작업.
+
+---
+
+## 9. 아카이브 → 심사
 1. Xcode → Product → Archive (Release)
 2. Info.plist ATS: 프로덕션은 HTTPS 라 통과 (전면 허용 이미 제거됨)
 3. TestFlight 베타 한 바퀴 → App Store 심사 제출

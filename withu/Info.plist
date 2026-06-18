@@ -2,27 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<!-- 전면 평문 허용(NSAllowsArbitraryLoads)은 제거 — 프로덕션은 HTTPS(workers.dev)만 사용. -->
-		<!-- Debug 로컬 FastAPI(Tailscale, 평문)만 아래 예외로 허용. Release 는 이 예외를 쓰지 않음. -->
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>100.84.165.121</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
-		</dict>
-	</dict>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_http._tcp</string>
-	</array>
+	<!-- 수출 규정: 표준 암호화(HTTPS)만 사용 → 비면제 암호화 없음. 업로드마다 묻는 질문 제거. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- ATS 평문 예외(개인 Tailscale IP) + Bonjour 로컬 검색 제거 — 프로덕션/디버그 모두 HTTPS Worker 사용.
+	     로컬 FastAPI 를 HTTP 로 직접 붙는 디버그가 필요하면 NSAppTransportSecurity 예외를 로컬에서만 임시 복원. -->
 	<key>NSFocusStatusUsageDescription</key>
 	<string>수면/집중 모드를 감지해 캐릭터 상태(예: 자는 모습)에 반영해요.</string>
 	<key>NSMotionUsageDescription</key>

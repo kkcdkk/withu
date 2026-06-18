@@ -552,6 +552,7 @@ struct SettingsView: View {
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
     @State private var focus = FocusModeManager.shared
+    @State private var auth = AuthManager.shared
 
     @Binding var overrideState: CharacterState?
     let characterState: CharacterState
@@ -562,6 +563,9 @@ struct SettingsView: View {
     @State private var showWidgetGuide: Bool = false
     @State private var showOnboardingConfirm: Bool = false
     @State private var showPaywall: Bool = false
+    @State private var showDeleteConfirm: Bool = false
+    @State private var isDeletingAccount: Bool = false
+    @State private var deleteError: String?
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
 
     var body: some View {
@@ -626,6 +630,34 @@ struct SettingsView: View {
                     } header: {
                         Text("법적 정보")
                     }
+                    if KeychainStore.sessionToken() != nil {
+                        Section {
+                            Button {
+                                auth.signOut()
+                                dismiss()
+                            } label: {
+                                Label("로그아웃", systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                            Button(role: .destructive) {
+                                showDeleteConfirm = true
+                            } label: {
+                                if isDeletingAccount {
+                                    HStack(spacing: 8) {
+                                        ProgressView()
+                                        Text("삭제 중…")
+                                    }
+                                } else {
+                                    Label("계정 삭제", systemImage: "trash")
+                                }
+                            }
+                            .disabled(isDeletingAccount)
+                        } header: {
+                            Text("계정")
+                        } footer: {
+                            Text("계정과 서버에 저장된 이용 기록을 삭제해요. 충전한 횟수·무료 혜택도 함께 사라지고 되돌릴 수 없어요.")
+                                .font(.caption2)
+                        }
+                    }
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -650,6 +682,29 @@ struct SettingsView: View {
                 Button("취소", role: .cancel) {}
             } message: {
                 Text("권한 안내 화면을 처음부터 다시 봐요. 거절한 권한도 다시 한 번 물어볼 수 있어요.")
+            }
+            .alert("계정을 삭제할까요?", isPresented: $showDeleteConfirm) {
+                Button("삭제", role: .destructive) {
+                    Task {
+                        isDeletingAccount = true
+                        let ok = await auth.deleteAccount()
+                        isDeletingAccount = false
+                        if ok {
+                            dismiss()
+                        } else {
+                            deleteError = auth.lastError ?? "삭제에 실패했어요. 잠시 후 다시 시도해 주세요."
+                        }
+                    }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("계정과 서버 이용 기록이 모두 삭제돼요. 충전한 횟수·무료 혜택도 사라지며 되돌릴 수 없어요.")
+            }
+            .alert("계정 삭제 실패", isPresented: Binding(get: { deleteError != nil },
+                                                  set: { if !$0 { deleteError = nil } })) {
+                Button("확인", role: .cancel) { deleteError = nil }
+            } message: {
+                Text(deleteError ?? "")
             }
         }
     }

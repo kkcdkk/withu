@@ -14,6 +14,9 @@ import CoreImage
 
 enum ImageProcessing {
 
+    /// CIContext 는 생성 비용이 큰 객체 — 1개를 공유 재사용 (immutable, thread-safe).
+    private static let sharedCIContext = CIContext()
+
     enum ProcessingError: LocalizedError {
         case invalidImage
         case noForeground
@@ -77,8 +80,7 @@ enum ImageProcessing {
         )
 
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let context = CIContext()
-        guard let cgOutput = context.createCGImage(ciImage, from: ciImage.extent) else {
+        guard let cgOutput = sharedCIContext.createCGImage(ciImage, from: ciImage.extent) else {
             throw ProcessingError.renderFailed
         }
         return UIImage(cgImage: cgOutput, scale: image.scale, orientation: .up)
