@@ -191,7 +191,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("날씨 그림 표시", isOn: $showWeather)
+            Toggle("날씨 표시", isOn: $showWeather)
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.mini)
@@ -357,7 +357,7 @@ struct ContentView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             actionLink(title: "함께할 캐릭터 생성하기",
-                       subtitle: "AI/사진 첨부로 함께할 캐릭터를 만들어요",
+                       subtitle: "함께할 캐릭터를 만들어요",
                        icon: "wand.and.stars",
                        tint: .withuPink) {
                 CharacterGenView()
@@ -508,7 +508,7 @@ struct ContentView: View {
                         Text("\(deniedPermissions.joined(separator: " · ")) 권한이 꺼져 있어요")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("기능이 제한될 수 있어요. 탭해서 iOS 설정에서 켤 수 있어요.")
+                        Text("기능이 제한될 수 있어요. iOS 설정에서 켤 수 있어요.")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -578,7 +578,7 @@ struct SettingsView: View {
                     } header: {
                         Text("더 만들기")
                     } footer: {
-                        Text("오늘 \(GenerationQuota.remainingToday())번 만들 수 있어요.")
+                        Text("오늘 \(GenerationQuota.remainingToday())번 생성할 수 있어요.")
                             .font(.caption2)
                     }
                     watchSection

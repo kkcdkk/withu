@@ -141,7 +141,7 @@ struct OnboardingView: View {
                            description: "운동·수면·걸음에 맞춰 캐릭터 상태가 바뀌어요")
                 featureRow(icon: "applewatch", tint: .cyan,
                            title: "워치 동기화",
-                           description: "애플워치 시계 화면과 메인 화면에도 보여요")
+                           description: "애플워치 시계 화면과 메인 화면에도 함께해요")
             }
             .padding(.horizontal, 32)
             Spacer()
@@ -157,8 +157,8 @@ struct OnboardingView: View {
             title: "건강 데이터",
             body: "걸음·운동·수면 데이터를 캐릭터 상태에 반영해요.",
             details: [
-                (symbol: "figure.run", text: "운동을 시작하면 캐릭터도 같이 움직여요"),
-                (symbol: "moon.fill", text: "잠든 시간에는 캐릭터도 자요"),
+                (symbol: "figure.run", text: "운동을 시작하면 캐릭터도 같이 운동해요"),
+                (symbol: "moon.fill", text: "잠든 시간에는 캐릭터도 잠들어요"),
                 (symbol: "clock", text: "허용하지 않으면 시간대만 보고 움직여요")
             ],
             result: healthResult,
@@ -249,7 +249,7 @@ struct OnboardingView: View {
         permissionPage(
             icon: "moon.zzz.fill",
             tint: .indigo,
-            title: "잠든 시간을 알아챌게요",
+            title: "캐릭터와 함께 수면",
             body: "수면 집중 모드를 감지해 캐릭터를 재워줘요.",
             details: [
                 (symbol: "moon.zzz", text: "설정에서 집중·수면 필터에 withu 를 연결하면 더 정확해요"),

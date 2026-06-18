@@ -30,7 +30,7 @@ struct LoginGateView: View {
                 VStack(spacing: 8) {
                     Text("withu 시작하기")
                         .font(.title3.weight(.semibold))
-                    Text("로그인하면 내 캐릭터와 무료 체험이\n어느 기기에서나 이어져요.")
+                    Text("내 일상과 함께하는 나의 캐릭터")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -57,7 +57,7 @@ struct LoginGateView: View {
                 .padding(.horizontal, 32)
                 .disabled(auth.isAuthenticating)
 
-                Text("로그인하면 개인정보처리방침과 이용약관에 동의하는 것으로 봐요.")
+                Text("로그인하면 개인정보처리방침과 이용약관에 동의하는 것으로 간주됩니다.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
