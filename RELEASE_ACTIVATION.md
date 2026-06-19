@@ -96,7 +96,7 @@ kind: `credits` | `free_single` | `sub_days`.
 - [x] 온보딩 슬라이드 트랜지션 → opacity (VibeKit) — OnboardingView
 - [x] `.headline` 5곳 → `.callout.semibold` (VibeKit 타이포) — 생성/갤러리/온보딩
 - [x] PaywallView 배경 동적 tint + 크레딧 서버 잔액 표시
-- [x] **계정 삭제(회원탈퇴)** — 설정 > 계정 (로그아웃·삭제), 서버 `DELETE /me` 가 sub 참조 6테이블 삭제. **Apple 5.1.1(v) 충족** (단 토큰 revoke 는 아래 9 참고)
+- [x] **계정 삭제(회원탈퇴)** — 설정 > 계정 (로그아웃·삭제), 서버 `DELETE /me` 가 sub 참조 6테이블 삭제 + 로컬 캐릭터/갤러리/배경/데코까지 `wipeAll()`. **Apple 5.1.1(v) 충족** (단 토큰 revoke 는 아래 8 참고)
 - [x] **렉 제거** — CharacterImageStore 디코드 캐시(홈 0.7초 swap·갤러리 스크롤) + ImageProcessing CIContext 재사용
 - [x] **Info.plist 정리** — ATS 평문 예외(개인 Tailscale IP) 제거, `ITSAppUsesNonExemptEncryption=false`. ⚠️ 로컬 FastAPI 를 HTTP 로 직접 붙는 디버그는 이제 ATS 에 막힘 → 디버그도 HTTPS Worker(APIConfig) 사용.
 

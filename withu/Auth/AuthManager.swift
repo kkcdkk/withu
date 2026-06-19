@@ -97,6 +97,7 @@ final class AuthManager {
     func deleteAccount() async -> Bool {
         do {
             try await APIClient.shared.deleteAccount()
+            CharacterImageStore.wipeAll()   // 서버 삭제 성공 후 로컬 캐릭터/갤러리/배경/데코도 초기화
             signOut()
             return true
         } catch {

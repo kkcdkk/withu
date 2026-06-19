@@ -498,6 +498,19 @@ enum CharacterImageStore {
         return true
     }
 
+    /// 계정 삭제 시 로컬 이미지 전체 초기화 — 활성 슬롯/갤러리/배경/데코 폴더 + 활성 매핑 + 캐시.
+    static func wipeAll() {
+        for folder in [activeFolder, galleryFolder, backgroundsFolder, decorationsFolder] {
+            if let url = containerURL?.appendingPathComponent(folder, isDirectory: true) {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        UserDefaults(suiteName: SharedAppState.groupID)?.removeObject(forKey: activeSourceMapKey)
+        evictImageCache()
+        NotificationCenter.default.post(name: .characterImageChanged, object: nil)
+        NotificationCenter.default.post(name: .weatherBackgroundChanged, object: nil)
+    }
+
     // MARK: - 갤러리
 
     private static func galleryFileURL(id: String) -> URL? {

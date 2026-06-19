@@ -654,7 +654,7 @@ struct SettingsView: View {
                         } header: {
                             Text("계정")
                         } footer: {
-                            Text("계정과 서버에 저장된 이용 기록을 삭제해요. 충전한 횟수·무료 혜택도 함께 사라지고 되돌릴 수 없어요.")
+                            Text("계정·서버 이용 기록과 이 기기에 만든 캐릭터·갤러리를 모두 삭제해요. 충전한 횟수·무료 혜택도 함께 사라지고 되돌릴 수 없어요.")
                                 .font(.caption2)
                         }
                     }
@@ -698,7 +698,7 @@ struct SettingsView: View {
                 }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("계정과 서버 이용 기록이 모두 삭제돼요. 충전한 횟수·무료 혜택도 사라지며 되돌릴 수 없어요.")
+                Text("계정과 서버 이용 기록, 이 기기의 캐릭터·갤러리가 모두 삭제돼요. 충전한 횟수·무료 혜택도 사라지며 되돌릴 수 없어요.")
             }
             .alert("계정 삭제 실패", isPresented: Binding(get: { deleteError != nil },
                                                   set: { if !$0 { deleteError = nil } })) {
