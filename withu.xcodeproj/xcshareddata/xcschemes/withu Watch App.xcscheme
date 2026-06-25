@@ -21,20 +21,6 @@
                ReferencedContainer = "container:withu.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1D34FFA92FB4C2760033EC7D"
-               BuildableName = "withu.app"
-               BlueprintName = "withu"
-               ReferencedContainer = "container:withu.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
