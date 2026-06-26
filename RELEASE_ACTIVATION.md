@@ -10,6 +10,7 @@
 - [x] 결제 시스템 6단계 코드 (Phase 1~6) + 클라/서버 전부
 - [x] APIConfig Release URL = `https://withu-api.ysy1398.workers.dev` (skip-worktree, 로컬)
 - [x] bundle ID = `sy.withu` (서버 aud 검증과 일치)
+- [x] **§2 완료 (2026-06-27)**: D1 마이그레이션 0002~0005 원격 적용 + `SESSION_SECRET` 설정 + 최신 코드 배포(계정삭제·보안수정 라이브). `/auth/apple`·`DELETE /me`·`/me` 정상 응답 확인. (`ENFORCE_AUTH` 는 §5 까지 off 유지)
 
 ---
 
