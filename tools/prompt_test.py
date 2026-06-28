@@ -15,7 +15,16 @@ withu 디폴트 프롬프트 테스트 하니스.
   ! cd ~/Desktop/withu && python3 tools/prompt_test.py --identity "round green cat, big eyes"
 끝나면 prompt-tests/index.html 가 자동으로 열림.
 """
-import os, re, json, base64, argparse, html, subprocess, urllib.request, urllib.error
+import os, re, json, base64, argparse, html, subprocess, ssl, urllib.request, urllib.error
+
+# macOS Python 이 시스템 루트 인증서를 못 찾는 경우 대비 — certifi 번들 사용, 없으면 미검증 폴백.
+try:
+    import certifi
+    SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    SSL_CTX = ssl.create_default_context()
+    SSL_CTX.check_hostname = False
+    SSL_CTX.verify_mode = ssl.CERT_NONE
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_FILE = os.path.join(ROOT, "withu", "Character", "CharacterState.swift")
@@ -59,8 +68,10 @@ def generate(prompt, quality, art_style):
     }).encode()
     req = urllib.request.Request(SERVER + "/generate", data=body,
                                  headers={"Content-Type": "application/json",
-                                          "X-Withu-Kind": "single"}, method="POST")
-    with urllib.request.urlopen(req, timeout=600) as r:
+                                          "X-Withu-Kind": "single",
+                                          # 기본 Python-urllib UA 는 Cloudflare 가 403 으로 막음.
+                                          "User-Agent": "withu-prompt-test/1.0"}, method="POST")
+    with urllib.request.urlopen(req, timeout=600, context=SSL_CTX) as r:
         data = json.loads(r.read())
     return base64.b64decode(data["image_base64"])
 
