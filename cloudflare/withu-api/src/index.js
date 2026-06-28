@@ -11,6 +11,11 @@ function openaiBase(env) {
   return (env.AI_GATEWAY_BASE || "https://api.openai.com/v1").replace(/\/$/, "");
 }
 
+// 인증(Authenticated) AI Gateway 면 cf-aig-authorization 헤더 필요. 토큰 미설정이면 빈 객체(비인증 게이트웨이/직접호출).
+function gatewayHeaders(env) {
+  return env.AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.AI_GATEWAY_TOKEN}` } : {};
+}
+
 // FastAPI server.py 와 parity — art_style 별 다른 [Style guidelines].
 // 캐릭터 일관성을 위해 클라이언트엔 노출되지 않는 고정 prompt.
 const STYLE_SECTIONS = {
@@ -343,7 +348,8 @@ function generateImageFromPrompt(input, env) {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...gatewayHeaders(env)
     },
     body: JSON.stringify({
       model: OPENAI_IMAGE_MODEL,
@@ -367,7 +373,8 @@ function editImage(input, env) {
   return fetch(`${openaiBase(env)}/images/edits`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${env.OPENAI_API_KEY}`
+      "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+      ...gatewayHeaders(env)
     },
     body: form
   });
