@@ -20,7 +20,27 @@ import prompt_test as P   # SSL_CTX, SERVER 재사용
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_FILE = os.path.join(ROOT, "withu", "Character", "CharacterState.swift")
+INDEX_JS = os.path.join(ROOT, "cloudflare", "withu-api", "src", "index.js")
 PORT = 8765
+
+
+def parse_server_prompt():
+    """index.js 의 COMMON_PROMPT + STYLE_SECTIONS(casual/pixel) 파싱 → 스타일별 시스템 프롬프트.
+    (로컬 index.js 기준 — 라이브 반영은 wrangler deploy 필요)"""
+    try:
+        src = open(INDEX_JS, encoding="utf-8").read()
+        def backtick(after):
+            i = src.index(after)
+            s = src.index("`", i) + 1
+            e = src.index("`", s)
+            return src[s:e]
+        common = backtick("COMMON_PROMPT =")
+        casual = backtick("casual:")
+        pixel = backtick("pixel:")
+        return {st: common.replace("{styleSection}", sec)
+                for st, sec in (("casual", casual), ("pixel", pixel))}
+    except Exception as e:
+        return {"casual": f"(파싱 실패: {e})", "pixel": ""}
 
 # 앱(단건 생성)의 흰배경 가드와 동일.
 WHITE_BG = (". Solid clean WHITE background, no shadows, no gradients, no other elements behind the character. "
@@ -73,6 +93,7 @@ def generate(prompt, quality, art_style, reference=None, region_retries=8):
 
 
 STATES = parse_states()
+SYSTEM = parse_server_prompt()
 
 PAGE = r"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -108,22 +129,30 @@ PAGE = r"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
   <textarea id="desc" class="desc">__DEFAULT_IDENTITY__</textarea>
   <div class="row" style="margin-top:10px">
     품질 <select id="quality"><option>low</option><option>medium</option><option>high</option></select>
-    스타일 <select id="style"><option value="casual">Soft</option><option value="pixel">Pixel</option></select>
+    스타일 <select id="style" onchange="updateSys()"><option value="casual">Soft</option><option value="pixel">Pixel</option></select>
     <label style="display:inline;margin:0"><input type="checkbox" id="withAnim" style="width:auto"> 전체 생성 시 움직임도 함께</label>
     <button onclick="genAll()">전체 생성</button>
     <span id="globalStatus" class="spin"></span>
   </div>
 </div>
+<details style="margin-bottom:14px">
+  <summary style="cursor:pointer;font-weight:600">서버 시스템 프롬프트 (현재 스타일) — 모든 생성 앞에 자동으로 붙음</summary>
+  <div class="full" id="sysPrompt"></div>
+  <div class="note">⚠️ 로컬 index.js 기준 — 라이브 서버 반영은 wrangler deploy 필요. 실제 전송 = 이 시스템 프롬프트 + 각 카드의 클라 프롬프트.</div>
+</details>
 <div id="cards"></div>
 
 <script>
 const STATES = __STATES_JSON__;
 const WHITE_BG = __WHITE_BG_JSON__;
+const SYSTEM = __SYSTEM_JSON__;
 const frame0 = {};   // name -> b64 (움직임 reference)
 
 const desc = () => document.getElementById('desc').value.trim();
 const quality = () => document.getElementById('quality').value;
 const style = () => document.getElementById('style').value;
+
+function updateSys(){ document.getElementById('sysPrompt').textContent = SYSTEM[style()] || ''; }
 
 function buildStatic(pose){ const d=desc(); return (d? d+', ':'') + pose + WHITE_BG; }
 function buildAnim(pose, anim){ const d=desc(); return (d? d+', ':'') + pose + '. Animation frame 2 (for a 2-frame swap loop): ' + anim + WHITE_BG; }
@@ -212,6 +241,7 @@ async function genAll(){
 }
 
 render();
+updateSys();
 </script></body></html>"""
 
 
@@ -231,6 +261,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             page = (PAGE.replace("__STATES_JSON__", json.dumps(STATES, ensure_ascii=False))
                         .replace("__WHITE_BG_JSON__", json.dumps(WHITE_BG))
+                        .replace("__SYSTEM_JSON__", json.dumps(SYSTEM, ensure_ascii=False))
                         .replace("__DEFAULT_IDENTITY__", DEFAULT_IDENTITY))
             self._send(200, page, "text/html")
         else:
