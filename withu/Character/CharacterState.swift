@@ -91,7 +91,7 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .walking:        return "산책"
         case .running:        return "달리기"
         case .cycling:        return "자전거"
-        case .energetic:      return "Energetic"
+        case .energetic:      return "활기찬"
         case .beach:          return "해변"
         case .cloudy:         return "흐림"
         case .rainyShelter:   return "우산"
