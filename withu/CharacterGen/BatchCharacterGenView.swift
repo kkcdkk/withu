@@ -46,6 +46,8 @@ struct BatchCharacterGenView: View {
     @State private var stateReferencePickerItems: [CharacterState: PhotosPickerItem] = [:]
     /// idle 앵커링 — idle 을 먼저 만들어 승인받고, 나머지 상태 생성의 reference 로 사용(일관성).
     @State private var idleAnchor: UIImage?
+    /// 앵커 reference 용 원본(1024). results 는 128 썸네일이라 그대로 쓰면 일관성 reference 품질이 떨어짐.
+    @State private var idleFullRes: UIImage?
     @State private var awaitingIdleApproval: Bool = false
     /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
     @State private var referenceHint: String = ""
@@ -371,6 +373,11 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// 실제 생성 장수 — idle 은 항상 먼저 만들므로, 선택 안 했으면 +1.
+    private var requiredCount: Int {
+        selectedStates.contains(.idle) ? selectedStates.count : selectedStates.count + 1
+    }
+
     /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
     @ViewBuilder
     private var idleApprovalSection: some View {
@@ -430,7 +437,7 @@ struct BatchCharacterGenView: View {
             .tint(.withuPink)
             .disabled(isGenerating || selectedStates.isEmpty
                       || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      || remainingGenerations < selectedStates.count)
+                      || remainingGenerations < requiredCount)
 
             if isGenerating {
                 Text("만드는 동안엔 앱을 그대로 켜 주세요. 지금 \(inProgressStates.count)개를 만들고 있어요.")
@@ -443,7 +450,7 @@ struct BatchCharacterGenView: View {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
                 .tint(.secondary)
-            } else if remainingGenerations < selectedStates.count {
+            } else if remainingGenerations < requiredCount {
                 Text("오늘 남은 \(remainingGenerations)회로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 순간을 줄이거나 더 충전해 주세요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
@@ -698,15 +705,17 @@ struct BatchCharacterGenView: View {
                               referenceNote: userRefNote(for: .idle), frame: 0)
         if ok {
             GenerationQuota.record(1)
+            WidgetCenter.shared.reloadAllTimelines()   // idle 저장 즉시 위젯 반영
             awaitingIdleApproval = true   // 승인 대기 → idleApprovalSection 노출
         }
     }
 
     /// 2단계 — 승인된 idle 을 앵커로 나머지 선택 상태(+애니메이션)를 생성.
     private func approveIdleAndContinue() async {
-        guard let idle = results[.idle] else { return }
-        idleAnchor = idle
+        // 연타 재진입 차단 — awaitingIdleApproval 을 await 전에 동기로 끔.
+        guard awaitingIdleApproval, let idle = idleFullRes ?? results[.idle] else { return }
         awaitingIdleApproval = false
+        idleAnchor = idle           // 원본(1024) 우선 — 일관성 reference 품질
         isGenerating = true
 
         defer {
@@ -760,7 +769,11 @@ struct BatchCharacterGenView: View {
         let ok = await runOne(.idle, reference: idleRef,
                               consistencyPrefix: idleRef != nil,
                               referenceNote: userRefNote(for: .idle), frame: 0)
-        if ok { GenerationQuota.record(1) }
+        if ok {
+            GenerationQuota.record(1)
+        } else {
+            awaitingIdleApproval = false   // 실패 → 승인 게이트 해제(데드엔드 방지, 에러는 resultsSection 노출)
+        }
     }
 
     /// state 하나의 task — frame 0 (+ animated 면 frame 1 도 순차) 실행
@@ -796,7 +809,12 @@ struct BatchCharacterGenView: View {
         // 이전 에러 표시 제거 + 진행 표시 시작
         errors.removeValue(forKey: state)
         let refB64 = resolveReference(for: state)
-        await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil)
+        let ok = await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil,
+                              referenceNote: userRefNote(for: state))
+        if ok {
+            GenerationQuota.record(1)
+            remainingGenerations = GenerationQuota.remainingToday()
+        }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -848,6 +866,7 @@ struct BatchCharacterGenView: View {
             let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
             if frame == 0 {
                 results[state] = small
+                if state == .idle { idleFullRes = img }   // 앵커 reference 는 원본(1024)으로
             } else {
                 resultsFrame1[state] = small
             }
