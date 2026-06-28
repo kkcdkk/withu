@@ -117,6 +117,29 @@ enum ImageProcessing {
         }
     }
 
+    /// 알파(투명)가 있으면 흰 배경에 합성해 평탄화.
+    /// frame0 은 생성(흰배경)인데 frame1 은 edit 라 모델이 가끔 알파를 만들어 배경이 어긋남 → 통일용.
+    /// 알파 없으면 원본 그대로 반환(no-op).
+    static func flattenedOnWhite(_ image: UIImage) -> UIImage {
+        if let cg = image.cgImage {
+            switch cg.alphaInfo {
+            case .none, .noneSkipLast, .noneSkipFirst:
+                return image   // 알파 없음 — 평탄화 불필요
+            default:
+                break
+            }
+        }
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = true
+        format.scale = image.scale
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+        return renderer.image { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(origin: .zero, size: image.size))
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+    }
+
     // MARK: - Helpers
 
     private static func cgOrientation(_ orientation: UIImage.Orientation) -> CGImagePropertyOrientation {

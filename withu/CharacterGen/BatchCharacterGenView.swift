@@ -932,12 +932,13 @@ struct BatchCharacterGenView: View {
                 errors[state] = "이미지를 받지 못했어요"
                 return false
             }
-            // raw (white BG) 그대로 저장. Vision 처리는 사용자가 post-gen 에 선택.
+            // edit(frame1)이 알파를 만들 수 있어 흰배경으로 평탄화 — frame0/frame1 배경 통일.
+            let flat = ImageProcessing.flattenedOnWhite(img)
             // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
-            let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
+            let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
             if frame == 0 {
                 results[state] = small
-                if state == .idle { idleFullRes = img }   // 앵커 reference 는 원본(1024)으로
+                if state == .idle { idleFullRes = flat }   // 앵커 reference 는 원본(1024, 흰배경)으로
             } else {
                 resultsFrame1[state] = small
             }

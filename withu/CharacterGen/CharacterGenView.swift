@@ -797,9 +797,10 @@ struct CharacterGenView: View {
                 lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
                 return
             }
-            // raw (white BG) 그대로 저장 — Vision 처리는 사용자가 post-gen 에 선택.
+            // edit(frame1)이 알파를 만들 수 있어 흰배경으로 평탄화 — frame0/frame1 배경 통일.
+            let flat = ImageProcessing.flattenedOnWhite(img)
             // 128px 로 다운샘플 — 메인 화면 200, 워치 64, 위젯 60 다 커버 + 디스크 절약
-            let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
+            let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
             if frame == 0 {
                 resultImage = small
                 revisedPrompt = resp.revisedPrompt
