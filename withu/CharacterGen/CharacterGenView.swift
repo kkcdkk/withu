@@ -216,7 +216,7 @@ struct CharacterGenView: View {
 
     private var promptSection: some View {
         Section {
-            Text("내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 자동으로 붙어요.")
+            Text("내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 기본으로 시스템에 설정되어 있어요.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             TextEditor(text: $prompt)
@@ -232,7 +232,7 @@ struct CharacterGenView: View {
                             .allowsHitTesting(false)
                     }
                 }
-            DisclosureGroup("처음이라면? 항목별로 채우기") {
+            DisclosureGroup("프롬프트 항목별로 채우기") {
                 helperField("주제", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
                 helperField("색감 (선택)", text: $colorField, placeholder: "연두 파스텔톤")
@@ -243,7 +243,13 @@ struct CharacterGenView: View {
             .font(.callout)
             .disabled(isGenerating)
         } header: {
-            Text("1. 캐릭터 설명")
+            VStack(alignment: .leading, spacing: 3) {
+                Text("캐릭터 생성하기")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .textCase(nil)
+                Text("1. 캐릭터 프롬프트")
+            }
         }
     }
 
@@ -353,7 +359,7 @@ struct CharacterGenView: View {
                     .disabled(isGenerating)
             }
         } header: {
-            Text("2. 참고 사진 (선택)")
+            Text("2. 참고 사진 (Optional)")
         } footer: {
             Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요.")
                 .foregroundStyle(.secondary)
@@ -394,7 +400,7 @@ struct CharacterGenView: View {
                         .frame(minHeight: 70)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("첫 장면과 어떻게 다를지 적어요. 영어로 적으면 더 정확해요. 비워두면 알아서 채워져요.")
+                    Text("첫 장면과 어떻게 다를지 적어요. 영어로 적으면 더 정확해요. 비워두면 앱에서 기본으로 설정된 프롬프트로 채워져요.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
