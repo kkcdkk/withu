@@ -426,7 +426,7 @@ struct BatchCharacterGenView: View {
                 if isGenerating {
                     HStack {
                         ProgressView()
-                        Text("만드는 중… \(results.count + errors.count)/\(selectedStates.count)")
+                        Text("만드는 중… \(results.count + errors.count)/\(requiredCount)")
                     }
                 } else {
                     Label("만들기 시작", systemImage: "wand.and.stars")
@@ -440,7 +440,7 @@ struct BatchCharacterGenView: View {
                       || remainingGenerations < requiredCount)
 
             if isGenerating {
-                Text("만드는 동안엔 앱을 그대로 켜 주세요. 지금 \(inProgressStates.count)개를 만들고 있어요.")
+                Text("만드는 동안엔 앱을 그대로 켜 주세요. (\(results.count + errors.count)/\(requiredCount) 완료)")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button(role: .destructive) {
@@ -470,13 +470,17 @@ struct BatchCharacterGenView: View {
 
     private var resultsSection: some View {
         Section("만들어진 모습") {
-            let columns = [GridItem(.flexible()), GridItem(.flexible())]
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(CharacterState.allCases, id: \.self) { state in
-                    if let img = displayedImage(for: state) {
-                        resultCard(state: state, image: img)
-                    } else if let err = errors[state] {
-                        errorCard(state: state, error: err)
+            // LazyVGrid 는 Form 섹션 안에서 높이 계산이 어긋나 아래가 잘림 → 수동 2열 그리드.
+            let shown = CharacterState.allCases.filter { displayedImage(for: $0) != nil || errors[$0] != nil }
+            VStack(spacing: 12) {
+                ForEach(Array(stride(from: 0, to: shown.count, by: 2)), id: \.self) { i in
+                    HStack(alignment: .top, spacing: 12) {
+                        resultCell(shown[i]).frame(maxWidth: .infinity)
+                        if i + 1 < shown.count {
+                            resultCell(shown[i + 1]).frame(maxWidth: .infinity)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
                     }
                 }
             }
@@ -524,6 +528,16 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// 결과 그리드 셀 — 이미지면 결과 카드, 에러면 에러 카드.
+    @ViewBuilder
+    private func resultCell(_ state: CharacterState) -> some View {
+        if let img = displayedImage(for: state) {
+            resultCard(state: state, image: img)
+        } else if let err = errors[state] {
+            errorCard(state: state, error: err)
+        }
+    }
+
     /// per-state 현재 표시 이미지 — toggle 따라 raw 또는 transparent.
     private func displayedImage(for state: CharacterState) -> UIImage? {
         let useTransparent = displayTransparentByState[state] ?? false
@@ -561,6 +575,46 @@ struct BatchCharacterGenView: View {
                 ConnectivityManager.shared.sendCharacterImage(tF1, for: state, frame: 1)
             }
             displayTransparentByState[state] = true
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// 한 모습만 배경 토글 — on 이면 Vision 처리본, off 면 raw 로 active slot 적용.
+    @MainActor
+    private func applyTransparentOne(_ state: CharacterState, on: Bool) async {
+        guard let raw = results[state] else { return }
+        if on {
+            isProcessingTransparentBulk = true
+            defer { isProcessingTransparentBulk = false }
+            let transparent: UIImage
+            if let cached = transparentResults[state] {
+                transparent = cached
+            } else {
+                transparent = await ImageProcessing.bestEffortTransparent(raw)
+                transparentResults[state] = transparent
+            }
+            CharacterImageStore.saveActiveSlotOnly(transparent, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(transparent, for: state, frame: 0)
+            if let rawF1 = resultsFrame1[state] {
+                let tF1: UIImage
+                if let cachedF1 = transparentResultsFrame1[state] {
+                    tF1 = cachedF1
+                } else {
+                    tF1 = await ImageProcessing.bestEffortTransparent(rawF1)
+                    transparentResultsFrame1[state] = tF1
+                }
+                CharacterImageStore.saveActiveSlotOnly(tF1, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(tF1, for: state, frame: 1)
+            }
+            displayTransparentByState[state] = true
+        } else {
+            CharacterImageStore.saveActiveSlotOnly(raw, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(raw, for: state, frame: 0)
+            if let rawF1 = resultsFrame1[state] {
+                CharacterImageStore.saveActiveSlotOnly(rawF1, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(rawF1, for: state, frame: 1)
+            }
+            displayTransparentByState[state] = false
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -890,13 +944,29 @@ struct BatchCharacterGenView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    Image(uiImage: image)
+                    Image(uiImage: displayedImage(for: state) ?? image)
                         .resizable()
                         .scaledToFit()
                         .frame(maxHeight: 320)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     Text(state.koreanShortLabel)
                         .font(.callout.weight(.semibold))
+
+                    // 이 모습만 배경 토글 (개별)
+                    Picker("배경", selection: Binding(
+                        get: { displayTransparentByState[state] ?? false },
+                        set: { on in Task { await applyTransparentOne(state, on: on) } }
+                    )) {
+                        Text("흰 배경").tag(false)
+                        Text("배경 빼기").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .disabled(isProcessingTransparentBulk)
+                    if isProcessingTransparentBulk {
+                        HStack { ProgressView(); Text("배경 빼는 중…") }
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("어떻게 바꿀까요").font(.caption).foregroundStyle(.secondary)
