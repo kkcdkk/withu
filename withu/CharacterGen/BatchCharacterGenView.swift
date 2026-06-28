@@ -159,7 +159,7 @@ struct BatchCharacterGenView: View {
                 .font(.callout)
                 .disabled(isGenerating)
         } header: {
-            Text("내 캐릭터의 모습")
+            Text("캐릭터 설명")
         } footer: {
             Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"")
                 .foregroundStyle(.secondary)
@@ -327,7 +327,7 @@ struct BatchCharacterGenView: View {
                     .disabled(isGenerating)
             }
         } header: {
-            Text("이미 있는 캐릭터 사진 (선택)")
+            Text("참고 사진 (선택)")
         } footer: {
             Text("사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요.")
                 .foregroundStyle(.secondary)
@@ -366,7 +366,7 @@ struct BatchCharacterGenView: View {
                 }
             }
         } header: {
-            Text("분위기 정하기")
+            Text("스타일")
         } footer: {
             Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요.")
                 .foregroundStyle(.secondary)

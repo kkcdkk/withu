@@ -39,6 +39,8 @@ struct CharacterGenView: View {
     /// AI 생성 모드 — 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var referenceImage: UIImage?
+    /// 참고사진에서 무엇을 참고할지 (참고사진 있을 때만 프롬프트에 반영).
+    @State private var referenceHint: String = ""
 
     /// 이미지 첨부 모드 — 첨부 + 배경 제거 처리된 결과
     @State private var importPickerItem: PhotosPickerItem?
@@ -84,6 +86,7 @@ struct CharacterGenView: View {
                     promptSection       // 1. 캐릭터 설명
                     referenceSection    // 2. 참고 사진
                     optionsSection      // 3. 스타일
+                    generateButtonSection   // 만들기
                     resultSection
                     refinementSection
                 } else {
@@ -239,6 +242,14 @@ struct CharacterGenView: View {
             }
             .font(.callout)
             .disabled(isGenerating)
+        } header: {
+            Text("1. 캐릭터 설명")
+        }
+    }
+
+    /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.
+    private var generateButtonSection: some View {
+        Section {
             if isGenerating {
                 generatingLabel
                 Button(role: .destructive) {
@@ -261,11 +272,13 @@ struct CharacterGenView: View {
                     generateTask = Task { await generate() }
                 } label: {
                     Label("이 모습으로 만들기", systemImage: "wand.and.stars")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
                 .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        } header: {
-            Text("1. 캐릭터 설명")
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 if isGenerating {
@@ -332,6 +345,12 @@ struct CharacterGenView: View {
                         .disabled(isGenerating)
                     }
                 }
+            }
+            if referenceImage != nil {
+                TextField("이 사진에서 무엇을 참고하나요? (예: 얼굴, 색, 전체 느낌)",
+                          text: $referenceHint, axis: .vertical)
+                    .font(.callout)
+                    .disabled(isGenerating)
             }
         } header: {
             Text("2. 참고 사진 (선택)")
@@ -632,6 +651,15 @@ struct CharacterGenView: View {
         return desc.isEmpty ? pose : "\(desc), \(pose)"
     }
 
+    /// 참고사진이 있을 때 프롬프트 앞에 붙는 일관성 지시 (무엇을 참고할지 hint 반영).
+    private func referencePrefix() -> String {
+        guard referenceImage != nil else { return "" }
+        let note = referenceHint.trimmingCharacters(in: .whitespacesAndNewlines)
+        return note.isEmpty
+            ? "Same character as the reference image. "
+            : "Same character as the reference image (keep in particular: \(note)). "
+    }
+
     /// "항목별로 채우기" 한 줄 — 라벨 + 입력칸.
     private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
@@ -696,7 +724,7 @@ struct CharacterGenView: View {
         }
         saveDescription()
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
-        await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
+        await send(prompt: referencePrefix() + composedPrompt, reference: referenceB64, frame: 0)
         // 성공한 장만 횟수 차감
         if resultImage != nil { GenerationQuota.record() }
         // 연속 이미지 — frame 0 성공 시 그 결과를 reference 로 frame 1 추가
