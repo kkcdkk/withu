@@ -44,6 +44,11 @@ struct BatchCharacterGenView: View {
     /// state 별 개별 참고 이미지. 있으면 전체 reference 보다 우선.
     @State private var stateReferenceImages: [CharacterState: UIImage] = [:]
     @State private var stateReferencePickerItems: [CharacterState: PhotosPickerItem] = [:]
+    /// idle 앵커링 — idle 을 먼저 만들어 승인받고, 나머지 상태 생성의 reference 로 사용(일관성).
+    @State private var idleAnchor: UIImage?
+    @State private var awaitingIdleApproval: Bool = false
+    /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
+    @State private var referenceHint: String = ""
 
     // MARK: - Progress
 
@@ -91,8 +96,11 @@ struct BatchCharacterGenView: View {
                 stateListSection
                 referenceSection
                 optionsSection
-                startSection
-                if !results.isEmpty || !errors.isEmpty {
+                if !awaitingIdleApproval {
+                    startSection
+                }
+                idleApprovalSection
+                if !awaitingIdleApproval && (!results.isEmpty || !errors.isEmpty) {
                     resultsSection
                 }
             }
@@ -310,6 +318,12 @@ struct BatchCharacterGenView: View {
                     }
                 }
             }
+            if referenceImage != nil {
+                TextField("이 사진에서 무엇을 참고하나요? (예: 얼굴, 색, 전체 느낌)",
+                          text: $referenceHint, axis: .vertical)
+                    .font(.callout)
+                    .disabled(isGenerating)
+            }
         } header: {
             Text("이미 있는 캐릭터 사진 (선택)")
         } footer: {
@@ -354,6 +368,46 @@ struct BatchCharacterGenView: View {
         } footer: {
             Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요.")
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
+    @ViewBuilder
+    private var idleApprovalSection: some View {
+        if awaitingIdleApproval, let idle = results[.idle] {
+            Section {
+                Image(uiImage: idle)
+                    .resizable().scaledToFit()
+                    .frame(maxHeight: 280)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                Button {
+                    batchTask = Task { await approveIdleAndContinue() }
+                } label: {
+                    Label("이 모습으로 나머지 만들기", systemImage: "checkmark.circle.fill")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
+                .disabled(isGenerating)
+                Button {
+                    batchTask = Task { await regenerateIdle() }
+                } label: {
+                    if isGenerating {
+                        HStack { ProgressView(); Text("다시 만드는 중…") }
+                    } else {
+                        Label("다시 만들기", systemImage: "arrow.clockwise")
+                    }
+                }
+                .tint(.secondary)
+                .disabled(isGenerating)
+            } header: {
+                Text("기준 모습 확인")
+            } footer: {
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요. 마음에 들면 진행하세요.")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -586,18 +640,31 @@ struct BatchCharacterGenView: View {
 
     /// state 의 reference base64 결정. state 별 > 공통 > nil.
     /// startBatch / retryOne 양쪽에서 사용.
-    private func resolveReference(for state: CharacterState) -> String? {
-        if let img = stateReferenceImages[state],
-           let data = img.pngData() {
+    /// 사용자가 직접 넣은 참고사진만 (상태별 → 전역). idle 앵커는 제외.
+    private func resolveUserReference(for state: CharacterState) -> String? {
+        if let img = stateReferenceImages[state], let data = img.pngData() {
             return data.base64EncodedString()
         }
         return referenceImage?.pngData()?.base64EncodedString()
     }
 
+    /// 생성에 쓸 reference: 사용자 참고사진 → (idle 외 상태면) 승인된 idle 앵커 → 없음.
+    private func resolveReference(for state: CharacterState) -> String? {
+        if let user = resolveUserReference(for: state) { return user }
+        if state != .idle, let anchor = idleAnchor { return anchor.pngData()?.base64EncodedString() }
+        return nil
+    }
+
+    /// 참고사진 "무엇을 참고" 힌트 — 사용자 참고사진이 실제로 쓰일 때만(앵커엔 미적용).
+    private func userRefNote(for state: CharacterState) -> String {
+        guard stateReferenceImages[state] != nil || referenceImage != nil else { return "" }
+        return referenceHint.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// 동시 호출 개수. 1 = 순차 (가장 안정적). 연속 이미지 ON 시도 한 번에 한 호출.
     private static let maxConcurrent: Int = 1
 
-    /// 전체 병렬 시작 — TaskGroup 풀 패턴으로 maxConcurrent 개만 동시 진행.
+    /// 1단계 — idle 을 먼저 만들어 앵커로 삼고, 사용자 승인을 기다린다.
     private func startBatch() async {
         isGenerating = true
         batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
@@ -607,25 +674,16 @@ struct BatchCharacterGenView: View {
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
+        idleAnchor = nil
+        awaitingIdleApproval = false
 
         defer {
             isGenerating = false
             inProgressStates.removeAll()
             stateStartedAt.removeAll()
-            showFinishedAlert = true
-            // 성공한 장수만큼 오늘 횟수 차감 (frame 0 + 연속 frame 1)
-            GenerationQuota.record(results.count + resultsFrame1.count)
             remainingGenerations = GenerationQuota.remainingToday()
-            WidgetCenter.shared.reloadAllTimelines()
-            // 결과 종합 알림 — 모두 성공이면 success, 일부 실패면 warning.
-            if errors.isEmpty {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            } else {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            }
         }
 
-        // 사전 reachability 체크 — 18+ 호출 실패하면서 시간만 가는 거 방지.
         do {
             try await APIClient.shared.preflightPing()
         } catch {
@@ -633,9 +691,48 @@ struct BatchCharacterGenView: View {
             return
         }
 
-        let toGen = CharacterState.allCases.filter { selectedStates.contains($0) }
-        var iterator = toGen.makeIterator()
+        // idle 먼저 (앵커, frame 0). 사용자 참고사진이 있으면 그걸 reference 로.
+        let idleRef = resolveUserReference(for: .idle)
+        let ok = await runOne(.idle, reference: idleRef,
+                              consistencyPrefix: idleRef != nil,
+                              referenceNote: userRefNote(for: .idle), frame: 0)
+        if ok {
+            GenerationQuota.record(1)
+            awaitingIdleApproval = true   // 승인 대기 → idleApprovalSection 노출
+        }
+    }
 
+    /// 2단계 — 승인된 idle 을 앵커로 나머지 선택 상태(+애니메이션)를 생성.
+    private func approveIdleAndContinue() async {
+        guard let idle = results[.idle] else { return }
+        idleAnchor = idle
+        awaitingIdleApproval = false
+        isGenerating = true
+
+        defer {
+            isGenerating = false
+            inProgressStates.removeAll()
+            stateStartedAt.removeAll()
+            showFinishedAlert = true
+            // 2단계에서 만든 장수 차감 (idle frame0 은 1단계에서 이미 반영).
+            GenerationQuota.record(max(0, results.count - 1) + resultsFrame1.count)
+            remainingGenerations = GenerationQuota.remainingToday()
+            WidgetCenter.shared.reloadAllTimelines()
+            if errors.filter({ $0.key != .idle }).isEmpty {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            }
+        }
+
+        // idle 의 움직임(frame 1) — frame 0(앵커)을 reference 로 체이닝.
+        if generateAnimated, let f0Ref = idle.pngData()?.base64EncodedString() {
+            await runOne(.idle, reference: f0Ref, consistencyPrefix: true, frame: 1)
+        }
+
+        // 나머지 선택 상태 (idle 제외) — resolveReference 가 idle 앵커를 reference 로 넣음.
+        let rest = CharacterState.allCases.filter { selectedStates.contains($0) && $0 != .idle }
+        var iterator = rest.makeIterator()
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<Self.maxConcurrent {
                 guard let state = iterator.next() else { break }
@@ -648,14 +745,33 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// idle 다시 만들기 (승인 대기 유지).
+    private func regenerateIdle() async {
+        isGenerating = true
+        defer {
+            isGenerating = false
+            inProgressStates.removeAll()
+            stateStartedAt.removeAll()
+            remainingGenerations = GenerationQuota.remainingToday()
+        }
+        results.removeValue(forKey: .idle)
+        errors.removeValue(forKey: .idle)
+        let idleRef = resolveUserReference(for: .idle)
+        let ok = await runOne(.idle, reference: idleRef,
+                              consistencyPrefix: idleRef != nil,
+                              referenceNote: userRefNote(for: .idle), frame: 0)
+        if ok { GenerationQuota.record(1) }
+    }
+
     /// state 하나의 task — frame 0 (+ animated 면 frame 1 도 순차) 실행
     private func addStateTask(group: inout TaskGroup<Void>, state: CharacterState) {
         let refB64 = resolveReference(for: state)
+        let note = userRefNote(for: state)
         let animated = generateAnimated
         group.addTask { @MainActor in
             // frame 0
             let ok = await runOne(state, reference: refB64,
-                                  consistencyPrefix: refB64 != nil, frame: 0)
+                                  consistencyPrefix: refB64 != nil, referenceNote: note, frame: 0)
             // frame 1 — frame 0 성공 시에만, 그 결과를 reference 로 체이닝
             if ok, animated, let f0 = results[state],
                let f0Ref = f0.pngData()?.base64EncodedString() {
@@ -688,15 +804,16 @@ struct BatchCharacterGenView: View {
     /// frame == 0: 기본. frame == 1: 애니메이션용 (이전 결과를 reference 로 chain + 다른 포즈).
     @discardableResult
     private func runOne(_ state: CharacterState, reference: String?,
-                        consistencyPrefix: Bool, frame: Int = 0) async -> Bool {
+                        consistencyPrefix: Bool, referenceNote: String = "", frame: Int = 0) async -> Bool {
         inProgressStates.insert(state)
         stateStartedAt[state] = .now
         defer {
             inProgressStates.remove(state)
             stateStartedAt.removeValue(forKey: state)
         }
+        let note = referenceNote.isEmpty ? "" : " (keep in particular: \(referenceNote))"
         let prefix = consistencyPrefix
-            ? "Same exact character as the reference image — only the pose/scene differs. "
+            ? "Same exact character as the reference image\(note) — only the pose/scene differs. "
             : ""
         let pose = stateHints[state] ?? state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
