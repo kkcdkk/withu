@@ -25,8 +25,8 @@ struct BatchCharacterGenView: View {
 
     @State private var quality: String = "low"
     @State private var artStyle: String = "casual"
-    /// 켜져 있으면 state 당 frame 0 + frame 1 두 장 생성 → 메인 화면이 swap 애니메이션
-    @State private var generateAnimated: Bool = false
+    /// 움직임(frame 1) 만들 상태들. 비어 있으면 정적만. 상태별 토글 + '모두 움직임' 으로 관리.
+    @State private var animatedStates: Set<CharacterState> = []
     /// frame 2 변화 힌트 (영어, 전체 state 공통). 비우면 각 state 의 animationFrame2Hint 자동 사용.
     @State private var animationHintOverride: String = ""
     /// Vision 처리된 transparent 버전 캐시 (per-state).
@@ -204,6 +204,15 @@ struct BatchCharacterGenView: View {
             // state 별 참고 이미지 (있으면 전체 reference 보다 우선)
             stateReferencePicker(state)
 
+            Toggle("움직임 (2장 · 메인에서 움직여요)", isOn: Binding(
+                get: { animatedStates.contains(state) },
+                set: { on in
+                    if on { animatedStates.insert(state) } else { animatedStates.remove(state) }
+                }
+            ))
+            .font(.footnote)
+            .disabled(isGenerating)
+
             Button("기본값으로 되돌리기") {
                 stateHints[state] = state.generationHint
             }
@@ -349,11 +358,17 @@ struct BatchCharacterGenView: View {
             }
             .pickerStyle(.menu).disabled(isGenerating)
 
-            Toggle("움직이는 캐릭터 만들기 (한 모습당 2장)", isOn: $generateAnimated)
-                .disabled(isGenerating)
-            if generateAnimated {
+            Toggle("모두 움직이는 캐릭터로 (한 모습당 2장)", isOn: Binding(
+                get: { !selectedStates.isEmpty && selectedStates.isSubset(of: animatedStates) },
+                set: { on in
+                    if on { animatedStates.formUnion(selectedStates) }
+                    else { animatedStates.subtract(selectedStates) }
+                }
+            ))
+            .disabled(isGenerating)
+            if !animatedStates.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 ?(모든 모습에 함께 쓰여요)")
+                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 ?(움직이는 모습에 함께 쓰여요)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     TextEditor(text: $animationHintOverride)
@@ -373,9 +388,11 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 실제 생성 장수 — idle 은 항상 먼저 만들므로, 선택 안 했으면 +1.
+    /// 실제 생성 장수 — idle 은 항상 먼저 만들므로 선택 안 했으면 +1, 움직임 상태는 frame1 만큼 +1씩.
     private var requiredCount: Int {
-        selectedStates.contains(.idle) ? selectedStates.count : selectedStates.count + 1
+        let base = selectedStates.contains(.idle) ? selectedStates.count : selectedStates.count + 1
+        let anim = animatedStates.intersection(selectedStates.union([.idle])).count
+        return base + anim
     }
 
     /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
@@ -789,7 +806,7 @@ struct BatchCharacterGenView: View {
         }
 
         // idle 의 움직임(frame 1) — frame 0(앵커)을 reference 로 체이닝.
-        if generateAnimated, let f0Ref = idle.pngData()?.base64EncodedString() {
+        if animatedStates.contains(.idle), let f0Ref = idle.pngData()?.base64EncodedString() {
             await runOne(.idle, reference: f0Ref, consistencyPrefix: true, frame: 1)
         }
 
@@ -834,7 +851,7 @@ struct BatchCharacterGenView: View {
     private func addStateTask(group: inout TaskGroup<Void>, state: CharacterState) {
         let refB64 = resolveReference(for: state)
         let note = userRefNote(for: state)
-        let animated = generateAnimated
+        let animated = animatedStates.contains(state)
         group.addTask { @MainActor in
             // frame 0
             let ok = await runOne(state, reference: refB64,
