@@ -738,7 +738,7 @@ struct CharacterGenView: View {
            let f0Ref = f0.pngData()?.base64EncodedString() {
             let trimmedHint = animationHint.trimmingCharacters(in: .whitespacesAndNewlines)
             let hint = trimmedHint.isEmpty ? targetState.animationFrame2Hint : trimmedHint
-            let animPrompt = "\(composedPrompt). Animation frame 2 (for a 2-frame swap loop): \(hint)"
+            let animPrompt = "\(composedPrompt). Animation frame 2 (for a 2-frame swap loop): \(hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image — do not zoom in or out, crop, shift, or resize. Same framing and canvas composition, only the described pose change differs."
             await send(prompt: animPrompt, reference: f0Ref, frame: 1)
             if resultFrame2 != nil { GenerationQuota.record() }
         }

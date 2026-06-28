@@ -910,7 +910,8 @@ struct BatchCharacterGenView: View {
         if frame == 1 {
             let trimmed = animationHintOverride.trimmingCharacters(in: .whitespacesAndNewlines)
             let hint = trimmed.isEmpty ? state.animationFrame2Hint : trimmed
-            prompt += ". Animation frame 2 (for a 2-frame swap loop): \(hint)"
+            prompt += ". Animation frame 2 (for a 2-frame swap loop): \(hint)."
+            prompt += " CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image — do not zoom in or out, crop, shift, or resize. Same framing and canvas composition, only the described pose change differs."
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
