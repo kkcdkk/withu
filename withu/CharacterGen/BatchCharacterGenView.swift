@@ -24,7 +24,7 @@ struct BatchCharacterGenView: View {
     @State private var selectedStates: Set<CharacterState> = Set(CharacterState.userFacing)
 
     @State private var quality: String = "low"
-    @State private var artStyle: String = "casual"
+    @State private var artStyle: String = "pixel"
     /// 움직임(frame 1) 만들 상태들. 비어 있으면 정적만. 상태별 토글 + '모두 움직임' 으로 관리.
     @State private var animatedStates: Set<CharacterState> = []
     /// frame 2 변화 힌트 (영어, 전체 state 공통). 비우면 각 state 의 animationFrame2Hint 자동 사용.
@@ -97,8 +97,8 @@ struct BatchCharacterGenView: View {
         ZStack {
             backgroundGradient(for: .idle).ignoresSafeArea()
             Form {
-                identitySection
                 stateListSection
+                identitySection
                 referenceSection
                 optionsSection
                 if !awaitingIdleApproval {
@@ -162,7 +162,7 @@ struct BatchCharacterGenView: View {
                 .font(.callout)
                 .disabled(isGenerating)
         } header: {
-            Text("캐릭터 설명")
+            Text("캐릭터 프롬프트(캐릭터 설명)")
         } footer: {
             Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"")
                 .foregroundStyle(.secondary)
@@ -419,22 +419,22 @@ struct BatchCharacterGenView: View {
                 .tint(.withuPink)
                 .disabled(isGenerating)
 
-                // 마음에 안 들면 — ① 이 모습을 수정해서 다시  ② 완전히 새로
-                TextField("이 모습을 어떻게 바꿀까요? (예: 더 둥글게, 색 연하게)",
-                          text: $idleRevisionText, axis: .vertical)
-                    .font(.callout)
-                    .disabled(isGenerating)
+                // 마음에 안 들면 — ① 수정해서 생성하기(아래 수정사항 반영)  ② 완전히 새로
                 Button {
                     batchTask = Task { await reviseIdle() }
                 } label: {
                     if isGenerating {
                         HStack { ProgressView(); Text("만드는 중…") }
                     } else {
-                        Label("이 모습 수정해서 다시", systemImage: "wand.and.stars")
+                        Label("수정해서 생성하기", systemImage: "wand.and.stars")
                     }
                 }
                 .tint(.secondary)
                 .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
+                          text: $idleRevisionText, axis: .vertical)
+                    .font(.callout)
+                    .disabled(isGenerating)
                 Button {
                     batchTask = Task { await regenerateIdle() }
                 } label: {
@@ -445,7 +445,7 @@ struct BatchCharacterGenView: View {
             } header: {
                 Text("기준 모습 확인")
             } footer: {
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 다시' · 처음부터면 '완전히 새로'")
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 처음부터면 '완전히 새로'")
                     .foregroundStyle(.secondary)
             }
         }

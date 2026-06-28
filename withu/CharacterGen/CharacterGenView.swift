@@ -34,7 +34,7 @@ struct CharacterGenView: View {
 
     /// "low" $0.011 / "medium" $0.04 / "high" $0.17
     @State private var quality: String = "low"
-    @State private var artStyle: String = "casual"   // "casual" | "pixel"
+    @State private var artStyle: String = "pixel"   // "casual" | "pixel"
 
     /// AI 생성 모드 — 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
     @State private var photoPickerItem: PhotosPickerItem?
@@ -249,7 +249,7 @@ struct CharacterGenView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .textCase(nil)
-                Text("1. 캐릭터 프롬프트")
+                Text("1. 캐릭터 프롬프트(캐릭터 설명)")
             }
         }
     }
@@ -933,7 +933,7 @@ struct WeatherBackgroundGenView: View {
     @State private var condition: WeatherBackgroundCondition
     @State private var prompt: String
     @State private var quality: String = "low"
-    @State private var artStyle: String = "casual"
+    @State private var artStyle: String = "pixel"
     @State private var isGenerating: Bool = false
     @State private var generationStartedAt: Date?
     @State private var resultImage: UIImage?
