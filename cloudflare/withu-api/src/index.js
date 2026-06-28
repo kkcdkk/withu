@@ -36,13 +36,14 @@ const STYLE_SECTIONS = {
 `,
 };
 
-const COMMON_PROMPT = `You are illustrating mascot characters for the iOS app "withu".
+const COMMON_PROMPT = `You are illustrating a single cute mascot character.
 
 {styleSection}
 [Content guidelines]
 - Family-friendly, wholesome content only
 - No realistic humans, no violence, no inappropriate content
 - The image must work as a small icon — keep composition simple
+- Do NOT render any text, letters, words, numbers, captions, watermarks, labels, or signatures anywhere in the image
 
 [User request]
 `;
