@@ -274,6 +274,7 @@ struct CharacterGenView: View {
                     Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
             } else {
+                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                 Button {
                     generateTask = Task { await generate() }
                 } label: {
@@ -388,9 +389,6 @@ struct CharacterGenView: View {
                 qualityPreviewRow(label: "medium", asset: "quality_medium")
                 qualityPreviewRow(label: "high", asset: "quality_high")
             }
-
-            Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
-                .disabled(isGenerating)
         }
     }
 
