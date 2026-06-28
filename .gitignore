@@ -59,3 +59,4 @@ GoogleService-Info.plist
 # Cloudflare Workers / Node
 node_modules/
 .wrangler/
+prompt-tests/
