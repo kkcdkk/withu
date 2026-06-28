@@ -15,7 +15,7 @@ withu 디폴트 프롬프트 테스트 하니스.
   ! cd ~/Desktop/withu && python3 tools/prompt_test.py --identity "round green cat, big eyes"
 끝나면 prompt-tests/index.html 가 자동으로 열림.
 """
-import os, re, json, base64, argparse, html, subprocess, ssl, urllib.request, urllib.error
+import os, re, json, base64, argparse, html, subprocess, ssl, time, urllib.request, urllib.error
 
 # macOS Python 이 시스템 루트 인증서를 못 찾는 경우 대비 — certifi 번들 사용, 없으면 미검증 폴백.
 try:
@@ -61,19 +61,31 @@ def build_prompt(identity, hint):
     return f"{identity}, {hint}{WHITE_BG}"
 
 
-def generate(prompt, quality, art_style):
+def generate(prompt, quality, art_style, region_retries=8):
     body = json.dumps({
         "prompt": prompt, "steps": 30, "width": 1024, "height": 1024,
         "quality": quality, "art_style": art_style, "style": "auto",
     }).encode()
-    req = urllib.request.Request(SERVER + "/generate", data=body,
-                                 headers={"Content-Type": "application/json",
-                                          "X-Withu-Kind": "single",
-                                          # 기본 Python-urllib UA 는 Cloudflare 가 403 으로 막음.
-                                          "User-Agent": "withu-prompt-test/1.0"}, method="POST")
-    with urllib.request.urlopen(req, timeout=600, context=SSL_CTX) as r:
-        data = json.loads(r.read())
-    return base64.b64decode(data["image_base64"])
+    # OpenAI 지역 차단(403 "Country ... not supported")은 Cloudflare 출구 IP 가
+    # 요청마다 달라서 간헐적 — 새 요청으로 재시도하면 보통 곧 지원 지역으로 나감.
+    for attempt in range(region_retries + 1):
+        req = urllib.request.Request(SERVER + "/generate", data=body,
+                                     headers={"Content-Type": "application/json",
+                                              "X-Withu-Kind": "single",
+                                              # 기본 Python-urllib UA 는 Cloudflare 가 403 으로 막음.
+                                              "User-Agent": "withu-prompt-test/1.0"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=600, context=SSL_CTX) as r:
+                data = json.loads(r.read())
+            return base64.b64decode(data["image_base64"])
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors="ignore")
+            if e.code == 403 and "not supported" in detail and attempt < region_retries:
+                print(f"      ↻ 지역차단, 재시도 {attempt + 1}/{region_retries}", flush=True)
+                time.sleep(1.5)
+                continue
+            raise
+    raise RuntimeError("지역차단 재시도 모두 실패")
 
 
 def main():
