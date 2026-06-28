@@ -673,6 +673,9 @@ struct CharacterGenView: View {
         generationStartedAt = .now
         lastError = nil
         resultFrame2 = nil
+        // 새 생성 — 이전 투명(배경 제거) 캐시 무효화. 안 그러면 '배경 빼기' 보기에 옛 이미지가 남음.
+        transparentResult = nil
+        transparentResultFrame2 = nil
         // 백그라운드 진입해도 30초까지 살아남게 background task assertion.
         let bgTask = UIApplication.shared.beginBackgroundTask(withName: "withu.generate")
         defer {
@@ -705,6 +708,8 @@ struct CharacterGenView: View {
             await send(prompt: animPrompt, reference: f0Ref, frame: 1)
             if resultFrame2 != nil { GenerationQuota.record() }
         }
+        // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
+        if displayTransparent { await ensureTransparentResults() }
     }
 
     private func refine() async {
@@ -721,8 +726,9 @@ struct CharacterGenView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
-        // 다듬기는 단일 이미지 — 이전 연속(frame 1) 잔상 제거해 짝 불일치 방지
+        // 다듬기 — 새 결과로 갈아끼우므로 이전 연속(frame 1) + 투명 캐시(frame 0/1) 무효화.
         resultFrame2 = nil
+        transparentResult = nil
         transparentResultFrame2 = nil
         defer {
             isGenerating = false
@@ -732,6 +738,8 @@ struct CharacterGenView: View {
         await send(prompt: refinementPrompt, reference: referenceB64)
         if resultImage != nil { GenerationQuota.record() }
         refinementPrompt = ""
+        // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
+        if displayTransparent { await ensureTransparentResults() }
     }
 
     private func send(prompt: String, reference: String?, frame: Int = 0) async {
