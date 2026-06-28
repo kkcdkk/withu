@@ -40,6 +40,7 @@ struct PaywallView: View {
                         subscribedCard
                     } else if let sub = store.subscription {
                         subscriptionCard(sub)
+                        subscriptionDisclosure(sub)
                     }
 
                     if !store.creditPacks.isEmpty {
@@ -249,6 +250,24 @@ struct PaywallView: View {
             .disabled(store.isPurchasing)
         }
         .frostedCard()
+    }
+
+    /// 자동 갱신 구독 고지 (App Store 가이드라인 3.1.2 — 가격·기간·자동갱신·해지·약관/개인정보).
+    private func subscriptionDisclosure(_ product: Product) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(product.displayPrice) / 월 자동 갱신 구독이에요. 현재 기간이 끝나기 24시간 전까지 해지하지 않으면 같은 금액으로 자동 갱신돼요. 구독 관리·해지는 기기 설정 > Apple ID > 구독에서 할 수 있어요.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 16) {
+                Link("이용약관", destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!)
+                Link("개인정보처리방침", destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!)
+            }
+            .font(.caption2.weight(.semibold))
+            .tint(.withuPink)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
     }
 
     private var creditSection: some View {
