@@ -2,8 +2,14 @@ import { verifyAppleIdentityToken, signSession, subFromRequest, decodeJwsPayload
 import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
-const OPENAI_IMAGE_GENERATIONS_ENDPOINT = "https://api.openai.com/v1/images/generations";
-const OPENAI_IMAGE_EDITS_ENDPOINT = "https://api.openai.com/v1/images/edits";
+
+// OpenAI 호출 베이스. AI_GATEWAY_BASE(시크릿)가 설정되면 Cloudflare AI Gateway 경유 —
+// Worker 직접 호출의 출구 IP 지역이 요청마다 달라 OpenAI 가 간헐적 403("Country ... not supported")을
+// 주던 문제를, 게이트웨이의 안정적 출구로 회피한다. 미설정이면 OpenAI 직접 호출(폴백).
+//   형식: https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway>/openai
+function openaiBase(env) {
+  return (env.AI_GATEWAY_BASE || "https://api.openai.com/v1").replace(/\/$/, "");
+}
 
 // FastAPI server.py 와 parity — art_style 별 다른 [Style guidelines].
 // 캐릭터 일관성을 위해 클라이언트엔 노출되지 않는 고정 prompt.
@@ -52,7 +58,8 @@ export default {
         service: "withu-api",
         openai_configured: Boolean(env.OPENAI_API_KEY),
         db_configured: Boolean(env.DB),
-        auth_enforced: env.ENFORCE_AUTH === "true"
+        auth_enforced: env.ENFORCE_AUTH === "true",
+        ai_gateway: Boolean(env.AI_GATEWAY_BASE)
       });
     }
 
@@ -285,8 +292,8 @@ async function generateImage(request, env) {
   let openAIResponse;
   try {
     openAIResponse = input.reference_image_base64
-      ? await editImage(input, env.OPENAI_API_KEY)
-      : await generateImageFromPrompt(input, env.OPENAI_API_KEY);
+      ? await editImage(input, env)
+      : await generateImageFromPrompt(input, env);
   } catch (error) {
     if (sub) await refundGeneration(env, sub, charge.chargedFrom, idemKey);
     return jsonError(error.message, 400);
@@ -331,11 +338,11 @@ function buildFullPrompt(input) {
   return systemPromptFor(input.art_style) + input.prompt;
 }
 
-function generateImageFromPrompt(input, apiKey) {
-  return fetch(OPENAI_IMAGE_GENERATIONS_ENDPOINT, {
+function generateImageFromPrompt(input, env) {
+  return fetch(`${openaiBase(env)}/images/generations`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -348,7 +355,7 @@ function generateImageFromPrompt(input, apiKey) {
   });
 }
 
-function editImage(input, apiKey) {
+function editImage(input, env) {
   const form = new FormData();
   form.append("model", OPENAI_IMAGE_MODEL);
   form.append("prompt", buildFullPrompt(input));
@@ -357,10 +364,10 @@ function editImage(input, apiKey) {
   form.append("n", "1");
   form.append("image", base64ToBlob(input.reference_image_base64), "reference.png");
 
-  return fetch(OPENAI_IMAGE_EDITS_ENDPOINT, {
+  return fetch(`${openaiBase(env)}/images/edits`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`
+      "Authorization": `Bearer ${env.OPENAI_API_KEY}`
     },
     body: form
   });
