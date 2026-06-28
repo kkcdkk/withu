@@ -55,9 +55,9 @@ struct CharacterGenView: View {
     @State private var resultImage: UIImage?
     @State private var resultFrame2: UIImage?    // frame 1 (애니메이션용)
     @State private var generateAnimated: Bool = false
+    @State private var lastFrame0FullRes: UIImage?   // frame1 정규화용 1번째 프레임 원본(1024)
     /// frame 2 prompt 의 변화 힌트 (영어). 토글 ON 일 때만 노출.
     /// targetState 가 바뀌면 그 state 의 기본 hint 로 자동 갱신.
-    @State private var animationHint: String = CharacterState.idle.animationFrame2Hint
     /// frame 0/1 의 raw (white BG) ↔ transparent (Vision 처리) 캐시.
     /// 사용자가 [원본] / [투명 적용] 토글로 표시/적용 버전 선택.
     @State private var transparentResult: UIImage?
@@ -121,9 +121,8 @@ struct CharacterGenView: View {
         } message: {
             Text("사진 앱에 저장했어요.")
         }
-        .onChange(of: targetState) { _, new in
-            // prompt(캐릭터 설명)은 상태와 무관하게 유지 — 포즈만 자동(generationHint), 애니 힌트 갱신.
-            animationHint = new.animationFrame2Hint
+        .onChange(of: targetState) { _, _ in
+            // prompt(캐릭터 설명)은 상태와 무관하게 유지 — 포즈는 generationHint 로 자동 반영.
             refinementPrompt = ""
         }
         .onChange(of: subjectField) { _, _ in composeFromHelper() }
@@ -392,20 +391,6 @@ struct CharacterGenView: View {
 
             Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                 .disabled(isGenerating)
-            if generateAnimated {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("두 번째 장면")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextEditor(text: $animationHint)
-                        .frame(minHeight: 70)
-                        .font(.callout)
-                        .disabled(isGenerating)
-                    Text("첫 장면과 어떻게 다를지 적어요. 영어로 적으면 더 정확해요. 비워두면 앱에서 기본으로 설정된 프롬프트로 채워져요.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
     }
 
@@ -734,16 +719,17 @@ struct CharacterGenView: View {
         }
         saveDescription()
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
+        let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         await send(prompt: referencePrefix() + composedPrompt, reference: referenceB64, frame: 0)
+        let frame0Succeeded = resultImage !== prevResult
         // 성공한 장만 횟수 차감
-        if resultImage != nil { GenerationQuota.record() }
-        // 연속 이미지 — frame 0 성공 시 그 결과를 reference 로 frame 1 추가
-        if generateAnimated, let f0 = resultImage,
-           let f0Ref = f0.pngData()?.base64EncodedString() {
-            let trimmedHint = animationHint.trimmingCharacters(in: .whitespacesAndNewlines)
-            let hint = trimmedHint.isEmpty ? targetState.animationFrame2Hint : trimmedHint
-            let animPrompt = "\(composedPrompt). Animation frame 2 (for a 2-frame swap loop): \(hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image — do not zoom in or out, crop, shift, or resize. Same framing and canvas composition, only the described pose change differs."
-            await send(prompt: animPrompt, reference: f0Ref, frame: 1)
+        if frame0Succeeded { GenerationQuota.record() }
+        // 연속 이미지 — frame 0 성공 시 그 원본(1024)을 reference 로 frame 1 추가
+        if generateAnimated, frame0Succeeded,
+           let f0Full = lastFrame0FullRes ?? resultImage,
+           let f0Ref = f0Full.pngData()?.base64EncodedString() {
+            let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
+            await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full)
             if resultFrame2 != nil { GenerationQuota.record() }
         }
         // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
@@ -778,7 +764,8 @@ struct CharacterGenView: View {
         if frame == 1 {
             prompt += ". Animation frame 2 (for a 2-frame swap loop): \(targetState.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
         }
-        await send(prompt: prompt, reference: referenceB64, frame: frame)
+        await send(prompt: prompt, reference: referenceB64, frame: frame,
+                   matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil)
         if (frame == 1 ? resultFrame2 : resultImage) != nil { GenerationQuota.record() }
         refinementPrompt = ""
         // '배경 빼기' 보기 중이면 다듬은 프레임만 즉시 재처리(stale 방지).
@@ -791,7 +778,12 @@ struct CharacterGenView: View {
         }
     }
 
-    private func send(prompt: String, reference: String?, frame: Int = 0) async {
+    /// frame1(2번째 장면) 프롬프트 — "1번째와 거의 동일, 표정만 살짝" 강제.
+    private func animationFrame2Instruction(_ state: CharacterState) -> String {
+        " SECOND FRAME of a tiny 2-frame idle loop, almost identical to the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
+    }
+
+    private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil) async {
         // AI 에 흰 배경 강제 — 결과를 사용자가 post-gen 에 Vision 으로 정제할 수 있음.
         // 격자(체커보드) 방지: 일부 모델이 "투명"을 격자 무늬로 그려버림 → 단색 흰배경 명시.
         let finalPrompt = "\(prompt). Solid clean WHITE background, no shadows, no gradients, no other elements behind the character. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
@@ -812,12 +804,18 @@ struct CharacterGenView: View {
                 lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
                 return
             }
-            // edit(frame1)이 알파를 만들 수 있어 흰배경으로 평탄화 — frame0/frame1 배경 통일.
-            let flat = ImageProcessing.flattenedOnWhite(img)
+            // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
+            let flat: UIImage
+            if frame == 1, let ref = matchReference {
+                flat = await ImageProcessing.matchedToReference(img, reference: ref)
+            } else {
+                flat = ImageProcessing.flattenedOnWhite(img)
+            }
             // 128px 로 다운샘플 — 메인 화면 200, 워치 64, 위젯 60 다 커버 + 디스크 절약
             let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
             if frame == 0 {
                 resultImage = small
+                lastFrame0FullRes = flat   // frame1 정규화 reference (1024 원본)
                 revisedPrompt = resp.revisedPrompt
             } else {
                 resultFrame2 = small

@@ -27,8 +27,8 @@ struct BatchCharacterGenView: View {
     @State private var artStyle: String = "pixel"
     /// 움직임(frame 1) 만들 상태들. 비어 있으면 정적만. 상태별 토글 + '모두 움직임' 으로 관리.
     @State private var animatedStates: Set<CharacterState> = []
-    /// frame 2 변화 힌트 (영어, 전체 state 공통). 비우면 각 state 의 animationFrame2Hint 자동 사용.
-    @State private var animationHintOverride: String = ""
+    /// frame1 정규화용 — state 별 1번째 프레임 원본(1024, 흰배경).
+    @State private var frame0FullRes: [CharacterState: UIImage] = [:]
     /// Vision 처리된 transparent 버전 캐시 (per-state).
     /// bulk "투명 모두 적용" 또는 detail sheet per-state 토글로 채워짐.
     @State private var transparentResults: [CharacterState: UIImage] = [:]
@@ -369,20 +369,6 @@ struct BatchCharacterGenView: View {
                 }
             ))
             .disabled(isGenerating)
-            if !animatedStates.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("두 번째 장면은 어떻게 바뀌면 좋을까요 ?(움직이는 모습에 함께 쓰여요)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextEditor(text: $animationHintOverride)
-                        .frame(minHeight: 60)
-                        .font(.callout)
-                        .disabled(isGenerating)
-                    Text("비워두면 각 모습에 어울리게 알아서 움직여요.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
         } header: {
             Text("스타일")
         } footer: {
@@ -777,6 +763,10 @@ struct BatchCharacterGenView: View {
         saveDescription()                    // 캐릭터 설명을 프로필에 저장 — 단건 생성과 공유
         results.removeAll()
         resultsFrame1.removeAll()
+        frame0FullRes.removeAll()
+        transparentResults.removeAll()          // 이전 배치의 배경제거 캐시 잔존 방지
+        transparentResultsFrame1.removeAll()
+        displayTransparentByState.removeAll()
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
@@ -929,8 +919,9 @@ struct BatchCharacterGenView: View {
             // frame 0
             let ok = await runOne(state, reference: refB64,
                                   consistencyPrefix: refB64 != nil, referenceNote: note, frame: 0)
-            // frame 1 — frame 0 성공 시에만, 그 결과를 reference 로 체이닝
-            if ok, animated, let f0 = results[state],
+            // frame 1 — frame 0 성공 시에만, frame 0 원본(1024)을 reference 로 체이닝
+            // (128px 썸네일을 reference 로 보내면 캐릭터 디테일이 뭉개져 drift 가 커짐)
+            if ok, animated, let f0 = frame0FullRes[state] ?? results[state],
                let f0Ref = f0.pngData()?.base64EncodedString() {
                 await runOne(state, reference: f0Ref,
                              consistencyPrefix: true, frame: 1)
@@ -981,10 +972,7 @@ struct BatchCharacterGenView: View {
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         var prompt = desc.isEmpty ? "\(prefix)\(pose)" : "\(prefix)\(desc), \(pose)"
         if frame == 1 {
-            let trimmed = animationHintOverride.trimmingCharacters(in: .whitespacesAndNewlines)
-            let hint = trimmed.isEmpty ? state.animationFrame2Hint : trimmed
-            prompt += ". Animation frame 2 (for a 2-frame swap loop): \(hint)."
-            prompt += " CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image — do not zoom in or out, crop, shift, or resize. Same framing and canvas composition, only the described pose change differs."
+            prompt += ". SECOND FRAME of a tiny 2-frame idle loop, almost identical to the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
@@ -1006,12 +994,18 @@ struct BatchCharacterGenView: View {
                 errors[state] = "이미지를 받지 못했어요"
                 return false
             }
-            // edit(frame1)이 알파를 만들 수 있어 흰배경으로 평탄화 — frame0/frame1 배경 통일.
-            let flat = ImageProcessing.flattenedOnWhite(img)
+            // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
+            let flat: UIImage
+            if frame == 1, let ref0 = frame0FullRes[state] {
+                flat = await ImageProcessing.matchedToReference(img, reference: ref0)
+            } else {
+                flat = ImageProcessing.flattenedOnWhite(img)
+            }
             // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
             let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
             if frame == 0 {
                 results[state] = small
+                frame0FullRes[state] = flat               // frame1 정규화 reference
                 if state == .idle { idleFullRes = flat }   // 앵커 reference 는 원본(1024, 흰배경)으로
             } else {
                 resultsFrame1[state] = small
@@ -1215,13 +1209,20 @@ struct BatchCharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             if let data = Data(base64Encoded: resp.imageBase64),
                let img = UIImage(data: data) {
-                let flat = ImageProcessing.flattenedOnWhite(img)
+                // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
+                let flat: UIImage
+                if frame == 1, let ref0 = frame0FullRes[state] ?? results[state] {
+                    flat = await ImageProcessing.matchedToReference(img, reference: ref0)
+                } else {
+                    flat = ImageProcessing.flattenedOnWhite(img)
+                }
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 if frame == 1 {
                     resultsFrame1[state] = small
                     transparentResultsFrame1[state] = nil   // 배경 캐시 무효화
                 } else {
                     results[state] = small
+                    frame0FullRes[state] = flat
                     if state == .idle { idleFullRes = flat }
                     transparentResults[state] = nil
                 }
