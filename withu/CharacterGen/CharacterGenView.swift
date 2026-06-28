@@ -27,6 +27,10 @@ struct CharacterGenView: View {
     /// 저장된 묘사(CharacterProfile.aiPrompt)로 시작 — 비어 있으면 빈 칸(placeholder 안내).
     @State private var prompt: String = CharacterProfileStore.load().aiPrompt
     @State private var refinementPrompt: String = ""
+    /// "항목별로 채우기" 도우미 — 채우면 위 자유 설명칸(prompt)에 자동 합쳐짐.
+    @State private var subjectField: String = ""
+    @State private var looksField: String = ""
+    @State private var colorField: String = ""
 
     /// "low" $0.011 / "medium" $0.04 / "high" $0.17
     @State private var quality: String = "low"
@@ -118,6 +122,9 @@ struct CharacterGenView: View {
             animationHint = new.animationFrame2Hint
             refinementPrompt = ""
         }
+        .onChange(of: subjectField) { _, _ in composeFromHelper() }
+        .onChange(of: looksField) { _, _ in composeFromHelper() }
+        .onChange(of: colorField) { _, _ in composeFromHelper() }
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
         }
@@ -222,6 +229,16 @@ struct CharacterGenView: View {
                             .allowsHitTesting(false)
                     }
                 }
+            DisclosureGroup("처음이라면? 항목별로 채우기") {
+                helperField("주제", text: $subjectField, placeholder: "마시멜로 캐릭터")
+                helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
+                helperField("색감 (선택)", text: $colorField, placeholder: "연두 파스텔톤")
+                Text("채우면 위 설명칸에 자동으로 합쳐져요.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .font(.callout)
+            .disabled(isGenerating)
             if isGenerating {
                 generatingLabel
                 Button(role: .destructive) {
@@ -613,6 +630,28 @@ struct CharacterGenView: View {
         let desc = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let pose = targetState.generationHint
         return desc.isEmpty ? pose : "\(desc), \(pose)"
+    }
+
+    /// "항목별로 채우기" 한 줄 — 라벨 + 입력칸.
+    private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 64, alignment: .leading)
+            TextField(placeholder, text: text, axis: .vertical)
+                .font(.callout)
+        }
+    }
+
+    /// 항목별 입력(주제·생김새·색감)을 합쳐 캐릭터 설명칸(prompt)에 반영.
+    private func composeFromHelper() {
+        let parts = [subjectField, looksField, colorField]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !parts.isEmpty {
+            prompt = parts.joined(separator: ", ")
+        }
     }
 
     /// 캐릭터 설명을 프로필에 저장 — 다음에 열어도 유지되고, 일괄 생성도 같은 설명을 씀.
