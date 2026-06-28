@@ -63,6 +63,7 @@ struct CharacterGenView: View {
     @State private var transparentResult: UIImage?
     @State private var transparentResultFrame2: UIImage?
     @State private var displayTransparent: Bool = false
+    @State private var singleDetailFrame: Int = 0   // 결과에서 보고 있는 프레임(0=기본, 1=움직임)
     @State private var isProcessingTransparent: Bool = false
     @State private var revisedPrompt: String?
     @State private var lastError: String?
@@ -448,18 +449,19 @@ struct CharacterGenView: View {
                 let f0 = currentDisplay(frame: 0)
                 let f1 = currentDisplay(frame: 1)
                 if let f0, let f1 {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(spacing: 4) {
-                            Image(uiImage: f0).resizable().scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            Text("1번째").font(.caption2).foregroundStyle(.secondary)
-                        }
-                        VStack(spacing: 4) {
-                            Image(uiImage: f1).resizable().scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            Text("2번째").font(.caption2).foregroundStyle(.secondary)
-                        }
+                    // 기본 ↔ 움직임 좌우 스와이프 (위 점으로 프레임 표시)
+                    TabView(selection: $singleDetailFrame) {
+                        Image(uiImage: f0).resizable().scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 12)).tag(0)
+                        Image(uiImage: f1).resizable().scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 12)).tag(1)
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .always))
+                    .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+                    .frame(height: 260)
+                    Text(singleDetailFrame == 1 ? "2번째 (움직임)" : "1번째")
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
                 } else if let f0 {
                     Image(uiImage: f0)
                         .resizable()
@@ -501,7 +503,8 @@ struct CharacterGenView: View {
                     .tint(.withuPink)
                     .disabled(isProcessingTransparent)
                     Button("사진 앱에 저장") {
-                        Task { await saveToPhotos(f0) }
+                        let img = (f1 != nil ? currentDisplay(frame: singleDetailFrame) : f0) ?? f0
+                        Task { await saveToPhotos(img) }
                     }
                     .tint(.secondary)
                 }
@@ -553,7 +556,7 @@ struct CharacterGenView: View {
                     .frame(minHeight: 80)
                     .font(.callout)
                 Button {
-                    Task { await refine() }
+                    Task { await refine(frame: resultFrame2 != nil ? singleDetailFrame : 0) }
                 } label: {
                     if isGenerating {
                         HStack { ProgressView(); Text("다듬는 중…") }
@@ -563,7 +566,7 @@ struct CharacterGenView: View {
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: {
-                Text("이어서 다듬기")
+                Text(resultFrame2 != nil && singleDetailFrame == 1 ? "이어서 다듬기 (움직임 프레임)" : "이어서 다듬기")
             } footer: {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 같은 비용이 들어요.")
                     .foregroundStyle(.secondary)
@@ -707,6 +710,7 @@ struct CharacterGenView: View {
         generationStartedAt = .now
         lastError = nil
         resultFrame2 = nil
+        singleDetailFrame = 0
         // 새 생성 — 이전 투명(배경 제거) 캐시 무효화. 안 그러면 '배경 빼기' 보기에 옛 이미지가 남음.
         transparentResult = nil
         transparentResultFrame2 = nil
@@ -746,34 +750,45 @@ struct CharacterGenView: View {
         if displayTransparent { await ensureTransparentResults() }
     }
 
-    private func refine() async {
+    /// 보고 있는 프레임만 다듬기. frame1 은 frame0 을 앵커로 둬서 캐릭터/크기 일관성 유지.
+    private func refine(frame: Int) async {
         guard GenerationQuota.canGenerate() else {
             lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
             return
         }
-        guard let current = resultImage,
-              let pngData = current.pngData() else {
+        let currentSlot = frame == 1 ? resultFrame2 : resultImage
+        guard currentSlot != nil else {
             lastError = "기존 이미지를 다시 불러오지 못했어요. 다시 시도해 주세요."
             return
         }
-        let referenceB64 = pngData.base64EncodedString()
+        // reference: frame1 이면 frame0 앵커, frame0 이면 자기 자신
+        let anchor = frame == 1 ? (resultImage ?? currentSlot) : currentSlot
+        let referenceB64 = anchor?.pngData()?.base64EncodedString()
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
-        // 다듬기 — 새 결과로 갈아끼우므로 이전 연속(frame 1) + 투명 캐시(frame 0/1) 무효화.
-        resultFrame2 = nil
-        transparentResult = nil
-        transparentResultFrame2 = nil
+        // 선택한 프레임의 투명 캐시만 무효화 (다른 프레임은 보존).
+        if frame == 1 { transparentResultFrame2 = nil } else { transparentResult = nil }
         defer {
             isGenerating = false
             generationStartedAt = nil
             remainingGenerations = GenerationQuota.remainingToday()
         }
-        await send(prompt: refinementPrompt, reference: referenceB64)
-        if resultImage != nil { GenerationQuota.record() }
+        var prompt = refinementPrompt
+        if frame == 1 {
+            prompt += ". Animation frame 2 (for a 2-frame swap loop): \(targetState.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
+        }
+        await send(prompt: prompt, reference: referenceB64, frame: frame)
+        if (frame == 1 ? resultFrame2 : resultImage) != nil { GenerationQuota.record() }
         refinementPrompt = ""
-        // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
-        if displayTransparent { await ensureTransparentResults() }
+        // '배경 빼기' 보기 중이면 다듬은 프레임만 즉시 재처리(stale 방지).
+        if displayTransparent {
+            if frame == 1, let rawF2 = resultFrame2 {
+                transparentResultFrame2 = await ImageProcessing.bestEffortTransparent(rawF2)
+            } else if let raw = resultImage {
+                transparentResult = await ImageProcessing.bestEffortTransparent(raw)
+            }
+        }
     }
 
     private func send(prompt: String, reference: String?, frame: Int = 0) async {

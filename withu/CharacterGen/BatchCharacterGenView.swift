@@ -72,6 +72,7 @@ struct BatchCharacterGenView: View {
 
     // 결과 사진 클릭 시 sheet
     @State private var selectedResult: (state: CharacterState, image: UIImage)?
+    @State private var detailFrame: Int = 0   // 상세 시트에서 보고 있는 프레임(0=기본, 1=움직임)
     @State private var revisionText: String = ""
     @State private var isRevising: Bool = false
     @State private var revisionRefItem: PhotosPickerItem?
@@ -141,7 +142,7 @@ struct BatchCharacterGenView: View {
             get: { selectedResult.map { ResultSelection(state: $0.state, image: $0.image) } },
             set: { _ in selectedResult = nil }
         )) { sel in
-            resultDetailSheet(state: sel.state, image: sel.image)
+            resultDetailSheet(state: sel.state)
         }
     }
 
@@ -577,6 +578,17 @@ struct BatchCharacterGenView: View {
         return results[state]
     }
 
+    /// 프레임별 표시 이미지 — 배경 토글 상태 반영 (frame 1 = 움직임).
+    private func displayedImage(for state: CharacterState, frame: Int) -> UIImage? {
+        let useTransparent = displayTransparentByState[state] ?? false
+        if frame == 1 {
+            if useTransparent, let t = transparentResultsFrame1[state] { return t }
+            return resultsFrame1[state]
+        }
+        if useTransparent, let t = transparentResults[state] { return t }
+        return results[state]
+    }
+
     /// bulk — 모든 state 의 raw 를 Vision 처리, active slot 에 적용 + 워치 push.
     /// gallery 항목은 raw 유지 (원본 보존).
     @MainActor
@@ -671,6 +683,7 @@ struct BatchCharacterGenView: View {
         Button {
             selectedResult = (state, image)
             revisionText = ""
+            detailFrame = 0
         } label: {
             VStack(spacing: 6) {
                 ZStack(alignment: .bottomTrailing) {
@@ -1017,18 +1030,35 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 결과 카드 탭 시 열리는 sheet — 큰 이미지 + 저장 / 수정 옵션
+    /// 결과 카드 탭 시 열리는 sheet — 프레임 페이지(좌우 스와이프) + 저장 / 수정
     @ViewBuilder
-    private func resultDetailSheet(state: CharacterState, image: UIImage) -> some View {
+    private func resultDetailSheet(state: CharacterState) -> some View {
+        let hasF1 = resultsFrame1[state] != nil
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    Image(uiImage: displayedImage(for: state) ?? image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 320)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                    Text(state.koreanShortLabel)
+                    // 프레임 페이지 — 기본 ↔ 움직임 좌우 스와이프 (움직이는 캐릭터면 위에 점 표시)
+                    TabView(selection: $detailFrame) {
+                        Image(uiImage: displayedImage(for: state, frame: 0) ?? results[state] ?? UIImage())
+                            .resizable().scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(.horizontal)
+                            .tag(0)
+                        if hasF1 {
+                            Image(uiImage: displayedImage(for: state, frame: 1) ?? resultsFrame1[state] ?? UIImage())
+                                .resizable().scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .padding(.horizontal)
+                                .tag(1)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: hasF1 ? .always : .never))
+                    .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+                    .frame(height: 320)
+
+                    Text(hasF1
+                         ? "\(state.koreanShortLabel) · \(detailFrame == 1 ? "움직임 프레임" : "기본")"
+                         : state.koreanShortLabel)
                         .font(.callout.weight(.semibold))
 
                     // 이 모습만 배경 토글 (개별)
@@ -1048,7 +1078,8 @@ struct BatchCharacterGenView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("어떻게 바꿀까요").font(.caption).foregroundStyle(.secondary)
+                        Text(hasF1 && detailFrame == 1 ? "이 움직임 프레임을 어떻게 바꿀까요" : "어떻게 바꿀까요")
+                            .font(.caption).foregroundStyle(.secondary)
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
                             .lineLimit(2...4)
                             .textFieldStyle(.roundedBorder)
@@ -1085,7 +1116,9 @@ struct BatchCharacterGenView: View {
 
                     HStack(spacing: 12) {
                         Button {
-                            Task { await saveOneToPhotos(image) }
+                            let img = displayedImage(for: state, frame: hasF1 ? detailFrame : 0)
+                                ?? results[state] ?? UIImage()
+                            Task { await saveOneToPhotos(img) }
                         } label: {
                             Label("저장", systemImage: "square.and.arrow.down")
                                 .frame(maxWidth: .infinity)
@@ -1094,7 +1127,7 @@ struct BatchCharacterGenView: View {
                         .tint(.secondary)
 
                         Button {
-                            Task { await reviseOne(state, text: revisionText) }
+                            Task { await reviseOne(state, frame: hasF1 ? detailFrame : 0, text: revisionText) }
                         } label: {
                             if isRevising {
                                 ProgressView()
@@ -1141,21 +1174,26 @@ struct BatchCharacterGenView: View {
         showSaveResultAlert = true
     }
 
-    /// 기존 결과 + 자연어 수정 요청으로 재생성.
-    /// reference 우선순위: 사용자 첨부 > 기존 결과
-    private func reviseOne(_ state: CharacterState, text: String) async {
+    /// 기존 결과 + 자연어 수정 요청으로 재생성 (프레임별).
+    /// reference 우선순위: 사용자 첨부 > (frame1이면) frame0 앵커 > 해당 프레임 기존본
+    private func reviseOne(_ state: CharacterState, frame: Int, text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isRevising = true
         defer { isRevising = false }
 
-        // reference: 사용자가 새로 첨부한 거 우선, 없으면 기존 결과
+        // frame1 은 frame0 을 앵커로 두면 캐릭터/크기 일관성이 유지됨
+        let anchor: UIImage? = frame == 1 ? (results[state] ?? resultsFrame1[state]) : results[state]
         let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
-            ?? results[state]?.pngData()?.base64EncodedString()
+            ?? anchor?.pngData()?.base64EncodedString()
         let pose = stateHints[state] ?? state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let basePrompt = desc.isEmpty ? pose : "\(desc), \(pose)"
-        let modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
+        var modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
+        if frame == 1 {
+            modifiedPrompt += ". Animation frame 2 (for a 2-frame swap loop): \(state.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
+        }
+        modifiedPrompt += ". Solid clean WHITE background, no shadows, no transparency grid pattern."
 
         inProgressStates.insert(state)
         stateStartedAt[state] = .now
@@ -1177,14 +1215,25 @@ struct BatchCharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             if let data = Data(base64Encoded: resp.imageBase64),
                let img = UIImage(data: data) {
-                let transparent = await ImageProcessing.bestEffortTransparent(img)
-                let small = transparent.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? transparent
-                results[state] = small
-                CharacterImageStore.save(small, for: state)
-                ConnectivityManager.shared.sendCharacterImage(small, for: state)
-                selectedResult = (state, small)
+                let flat = ImageProcessing.flattenedOnWhite(img)
+                let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                if frame == 1 {
+                    resultsFrame1[state] = small
+                    transparentResultsFrame1[state] = nil   // 배경 캐시 무효화
+                } else {
+                    results[state] = small
+                    if state == .idle { idleFullRes = flat }
+                    transparentResults[state] = nil
+                }
+                displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
+                CharacterImageStore.save(small, for: state, frame: frame)
+                ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
+                if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+                revisionText = ""
                 WidgetCenter.shared.reloadAllTimelines()
             }
+        } catch APIError.paymentRequired {
+            showPaywall = true
         } catch {
             errors[state] = error.koreanizedDescription
         }
