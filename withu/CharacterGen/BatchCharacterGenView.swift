@@ -14,10 +14,8 @@ import WidgetKit
 struct BatchCharacterGenView: View {
     // MARK: - Input
 
-    @State private var baseIdentity: String = {
-        let p = CharacterProfileStore.load().aiPrompt
-        return p.isEmpty ? "round chibi mascot character with simple features and friendly closed-eye smile" : p
-    }()
+    /// 내 캐릭터 설명(정체성). 저장된 묘사(aiPrompt)로 시작 — 단건 생성과 공유, 비어 있으면 빈 칸.
+    @State private var baseIdentity: String = CharacterProfileStore.load().aiPrompt
 
     @State private var stateHints: [CharacterState: String] = Dictionary(
         uniqueKeysWithValues: CharacterState.userFacing.map { ($0, $0.generationHint) }
@@ -603,6 +601,7 @@ struct BatchCharacterGenView: View {
     private func startBatch() async {
         isGenerating = true
         batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
+        saveDescription()                    // 캐릭터 설명을 프로필에 저장 — 단건 생성과 공유
         results.removeAll()
         resultsFrame1.removeAll()
         errors.removeAll()
@@ -666,6 +665,16 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// 캐릭터 설명을 프로필에 저장 — 다음에 열어도 유지되고 단건 생성과 같은 설명을 씀.
+    private func saveDescription() {
+        var p = CharacterProfileStore.load()
+        let trimmed = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
+        if p.aiPrompt != trimmed {
+            p.aiPrompt = trimmed
+            CharacterProfileStore.save(p)
+        }
+    }
+
     /// 실패한 카드 탭 시 재시도. 같은 prompt + reference 그대로.
     private func retryOne(_ state: CharacterState) async {
         // 이전 에러 표시 제거 + 진행 표시 시작
@@ -689,7 +698,9 @@ struct BatchCharacterGenView: View {
         let prefix = consistencyPrefix
             ? "Same exact character as the reference image — only the pose/scene differs. "
             : ""
-        var prompt = "\(prefix)\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
+        let pose = stateHints[state] ?? state.generationHint
+        let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
+        var prompt = desc.isEmpty ? "\(prefix)\(pose)" : "\(prefix)\(desc), \(pose)"
         if frame == 1 {
             let trimmed = animationHintOverride.trimmingCharacters(in: .whitespacesAndNewlines)
             let hint = trimmed.isEmpty ? state.animationFrame2Hint : trimmed
@@ -856,7 +867,9 @@ struct BatchCharacterGenView: View {
         // reference: 사용자가 새로 첨부한 거 우선, 없으면 기존 결과
         let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
             ?? results[state]?.pngData()?.base64EncodedString()
-        let basePrompt = "\(baseIdentity), \(stateHints[state] ?? state.generationHint)"
+        let pose = stateHints[state] ?? state.generationHint
+        let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
+        let basePrompt = desc.isEmpty ? pose : "\(desc), \(pose)"
         let modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
 
         inProgressStates.insert(state)

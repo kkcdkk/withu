@@ -20,18 +20,17 @@ function gatewayHeaders(env) {
 // 캐릭터 일관성을 위해 클라이언트엔 노출되지 않는 고정 prompt.
 const STYLE_SECTIONS = {
   casual: `[Style guidelines]
-- Cute, round, chibi-style mascot character
-- Soft pastel colors, warm and approachable
-- Large head, small body, simple expressive features
-- Flat 2D illustration, clean lines, no harsh shading
+- Draw the character based on the user's description — appearance, species, and proportions follow the description
+- Soft, warm, approachable look with clean, readable shapes that work well as a small icon
+- Flat 2D illustration, clean lines, simple shading
 - Plain solid white background (never a checkerboard or transparency grid), full body visible, character centered
 - Keep the same character identity across requests
 `,
   pixel: `[Style guidelines]
-- 8-bit / 16-bit pixel art style mascot character
-- Retro video game sprite feel, limited palette (8~16 colors)
+- 8-bit / 16-bit pixel art sprite
+- Retro video game feel, limited palette (8~16 colors)
 - Clear pixel boundaries (no anti-aliasing, no smooth gradients)
-- Chibi proportions, large head, small body
+- Draw the character based on the user's description — appearance and proportions follow the description
 - Plain solid white background (never a checkerboard or transparency grid), character centered
 - Keep the same character identity across requests
 `,

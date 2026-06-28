@@ -34,8 +34,8 @@ SERVER = "https://withu-api.ysy1398.workers.dev"
 WHITE_BG = (". Solid clean WHITE background, no shadows, no gradients. "
             "Never draw a checkerboard or transparency grid pattern — "
             "the background must be one flat solid white color.")
-# baseIdentity 기본값 (앱의 fallback 과 동일). --identity 로 덮어쓰기.
-DEFAULT_IDENTITY = "round chibi mascot character with simple features and friendly closed-eye smile"
+# 캐릭터 "설명"(정체성) 예시값. 앱은 사용자가 직접 입력(동적) — 더는 chibi 고정 아님. --identity 로 바꿔 테스트.
+DEFAULT_IDENTITY = "round green sprout character with big friendly eyes"
 
 
 def parse_states():
@@ -137,9 +137,9 @@ def main():
         <div class="img">{img}</div>
         <div class="meta">
           <div class="state">{html.escape(label)} <span class="raw">{html.escape(st)}</span></div>
-          <div class="lbl">generationHint (디폴트)</div>
+          <div class="lbl">상태별 포즈 (자동, generationHint)</div>
           <div class="hint">{html.escape(hint)}</div>
-          <div class="lbl">서버로 보낸 전체 프롬프트</div>
+          <div class="lbl">캐릭터 설명 + 포즈 (서버로 보낸 전체)</div>
           <div class="prompt">{html.escape(prompt)}</div>
         </div>
       </div>""")
@@ -162,8 +162,9 @@ def main():
   .prompt{{font-family:ui-monospace,Menlo,monospace;font-size:.78rem;color:#555;background:#f7f7f8;border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-word;line-height:1.5}}
 </style></head><body>
   <h1>withu 디폴트 프롬프트 테스트</h1>
-  <div class="note">품질 {args.quality} · 스타일 {args.style} · baseIdentity: {html.escape(args.identity)}<br>
-  ⚠️ 서버가 추가로 [Style/Content] 시스템 프롬프트로 감쌉니다 (cloudflare/withu-api/src/index.js). 아래는 클라가 보낸 프롬프트.</div>
+  <div class="note">품질 {args.quality} · 스타일 {args.style} · 캐릭터 설명: {html.escape(args.identity)}<br>
+  ⚠️ 캐릭터 설명은 앱에서 사용자가 직접 입력(동적) — 여기선 --identity 값. 상태별 포즈만 자동(generationHint).
+  서버가 [Style/Content] 가드로 한 번 더 감쌉니다 (index.js). 아래는 클라가 보낸 프롬프트.</div>
   {''.join(cards)}
 </body></html>"""
     out_html = os.path.join(args.out, "index.html")

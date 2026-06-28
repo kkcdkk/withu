@@ -23,7 +23,9 @@ struct CharacterGenView: View {
     @State private var mode: GenerationMode = .aiGenerate
 
     @State private var targetState: CharacterState = .idle
-    @State private var prompt: String = CharacterState.idle.generationHint
+    /// 내 캐릭터 "설명"(정체성). 포즈는 선택한 상태(generationHint)에서 자동으로 붙음.
+    /// 저장된 묘사(CharacterProfile.aiPrompt)로 시작 — 비어 있으면 빈 칸(placeholder 안내).
+    @State private var prompt: String = CharacterProfileStore.load().aiPrompt
     @State private var refinementPrompt: String = ""
 
     /// "low" $0.011 / "medium" $0.04 / "high" $0.17
@@ -75,9 +77,9 @@ struct CharacterGenView: View {
                 modeSection
                 stateSection
                 if mode == .aiGenerate {
-                    optionsSection
-                    referenceSection
-                    promptSection
+                    promptSection       // 1. 캐릭터 설명
+                    referenceSection    // 2. 참고 사진
+                    optionsSection      // 3. 스타일
                     resultSection
                     refinementSection
                 } else {
@@ -112,7 +114,7 @@ struct CharacterGenView: View {
             Text("사진 앱에 저장했어요.")
         }
         .onChange(of: targetState) { _, new in
-            prompt = new.generationHint
+            // prompt(캐릭터 설명)은 상태와 무관하게 유지 — 포즈만 자동(generationHint), 애니 힌트 갱신.
             animationHint = new.animationFrame2Hint
             refinementPrompt = ""
         }
@@ -204,9 +206,22 @@ struct CharacterGenView: View {
 
     private var promptSection: some View {
         Section {
+            Text("내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 자동으로 붙어요.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             TextEditor(text: $prompt)
                 .frame(minHeight: 100)
                 .font(.callout)
+                .overlay(alignment: .topLeading) {
+                    if prompt.isEmpty {
+                        Text("예: 둥근 초록 새싹 캐릭터, 큰 눈, 작은 몸")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 8)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
             if isGenerating {
                 generatingLabel
                 Button(role: .destructive) {
@@ -233,7 +248,7 @@ struct CharacterGenView: View {
                 .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         } header: {
-            Text("캐릭터 생성")
+            Text("1. 캐릭터 설명")
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 if isGenerating {
@@ -302,7 +317,7 @@ struct CharacterGenView: View {
                 }
             }
         } header: {
-            Text("참고용 사진 (선택)")
+            Text("2. 참고 사진 (선택)")
         } footer: {
             Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요.")
                 .foregroundStyle(.secondary)
@@ -310,7 +325,7 @@ struct CharacterGenView: View {
     }
 
     private var optionsSection: some View {
-        Section("스타일") {
+        Section("3. 스타일") {
             Picker("그림 스타일", selection: $artStyle) {
                 Text("Soft").tag("casual")
                 Text("Pixel").tag("pixel")
@@ -592,6 +607,24 @@ struct CharacterGenView: View {
 
     // MARK: - Actions (AI generate)
 
+    /// 서버로 보낼 프롬프트 = 캐릭터 설명 + 선택한 상태의 포즈(generationHint).
+    /// 설명이 비어 있으면 포즈만(서버 스타일 가드가 채움).
+    private var composedPrompt: String {
+        let desc = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pose = targetState.generationHint
+        return desc.isEmpty ? pose : "\(desc), \(pose)"
+    }
+
+    /// 캐릭터 설명을 프로필에 저장 — 다음에 열어도 유지되고, 일괄 생성도 같은 설명을 씀.
+    private func saveDescription() {
+        var p = CharacterProfileStore.load()
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if p.aiPrompt != trimmed {
+            p.aiPrompt = trimmed
+            CharacterProfileStore.save(p)
+        }
+    }
+
     private func generate() async {
         guard GenerationQuota.canGenerate() else {
             lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
@@ -619,8 +652,9 @@ struct CharacterGenView: View {
             lastError = "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요."
             return
         }
+        saveDescription()
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
-        await send(prompt: prompt, reference: referenceB64, frame: 0)
+        await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
         // 성공한 장만 횟수 차감
         if resultImage != nil { GenerationQuota.record() }
         // 연속 이미지 — frame 0 성공 시 그 결과를 reference 로 frame 1 추가
@@ -628,7 +662,7 @@ struct CharacterGenView: View {
            let f0Ref = f0.pngData()?.base64EncodedString() {
             let trimmedHint = animationHint.trimmingCharacters(in: .whitespacesAndNewlines)
             let hint = trimmedHint.isEmpty ? targetState.animationFrame2Hint : trimmedHint
-            let animPrompt = "\(prompt). Animation frame 2 (for a 2-frame swap loop): \(hint)"
+            let animPrompt = "\(composedPrompt). Animation frame 2 (for a 2-frame swap loop): \(hint)"
             await send(prompt: animPrompt, reference: f0Ref, frame: 1)
             if resultFrame2 != nil { GenerationQuota.record() }
         }

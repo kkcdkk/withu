@@ -60,3 +60,4 @@ GoogleService-Info.plist
 node_modules/
 .wrangler/
 prompt-tests/
+__pycache__/
