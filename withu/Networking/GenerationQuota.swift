@@ -56,7 +56,11 @@ enum GenerationQuota {
 
     /// 지금 더 만들 수 있는 총 횟수 = (오늘 남은 일일 한도) + 크레딧.
     static func remainingToday() -> Int {
-        max(0, dailyAllowance - usedToday()) + credits()
+        #if DEBUG
+        return 9999   // 개발 빌드 — 무제한 테스트 (출시 빌드는 실제 한도)
+        #else
+        return max(0, dailyAllowance - usedToday()) + credits()
+        #endif
     }
 
     /// n 회를 만들 수 있나.
@@ -66,6 +70,9 @@ enum GenerationQuota {
 
     /// n 회 사용 기록. 오늘 한도부터 차감, 부족분은 크레딧에서.
     static func record(_ n: Int = 1) {
+        #if DEBUG
+        return   // 개발 빌드 — 차감 안 함 (무제한 테스트)
+        #else
         guard let d = defaults, n > 0 else { return }
         let today = todayStamp()
         let usedBase = d.integer(forKey: dateKey) == today ? d.integer(forKey: countKey) : 0
@@ -79,6 +86,7 @@ enum GenerationQuota {
         if fromCredits > 0 {
             d.set(max(0, credits() - fromCredits), forKey: creditsKey)
         }
+        #endif
     }
 
     /// 횟수 팩 구매 시 크레딧 적립.
