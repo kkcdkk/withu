@@ -49,6 +49,8 @@ struct BatchCharacterGenView: View {
     /// 앵커 reference 용 원본(1024). results 는 128 썸네일이라 그대로 쓰면 일관성 reference 품질이 떨어짐.
     @State private var idleFullRes: UIImage?
     @State private var awaitingIdleApproval: Bool = false
+    /// 승인 화면 — '수정해서 다시' 입력.
+    @State private var idleRevisionText: String = ""
     /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
     @State private var referenceHint: String = ""
 
@@ -415,21 +417,34 @@ struct BatchCharacterGenView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.withuPink)
                 .disabled(isGenerating)
+
+                // 마음에 안 들면 — ① 이 모습을 수정해서 다시  ② 완전히 새로
+                TextField("이 모습을 어떻게 바꿀까요? (예: 더 둥글게, 색 연하게)",
+                          text: $idleRevisionText, axis: .vertical)
+                    .font(.callout)
+                    .disabled(isGenerating)
+                Button {
+                    batchTask = Task { await reviseIdle() }
+                } label: {
+                    if isGenerating {
+                        HStack { ProgressView(); Text("만드는 중…") }
+                    } else {
+                        Label("이 모습 수정해서 다시", systemImage: "wand.and.stars")
+                    }
+                }
+                .tint(.secondary)
+                .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button {
                     batchTask = Task { await regenerateIdle() }
                 } label: {
-                    if isGenerating {
-                        HStack { ProgressView(); Text("다시 만드는 중…") }
-                    } else {
-                        Label("다시 만들기", systemImage: "arrow.clockwise")
-                    }
+                    Label("완전히 새로 만들기", systemImage: "arrow.clockwise")
                 }
                 .tint(.secondary)
                 .disabled(isGenerating)
             } header: {
                 Text("기준 모습 확인")
             } footer: {
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요. 마음에 들면 진행하세요.")
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 다시' · 처음부터면 '완전히 새로'")
                     .foregroundStyle(.secondary)
             }
         }
@@ -845,6 +860,51 @@ struct BatchCharacterGenView: View {
         } else {
             awaitingIdleApproval = false   // 실패 → 승인 게이트 해제(데드엔드 방지, 에러는 resultsSection 노출)
         }
+    }
+
+    /// idle 을 '수정사항' 으로 고쳐 다시 — 현재 idle 을 reference 로 edit. 승인 대기 유지.
+    private func reviseIdle() async {
+        let trimmed = idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let current = idleFullRes ?? results[.idle],
+              let refB64 = current.pngData()?.base64EncodedString() else { return }
+        isGenerating = true
+        defer {
+            isGenerating = false
+            inProgressStates.removeAll()
+            stateStartedAt.removeAll()
+            remainingGenerations = GenerationQuota.remainingToday()
+        }
+        errors.removeValue(forKey: .idle)
+        let pose = stateHints[.idle] ?? CharacterState.idle.generationHint
+        let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = desc.isEmpty ? pose : "\(desc), \(pose)"
+        let prompt = "\(base). User modification: \(trimmed). Solid clean WHITE background, no shadows, no gradients. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
+        do {
+            let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
+                                           steps: 30, width: 1024, height: 1024,
+                                           quality: quality, artStyle: artStyle, style: "auto")
+            let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
+            if let data = Data(base64Encoded: resp.imageBase64), let img = UIImage(data: data) {
+                let flat = ImageProcessing.flattenedOnWhite(img)
+                let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                results[.idle] = small
+                idleFullRes = flat
+                CharacterImageStore.save(small, for: .idle, frame: 0)
+                ConnectivityManager.shared.sendCharacterImage(small, for: .idle, frame: 0)
+                if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+                GenerationQuota.record(1)
+                idleRevisionText = ""
+                WidgetCenter.shared.reloadAllTimelines()
+            } else {
+                errors[.idle] = "이미지를 받지 못했어요"
+            }
+        } catch APIError.paymentRequired {
+            showPaywall = true
+        } catch {
+            errors[.idle] = error.koreanizedDescription
+        }
+        // awaitingIdleApproval 유지 — 수정본을 다시 승인/수정 가능
     }
 
     /// state 하나의 task — frame 0 (+ animated 면 frame 1 도 순차) 실행
