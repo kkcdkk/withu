@@ -112,14 +112,28 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
             }
+            if GenerationQuota.allowsTestCandyCode {
+                Text("테스트: '\(GenerationQuota.testCandyCode)' 입력하면 캔디 \(GenerationQuota.testCandyAmount)개")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
+            }
         }
     }
 
     private func redeem() async {
+        // TestFlight/샌드박스 전용 캔디 코드 — 로컬 캔디 +20 (운영 빌드에선 무시 → 서버로 보냄).
+        let trimmed = redeemInput.trimmingCharacters(in: .whitespaces)
+        if trimmed.uppercased() == GenerationQuota.testCandyCode, GenerationQuota.allowsTestCandyCode {
+            GenerationQuota.addCredits(GenerationQuota.testCandyAmount)
+            redeemMessage = "🍬 캔디 \(GenerationQuota.testCandyAmount)개 충전됐어요! (테스트)"
+            redeemInput = ""
+            return
+        }
         isRedeeming = true
         defer { isRedeeming = false }
         do {
-            let ent = try await APIClient.shared.redeem(code: redeemInput)
+            let ent = try await APIClient.shared.redeem(code: trimmed)
             auth.applyEntitlement(ent)
             redeemMessage = "적용됐어요! 잔액에 반영됐어요."
             redeemInput = ""
@@ -273,7 +287,7 @@ struct PaywallView: View {
     private var creditSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader("횟수 충전") {
-                Text("지금 \(auth.entitlement?.credits ?? GenerationQuota.credits())회 보유")
+                Text("지금 캔디 \(GenerationQuota.displayedCandy())개 보유")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

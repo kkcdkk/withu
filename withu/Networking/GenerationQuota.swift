@@ -94,4 +94,26 @@ enum GenerationQuota {
         guard let d = defaults, n > 0 else { return }
         d.set(credits() + n, forKey: creditsKey)
     }
+
+    /// 화면 표시용 보유 캔디 = 실제로 쓸 수 있는 로컬 잔액(credits).
+    /// canGenerate 가 로컬 credits 만 보므로, 배지도 같은 값을 보여 과대표시(쓸 수 없는데 숫자만 큼)를 막는다.
+    /// (로그인 구매분이 서버 entitlement 에만 있고 로컬 미반영인 desync 는 별도 과제 — 그때 여기서 합산.)
+    static func displayedCandy() -> Int {
+        credits()
+    }
+
+    // MARK: - 테스트 캔디 코드 (TestFlight/샌드박스 전용)
+
+    /// 입력하면 +20 캔디(로컬). 운영 App Store 빌드에서는 동작 안 함 → 무료 캔디 악용 방지.
+    static let testCandyCode = "CANDY20"
+    static let testCandyAmount = 20
+
+    /// 테스트 캔디 코드 허용 여부. App Store 운영 빌드(receipt)는 false, TestFlight/샌드박스(sandboxReceipt)·DEBUG 만 true.
+    static var allowsTestCandyCode: Bool {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
+    }
 }

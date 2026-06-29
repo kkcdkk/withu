@@ -154,7 +154,7 @@ struct BatchCharacterGenView: View {
         Button { showPaywall = true } label: {
             HStack(spacing: 3) {
                 Text("🍬")
-                Text("\(AuthManager.shared.entitlement?.credits ?? GenerationQuota.credits())")
+                Text("\(GenerationQuota.displayedCandy())")
                     .font(.callout.weight(.semibold))
                     .monospacedDigit()
             }
