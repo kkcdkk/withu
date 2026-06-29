@@ -818,7 +818,7 @@ struct BatchCharacterGenView: View {
                               consistencyPrefix: idleRef != nil,
                               referenceNote: userRefNote(for: .idle), frame: 0)
         if ok {
-            GenerationQuota.record(1)
+            // 차감은 runOne 성공 시 이미 됨.
             WidgetCenter.shared.reloadAllTimelines()   // idle 저장 즉시 위젯 반영
             awaitingIdleApproval = true   // 승인 대기 → idleApprovalSection 노출
         }
@@ -837,8 +837,7 @@ struct BatchCharacterGenView: View {
             inProgressStates.removeAll()
             stateStartedAt.removeAll()
             showFinishedAlert = true
-            // 2단계에서 만든 장수 차감 (idle frame0 은 1단계에서 이미 반영).
-            GenerationQuota.record(max(0, results.count - 1) + resultsFrame1.count)
+            // 차감은 각 runOne 성공 시 이미 됨 (크래시 안전).
             remainingGenerations = GenerationQuota.remainingToday()
             WidgetCenter.shared.reloadAllTimelines()
             if errors.filter({ $0.key != .idle }).isEmpty {
@@ -951,7 +950,7 @@ struct BatchCharacterGenView: View {
         let ok = await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil,
                               referenceNote: userRefNote(for: state))
         if ok {
-            GenerationQuota.record(1)
+            // 차감은 runOne 성공 시 이미 됨.
             remainingGenerations = GenerationQuota.remainingToday()
         }
         WidgetCenter.shared.reloadAllTimelines()
@@ -1022,6 +1021,7 @@ struct BatchCharacterGenView: View {
             CharacterImageStore.save(small, for: state, frame: frame)
             ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
             if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+            GenerationQuota.record(1)   // 성공 1장 = 즉시 차감 (도중 앱이 꺼져도 과생성 방지)
             return true
         } catch APIError.paymentRequired {
             showPaywall = true
