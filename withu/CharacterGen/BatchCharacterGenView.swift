@@ -178,7 +178,7 @@ struct BatchCharacterGenView: View {
                 .font(.callout)
                 .disabled(isGenerating)
         } header: {
-            Text("캐릭터 프롬프트(캐릭터 설명)")
+            Text("캐릭터 프롬프트")
         } footer: {
             Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"")
                 .foregroundStyle(.secondary)
@@ -197,12 +197,12 @@ struct BatchCharacterGenView: View {
             }
             .disabled(isGenerating)
         } header: {
-            Text("만들고 싶은 순간 (\(selectedStates.count)개)")
+            Text("만들고 싶은 상태 (\(selectedStates.count)개)")
         } footer: {
             let count = selectedStates.count
             let cost = costPer(quality: quality) * Double(count)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(count)개의 순간을 만들어요")
+                Text("\(count)개의 상태을 만들어요")
                 Text("드는 비용은 약 \(Int(cost * 1380))원이에요 (한 장당 약 \(Int(costPer(quality: quality) * 1380))원)")
             }
             .foregroundStyle(.secondary)
@@ -273,7 +273,7 @@ struct BatchCharacterGenView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 PhotosPicker(
-                    stateReferenceImages[state] == nil ? "이 순간에 쓸 사진 넣기" : "변경",
+                    stateReferenceImages[state] == nil ? "이 상태에 쓸 사진 넣기" : "변경",
                     selection: Binding(
                         get: { stateReferencePickerItems[state] },
                         set: { item in
@@ -292,7 +292,7 @@ struct BatchCharacterGenView: View {
                 .disabled(isGenerating)
 
                 if stateReferenceImages[state] != nil {
-                    Button("이 순간 사진 빼기", role: .destructive) {
+                    Button("이 상태 사진 빼기", role: .destructive) {
                         stateReferenceImages.removeValue(forKey: state)
                         stateReferencePickerItems.removeValue(forKey: state)
                     }
@@ -355,7 +355,7 @@ struct BatchCharacterGenView: View {
                     .disabled(isGenerating)
             }
         } header: {
-            Text("참고 사진 (선택)")
+            Text("참고 사진 (Optional)")
         } footer: {
             Text("사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요.")
                 .foregroundStyle(.secondary)
@@ -495,7 +495,7 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.secondary)
             } else if remainingGenerations < requiredCount {
-                Text("지금 \(remainingGenerations)번으로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 순간을 줄이거나 캔디를 충전해 주세요.")
+                Text("지금 \(remainingGenerations)번으로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 상태을 줄이거나 캔디를 충전해 주세요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button {

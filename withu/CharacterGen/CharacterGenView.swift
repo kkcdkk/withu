@@ -252,7 +252,7 @@ struct CharacterGenView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .textCase(nil)
-                Text("1. 캐릭터 프롬프트(캐릭터 설명)")
+                Text("캐릭터 프롬프트")
             }
         }
     }
@@ -397,17 +397,17 @@ struct CharacterGenView: View {
                 }
             }
         } header: {
-            Text("2. 참고 사진 (Optional)")
+            Text("참고 사진 (Optional)")
         } footer: {
             Text(referenceImage == nil
-                 ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요."
-                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'만 바뀌어요. 비우면 위에서 고른 순간의 포즈로 만들어요.")
+                 ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요."
+                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'에 기입해 준 요소만 바뀌어요. 비우면 위에서 고른 상태의 포즈로 만들어요.")
                 .foregroundStyle(.secondary)
         }
     }
 
     private var optionsSection: some View {
-        Section("3. 스타일") {
+        Section("스타일") {
             Picker("그림 스타일", selection: $artStyle) {
                 Text("Soft").tag("casual")
                 Text("Pixel").tag("pixel")
