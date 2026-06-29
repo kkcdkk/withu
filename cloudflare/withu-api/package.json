@@ -8,5 +8,9 @@
   },
   "devDependencies": {
     "wrangler": "^4.92.0"
+  },
+  "dependencies": {
+    "@peculiar/x509": "^2.0.0",
+    "reflect-metadata": "^0.2.2"
   }
 }

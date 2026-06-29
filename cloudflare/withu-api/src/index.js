@@ -1,4 +1,4 @@
-import { verifyAppleIdentityToken, signSession, subFromRequest, decodeJwsPayload } from "./auth.js";
+import { verifyAppleIdentityToken, signSession, subFromRequest, verifyAppleJws } from "./auth.js";
 import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1";
@@ -171,8 +171,8 @@ async function iapVerify(request, env) {
   if (!jws) return jsonError("signed_transaction 필요", 400);
 
   let payload;
-  try { payload = decodeJwsPayload(jws); }
-  catch { return jsonError("영수증 형식 오류", 400); }
+  try { payload = await verifyAppleJws(jws, env); }
+  catch { return jsonError("영수증 검증에 실패했어요.", 400); }
 
   const result = await applyPurchase(env, sub, payload);
   if (!result.ok) return jsonError("적립에 실패했어요.", result.status || 500);

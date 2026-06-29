@@ -126,8 +126,9 @@ export async function applyPurchase(env, sub, payload) {
   const transactionId = payload.transactionId;
   const productId = payload.productId;
   if (!transactionId || !productId) return { ok: false, status: 400 };
-  // 1차 방어 — 우리 앱 트랜잭션만 (JWS 서명 체인 검증은 출시 전 강화 TODO)
-  if (payload.bundleId && payload.bundleId !== "sy.withu") {
+  // 우리 앱 트랜잭션만. JWS 서명+체인은 verifyAppleJws 가 이미 검증했으니
+  // 정품 payload 엔 bundleId 가 반드시 있음 → 누락/불일치는 거부.
+  if (payload.bundleId !== "sy.withu") {
     return { ok: false, status: 400 };
   }
 
