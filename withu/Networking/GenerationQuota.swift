@@ -2,12 +2,12 @@
 //  GenerationQuota.swift
 //  withu (iOS)
 //
-//  AI 생성 횟수 관리 — 3층 구조.
-//    1) 무료 하루 한도 (freeDailyLimit)        — 매일 자정 리셋
-//    2) 구독자 하루 한도 (subscriberDailyLimit) — 구독 활성 시 상향, 매일 리셋
-//    3) 충전 크레딧 (credits)                   — 횟수 팩 구매분, 만료 없음, 일일 한도 소진 후 사용
+//  AI 생성 횟수 관리.
+//    1) 무료 하루 한도 (freeDailyLimit)        — 0 (무료 없음, 캔디로만 생성)
+//    2) 구독자 하루 한도 (subscriberDailyLimit) — 구독 활성 시, 매일 리셋
+//    3) 충전 크레딧 = 캔디 (credits)            — 캔디 팩 구매분, 만료 없음
 //
-//  소비 우선순위: 오늘의 (구독/무료) 한도 → 그 다음 충전 크레딧.
+//  소비 우선순위: 오늘의 (구독) 한도 → 그 다음 캔디.
 //
 //  ⚠️ 클라이언트 측 저장(App Group UserDefaults). 진짜 비용 방어는 서버 rate limit +
 //     OpenAI 대시보드 hard cap 이 담당. 신규 키만 추가 — 기존 스키마 불변.
@@ -16,8 +16,8 @@
 import Foundation
 
 enum GenerationQuota {
-    /// 무료 사용자 하루 한도.
-    static let freeDailyLimit = 10
+    /// 무료 사용자 하루 한도. 0 = 무료 없음 — 생성은 캔디(credits)로만.
+    static let freeDailyLimit = 0
     /// 구독 사용자 하루 한도. (무제한으로 하려면 아주 큰 값.)
     static let subscriberDailyLimit = 100
 

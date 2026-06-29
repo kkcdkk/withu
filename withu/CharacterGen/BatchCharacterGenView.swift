@@ -495,7 +495,7 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.secondary)
             } else if remainingGenerations < requiredCount {
-                Text("오늘 남은 \(remainingGenerations)회로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 순간을 줄이거나 더 충전해 주세요.")
+                Text("지금 \(remainingGenerations)번으로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 순간을 줄이거나 캔디를 충전해 주세요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button {
@@ -505,7 +505,7 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.withuPink)
             } else {
-                Text("오늘 \(remainingGenerations)번 더 만들 수 있어요.")
+                Text("지금 \(remainingGenerations)번 더 만들 수 있어요.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

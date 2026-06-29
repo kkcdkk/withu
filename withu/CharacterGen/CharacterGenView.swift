@@ -312,10 +312,10 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
                 if remainingGenerations == 0 {
-                    Text("오늘은 더 만들 수 없어요. 내일 다시 만들 수 있어요.")
+                    Text("캔디가 없어요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("오늘 \(remainingGenerations)번 더 만들 수 있어요.")
+                    Text("지금 \(remainingGenerations)번 더 만들 수 있어요.")
                         .foregroundStyle(.secondary)
                 }
             }
