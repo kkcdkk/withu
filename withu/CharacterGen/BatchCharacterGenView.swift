@@ -968,15 +968,20 @@ struct BatchCharacterGenView: View {
             inProgressStates.remove(state)
             stateStartedAt.removeValue(forKey: state)
         }
-        let note = referenceNote.isEmpty ? "" : " (keep in particular: \(referenceNote))"
-        let prefix = consistencyPrefix
-            ? "Same exact character as the reference image\(note) — only the pose/scene differs. "
-            : ""
         let pose = stateHints[state] ?? state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
-        var prompt = desc.isEmpty ? "\(prefix)\(pose)" : "\(prefix)\(desc), \(pose)"
+        let keepNote = referenceNote.isEmpty ? "" : " Keep especially: \(referenceNote)."
+        var prompt: String
         if frame == 1 {
-            prompt += ". SECOND FRAME of a tiny 2-frame idle loop, almost identical to the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
+            // frame1 — 1번째와 거의 동일, 표정/움직임만. Keep=전부(크기·위치 포함).
+            prompt = "Use the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
+        } else if consistencyPrefix {
+            // frame0 + 참고(idle 앵커 또는 사용자 사진) — Keep=캐릭터 전부, Change=이 state 의 포즈/장면.
+            let charNote = desc.isEmpty ? "" : " The character is: \(desc)."
+            prompt = "Use the reference image. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail.\(charNote)\(keepNote) Change ONLY: \(pose). Do not change the character design; keep all other visual details identical to the reference."
+        } else {
+            // frame0, 참고 없음 (보통 idle 최초 생성) — 설명 + 포즈.
+            prompt = desc.isEmpty ? pose : "\(desc), \(pose)"
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
