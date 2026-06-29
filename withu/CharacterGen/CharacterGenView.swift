@@ -374,11 +374,14 @@ struct CharacterGenView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("그대로 둘 것")
                         .font(.caption).foregroundStyle(.secondary)
-                    TextField("예: 얼굴, 머리색, 옷",
-                              text: $referenceKeep, axis: .vertical)
-                        .lineLimit(1...3)
+                    TextField("비우면 사진 그대로 유지돼요", text: $referenceKeep, axis: .vertical)
+                        .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
+                    Text("- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
@@ -387,7 +390,7 @@ struct CharacterGenView: View {
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("예)\n포즈 — 점프하는 모습\n각도 — 옆모습\n표정 — 활짝 웃기\n소품 — 모자")
+                    Text("- 포즈: [원하는 포즈]\n- 행동: [행동]\n- 각도: [정면/측면/3/4]\n- 표정: [필요하면]\n- 소품: [필요하면]")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
