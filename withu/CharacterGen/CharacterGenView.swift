@@ -374,7 +374,7 @@ struct CharacterGenView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("그대로 둘 것")
                         .font(.caption).foregroundStyle(.secondary)
-                    TextField("예: 얼굴, 머리색, 옷, 몸 비율 (비워두면 전부 그대로 유지)",
+                    TextField("예: 얼굴, 머리색, 옷",
                               text: $referenceKeep, axis: .vertical)
                         .lineLimit(1...3)
                         .font(.callout)
@@ -383,7 +383,7 @@ struct CharacterGenView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
                         .font(.caption).foregroundStyle(.secondary)
-                    TextField("예: 포즈 — 점프하는 모습 / 표정 — 활짝 웃기 / 각도 — 옆모습",
+                    TextField("예: 점프하는 포즈",
                               text: $referenceChange, axis: .vertical)
                         .lineLimit(1...3)
                         .font(.callout)
@@ -395,7 +395,7 @@ struct CharacterGenView: View {
         } footer: {
             Text(referenceImage == nil
                  ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요."
-                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'만 바뀌어요. 바꿀 것을 비우면 위에서 고른 순간의 포즈로 만들어요.")
+                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'(포즈·표정·각도 등)만 바뀌어요. 바꿀 것을 비우면 위에서 고른 순간의 포즈로 만들어요.")
                 .foregroundStyle(.secondary)
         }
     }
