@@ -88,6 +88,10 @@ struct CharacterProfileView: View {
 
                 statesOverviewSection
 
+                #if DEBUG
+                weatherBackgroundsSection   // 개발자 전용 — 날씨 배경 디폴트 세팅용 (사용자 빌드에선 숨김)
+                #endif
+
                 Section {
                     Toggle("캐릭터 움직이게 하기", isOn: $animationEnabled)
                 } header: {
