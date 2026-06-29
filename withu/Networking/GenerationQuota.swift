@@ -95,9 +95,17 @@ enum GenerationQuota {
         d.set(credits() + n, forKey: creditsKey)
     }
 
+    /// 서버 잔액(entitlement.credits) 동기화 — 로컬 캔디를 서버 값까지 끌어올림.
+    /// canGenerate 는 로컬 credits 만 보므로, 로그인 구매·서버 적립분이 실제로 쓰이게 한다.
+    /// '끌어올림'(max)이라 로컬-only 적립(미로그인 구매·테스트 코드)을 덮어쓰지 않는다.
+    static func syncCreditsUp(to serverCredits: Int) {
+        guard let d = defaults, serverCredits > credits() else { return }
+        d.set(serverCredits, forKey: creditsKey)
+    }
+
     /// 화면 표시용 보유 캔디 = 실제로 쓸 수 있는 로컬 잔액(credits).
     /// canGenerate 가 로컬 credits 만 보므로, 배지도 같은 값을 보여 과대표시(쓸 수 없는데 숫자만 큼)를 막는다.
-    /// (로그인 구매분이 서버 entitlement 에만 있고 로컬 미반영인 desync 는 별도 과제 — 그때 여기서 합산.)
+    /// 서버 적립분은 syncCreditsUp 으로 이미 로컬에 반영됨.
     static func displayedCandy() -> Int {
         credits()
     }

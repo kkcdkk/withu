@@ -64,6 +64,7 @@ final class AuthManager {
             KeychainStore.saveSessionToken(resp.sessionToken)
             KeychainStore.saveAppleUserId(appleUserId)
             entitlement = resp.entitlement
+            if let ent = resp.entitlement { GenerationQuota.syncCreditsUp(to: ent.credits) }
             state = .signedIn
             lastError = nil
         } catch {
@@ -71,15 +72,18 @@ final class AuthManager {
         }
     }
 
-    /// 생성 응답 등에 동봉돼 온 최신 잔액을 캐시에 반영.
+    /// 생성 응답 등에 동봉돼 온 최신 잔액을 캐시에 반영 + 로컬 캔디 동기화.
     func applyEntitlement(_ ent: Entitlement) {
         entitlement = ent
+        GenerationQuota.syncCreditsUp(to: ent.credits)
     }
 
     /// 서버 권리 스냅샷 갱신. 401 이면 토큰 만료로 보고 로그아웃.
     func refreshEntitlement() async {
         do {
-            entitlement = try await APIClient.shared.fetchMe()
+            let ent = try await APIClient.shared.fetchMe()
+            entitlement = ent
+            GenerationQuota.syncCreditsUp(to: ent.credits)
         } catch {
             if case APIError.server(let status, _) = error, status == 401 {
                 signOut()
