@@ -89,6 +89,15 @@ enum GenerationQuota {
         #endif
     }
 
+    /// 퀄리티별 캔디 비용 — 낮음 1 · 보통 2 · 높음 3.
+    static func cost(forQuality quality: String) -> Int {
+        switch quality {
+        case "high":   return 3
+        case "medium": return 2
+        default:       return 1   // low
+        }
+    }
+
     /// 횟수 팩 구매 시 크레딧 적립.
     static func addCredits(_ n: Int) {
         guard let d = defaults, n > 0 else { return }

@@ -272,7 +272,8 @@ struct CharacterGenView: View {
 
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.
     private var generateButtonSection: some View {
-        Section {
+        let cost = GenerationQuota.cost(forQuality: quality)
+        return Section {
             if isGenerating {
                 generatingLabel
                 Button(role: .destructive) {
@@ -284,7 +285,7 @@ struct CharacterGenView: View {
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
-            } else if remainingGenerations == 0 {
+            } else if remainingGenerations < cost {
                 Button {
                     showPaywall = true
                 } label: {
@@ -312,11 +313,11 @@ struct CharacterGenView: View {
                     Text("평균 low 20초, medium 50초, high 1~2분 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
-                if remainingGenerations == 0 {
-                    Text("캔디가 없어요. 충전하면 계속 만들 수 있어요.")
+                if remainingGenerations < cost {
+                    Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("지금 \(remainingGenerations)번 더 만들 수 있어요.")
+                    Text("보유 캔디 \(remainingGenerations)개 · 이번 만들기 \(generateAnimated ? cost * 2 : cost)캔디")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -416,9 +417,9 @@ struct CharacterGenView: View {
             .disabled(isGenerating)
 
             Picker("퀄리티", selection: $quality) {
-                Text("low (약 20초 · 15원)").tag("low")
-                Text("medium (약 50초 · 55원)").tag("medium")
-                Text("high (1~2분 · 230원)").tag("high")
+                Text("low (약 20초 · 1캔디)").tag("low")
+                Text("medium (약 50초 · 2캔디)").tag("medium")
+                Text("high (1~2분 · 3캔디)").tag("high")
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)
@@ -723,8 +724,8 @@ struct CharacterGenView: View {
     }
 
     private func generate() async {
-        guard GenerationQuota.canGenerate() else {
-            lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
+        guard GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+            lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
             return
         }
         isGenerating = true
@@ -754,19 +755,20 @@ struct CharacterGenView: View {
             return
         }
         saveDescription()
+        let cost = GenerationQuota.cost(forQuality: quality)
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
         let frame0Succeeded = resultImage !== prevResult
-        // 성공한 장만 횟수 차감
-        if frame0Succeeded { GenerationQuota.record() }
+        // 성공한 장만 차감 (퀄리티별 캔디)
+        if frame0Succeeded { GenerationQuota.record(cost) }
         // 연속 이미지 — frame 0 성공 시 그 원본(1024)을 reference 로 frame 1 추가
         if generateAnimated, frame0Succeeded,
            let f0Full = lastFrame0FullRes ?? resultImage,
            let f0Ref = f0Full.pngData()?.base64EncodedString() {
             let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
             await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full)
-            if resultFrame2 != nil { GenerationQuota.record() }
+            if resultFrame2 != nil { GenerationQuota.record(cost) }
         }
         // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
         if displayTransparent { await ensureTransparentResults() }
@@ -774,8 +776,8 @@ struct CharacterGenView: View {
 
     /// 보고 있는 프레임만 다듬기. frame1 은 frame0 을 앵커로 둬서 캐릭터/크기 일관성 유지.
     private func refine(frame: Int) async {
-        guard GenerationQuota.canGenerate() else {
-            lastError = "오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 시도해 주세요."
+        guard GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+            lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
             return
         }
         let currentSlot = frame == 1 ? resultFrame2 : resultImage
@@ -802,7 +804,7 @@ struct CharacterGenView: View {
         }
         await send(prompt: prompt, reference: referenceB64, frame: frame,
                    matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil)
-        if (frame == 1 ? resultFrame2 : resultImage) != nil { GenerationQuota.record() }
+        if (frame == 1 ? resultFrame2 : resultImage) != nil { GenerationQuota.record(GenerationQuota.cost(forQuality: quality)) }
         refinementPrompt = ""
         // '배경 빼기' 보기 중이면 다듬은 프레임만 즉시 재처리(stale 방지).
         if displayTransparent {

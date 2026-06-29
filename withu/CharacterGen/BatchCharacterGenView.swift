@@ -200,10 +200,10 @@ struct BatchCharacterGenView: View {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
         } footer: {
             let count = selectedStates.count
-            let cost = costPer(quality: quality) * Double(count)
+            let unit = GenerationQuota.cost(forQuality: quality)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(count)개의 상태을 만들어요")
-                Text("드는 비용은 약 \(Int(cost * 1380))원이에요 (한 장당 약 \(Int(costPer(quality: quality) * 1380))원)")
+                Text("\(count)개의 상태를 만들어요")
+                Text("약 \(requiredCount * unit)캔디 (한 장당 \(unit)캔디)")
             }
             .foregroundStyle(.secondary)
         }
@@ -371,9 +371,9 @@ struct BatchCharacterGenView: View {
             .pickerStyle(.segmented).disabled(isGenerating)
 
             Picker("품질", selection: $quality) {
-                Text("low (약 20초 · 15원)").tag("low")
-                Text("medium (약 50초 · 55원)").tag("medium")
-                Text("high (1~2분 · 230원)").tag("high")
+                Text("low (약 20초 · 1캔디)").tag("low")
+                Text("medium (약 50초 · 2캔디)").tag("medium")
+                Text("high (1~2분 · 3캔디)").tag("high")
             }
             .pickerStyle(.menu).disabled(isGenerating)
 
@@ -463,7 +463,8 @@ struct BatchCharacterGenView: View {
     }
 
     private var startSection: some View {
-        Section {
+        let need = requiredCount * GenerationQuota.cost(forQuality: quality)
+        return Section {
             Button {
                 batchTask = Task { await startBatch() }
             } label: {
@@ -481,7 +482,7 @@ struct BatchCharacterGenView: View {
             .tint(.withuPink)
             .disabled(isGenerating || selectedStates.isEmpty
                       || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      || remainingGenerations < requiredCount)
+                      || remainingGenerations < need)
 
             if isGenerating {
                 Text("만드는 동안엔 앱을 그대로 켜 주세요. (\(results.count + errors.count)/\(requiredCount) 완료)")
@@ -494,8 +495,8 @@ struct BatchCharacterGenView: View {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
                 .tint(.secondary)
-            } else if remainingGenerations < requiredCount {
-                Text("지금 \(remainingGenerations)번으로는 \(selectedStates.count)개를 한 번에 만들 수 없어요. 만들 상태을 줄이거나 캔디를 충전해 주세요.")
+            } else if remainingGenerations < need {
+                Text("캔디 \(remainingGenerations)개로는 \(selectedStates.count)개 상태(약 \(need)캔디)를 한 번에 만들 수 없어요. 만들 상태를 줄이거나 캔디를 충전해 주세요.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
                 Button {
@@ -505,7 +506,7 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.withuPink)
             } else {
-                Text("지금 \(remainingGenerations)번 더 만들 수 있어요.")
+                Text("보유 캔디 \(remainingGenerations)개 · 이번 약 \(need)캔디")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -899,7 +900,7 @@ struct BatchCharacterGenView: View {
                 CharacterImageStore.save(small, for: .idle, frame: 0)
                 ConnectivityManager.shared.sendCharacterImage(small, for: .idle, frame: 0)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
-                GenerationQuota.record(1)
+                GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
                 idleRevisionText = ""
                 WidgetCenter.shared.reloadAllTimelines()
             } else {
@@ -1021,7 +1022,7 @@ struct BatchCharacterGenView: View {
             CharacterImageStore.save(small, for: state, frame: frame)
             ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
             if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
-            GenerationQuota.record(1)   // 성공 1장 = 즉시 차감 (도중 앱이 꺼져도 과생성 방지)
+            GenerationQuota.record(GenerationQuota.cost(forQuality: quality))   // 성공 1장 = 즉시 차감 (퀄리티별)
             return true
         } catch APIError.paymentRequired {
             showPaywall = true
@@ -1328,15 +1329,6 @@ struct BatchCharacterGenView: View {
             }
         } catch {
             errors[.idle] = "참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요."
-        }
-    }
-
-    private func costPer(quality: String) -> Double {
-        switch quality {
-        case "low":    return 0.011
-        case "medium": return 0.04
-        case "high":   return 0.17
-        default:       return 0.04
         }
     }
 }
