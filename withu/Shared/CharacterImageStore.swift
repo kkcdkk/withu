@@ -302,11 +302,21 @@ enum CharacterImageStore {
         return cache
     }()
 
-    private static func imageCacheKey(_ state: CharacterState, frame: Int, maxPixelSize: CGFloat?) -> NSString {
+    /// 활성 파일의 내용 버전(수정시각+크기). 파일이 바뀌면 이 값이 바뀌어 캐시 키도 바뀐다.
+    /// → 위젯/컴플리케이션처럼 앱과 다른 프로세스도 evict 없이 새 이미지를 자동으로 읽는다.
+    private static func activeFileVersion(_ state: CharacterState, frame: Int) -> String {
+        guard let url = activeFileURL(for: state, frame: frame),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) else { return "0" }
+        let mod = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        let size = (attrs[.size] as? Int) ?? 0
+        return "\(Int(mod * 1000))_\(size)"
+    }
+
+    private static func imageCacheKey(_ state: CharacterState, frame: Int, maxPixelSize: CGFloat?, version: String) -> NSString {
         if let maxPixelSize {
-            return "\(state.rawValue)#\(frame)#t\(Int(maxPixelSize))" as NSString
+            return "\(state.rawValue)#\(frame)#t\(Int(maxPixelSize))#\(version)" as NSString
         }
-        return "\(state.rawValue)#\(frame)#full" as NSString
+        return "\(state.rawValue)#\(frame)#full#\(version)" as NSString
     }
 
     /// 디코드된 비트맵 대략 바이트 — totalCostLimit 산정용.
@@ -327,7 +337,8 @@ enum CharacterImageStore {
 
     /// frame 별 로드. frame > 0 인데 없으면 nil. caller 가 frame 0 fallback.
     static func loadFrame(_ state: CharacterState, frame: Int) -> UIImage? {
-        let key = imageCacheKey(state, frame: frame, maxPixelSize: nil)
+        let key = imageCacheKey(state, frame: frame, maxPixelSize: nil,
+                                version: activeFileVersion(state, frame: frame))
         if let cached = imageCache.object(forKey: key) { return cached }
         guard let url = activeFileURL(for: state, frame: frame),
               FileManager.default.fileExists(atPath: url.path),
@@ -348,7 +359,8 @@ enum CharacterImageStore {
     /// 일시적으로 원본 디코드되긴 하지만, render 후엔 작은 thumbnail 만 메모리에 남음.
     static func loadThumbnail(_ state: CharacterState,
                               maxPixelSize: CGFloat) -> UIImage? {
-        let key = imageCacheKey(state, frame: 0, maxPixelSize: maxPixelSize)
+        let key = imageCacheKey(state, frame: 0, maxPixelSize: maxPixelSize,
+                                version: activeFileVersion(state, frame: 0))
         if let cached = imageCache.object(forKey: key) { return cached }
         guard let image = computeThumbnail(state, maxPixelSize: maxPixelSize) else { return nil }
         imageCache.setObject(image, forKey: key, cost: imageCost(image))
