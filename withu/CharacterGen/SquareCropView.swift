@@ -54,7 +54,7 @@ struct SquareCropView: View {
                                 onCancel()
                             }
                         } label: {
-                            Text("자르기")
+                            Text("수정")
                                 .font(.callout.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 24).padding(.vertical, 10)
