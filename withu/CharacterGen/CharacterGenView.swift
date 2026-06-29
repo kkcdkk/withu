@@ -40,7 +40,8 @@ struct CharacterGenView: View {
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var referenceImage: UIImage?
     /// 참고사진에서 무엇을 참고할지 (참고사진 있을 때만 프롬프트에 반영).
-    @State private var referenceHint: String = ""
+    @State private var referenceKeep: String = ""     // 사진에서 그대로 둘 것
+    @State private var referenceChange: String = ""   // 사진에서 바꿀 것
 
     /// 이미지 첨부 모드 — 첨부 + 배경 제거 처리된 결과
     @State private var importPickerItem: PhotosPickerItem?
@@ -370,15 +371,31 @@ struct CharacterGenView: View {
                 }
             }
             if referenceImage != nil {
-                TextField("이 사진에서 무엇을 참고하나요? (예: 얼굴, 색, 전체 느낌)",
-                          text: $referenceHint, axis: .vertical)
-                    .font(.callout)
-                    .disabled(isGenerating)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("그대로 둘 것")
+                        .font(.caption).foregroundStyle(.secondary)
+                    TextField("예: 얼굴, 머리색, 옷, 몸 비율 (비워두면 전부 그대로 유지)",
+                              text: $referenceKeep, axis: .vertical)
+                        .lineLimit(1...3)
+                        .font(.callout)
+                        .disabled(isGenerating)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("바꿀 것")
+                        .font(.caption).foregroundStyle(.secondary)
+                    TextField("예: 포즈 — 점프하는 모습 / 표정 — 활짝 웃기 / 각도 — 옆모습",
+                              text: $referenceChange, axis: .vertical)
+                        .lineLimit(1...3)
+                        .font(.callout)
+                        .disabled(isGenerating)
+                }
             }
         } header: {
             Text("2. 참고 사진 (Optional)")
         } footer: {
-            Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요.")
+            Text(referenceImage == nil
+                 ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 글로만 만들어요."
+                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'만 바뀌어요. 바꿀 것을 비우면 위에서 고른 순간의 포즈로 만들어요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -656,16 +673,15 @@ struct CharacterGenView: View {
     private var composedPrompt: String {
         let desc = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let pose = targetState.generationHint
+        // 참고 사진이 있으면 Keep/Change 템플릿 — 캐릭터는 그대로, '바꿀 것'만 바뀌게.
+        if referenceImage != nil {
+            let keep = referenceKeep.trimmingCharacters(in: .whitespacesAndNewlines)
+            let change = referenceChange.trimmingCharacters(in: .whitespacesAndNewlines)
+            let keepClause = keep.isEmpty ? "" : " Keep especially: \(keep)."
+            let changeClause = change.isEmpty ? pose : change
+            return "Use the reference image. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail.\(keepClause) Change ONLY: \(changeClause). Do not change the character design; keep all other visual details identical to the reference."
+        }
         return desc.isEmpty ? pose : "\(desc), \(pose)"
-    }
-
-    /// 참고사진이 있을 때 프롬프트 앞에 붙는 일관성 지시 (무엇을 참고할지 hint 반영).
-    private func referencePrefix() -> String {
-        guard referenceImage != nil else { return "" }
-        let note = referenceHint.trimmingCharacters(in: .whitespacesAndNewlines)
-        return note.isEmpty
-            ? "Same character as the reference image. "
-            : "Same character as the reference image (keep in particular: \(note)). "
     }
 
     /// "항목별로 채우기" 한 줄 — 라벨 + 입력칸.
@@ -734,7 +750,7 @@ struct CharacterGenView: View {
         saveDescription()
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
-        await send(prompt: referencePrefix() + composedPrompt, reference: referenceB64, frame: 0)
+        await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
         let frame0Succeeded = resultImage !== prevResult
         // 성공한 장만 횟수 차감
         if frame0Succeeded { GenerationQuota.record() }
