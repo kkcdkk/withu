@@ -98,6 +98,9 @@ struct CharacterGenView: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("캐릭터 만들기")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { candyBadge }
+        }
         .scrollDismissesKeyboard(.interactively)
         .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
         .sheet(isPresented: $showPaywall) {
@@ -251,6 +254,19 @@ struct CharacterGenView: View {
                 Text("1. 캐릭터 프롬프트(캐릭터 설명)")
             }
         }
+    }
+
+    /// 보유 캔디(충전 크레딧) 배지 — 탭하면 충전(Paywall). 서버 잔액 우선, 없으면 로컬.
+    private var candyBadge: some View {
+        Button { showPaywall = true } label: {
+            HStack(spacing: 3) {
+                Text("🍬")
+                Text("\(AuthManager.shared.entitlement?.credits ?? GenerationQuota.credits())")
+                    .font(.callout.weight(.semibold))
+                    .monospacedDigit()
+            }
+        }
+        .tint(.withuPink)
     }
 
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.

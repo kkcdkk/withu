@@ -112,6 +112,9 @@ struct BatchCharacterGenView: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("여러 모습 만들기")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { candyBadge }
+        }
         .scrollDismissesKeyboard(.interactively)
         .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
         .sheet(isPresented: $showPaywall) {
@@ -144,6 +147,19 @@ struct BatchCharacterGenView: View {
         )) { sel in
             resultDetailSheet(state: sel.state)
         }
+    }
+
+    /// 보유 캔디(충전 크레딧) 배지 — 탭하면 충전(Paywall). 서버 잔액 우선, 없으면 로컬.
+    private var candyBadge: some View {
+        Button { showPaywall = true } label: {
+            HStack(spacing: 3) {
+                Text("🍬")
+                Text("\(AuthManager.shared.entitlement?.credits ?? GenerationQuota.credits())")
+                    .font(.callout.weight(.semibold))
+                    .monospacedDigit()
+            }
+        }
+        .tint(.withuPink)
     }
 
     /// sheet 의 item 으로 쓸 wrapper (Identifiable 필요)
@@ -422,16 +438,25 @@ struct BatchCharacterGenView: View {
                     .font(.callout)
                     .disabled(isGenerating)
                 Button {
-                    batchTask = Task { await regenerateIdle() }
+                    // 즉시 재생성하지 않고 프롬프트 화면으로 돌아감 — 프롬프트/사진을 고친 뒤
+                    // '만들기 시작'을 누를 때 캔디가 차감된다.
+                    awaitingIdleApproval = false
+                    results.removeAll()
+                    resultsFrame1.removeAll()
+                    frame0FullRes.removeAll()
+                    idleFullRes = nil
+                    idleAnchor = nil
+                    idleRevisionText = ""
+                    errors.removeAll()
                 } label: {
-                    Label("완전히 새로 만들기", systemImage: "arrow.clockwise")
+                    Label("프롬프트 수정해서 다시", systemImage: "pencil")
                 }
                 .tint(.secondary)
                 .disabled(isGenerating)
             } header: {
                 Text("기준 모습 확인")
             } footer: {
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 처음부터면 '완전히 새로'")
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'")
                     .foregroundStyle(.secondary)
             }
         }
@@ -844,27 +869,6 @@ struct BatchCharacterGenView: View {
     }
 
     /// idle 다시 만들기 (승인 대기 유지).
-    private func regenerateIdle() async {
-        isGenerating = true
-        defer {
-            isGenerating = false
-            inProgressStates.removeAll()
-            stateStartedAt.removeAll()
-            remainingGenerations = GenerationQuota.remainingToday()
-        }
-        results.removeValue(forKey: .idle)
-        errors.removeValue(forKey: .idle)
-        let idleRef = resolveUserReference(for: .idle)
-        let ok = await runOne(.idle, reference: idleRef,
-                              consistencyPrefix: idleRef != nil,
-                              referenceNote: userRefNote(for: .idle), frame: 0)
-        if ok {
-            GenerationQuota.record(1)
-        } else {
-            awaitingIdleApproval = false   // 실패 → 승인 게이트 해제(데드엔드 방지, 에러는 resultsSection 노출)
-        }
-    }
-
     /// idle 을 '수정사항' 으로 고쳐 다시 — 현재 idle 을 reference 로 edit. 승인 대기 유지.
     private func reviseIdle() async {
         let trimmed = idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines)
