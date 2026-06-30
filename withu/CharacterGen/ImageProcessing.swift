@@ -42,19 +42,36 @@ enum ImageProcessing {
     /// Vision 이 전경을 못 잡거나 15초 안에 안 끝나면 원본을 그대로 반환.
     /// (일부 이미지에서 Vision 이 매우 느리거나 hang 하는 케이스 안전망.)
     static func bestEffortTransparent(_ image: UIImage, timeoutSeconds: Double = 15) async -> UIImage {
-        await withTaskGroup(of: UIImage?.self) { group in
-            group.addTask {
-                do { return try await removeBackground(from: image) }
-                catch { return nil }
-            }
+        let cutout: UIImage? = await withTaskGroup(of: UIImage?.self) { group in
+            group.addTask { try? await removeBackground(from: image) }
             group.addTask {
                 try? await Task.sleep(for: .seconds(timeoutSeconds))
                 return nil   // timeout → 원본 fallback
             }
-            // 먼저 끝난 결과를 채택, 나머지 task 는 cancel
             let first = await group.next() ?? nil
             group.cancelAll()
-            return first ?? image
+            return first
+        }
+        // Vision 실패/타임아웃 → 원본
+        guard let cutout else { return image }
+
+        // 과다 제거 가드 — 흰배경에 밝은 캐릭터면 Vision 이 전경을 거의 다 날려버림.
+        // 남은 전경이 거의 없으면 배경 빼기를 포기하고 원본 유지(빈 화면 방지).
+        guard let box = alphaBoundingBox(cutout),
+              let cg = cutout.cgImage, cg.width > 0, cg.height > 0 else {
+            return image
+        }
+        if box.width / CGFloat(cg.width) < 0.2, box.height / CGFloat(cg.height) < 0.2 {
+            return image
+        }
+
+        // 크기·스케일을 원본과 동일하게 고정(투명 유지) — '배경 빼면 크기 달라짐' 방지.
+        if cutout.size == image.size, cutout.scale == image.scale { return cutout }
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = image.scale
+        return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+            cutout.draw(in: CGRect(origin: .zero, size: image.size))
         }
     }
 
