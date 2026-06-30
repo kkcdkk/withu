@@ -33,7 +33,17 @@ enum ImageProcessing {
 
     /// 사진 첨부 흐름의 한 번 호출: 배경 제거 → 정사각형 정규화.
     static func prepareForCharacter(_ image: UIImage, target: CGFloat = 1024) async throws -> UIImage {
-        let cutout = try await removeBackground(from: image)
+        // Vision 전에 다운샘플 — 폰 카메라 원본(수천 px)에 그대로 Vision 돌리면 몇 초씩 걸림.
+        let maxDim = max(image.size.width, image.size.height)
+        let downsized: UIImage
+        if maxDim > target {
+            let s = target / maxDim
+            let fitted = CGSize(width: image.size.width * s, height: image.size.height * s)
+            downsized = image.preparingThumbnail(of: fitted) ?? image
+        } else {
+            downsized = image
+        }
+        let cutout = try await removeBackground(from: downsized)
         return normalizeSquare(cutout, target: target)
     }
 
