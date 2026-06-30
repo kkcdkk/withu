@@ -236,7 +236,7 @@ struct CharacterGenView: View {
                             .allowsHitTesting(false)
                     }
                 }
-            DisclosureGroup("프롬프트 항목별로 채우기") {
+            DisclosureGroup("항목별 입력") {
                 helperField("주제", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
                 helperField("색감 (선택)", text: $colorField, placeholder: "연두 파스텔톤")
@@ -248,10 +248,6 @@ struct CharacterGenView: View {
             .disabled(isGenerating)
         } header: {
             VStack(alignment: .leading, spacing: 3) {
-                Text("캐릭터 생성하기")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .textCase(nil)
                 Text("캐릭터 프롬프트")
             }
         }
@@ -674,7 +670,8 @@ struct CharacterGenView: View {
             let keep = referenceKeep.trimmingCharacters(in: .whitespacesAndNewlines)
             let change = referenceChange.trimmingCharacters(in: .whitespacesAndNewlines)
             let keepClause = keep.isEmpty ? "" : " Keep especially: \(keep)."
-            let changeClause = change.isEmpty ? pose : change
+            // '바꿀 것'·'캐릭터 프롬프트' 둘 중 하나만 채워도 됨 — 바꿀것 > 프롬프트 > 상태 포즈 순.
+            let changeClause = !change.isEmpty ? change : (!desc.isEmpty ? desc : pose)
             return "Use the reference image. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail.\(keepClause) Change ONLY: \(changeClause). Do not change the character design; keep all other visual details identical to the reference."
         }
         return desc.isEmpty ? pose : "\(desc), \(pose)"
