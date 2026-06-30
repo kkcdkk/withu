@@ -60,7 +60,7 @@ const STYLE_SECTIONS = {
 - Draw the character based on the user's description — appearance, species, and proportions follow the description
 - Soft, warm, approachable look with clean, readable shapes that work well as a small icon
 - Flat 2D illustration, clean lines, simple shading
-- Plain solid white background (never a checkerboard or transparency grid), full body visible, character centered
+- Transparent background — only the character, nothing behind it. Full body visible, character centered
 - Keep the same character identity across requests
 `,
   pixel: `[Style guidelines]
@@ -68,7 +68,7 @@ const STYLE_SECTIONS = {
 - Retro video game feel, limited palette (8~16 colors)
 - Clear pixel boundaries (no anti-aliasing, no smooth gradients)
 - Draw the character based on the user's description — appearance and proportions follow the description
-- Plain solid white background (never a checkerboard or transparency grid), character centered
+- Transparent background — only the character, nothing behind it. Character centered
 - Keep the same character identity across requests
 `,
 };
@@ -397,6 +397,9 @@ function generateImageFromPrompt(input, env) {
       prompt: buildFullPrompt(input),
       quality: normalizeQuality(input.quality),
       size: normalizeSize(input.width, input.height),
+      // 캐릭터는 투명 배경. 날씨 배경(kind=background)은 풍경이라 불투명 유지.
+      ...(input.kind === "background" ? {} : { background: "transparent" }),
+      output_format: "png",
       n: 1
     })
   });
@@ -408,6 +411,8 @@ function editImage(input, env) {
   form.append("prompt", buildFullPrompt(input));
   form.append("quality", normalizeQuality(input.quality));
   form.append("size", normalizeSize(input.width, input.height));
+  form.append("background", "transparent");
+  form.append("output_format", "png");
   form.append("n", "1");
   form.append("image", base64ToBlob(input.reference_image_base64), "reference.png");
 
