@@ -33,16 +33,7 @@ struct SquareCropView: View {
                 Color.black.ignoresSafeArea()
 
                 VStack(spacing: 20) {
-                    Spacer()
-
-                    cropWindow(side: side)
-
-                    Text("두 손가락으로 확대 · 드래그로 위치를 맞춰요")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.7))
-
-                    Spacer()
-
+                    // 상단 바 — 취소(좌) / 선택(우)
                     HStack {
                         Button("취소") { onCancel() }
                             .foregroundStyle(.white)
@@ -54,15 +45,25 @@ struct SquareCropView: View {
                                 onCancel()
                             }
                         } label: {
-                            Text("수정")
+                            Text("선택")
                                 .font(.callout.weight(.semibold))
                                 .foregroundStyle(.white)
-                                .padding(.horizontal, 24).padding(.vertical, 10)
+                                .padding(.horizontal, 22).padding(.vertical, 9)
                                 .background(Color.withuPink, in: Capsule())
                         }
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+
+                    Spacer()
+
+                    cropWindow(side: side)
+
+                    Text("두 손가락으로 확대 · 드래그로 위치를 맞춰요")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+
+                    Spacer()
                 }
             }
         }
