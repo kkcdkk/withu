@@ -24,7 +24,7 @@ export async function upsertAccount(env, sub, email) {
       "INSERT INTO accounts (sub, email, my_referral_code, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)"
     ).bind(sub, email, code, now, now),
     env.DB.prepare(
-      "INSERT INTO entitlements (sub, free_batch_remaining, free_single_remaining, credits, sub_active, updated_at) VALUES (?, 1, 5, 0, 0, ?)"
+      "INSERT INTO entitlements (sub, free_batch_remaining, free_single_remaining, credits, sub_active, updated_at) VALUES (?, 0, 1, 0, 0, ?)"
     ).bind(sub, now),
   ]);
 }
