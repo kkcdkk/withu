@@ -21,9 +21,14 @@ function gatewayHeaders(env) {
 // Moderation API 는 무료. 호출 실패는 fail-open(이미지 생성 API 자체 moderation 이 2차 방어막).
 const MAX_PROMPT_LEN = 1500;
 
-async function checkPromptSafe(prompt, env) {
+async function checkPromptSafe(prompt, referenceB64, env) {
   if (prompt.length > MAX_PROMPT_LEN) {
     return { ok: false, status: 400, reason: "설명이 너무 길어요. 더 짧게 적어 주세요." };
+  }
+  // 멀티모달 — 텍스트 + (있으면) 참고사진을 함께 검사. omni-moderation 은 이미지도 본다.
+  const input = [{ type: "text", text: prompt }];
+  if (referenceB64) {
+    input.push({ type: "image_url", image_url: { url: `data:image/png;base64,${referenceB64}` } });
   }
   try {
     const res = await fetch(`${openaiBase(env)}/moderations`, {
@@ -33,12 +38,13 @@ async function checkPromptSafe(prompt, env) {
         "Content-Type": "application/json",
         ...gatewayHeaders(env),
       },
-      body: JSON.stringify({ model: "omni-moderation-latest", input: prompt }),
+      body: JSON.stringify({ model: "omni-moderation-latest", input }),
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.results?.[0]?.flagged) {
-        return { ok: false, status: 400, reason: "안전 정책에 맞지 않는 요청이에요. 다른 묘사로 바꿔서 시도해 주세요." };
+      // input 이 배열이면 results 도 항목별 배열 — 하나라도 flagged 면 차단(텍스트/이미지 둘 다 커버).
+      if (Array.isArray(data?.results) && data.results.some((r) => r?.flagged)) {
+        return { ok: false, status: 400, reason: "안전 정책에 맞지 않는 요청이에요. 다른 묘사나 사진으로 바꿔서 시도해 주세요." };
       }
     }
   } catch {
@@ -309,8 +315,8 @@ async function generateImage(request, env) {
     return jsonError("prompt is required.", 400);
   }
 
-  // 입력 안전 가드 — 부적절/과도한 프롬프트는 차감·생성 전에 차단
-  const safe = await checkPromptSafe(input.prompt, env);
+  // 입력 안전 가드 — 부적절한 프롬프트/참고사진은 차감·생성 전에 차단
+  const safe = await checkPromptSafe(input.prompt, input.reference_image_base64, env);
   if (!safe.ok) return jsonError(safe.reason, safe.status);
 
   // 서버 권위 차감 (로그인된 경우만). 잔액 없으면 402.
