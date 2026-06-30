@@ -44,6 +44,11 @@ database_id = "1fa6ac78-220c-4b34-8547-bed6d4115077"
 #    기존 X-Withu-Token 경로로 통과 (shadow 배포 — 기존 앱 호환):
 #      npx wrangler secret put ENFORCE_AUTH   (값: true)
 #
+# IP 일일 생성 상한(DAILY_IP_LIMIT=60). 남용/비용 방어.
+[[kv_namespaces]]
+binding = "RATE_KV"
+id = "7c9eb73dbe9b4d76a854b96cf558c5e3"
+
 # 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
 [vars]
 APPLE_BUNDLE_ID = "sy.withu"
