@@ -115,32 +115,23 @@ enum ImageProcessing {
 
     // MARK: - 정사각형 정규화
 
-    /// center crop → 1024x1024 (또는 target) 으로 리사이즈. 투명 배경 유지.
+    /// 전체를 정사각(target) 안에 aspect-fit + 중앙 정렬. 투명 배경 유지(잘리지 않음).
+    /// (이전엔 cg 픽셀과 image.size 포인트를 섞어 center-crop 해서 고배율 기기에서 1/4만 잘리는 버그가 있었음.)
     static func normalizeSquare(_ image: UIImage, target: CGFloat = 1024) -> UIImage {
-        let size = image.size
-        let side = Swift.min(size.width, size.height)
-        let crop = CGRect(
-            x: (size.width - side) / 2,
-            y: (size.height - side) / 2,
-            width: side,
-            height: side
-        )
-
-        // crop 한 다음 target 크기로 그림
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false   // 알파 채널 유지
         format.scale = 1
         let canvas = CGSize(width: target, height: target)
         let renderer = UIGraphicsImageRenderer(size: canvas, format: format)
-
         return renderer.image { _ in
-            // cgImage 가 있으면 직접 crop
-            if let cg = image.cgImage, let croppedCG = cg.cropping(to: crop) {
-                UIImage(cgImage: croppedCG).draw(in: CGRect(origin: .zero, size: canvas))
-            } else {
-                // fallback: 원본 그대로 그려도 일단 동작
-                image.draw(in: CGRect(origin: .zero, size: canvas))
+            let w = image.size.width, h = image.size.height
+            guard w > 0, h > 0 else {
+                image.draw(in: CGRect(origin: .zero, size: canvas)); return
             }
+            // 긴 변을 target 에 맞춰 비율 유지(aspect-fit), 중앙 정렬 — image.draw 는 포인트 단위라 단위 일관.
+            let s = Swift.min(target / w, target / h)
+            let dw = w * s, dh = h * s
+            image.draw(in: CGRect(x: (target - dw) / 2, y: (target - dh) / 2, width: dw, height: dh))
         }
     }
 
