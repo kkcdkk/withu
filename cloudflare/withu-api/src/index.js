@@ -16,6 +16,37 @@ function gatewayHeaders(env) {
   return env.AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.AI_GATEWAY_TOKEN}` } : {};
 }
 
+// 입력 안전 가드 — 길이 컷 + OpenAI Moderation API 사전검사.
+// 차감·이미지 생성 전에 호출해 부적절/과도한 프롬프트를 차단한다.
+// Moderation API 는 무료. 호출 실패는 fail-open(이미지 생성 API 자체 moderation 이 2차 방어막).
+const MAX_PROMPT_LEN = 1500;
+
+async function checkPromptSafe(prompt, env) {
+  if (prompt.length > MAX_PROMPT_LEN) {
+    return { ok: false, status: 400, reason: "설명이 너무 길어요. 더 짧게 적어 주세요." };
+  }
+  try {
+    const res = await fetch(`${openaiBase(env)}/moderations`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+        ...gatewayHeaders(env),
+      },
+      body: JSON.stringify({ model: "omni-moderation-latest", input: prompt }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.results?.[0]?.flagged) {
+        return { ok: false, status: 400, reason: "안전 정책에 맞지 않는 요청이에요. 다른 묘사로 바꿔서 시도해 주세요." };
+      }
+    }
+  } catch {
+    // fail-open
+  }
+  return { ok: true };
+}
+
 // FastAPI server.py 와 parity — art_style 별 다른 [Style guidelines].
 // 캐릭터 일관성을 위해 클라이언트엔 노출되지 않는 고정 prompt.
 const STYLE_SECTIONS = {
@@ -277,6 +308,10 @@ async function generateImage(request, env) {
   if (typeof input.prompt !== "string" || input.prompt.trim() === "") {
     return jsonError("prompt is required.", 400);
   }
+
+  // 입력 안전 가드 — 부적절/과도한 프롬프트는 차감·생성 전에 차단
+  const safe = await checkPromptSafe(input.prompt, env);
+  if (!safe.ok) return jsonError(safe.reason, safe.status);
 
   // 서버 권위 차감 (로그인된 경우만). 잔액 없으면 402.
   const idemKey = request.headers.get("Idempotency-Key") || crypto.randomUUID();
