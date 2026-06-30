@@ -583,108 +583,63 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// per-state 현재 표시 이미지 — toggle 따라 raw 또는 transparent.
+    /// per-state 현재 표시 이미지 — toggle 따라.
     private func displayedImage(for state: CharacterState) -> UIImage? {
-        let useTransparent = displayTransparentByState[state] ?? false
-        if useTransparent, let t = transparentResults[state] { return t }
-        return results[state]
+        displayedImage(for: state, frame: 0)
     }
 
-    /// 프레임별 표시 이미지 — 배경 토글 상태 반영 (frame 1 = 움직임).
+    /// 프레임별 표시 이미지 — raw=투명(모델 출력). '배경 빼기'=투명 원본, '흰 배경'=즉시 흰색 합성(Vision 없음).
     private func displayedImage(for state: CharacterState, frame: Int) -> UIImage? {
-        let useTransparent = displayTransparentByState[state] ?? false
-        if frame == 1 {
-            if useTransparent, let t = transparentResultsFrame1[state] { return t }
-            return resultsFrame1[state]
-        }
-        if useTransparent, let t = transparentResults[state] { return t }
-        return results[state]
+        let raw = frame == 1 ? resultsFrame1[state] : results[state]
+        guard let raw else { return nil }
+        let useTransparent = displayTransparentByState[state] ?? true
+        return useTransparent ? raw : ImageProcessing.flattenedOnWhite(raw)
     }
 
-    /// bulk — 모든 state 의 raw 를 Vision 처리, active slot 에 적용 + 워치 push.
-    /// gallery 항목은 raw 유지 (원본 보존).
+    /// bulk — 모든 모습을 '배경 빼기(투명 원본)' 로 active slot 적용 + 워치 push. (Vision 불필요)
     @MainActor
     private func applyTransparentToAll() async {
-        isProcessingTransparentBulk = true
-        defer { isProcessingTransparentBulk = false }
         for state in CharacterState.allCases {
             guard let raw = results[state] else { continue }
-            let transparent: UIImage
-            if let cached = transparentResults[state] {
-                transparent = cached
-            } else {
-                transparent = await ImageProcessing.bestEffortTransparent(raw)
-                transparentResults[state] = transparent
-            }
-            CharacterImageStore.saveActiveSlotOnly(transparent, for: state, frame: 0)
-            ConnectivityManager.shared.sendCharacterImage(transparent, for: state, frame: 0)
-            // frame 1 도 있으면 같이
-            if let rawF1 = resultsFrame1[state] {
-                let tF1: UIImage
-                if let cachedF1 = transparentResultsFrame1[state] {
-                    tF1 = cachedF1
-                } else {
-                    tF1 = await ImageProcessing.bestEffortTransparent(rawF1)
-                    transparentResultsFrame1[state] = tF1
-                }
-                CharacterImageStore.saveActiveSlotOnly(tF1, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(tF1, for: state, frame: 1)
-            }
-            displayTransparentByState[state] = true
-        }
-        WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    /// 한 모습만 배경 토글 — on 이면 Vision 처리본, off 면 raw 로 active slot 적용.
-    @MainActor
-    private func applyTransparentOne(_ state: CharacterState, on: Bool) async {
-        guard let raw = results[state] else { return }
-        if on {
-            isProcessingTransparentBulk = true
-            defer { isProcessingTransparentBulk = false }
-            let transparent: UIImage
-            if let cached = transparentResults[state] {
-                transparent = cached
-            } else {
-                transparent = await ImageProcessing.bestEffortTransparent(raw)
-                transparentResults[state] = transparent
-            }
-            CharacterImageStore.saveActiveSlotOnly(transparent, for: state, frame: 0)
-            ConnectivityManager.shared.sendCharacterImage(transparent, for: state, frame: 0)
-            if let rawF1 = resultsFrame1[state] {
-                let tF1: UIImage
-                if let cachedF1 = transparentResultsFrame1[state] {
-                    tF1 = cachedF1
-                } else {
-                    tF1 = await ImageProcessing.bestEffortTransparent(rawF1)
-                    transparentResultsFrame1[state] = tF1
-                }
-                CharacterImageStore.saveActiveSlotOnly(tF1, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(tF1, for: state, frame: 1)
-            }
-            displayTransparentByState[state] = true
-        } else {
             CharacterImageStore.saveActiveSlotOnly(raw, for: state, frame: 0)
             ConnectivityManager.shared.sendCharacterImage(raw, for: state, frame: 0)
             if let rawF1 = resultsFrame1[state] {
                 CharacterImageStore.saveActiveSlotOnly(rawF1, for: state, frame: 1)
                 ConnectivityManager.shared.sendCharacterImage(rawF1, for: state, frame: 1)
             }
-            displayTransparentByState[state] = false
+            displayTransparentByState[state] = true
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// bulk — raw 로 active slot 복원.
+    /// 한 모습만 배경 토글 — on=투명 원본, off=흰색 합성. active slot 적용 + 워치 push.
+    @MainActor
+    private func applyTransparentOne(_ state: CharacterState, on: Bool) async {
+        guard let raw = results[state] else { return }
+        let img0 = on ? raw : ImageProcessing.flattenedOnWhite(raw)
+        CharacterImageStore.saveActiveSlotOnly(img0, for: state, frame: 0)
+        ConnectivityManager.shared.sendCharacterImage(img0, for: state, frame: 0)
+        if let rawF1 = resultsFrame1[state] {
+            let img1 = on ? rawF1 : ImageProcessing.flattenedOnWhite(rawF1)
+            CharacterImageStore.saveActiveSlotOnly(img1, for: state, frame: 1)
+            ConnectivityManager.shared.sendCharacterImage(img1, for: state, frame: 1)
+        }
+        displayTransparentByState[state] = on
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// bulk — 모든 모습을 '흰 배경(합성)' 으로 active slot 적용.
     @MainActor
     private func restoreOriginalToAll() async {
         for state in CharacterState.allCases {
             guard let raw = results[state] else { continue }
-            CharacterImageStore.saveActiveSlotOnly(raw, for: state, frame: 0)
-            ConnectivityManager.shared.sendCharacterImage(raw, for: state, frame: 0)
+            let white0 = ImageProcessing.flattenedOnWhite(raw)
+            CharacterImageStore.saveActiveSlotOnly(white0, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(white0, for: state, frame: 0)
             if let rawF1 = resultsFrame1[state] {
-                CharacterImageStore.saveActiveSlotOnly(rawF1, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(rawF1, for: state, frame: 1)
+                let white1 = ImageProcessing.flattenedOnWhite(rawF1)
+                CharacterImageStore.saveActiveSlotOnly(white1, for: state, frame: 1)
+                ConnectivityManager.shared.sendCharacterImage(white1, for: state, frame: 1)
             }
             displayTransparentByState[state] = false
         }
@@ -886,14 +841,14 @@ struct BatchCharacterGenView: View {
         let pose = stateHints[.idle] ?? CharacterState.idle.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = desc.isEmpty ? pose : "\(desc), \(pose)"
-        let prompt = "\(base). User modification: \(trimmed). Solid clean WHITE background, no shadows, no gradients. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
+        let prompt = "\(base). User modification: \(trimmed). Transparent background — only the character, no background fill, no shadows."
         do {
             let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
                                            steps: 30, width: 1024, height: 1024,
                                            quality: quality, artStyle: artStyle, style: "auto")
             let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
             if let data = Data(base64Encoded: resp.imageBase64), let img = UIImage(data: data) {
-                let flat = ImageProcessing.flattenedOnWhite(img)
+                let flat = img
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 results[.idle] = small
                 idleFullRes = flat
@@ -985,7 +940,7 @@ struct BatchCharacterGenView: View {
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
-        prompt += ". Solid clean WHITE background, no shadows, no gradients. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
+        prompt += ". Transparent background — only the character, no background fill, no shadows."
         do {
             let req = GenerateImageRequest(
                 prompt: prompt,
@@ -1008,7 +963,7 @@ struct BatchCharacterGenView: View {
             if frame == 1, let ref0 = frame0FullRes[state] {
                 flat = await ImageProcessing.matchedToReference(img, reference: ref0)
             } else {
-                flat = ImageProcessing.flattenedOnWhite(img)
+                flat = img
             }
             // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
             let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
@@ -1067,7 +1022,7 @@ struct BatchCharacterGenView: View {
 
                     // 이 모습만 배경 토글 (개별)
                     Picker("배경", selection: Binding(
-                        get: { displayTransparentByState[state] ?? false },
+                        get: { displayTransparentByState[state] ?? true },
                         set: { on in Task { await applyTransparentOne(state, on: on) } }
                     )) {
                         Text("흰 배경").tag(false)
@@ -1197,7 +1152,7 @@ struct BatchCharacterGenView: View {
         if frame == 1 {
             modifiedPrompt += ". Animation frame 2 (for a 2-frame swap loop): \(state.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
         }
-        modifiedPrompt += ". Solid clean WHITE background, no shadows, no transparency grid pattern."
+        modifiedPrompt += ". Transparent background — only the character, no shadows."
 
         inProgressStates.insert(state)
         stateStartedAt[state] = .now
@@ -1224,7 +1179,7 @@ struct BatchCharacterGenView: View {
                 if frame == 1, let ref0 = frame0FullRes[state] ?? results[state] {
                     flat = await ImageProcessing.matchedToReference(img, reference: ref0)
                 } else {
-                    flat = ImageProcessing.flattenedOnWhite(img)
+                    flat = img
                 }
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 if frame == 1 {

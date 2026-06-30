@@ -63,7 +63,7 @@ struct CharacterGenView: View {
     /// 사용자가 [원본] / [투명 적용] 토글로 표시/적용 버전 선택.
     @State private var transparentResult: UIImage?
     @State private var transparentResultFrame2: UIImage?
-    @State private var displayTransparent: Bool = false
+    @State private var displayTransparent: Bool = true   // 기본 투명 (모델이 투명으로 줌)
     @State private var singleDetailFrame: Int = 0   // 결과에서 보고 있는 프레임(0=기본, 1=움직임)
     @State private var isProcessingTransparent: Bool = false
     @State private var revisedPrompt: String?
@@ -542,28 +542,17 @@ struct CharacterGenView: View {
         }
     }
 
-    /// 현재 displayTransparent 모드에서 보여줄 이미지. 토글 ON 이고 cache 있으면 transparent, 없으면 raw.
+    /// 보여줄 이미지. raw 는 투명(모델 출력). '배경 빼기'=투명 원본, '흰 배경'=흰색 합성(즉시, Vision 없음).
     private func currentDisplay(frame: Int) -> UIImage? {
         let raw = frame == 0 ? resultImage : resultFrame2
-        guard displayTransparent else { return raw }
-        let transparent = frame == 0 ? transparentResult : transparentResultFrame2
-        return transparent ?? raw
+        guard let raw else { return nil }
+        if displayTransparent { return raw }
+        return ImageProcessing.flattenedOnWhite(raw)
     }
 
-    /// "투명 적용" 켰을 때 transparentResult / Frame2 가 없으면 Vision 으로 처리.
+    /// 더는 Vision 불필요(모델이 투명으로 줌) — 흰배경은 currentDisplay 에서 즉시 합성. no-op 유지.
     @MainActor
-    private func ensureTransparentResults() async {
-        guard transparentResult == nil else { return }
-        guard let raw = resultImage else { return }
-        isProcessingTransparent = true
-        defer { isProcessingTransparent = false }
-        let t0 = await ImageProcessing.bestEffortTransparent(raw)
-        transparentResult = t0
-        if let rawF2 = resultFrame2 {
-            let t1 = await ImageProcessing.bestEffortTransparent(rawF2)
-            transparentResultFrame2 = t1
-        }
-    }
+    private func ensureTransparentResults() async {}
 
     /// 현재 선택된 모드의 이미지로 적용.
     private func applyCurrentSelection() {
@@ -824,7 +813,7 @@ struct CharacterGenView: View {
     private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil) async {
         // AI 에 흰 배경 강제 — 결과를 사용자가 post-gen 에 Vision 으로 정제할 수 있음.
         // 격자(체커보드) 방지: 일부 모델이 "투명"을 격자 무늬로 그려버림 → 단색 흰배경 명시.
-        let finalPrompt = "\(prompt). Solid clean WHITE background, no shadows, no gradients, no other elements behind the character. Never draw a checkerboard or transparency grid pattern — the background must be one flat solid white color."
+        let finalPrompt = "\(prompt). Only the character on a transparent background — no background fill, no shadows, no extra elements."
         do {
             let req = GenerateImageRequest(
                 prompt: finalPrompt,
@@ -842,18 +831,18 @@ struct CharacterGenView: View {
                 lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
                 return
             }
-            // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
-            let flat: UIImage
+            // 모델이 투명 배경으로 줌 — 평탄화 안 함(투명 유지). frame1 은 1번째 기준 크기·위치 정규화.
+            let processed: UIImage
             if frame == 1, let ref = matchReference {
-                flat = await ImageProcessing.matchedToReference(img, reference: ref)
+                processed = await ImageProcessing.matchedToReference(img, reference: ref)
             } else {
-                flat = ImageProcessing.flattenedOnWhite(img)
+                processed = img
             }
             // 128px 로 다운샘플 — 메인 화면 200, 워치 64, 위젯 60 다 커버 + 디스크 절약
-            let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+            let small = processed.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? processed
             if frame == 0 {
                 resultImage = small
-                lastFrame0FullRes = flat   // frame1 정규화 reference (1024 원본)
+                lastFrame0FullRes = processed   // frame1 정규화 reference (1024 투명)
                 revisedPrompt = resp.revisedPrompt
             } else {
                 resultFrame2 = small
