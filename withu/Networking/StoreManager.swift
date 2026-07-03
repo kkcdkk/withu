@@ -31,6 +31,7 @@ final class StoreManager {
     }
 
     private(set) var products: [Product] = []
+    private(set) var didAttemptLoad = false   // 로드 시도 완료 여부 — 무한 로딩 방지
     private(set) var isSubscriber = false
     private(set) var lastError: String?
     private(set) var isPurchasing = false
@@ -67,6 +68,7 @@ final class StoreManager {
         } catch {
             lastError = "상품 정보를 불러오지 못했어요."
         }
+        didAttemptLoad = true
     }
 
     /// 구매. 성공 시 크레딧 적립 또는 구독 활성화.

@@ -47,9 +47,15 @@ struct PaywallView: View {
                         creditSection
                     }
 
-                    if store.products.isEmpty {
+                    if !store.didAttemptLoad {
                         ProgressView("불러오는 중…")
                             .padding(.top, 20)
+                    } else if store.products.isEmpty {
+                        Text("지금은 충전 상품을 불러올 수 없어요.\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 12)
                     }
 
                     if let err = store.lastError {
