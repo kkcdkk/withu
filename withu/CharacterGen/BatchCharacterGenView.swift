@@ -52,7 +52,9 @@ struct BatchCharacterGenView: View {
     /// 승인 화면 — '수정해서 다시' 입력.
     @State private var idleRevisionText: String = ""
     /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
-    @State private var referenceHint: String = ""
+    /// 참고사진에서 그대로 둘 것 / 바꿀 것 (단건 생성과 동일). 참고사진 쓸 때만 프롬프트에 반영.
+    @State private var referenceKeep: String = ""
+    @State private var referenceChange: String = ""
 
     // MARK: - Progress
 
@@ -82,6 +84,8 @@ struct BatchCharacterGenView: View {
     @State private var isRevising: Bool = false
     @State private var revisionRefItem: PhotosPickerItem?
     @State private var revisionRefImage: UIImage?
+    /// '바꾸기' 실패 사유 — 상세 시트에 표시(예전엔 조용히 실패해 '반영 안 됨'으로 보였음).
+    @State private var revisionError: String?
 
     // 사진 앱 저장 상태
     @State private var isSavingPhotos: Bool = false
@@ -290,14 +294,17 @@ struct BatchCharacterGenView: View {
             // state 별 참고 이미지 (있으면 전체 reference 보다 우선)
             stateReferencePicker(state)
 
-            Toggle("움직임 (2장 · 메인에서 움직여요)", isOn: Binding(
-                get: { animatedStates.contains(state) },
-                set: { on in
-                    if on { animatedStates.insert(state) } else { animatedStates.remove(state) }
-                }
-            ))
-            .font(.footnote)
-            .disabled(isGenerating)
+            // 2프레임 생성이 의미 있는 상태만 토글 노출 — 미세 모션 상태는 자동(절차적) 애니메이션.
+            if state.usesGeneratedMotion {
+                Toggle("움직임 (2장 · 메인에서 움직여요)", isOn: Binding(
+                    get: { animatedStates.contains(state) },
+                    set: { on in
+                        if on { animatedStates.insert(state) } else { animatedStates.remove(state) }
+                    }
+                ))
+                .font(.footnote)
+                .disabled(isGenerating)
+            }
 
             Button("기본값으로 되돌리기") {
                 stateHints[state] = state.generationHint
@@ -432,10 +439,31 @@ struct BatchCharacterGenView: View {
                 }
             }
             if referenceImage != nil {
-                TextField("이 사진에서 무엇을 참고하나요? (예: 얼굴, 색, 전체 느낌)",
-                          text: $referenceHint, axis: .vertical)
-                    .font(.callout)
-                    .disabled(isGenerating)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("그대로 둘 것")
+                        .font(.caption).foregroundStyle(.secondary)
+                    TextField("비우면 사진 그대로 유지돼요", text: $referenceKeep, axis: .vertical)
+                        .lineLimit(1...4)
+                        .font(.callout)
+                        .disabled(isGenerating)
+                    Text("- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("바꿀 것")
+                        .font(.caption).foregroundStyle(.secondary)
+                    TextField("모든 모습에 함께 반영할 변화 (예: 모자 씌워줘, 색 연하게)",
+                              text: $referenceChange, axis: .vertical)
+                        .lineLimit(1...4)
+                        .font(.callout)
+                        .disabled(isGenerating)
+                    Text("각 상태의 포즈는 자동으로 적용되고, 여기 적은 변화가 모든 모습에 더해져요.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         } header: {
             Text("참고 사진 (Optional)")
@@ -460,14 +488,18 @@ struct BatchCharacterGenView: View {
             }
             .pickerStyle(.menu).disabled(isGenerating)
 
-            Toggle("모두 움직이는 캐릭터로 (한 모습당 2장)", isOn: Binding(
-                get: { !selectedStates.isEmpty && selectedStates.isSubset(of: animatedStates) },
-                set: { on in
-                    if on { animatedStates.formUnion(selectedStates) }
-                    else { animatedStates.subtract(selectedStates) }
-                }
-            ))
-            .disabled(isGenerating)
+            // '모두 움직임'은 2프레임 생성이 의미 있는 상태(usesGeneratedMotion)에만 적용.
+            let animatable = selectedStates.filter { $0.usesGeneratedMotion }
+            if !animatable.isEmpty {
+                Toggle("모두 움직이는 캐릭터로 (한 모습당 2장)", isOn: Binding(
+                    get: { animatable.isSubset(of: animatedStates) },
+                    set: { on in
+                        if on { animatedStates.formUnion(animatable) }
+                        else { animatedStates.subtract(animatable) }
+                    }
+                ))
+                .disabled(isGenerating)
+            }
 
             // 상태별 움직임 선택 — '모두' 대신 원하는 상태만 골라서.
             animatedStateChips
@@ -482,7 +514,9 @@ struct BatchCharacterGenView: View {
     /// 상태별 움직임 토글 칩 — 선택된 상태만 노출. 상태 행 안의 '움직임' 토글과 같은 값을 공유.
     @ViewBuilder
     private var animatedStateChips: some View {
-        let states = CharacterState.userFacing.filter { selectedStates.contains($0) }
+        // 미세 모션 상태(idle·수면 등)는 2프레임을 안 만드므로 칩에서 제외 — 그 상태는
+        // 절차적 모션으로 자동 애니메이션됨.
+        let states = CharacterState.userFacing.filter { selectedStates.contains($0) && $0.usesGeneratedMotion }
         if !states.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -776,6 +810,7 @@ struct BatchCharacterGenView: View {
         Button {
             selectedResult = (state, image)
             revisionText = ""
+            revisionError = nil
             detailFrame = 0
         } label: {
             VStack(spacing: 6) {
@@ -847,20 +882,27 @@ struct BatchCharacterGenView: View {
         return referenceImage?.pngData()?.base64EncodedString()
     }
 
-    /// 생성에 쓸 reference: 사용자 참고사진 → (idle 외 상태면) 승인된 idle 앵커 → 없음.
-    /// 앱 재시작 후엔 매니저가 디스크에 남긴 idle 원본으로 복구.
-    private func resolveReference(for state: CharacterState) -> String? {
-        if let user = resolveUserReference(for: state) { return user }
-        if state != .idle, let anchor = idleAnchor ?? genManager.loadFrame0FullRes(.idle) {
-            return anchor.pngData()?.base64EncodedString()
-        }
-        return nil
+    /// 나머지 상태용: 그 상태에 '명시적으로' 첨부한 사진만 (전역 사진 X). 없으면 nil → 호출부가 idle 앵커 사용.
+    private func perStateReferenceB64(for state: CharacterState) -> String? {
+        stateReferenceImages[state]?.pngData()?.base64EncodedString()
     }
 
-    /// 참고사진 "무엇을 참고" 힌트 — 사용자 참고사진이 실제로 쓰일 때만(앵커엔 미적용).
-    private func userRefNote(for state: CharacterState) -> String {
+    /// 승인된 idle 앵커 base64 — 나머지 상태의 일관성 기준. 앱 재시작 후엔 디스크에서 복구.
+    private func anchorReferenceB64() -> String? {
+        (idleAnchor ?? genManager.loadFrame0FullRes(.idle) ?? results[.idle])?
+            .pngData()?.base64EncodedString()
+    }
+
+    /// 참고사진 '그대로 둘 것' — 사용자 참고사진이 실제로 쓰일 때만(idle 앵커엔 미적용).
+    private func userRefKeep(for state: CharacterState) -> String {
         guard stateReferenceImages[state] != nil || referenceImage != nil else { return "" }
-        return referenceHint.trimmingCharacters(in: .whitespacesAndNewlines)
+        return referenceKeep.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 참고사진 '바꿀 것' — 모든 상태의 포즈에 더해 적용. 사용자 참고사진 쓸 때만.
+    private func userRefChange(for state: CharacterState) -> String {
+        guard stateReferenceImages[state] != nil || referenceImage != nil else { return "" }
+        return referenceChange.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// 1단계 — idle 을 먼저 만들어 앵커로 삼고, 사용자 승인을 기다린다.
@@ -899,7 +941,8 @@ struct BatchCharacterGenView: View {
         let spec = BackgroundGenJobSpec(
             state: .idle, frame: 0,
             prompt: buildPrompt(for: .idle, consistencyPrefix: idleRef != nil,
-                                referenceNote: userRefNote(for: .idle), frame: 0),
+                                keepNote: userRefKeep(for: .idle),
+                                changeNote: userRefChange(for: .idle), frame: 0),
             referenceB64: idleRef, frame0Reference: nil,
             wantsFrame1: false, frame1Prompt: nil)
         genManager.start(specs: [spec], quality: quality, artStyle: artStyle,
@@ -919,25 +962,31 @@ struct BatchCharacterGenView: View {
 
         var specs: [BackgroundGenJobSpec] = []
         // idle 의 움직임(frame 1) — frame 0(앵커)을 reference 로.
-        if animatedStates.contains(.idle), let anchorB64 {
+        // (idle 은 usesGeneratedMotion=false 라 실제로는 안 들어옴 — 절차적 모션으로 애니메이션)
+        if animatedStates.contains(.idle), CharacterState.idle.usesGeneratedMotion, let anchorB64 {
             specs.append(BackgroundGenJobSpec(
                 state: .idle, frame: 1,
                 prompt: buildPrompt(for: .idle, consistencyPrefix: true, frame: 1),
                 referenceB64: anchorB64, frame0Reference: idle,
                 wantsFrame1: false, frame1Prompt: nil))
         }
-        // 나머지 선택 상태 (idle 제외) — 사용자 참고사진 > idle 앵커.
+        // 나머지 선택 상태 (idle 제외) — 승인한 idle 앵커가 기준.
+        // (전역 첨부사진·keep/change 는 idle 만들 때만 반영됨. 그 상태에 명시적으로 붙인
+        //  사진이 있으면 그 상태만 예외로 그 사진을 참고.)
         let rest = CharacterState.allCases.filter { selectedStates.contains($0) && $0 != .idle }
         for state in rest {
-            let refB64 = resolveUserReference(for: state) ?? anchorB64
-            let animated = animatedStates.contains(state)
+            let perStatePhoto = perStateReferenceB64(for: state)
+            let refB64 = perStatePhoto ?? anchorB64
+            // 미세 모션 상태는 2프레임 생성 안 함 — 절차적 모션으로 애니메이션(색·이목구비 드리프트 방지)
+            let animated = animatedStates.contains(state) && state.usesGeneratedMotion
             specs.append(BackgroundGenJobSpec(
                 state: state, frame: 0,
-                prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil,
-                                    referenceNote: userRefNote(for: state), frame: 0),
+                prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil, frame: 0),
                 referenceB64: refB64, frame0Reference: nil,
                 wantsFrame1: animated,
-                frame1Prompt: animated ? buildPrompt(for: state, consistencyPrefix: true, frame: 1) : nil))
+                frame1Prompt: animated ? buildPrompt(for: state, consistencyPrefix: true, frame: 1) : nil,
+                // 앵커 기반이면 idle 색에 통일. 상태별 명시 사진을 쓴 상태는 그 사진 색 존중.
+                matchIdleColor: perStatePhoto == nil))
         }
         // 만들 게 없음 (idle 만 선택 + 움직임 없음) — 즉시 완료 처리.
         guard !specs.isEmpty else {
@@ -1048,13 +1097,26 @@ struct BatchCharacterGenView: View {
     private func retryOne(_ state: CharacterState) async {
         // 이전 에러 표시 제거 + 진행 표시 시작
         errors.removeValue(forKey: state)
-        let refB64 = resolveReference(for: state)
+        // idle: 전역 첨부사진 + keep/change. 나머지: 승인한 idle 앵커 기준(상태별 명시 사진만 예외).
+        let refB64: String?
+        let keep: String, change: String
+        let alignIdle: Bool
+        if state == .idle {
+            refB64 = resolveUserReference(for: .idle)
+            keep = userRefKeep(for: .idle); change = userRefChange(for: .idle)
+            alignIdle = false
+        } else {
+            let perStatePhoto = perStateReferenceB64(for: state)
+            refB64 = perStatePhoto ?? anchorReferenceB64()
+            keep = ""; change = ""
+            alignIdle = perStatePhoto == nil   // 앵커 기반이면 idle 색에 통일
+        }
         let spec = BackgroundGenJobSpec(
             state: state, frame: 0,
             prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil,
-                                referenceNote: userRefNote(for: state), frame: 0),
+                                keepNote: keep, changeNote: change, frame: 0),
             referenceB64: refB64, frame0Reference: nil,
-            wantsFrame1: false, frame1Prompt: nil)
+            wantsFrame1: false, frame1Prompt: nil, matchIdleColor: alignIdle)
         genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
         syncFromManager()
     }
@@ -1062,21 +1124,27 @@ struct BatchCharacterGenView: View {
     /// 한 state 의 생성 프롬프트 조립 (기존 runOne 의 프롬프트 로직).
     /// frame == 0: 기본. frame == 1: 애니메이션용 (frame 0 을 reference 로 chain + 다른 포즈).
     private func buildPrompt(for state: CharacterState, consistencyPrefix: Bool,
-                             referenceNote: String = "", frame: Int = 0) -> String {
+                             keepNote: String = "", changeNote: String = "", frame: Int = 0) -> String {
         let pose = stateHints[state] ?? state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
-        let keepNote = referenceNote.isEmpty ? "" : " Keep especially: \(referenceNote)."
+        let keepClause = keepNote.isEmpty ? "" : " Keep especially: \(keepNote)."
+        // '바꿀 것'은 상태별 포즈에 '추가'로 적용 (포즈는 상태마다 다르므로 대체가 아니라 더함).
+        let changeScene = changeNote.isEmpty ? pose : "\(pose), and also \(changeNote)"
         var prompt: String
         if frame == 1 {
-            // frame1 — 1번째와 거의 동일, 표정/움직임만. Keep=전부(크기·위치 포함).
-            prompt = "Use the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
+            // frame1 — 캐릭터 디자인·크기·위치는 그대로, 포즈는 '확실히' 바뀌게.
+            // (A 로 미세 모션 상태는 frame1 을 안 만드므로, frame1 은 항상 실제 포즈 변화용.
+            //  예전 "tiny hint of life / do not change overall appearance" 문구가 다리 교체 같은
+            //  큰 포즈 변화를 억눌러서 '말을 안 듣던' 문제를 해소.)
+            prompt = "Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, framing, and the flat solid white background. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(state.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference."
         } else if consistencyPrefix {
-            // frame0 + 참고(idle 앵커 또는 사용자 사진) — Keep=캐릭터 전부, Change=이 state 의 포즈/장면.
+            // frame0 + 참고(idle 앵커 또는 사용자 사진) — Keep=캐릭터 전부, Change=이 state 의 포즈/장면(+바꿀것).
             let charNote = desc.isEmpty ? "" : " The character is: \(desc)."
-            prompt = "Use the reference image. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail.\(charNote)\(keepNote) Change ONLY: \(pose). Do not change the character design; keep all other visual details identical to the reference."
+            prompt = "Use the reference image. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail.\(charNote)\(keepClause) Change ONLY: \(changeScene). Do not change the character design; keep all other visual details identical to the reference."
         } else {
-            // frame0, 참고 없음 (보통 idle 최초 생성) — 설명 + 포즈.
-            prompt = desc.isEmpty ? pose : "\(desc), \(pose)"
+            // frame0, 참고 없음 (보통 idle 최초 생성) — 설명 + 포즈 (+바꿀것).
+            let base = desc.isEmpty ? pose : "\(desc), \(pose)"
+            prompt = changeNote.isEmpty ? base : "\(base), \(changeNote)"
         }
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
@@ -1196,6 +1264,14 @@ struct BatchCharacterGenView: View {
                         .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(.horizontal)
+
+                    if let revisionError {
+                        Text(revisionError)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
                 }
                 .padding(.vertical)
             }
@@ -1233,6 +1309,12 @@ struct BatchCharacterGenView: View {
     private func reviseOne(_ state: CharacterState, frame: Int, text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        revisionError = nil
+        let cost = GenerationQuota.cost(forQuality: quality)
+        guard GenerationQuota.canGenerate(cost) else {
+            showPaywall = true
+            return
+        }
         isRevising = true
         defer { isRevising = false }
 
@@ -1270,14 +1352,20 @@ struct BatchCharacterGenView: View {
             if let data = Data(base64Encoded: resp.imageBase64),
                let img = UIImage(data: data) {
                 // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
+                let ref0: UIImage? = frame == 1
+                    ? (frame0FullRes[state] ?? genManager.loadFrame0FullRes(state) ?? results[state])
+                    : nil
                 let flat: UIImage
-                if frame == 1, let ref0 = frame0FullRes[state]
-                    ?? genManager.loadFrame0FullRes(state) ?? results[state] {
+                if let ref0 {
                     flat = await ImageProcessing.matchedToReference(img, reference: ref0)
                 } else {
                     flat = img
                 }
-                let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                var small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                // frame1 색 드리프트 제거 — frame0 색에 맞춤
+                if let ref0, let ref0Small = ref0.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
+                    small = ImageProcessing.colorMatched(small, reference: ref0Small)
+                }
                 if frame == 1 {
                     resultsFrame1[state] = small
                     transparentResultsFrame1[state] = nil   // 배경 캐시 무효화
@@ -1291,13 +1379,17 @@ struct BatchCharacterGenView: View {
                 CharacterImageStore.save(small, for: state, frame: frame)
                 ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+                GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
+                remainingGenerations = GenerationQuota.remainingToday()
                 revisionText = ""
                 WidgetCenter.shared.reloadAllTimelines()
+            } else {
+                revisionError = "이미지를 받지 못했어요. 다시 시도해 주세요."
             }
         } catch APIError.paymentRequired {
             showPaywall = true
         } catch {
-            errors[state] = error.koreanizedDescription
+            revisionError = error.koreanizedDescription
         }
     }
 

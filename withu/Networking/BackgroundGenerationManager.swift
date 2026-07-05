@@ -37,6 +37,9 @@ struct BackgroundGenJob: Codable, Identifiable {
     /// 실행 횟수. 앱이 죽은 사이 완료된 upload task 는 응답 본문이 유실될 수 있어
     /// (iOS 한계) 본문 없는 2xx 는 한 번 재큐잉한다 — 그 상한.
     var attempts: Int?
+    /// true 면 이 장의 색을 idle 앵커 색에 맞춤 (상태 간 색 통일).
+    /// idle 자신·per-state 첨부사진 상태는 false (사진 색 존중).
+    var matchIdleColor: Bool?
 }
 
 /// 뷰가 넘겨주는 한 장 스펙. 프롬프트는 뷰가 조립(기존 runOne 로직 그대로).
@@ -49,6 +52,8 @@ struct BackgroundGenJobSpec {
     let frame0Reference: UIImage?
     let wantsFrame1: Bool
     let frame1Prompt: String?
+    /// true 면 색을 idle 앵커에 맞춤 (나머지 상태·앵커 기반). idle·per-state 사진은 false.
+    var matchIdleColor: Bool = false
 }
 
 @Observable
@@ -202,7 +207,8 @@ final class BackgroundGenerationManager: NSObject {
                                    batchId: batchId,
                                    wantsFrame1: spec.wantsFrame1,
                                    frame1Prompt: spec.frame1Prompt,
-                                   status: .queued)
+                                   status: .queued,
+                                   matchIdleColor: spec.matchIdleColor)
         let req = GenerateImageRequest(prompt: spec.prompt,
                                        referenceImageBase64: spec.referenceB64,
                                        steps: 30, width: 1024, height: 1024,
@@ -297,13 +303,20 @@ final class BackgroundGenerationManager: NSObject {
                let state = CharacterState(rawValue: jobs[idx].stateRaw) {
                 let job = jobs[idx]
                 // frame1: frame0 원본 기준으로 크기·위치 정규화 (기존 runOne 과 동일)
+                let ref0 = job.frame == 1 ? loadFrame0FullRes(state) : nil
                 let flat: UIImage
-                if job.frame == 1, let ref0 = loadFrame0FullRes(state) {
+                if let ref0 {
                     flat = await ImageProcessing.matchedToReference(img, reference: ref0)
                 } else {
                     flat = img
                 }
-                let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                var small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
+                // 색 정렬 — 나머지 상태(앵커 기반)는 idle 앵커 색에 통일(상태 간 색 어긋남 해소),
+                // 그 외(idle 자신·per-state 사진)는 자기 frame0 색에 맞춰 frame1 드리프트만 제거.
+                let colorRef: UIImage? = (job.matchIdleColor == true) ? loadFrame0FullRes(.idle) : ref0
+                if let colorRef, let colorRefSmall = colorRef.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
+                    small = ImageProcessing.colorMatched(small, reference: colorRefSmall)
+                }
                 CharacterImageStore.save(small, for: state, frame: job.frame)
                 ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: job.frame)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
@@ -319,7 +332,8 @@ final class BackgroundGenerationManager: NSObject {
                    let refB64 = flatPNG?.base64EncodedString() {
                     let spec = BackgroundGenJobSpec(state: state, frame: 1, prompt: f1Prompt,
                                                     referenceB64: refB64, frame0Reference: nil,
-                                                    wantsFrame1: false, frame1Prompt: nil)
+                                                    wantsFrame1: false, frame1Prompt: nil,
+                                                    matchIdleColor: job.matchIdleColor ?? false)
                     appendJob(spec: spec, quality: job.quality, artStyle: job.artStyle, batchId: job.batchId)
                 }
             } else if (data == nil || data?.isEmpty == true), (jobs[idx].attempts ?? 1) < 2 {

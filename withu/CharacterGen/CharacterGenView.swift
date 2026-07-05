@@ -296,7 +296,10 @@ struct CharacterGenView: View {
                     Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
             } else {
-                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
+                // 2프레임 생성이 의미 있는 상태만 토글 노출 — 미세 모션 상태는 자동(절차적) 애니메이션.
+                if targetState.usesGeneratedMotion {
+                    Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
+                }
                 Button {
                     generateTask = Task { await generate() }
                 } label: {
@@ -321,7 +324,7 @@ struct CharacterGenView: View {
                     Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("보유 캔디 \(remainingGenerations)개 · 이번 만들기 \(generateAnimated ? cost * 2 : cost)캔디")
+                    Text("보유 캔디 \(remainingGenerations)개 · 이번 만들기 \((generateAnimated && targetState.usesGeneratedMotion) ? cost * 2 : cost)캔디")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -765,7 +768,7 @@ struct CharacterGenView: View {
         // 성공한 장만 차감 (퀄리티별 캔디)
         if frame0Succeeded { GenerationQuota.record(cost) }
         // 연속 이미지 — frame 0 성공 시 그 원본(1024)을 reference 로 frame 1 추가
-        if generateAnimated, frame0Succeeded,
+        if generateAnimated, targetState.usesGeneratedMotion, frame0Succeeded,
            let f0Full = lastFrame0FullRes ?? resultImage,
            let f0Ref = f0Full.pngData()?.base64EncodedString() {
             let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
@@ -820,7 +823,7 @@ struct CharacterGenView: View {
 
     /// frame1(2번째 장면) 프롬프트 — "1번째와 거의 동일, 표정만 살짝" 강제.
     private func animationFrame2Instruction(_ state: CharacterState) -> String {
-        " SECOND FRAME of a tiny 2-frame idle loop, almost identical to the reference image. Keep the EXACT same character: same face, body, proportions, outfit, colors, art/pixel style, line work, size, scale, centered position, framing, and the same flat solid white background. The ONLY change is a tiny hint of life: \(state.animationFrame2Hint). Do NOT change the size, zoom, crop, position, background, or overall appearance."
+        " Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, framing, and the flat solid white background. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(state.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference."
     }
 
     private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil) async {
@@ -852,7 +855,12 @@ struct CharacterGenView: View {
                 processed = img
             }
             // 128px 로 다운샘플 — 메인 화면 200, 워치 64, 위젯 60 다 커버 + 디스크 절약
-            let small = processed.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? processed
+            var small = processed.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? processed
+            // frame1 색 드리프트 제거 — frame0 색에 맞춤
+            if frame == 1, let ref = matchReference,
+               let refSmall = ref.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
+                small = ImageProcessing.colorMatched(small, reference: refSmall)
+            }
             if frame == 0 {
                 resultImage = small
                 lastFrame0FullRes = processed   // frame1 정규화 reference (1024 투명)

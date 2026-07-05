@@ -77,13 +77,17 @@ enum ImageProcessing {
             return image
         }
 
+        // 내부 흰색 구멍 복원 — 완전 흰색(눈·하이라이트 등)이 흰 배경으로 오인돼 뚫린 곳을
+        // 원본 색으로 되돌림. 가장자리와 연결된 투명(진짜 배경)만 투명 유지.
+        let repaired = fillInteriorHoles(cutout, original: image)
+
         // 크기·스케일을 원본과 동일하게 고정(투명 유지) — '배경 빼면 크기 달라짐' 방지.
-        if cutout.size == image.size, cutout.scale == image.scale { return cutout }
+        if repaired.size == image.size, repaired.scale == image.scale { return repaired }
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false
         format.scale = image.scale
         return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
-            cutout.draw(in: CGRect(origin: .zero, size: image.size))
+            repaired.draw(in: CGRect(origin: .zero, size: image.size))
         }
     }
 
@@ -220,6 +224,139 @@ enum ImageProcessing {
         return UIGraphicsImageRenderer(size: canvasSize, format: format).image { _ in
             UIImage(cgImage: croppedCG).draw(in: drawRect)
         }
+    }
+
+    // MARK: - 내부 구멍 복원 (배경 빼기 후)
+
+    /// Vision 배경 제거 결과에서 '캐릭터 안에 갇힌 투명 구멍'을 원본 색으로 복원.
+    /// 완전 흰색 부분(눈·하이라이트·흰옷)이 흰 배경으로 오인돼 뚫린 경우를 되살린다.
+    ///   - 가장자리에서 투명으로 이어지는 영역 = 진짜 배경 → 투명 유지.
+    ///   - 그 외 투명(=캐릭터에 둘러싸인 구멍)이면서 원본이 불투명이던 곳만 복원.
+    /// (원본이 원래 투명이던 진짜 구멍은 건드리지 않음 — 검은 얼룩 방지.)
+    static func fillInteriorHoles(_ cutout: UIImage, original: UIImage,
+                                  alphaThreshold: UInt8 = 20) -> UIImage {
+        guard let cutCG = cutout.cgImage, cutCG.width > 0, cutCG.height > 0,
+              let origCG = original.cgImage else { return cutout }
+        let w = cutCG.width, h = cutCG.height
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+
+        guard let cutCtx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                     bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return cutout }
+        cutCtx.draw(cutCG, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let cutData = cutCtx.data else { return cutout }
+        let cut = cutData.bindMemory(to: UInt8.self, capacity: w * h * 4)
+
+        // 원본을 cutout 과 같은 픽셀 격자로 그려 색 참조(크기 달라도 맞춤).
+        guard let origCtx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                      bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return cutout }
+        origCtx.draw(origCG, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let origData = origCtx.data else { return cutout }
+        let orig = origData.bindMemory(to: UInt8.self, capacity: w * h * 4)
+
+        // 가장자리에서 4-연결된 투명 픽셀 = 진짜 배경. BFS 로 표시.
+        var reached = [Bool](repeating: false, count: w * h)
+        var stack = [Int]()
+        func seedIfBg(_ p: Int) {
+            if cut[p * 4 + 3] < alphaThreshold, !reached[p] { reached[p] = true; stack.append(p) }
+        }
+        for x in 0..<w { seedIfBg(x); seedIfBg((h - 1) * w + x) }
+        for y in 0..<h { seedIfBg(y * w); seedIfBg(y * w + (w - 1)) }
+        while let p = stack.popLast() {
+            let x = p % w, y = p / w
+            if x > 0 { seedIfBg(p - 1) }
+            if x < w - 1 { seedIfBg(p + 1) }
+            if y > 0 { seedIfBg(p - w) }
+            if y < h - 1 { seedIfBg(p + w) }
+        }
+
+        // 투명이지만 가장자리와 연결 안 됨(내부 구멍) + 원본이 불투명이던 곳 → 원본 색 복원.
+        var filled = 0
+        for p in 0..<(w * h) {
+            let i = p * 4
+            if cut[i + 3] < alphaThreshold, !reached[p], orig[i + 3] > 200 {
+                cut[i] = orig[i]; cut[i + 1] = orig[i + 1]; cut[i + 2] = orig[i + 2]; cut[i + 3] = 255
+                filled += 1
+            }
+        }
+        guard filled > 0, let outCG = cutCtx.makeImage() else { return cutout }
+        return UIImage(cgImage: outCG, scale: cutout.scale, orientation: .up)
+    }
+
+    // MARK: - 색 맞추기 (프레임2 → 프레임0)
+
+    /// 프레임2의 색을 프레임0(reference)에 맞춰 2프레임 스왑 시 미묘한 색 드리프트 제거.
+    /// 전경(알파>200) 픽셀의 채널별 평균/표준편차를 reference 에 맞추는 Reinhard 색 전이.
+    /// 의도된 국소 변화(입·다리)는 전체 통계를 거의 안 바꾸므로 보존됨. 알파는 그대로 유지.
+    /// 128px 썸네일에 적용하는 전제(저비용). 통계가 불안정하면 원본 반환.
+    static func colorMatched(_ image: UIImage, reference: UIImage) -> UIImage {
+        guard let src = channelStats(image), let ref = channelStats(reference),
+              let cg = image.cgImage else { return image }
+        // 표준편차가 너무 작으면(거의 단색) 나눗셈 불안정 → 스킵
+        if src.std.contains(where: { $0 < 0.5 }) { return image }
+
+        let w = cg.width, h = cg.height
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return image }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let data = ctx.data else { return image }
+        let buf = data.bindMemory(to: UInt8.self, capacity: w * h * 4)
+
+        // out = (in - sMean) * (rStd/sStd) + rMean  = in*gain + off
+        var gain = [Double](repeating: 1, count: 3), off = [Double](repeating: 0, count: 3)
+        for c in 0..<3 {
+            gain[c] = ref.std[c] / src.std[c]
+            off[c] = ref.mean[c] - gain[c] * src.mean[c]
+        }
+        var i = 0
+        while i < w * h * 4 {
+            if buf[i + 3] > 200 {   // 전경만
+                for c in 0..<3 {
+                    let v = Double(buf[i + c]) * gain[c] + off[c]
+                    buf[i + c] = UInt8(max(0, min(255, v.rounded())))
+                }
+            }
+            i += 4
+        }
+        guard let outCG = ctx.makeImage() else { return image }
+        return UIImage(cgImage: outCG, scale: image.scale, orientation: .up)
+    }
+
+    private struct ChannelStats { let mean: [Double]; let std: [Double] }
+
+    /// 전경(알파>200) 픽셀의 RGB 채널별 평균/표준편차. 전경이 너무 적으면 nil.
+    private static func channelStats(_ image: UIImage) -> ChannelStats? {
+        guard let cg = image.cgImage, cg.width > 0, cg.height > 0 else { return nil }
+        let w = cg.width, h = cg.height
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return nil }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let data = ctx.data else { return nil }
+        let buf = data.bindMemory(to: UInt8.self, capacity: w * h * 4)
+        var sum = [Double](repeating: 0, count: 3), sumSq = [Double](repeating: 0, count: 3)
+        var n = 0, i = 0
+        while i < w * h * 4 {
+            if buf[i + 3] > 200 {
+                n += 1
+                for c in 0..<3 {
+                    let v = Double(buf[i + c])
+                    sum[c] += v; sumSq[c] += v * v
+                }
+            }
+            i += 4
+        }
+        guard n > 100 else { return nil }
+        let nd = Double(n)
+        var mean = [Double](repeating: 0, count: 3), std = [Double](repeating: 0, count: 3)
+        for c in 0..<3 {
+            mean[c] = sum[c] / nd
+            std[c] = max(0, sumSq[c] / nd - mean[c] * mean[c]).squareRoot()
+        }
+        return ChannelStats(mean: mean, std: std)
     }
 
     // MARK: - Helpers

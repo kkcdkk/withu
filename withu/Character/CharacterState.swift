@@ -162,12 +162,12 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         switch self {
         case .idle:         return "standing peacefully, hands folded, looking calm with a small smile"
         case .sleeping:     return "sleeping on a small pillow, eyes closed, with a 'zzz' bubble nearby"
-        case .wakingUp:     return "just woken up, holding a pillow, half-closed sleepy eyes, messy hair, yawning"
+        case .wakingUp:     return "just woken up, holding a pillow, messy hair, mouth wide open in a big yawn, sleepy half-closed eyes"
         case .walking:      return "walking happily with one foot up, motion lines, friendly expression"
         case .running:      return "running with arms swinging energetically, dynamic pose"
         case .cycling:      return "riding a small bicycle, wearing a tiny helmet, friendly smile"
         case .energetic:    return "jumping in the air with sparkles around, super happy"
-        case .eating:       return "sitting at a small table, happily eating a meal with fork and spoon, food on plate"
+        case .eating:       return "sitting at a small table, holding a fork with food on it down near the plate, food on plate, happy expression"
         case .beach:        return "lying on a beach towel with sunglasses, sun overhead"
         case .cloudy:       return "standing calmly with small fluffy clouds floating above the head, soft cloudy sky background, peaceful expression"
         case .rainyShelter: return "holding an umbrella, wearing rain boots, raindrops around"
@@ -198,17 +198,17 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .sleeping:
             return "breathing in (slightly puffed chest / cheeks) instead of out, or 'z' bubble in a different position. Same closed eyes, same pillow."
         case .wakingUp:
-            return "yawning with wide open mouth, or one eye fully open. Same messy hair and pillow."
+            return "mouth fully closed with relaxed lips (NOT yawning), and both eyes closed (relaxed, resting). Same messy hair, same pillow, same pose and size."
         case .walking:
-            return "the OPPOSITE foot stepping forward (mirror the leg/arm swing). Same direction of walking, same outfit."
+            return "a full stride swap: the clearly OPPOSITE leg forward — if frame 1's LEFT leg is forward, now the RIGHT leg is forward and the left leg is back, with arm swing mirrored to match. Same direction of walking, same outfit, same size and position."
         case .running:
-            return "arms and legs in the OPPOSITE swing phase — if frame 1 had right arm forward, frame 2 has left arm forward. Same speed, same expression."
+            return "a full stride swap: arms and legs in the clearly OPPOSITE swing phase — if frame 1 had the right leg and left arm forward, frame 2 has the left leg and right arm forward. Same speed, same expression, same size and position."
         case .cycling:
             return "pedals rotated half a turn — opposite foot at the top. Same helmet, same direction, same bicycle."
         case .energetic:
             return "jumping at the higher peak with arms wider, or sparkles in a different position. Same big smile."
         case .eating:
-            return "spoon/fork at a different position — mid-bite vs after-bite. Same table, same food, same outfit."
+            return "the fork raised all the way up to the mouth, taking a bite — mouth open around the food, cheeks a little full. Same table, same food, same outfit, same size and position."
         case .beach:
             return "waving one hand, or sunglasses pushed slightly up — small but visible change. Same beach towel, same sun overhead."
         case .cloudy:
@@ -219,11 +219,28 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
             return "snowball mid-toss (in the air) instead of in hands, or scarf flowing the other direction. Same mittens, same snow ground."
         // 조합 — 운동 base 의 hint 와 동일한 변화 패턴 사용
         case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy:
-            return "the OPPOSITE foot stepping forward (mirror the leg/arm swing). Same direction of walking, same outfit, same weather conditions."
+            return "a full stride swap: the clearly OPPOSITE leg forward — if frame 1's LEFT leg is forward, now the RIGHT leg is forward and the left leg is back, arm swing mirrored. Same direction, same outfit, same weather conditions, same size and position."
         case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy:
-            return "arms and legs in the OPPOSITE swing phase. Same speed, same expression, same weather conditions."
+            return "a full stride swap: arms and legs in the clearly OPPOSITE swing phase (left leg forward becomes right leg forward). Same speed, same expression, same weather conditions, same size and position."
         case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy:
             return "pedals rotated half a turn — opposite foot at the top. Same helmet, same direction, same bicycle, same weather conditions."
+        }
+    }
+
+    /// 프레임2(움직임)를 실제로 새로 생성할지 여부.
+    /// true  — 다리 교차·하품·냠·페달처럼 절차적 변형(scale/offset/rotation)으로 흉내낼 수
+    ///         없는 포즈 변화 → 2프레임 생성이 필요.
+    /// false — 숨쉬기·까닥 등 미세 모션. 홈/워치의 절차적 모션으로 충분하고, 2프레임을 새로
+    ///         그리면 이목구비·색이 흔들려(드리프트) 오히려 나빠짐 → 1장 + 절차적 모션.
+    var usesGeneratedMotion: Bool {
+        switch self {
+        case .idle, .sleeping, .beach, .cloudy, .rainyShelter:
+            return false
+        case .wakingUp, .walking, .running, .cycling, .eating, .energetic, .snowPlay,
+             .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy,
+             .runningSunny, .runningCloudy, .runningRainy, .runningSnowy,
+             .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy:
+            return true
         }
     }
 
