@@ -1,7 +1,7 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest, verifyAppleJws } from "./auth.js";
 import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
 
-const OPENAI_IMAGE_MODEL = "gpt-image-1";
+const OPENAI_IMAGE_MODEL = "gpt-image-1.5";
 
 // OpenAI 호출 베이스. AI_GATEWAY_BASE(시크릿)가 설정되면 Cloudflare AI Gateway 경유 —
 // Worker 직접 호출의 출구 IP 지역이 요청마다 달라 OpenAI 가 간헐적 403("Country ... not supported")을
