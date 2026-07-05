@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "1D34FECD2FB278620033EC7D"
-               BuildableName = "withu.app"
+               BuildableName = "Withy - make your characters.app"
                BlueprintName = "withu"
                ReferencedContainer = "container:withu.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1D34FECD2FB278620033EC7D"
-            BuildableName = "withu.app"
+            BuildableName = "Withy - make your characters.app"
             BlueprintName = "withu"
             ReferencedContainer = "container:withu.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1D34FECD2FB278620033EC7D"
-            BuildableName = "withu.app"
+            BuildableName = "Withy - make your characters.app"
             BlueprintName = "withu"
             ReferencedContainer = "container:withu.xcodeproj">
          </BuildableReference>
