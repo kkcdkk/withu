@@ -454,6 +454,12 @@ enum CharacterImageStore {
         if let activeURL = activeFileURL(for: state, frame: frame) {
             try? data.write(to: activeURL, options: .atomic)
         }
+        // frame0(새 기본 이미지) 저장 시 옛 frame1(움직임)은 무효 → 제거.
+        // 애니메이션 캐릭터면 이 직후 frame1 이 다시 저장된다.
+        // (안 지우면 frame1 없는 새 캐릭터가 옛 frame1 과 섞여 움직이는 버그)
+        if frame == 0, let f1URL = activeFileURL(for: state, frame: 1) {
+            try? FileManager.default.removeItem(at: f1URL)
+        }
         evictImageCache()
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
         // 2) 갤러리 — frame 별 분기
