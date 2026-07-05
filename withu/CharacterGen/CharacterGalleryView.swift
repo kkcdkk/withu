@@ -278,6 +278,8 @@ struct GalleryGrid<Header: View>: View {
     @ViewBuilder var header: () -> Header
 
     @State private var selectedItem: GalleryItem?
+    /// 프레임 스왑처럼 메타데이터는 그대로고 파일만 바뀌는 경우 상세 시트를 강제 재로드.
+    @State private var frameSwapTick: Int = 0
     @State private var showApplySheet: Bool = false
     @State private var showDeleteConfirm: Bool = false
     @State private var toastText: String?
@@ -488,6 +490,7 @@ struct GalleryGrid<Header: View>: View {
             ScrollView {
                 VStack(spacing: 16) {
                     if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
+                        let _ = frameSwapTick   // 스왑 시 이 블록 재평가 → 디스크에서 재로드
                         if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(spacing: 4) {
@@ -537,6 +540,7 @@ struct GalleryGrid<Header: View>: View {
                                         for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
                                             apply(item, to: state)
                                         }
+                                        frameSwapTick += 1   // 상세 시트 이미지 강제 재로드
                                         onChange()
                                     }
                                 } label: {
