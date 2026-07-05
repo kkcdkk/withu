@@ -288,6 +288,10 @@ struct GalleryGrid<Header: View>: View {
     @State private var selectedIDs: Set<String> = []
     @State private var showBulkDeleteConfirm: Bool = false
 
+    // 배경 빼기 (Vision) — 상세 sheet 에서
+    @State private var isRemovingBackground: Bool = false
+    @State private var showRemoveBGConfirm: Bool = false
+
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 12)]
 
     var body: some View {
@@ -557,6 +561,22 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
+                        Button {
+                            showRemoveBGConfirm = true
+                        } label: {
+                            if isRemovingBackground {
+                                HStack { ProgressView(); Text("배경 빼는 중…") }
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                Label("배경 빼기", systemImage: "wand.and.sparkles")
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.secondary)
+                        .padding(.horizontal)
+                        .disabled(isRemovingBackground)
+
                         Button(role: .destructive) {
                             showDeleteConfirm = true
                         } label: {
@@ -581,6 +601,12 @@ struct GalleryGrid<Header: View>: View {
                     Button("닫기") { selectedItem = nil }
                 }
             }
+            .alert("배경을 뺄까요?", isPresented: $showRemoveBGConfirm) {
+                Button("배경 빼기") { Task { await removeBackground(item) } }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("이 그림에서 배경을 지워 투명하게 만들어요. 원래대로 되돌릴 수 없어요.")
+            }
         }
     }
 
@@ -603,6 +629,53 @@ struct GalleryGrid<Header: View>: View {
             withAnimation { toastText = "적용하지 못했어요" }
             hideToastAfter(1.6)
         }
+    }
+
+    /// 갤러리 항목의 배경을 Vision 으로 제거해 파일을 교체.
+    /// 연속(2장) 항목은 두 장 모두 성공해야 교체 — 한쪽만 투명해져 애니메이션이
+    /// 어긋나는 것을 방지. 지금 어딘가에 적용 중이면 그 자리(활성 슬롯)와 워치에도 반영.
+    private func removeBackground(_ item: GalleryItem) async {
+        guard let img = CharacterImageStore.loadGalleryImage(id: item.id) else { return }
+        isRemovingBackground = true
+        defer { isRemovingBackground = false }
+
+        // bestEffortTransparent 는 실패/과다제거 시 원본 인스턴스를 그대로 반환
+        let cut = await ImageProcessing.bestEffortTransparent(img)
+        let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id)
+        var cutF1: UIImage?
+        if let f1 {
+            let processed = await ImageProcessing.bestEffortTransparent(f1)
+            guard processed !== f1 else {
+                withAnimation { toastText = "배경을 빼지 못했어요" }
+                hideToastAfter(1.6)
+                return
+            }
+            cutF1 = processed
+        }
+        guard cut !== img else {
+            withAnimation { toastText = "배경을 빼지 못했어요" }
+            hideToastAfter(1.6)
+            return
+        }
+        CharacterImageStore.replaceGalleryImage(item.id, with: cut)
+        if let cutF1 {
+            CharacterImageStore.replaceGalleryImage(item.id, with: cutF1, frame: 1)
+        }
+        // 지금 적용 중인 자리에도 새 그림 반영
+        let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
+        for state in activeStates {
+            CharacterImageStore.applyGalleryItem(item.id, to: state)
+            ConnectivityManager.shared.sendCharacterImage(cut, for: state, frame: 0)
+            if let cutF1 {
+                ConnectivityManager.shared.sendCharacterImage(cutF1, for: state, frame: 1)
+            }
+        }
+        if !activeStates.isEmpty {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        onChange()
+        withAnimation { toastText = "배경을 뺐어요" }
+        hideToastAfter(1.6)
     }
 
     private func saveSelected() async {

@@ -594,6 +594,19 @@ enum CharacterImageStore {
         return UIImage(data: data)
     }
 
+    /// 갤러리 항목의 이미지 파일을 교체 (배경 빼기 등 후처리 결과 반영). frame 0/1.
+    @discardableResult
+    static func replaceGalleryImage(_ id: String, with image: UIImage, frame: Int = 0) -> Bool {
+        let url = frame == 1 ? galleryFrame1URL(id: id) : galleryFileURL(id: id)
+        guard let url, let data = image.pngData() else { return false }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            return false
+        }
+        return true
+    }
+
     /// 갤러리 항목을 지정 state 의 활성 슬롯으로 적용.
     /// frame 1 있는 갤러리 항목이면 frame 1 도 같이 복사. 없으면 기존 frame 1 잔재 제거.
     @discardableResult

@@ -39,6 +39,8 @@ struct CharacterGenView: View {
     /// AI 생성 모드 — 사진 앱에서 첨부한 참고 이미지 (있으면 reference 로 보냄)
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var referenceImage: UIImage?
+    /// 참고사진을 내 캐릭터 갤러리에서 고르는 sheet
+    @State private var showGalleryRefPicker: Bool = false
     /// 참고사진에서 무엇을 참고할지 (참고사진 있을 때만 프롬프트에 반영).
     @State private var referenceKeep: String = ""     // 사진에서 그대로 둘 것
     @State private var referenceChange: String = ""   // 사진에서 바꿀 것
@@ -114,6 +116,12 @@ struct CharacterGenView: View {
             SquareCropView(image: target.image,
                            onDone: { cropped in target.onDone(cropped); cropTarget = nil },
                            onCancel: { cropTarget = nil })
+        }
+        .sheet(isPresented: $showGalleryRefPicker) {
+            GalleryReferencePicker { img in
+                referenceImage = img
+                photoPickerItem = nil
+            }
         }
         .alert("적용했어요", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
@@ -354,15 +362,23 @@ struct CharacterGenView: View {
                         )
                 }
                 VStack(alignment: .leading) {
+                    // Form 한 행에 버튼이 여러 개면 행 아무 데나 눌러도 전부 실행됨 — .borderless 필수.
                     PhotosPicker(referenceImage == nil ? "사진 선택" : "다른 사진으로 변경",
                                  selection: $photoPickerItem,
                                  matching: .images)
+                        .buttonStyle(.borderless)
                         .disabled(isGenerating)
+                    Button("내 캐릭터에서 고르기") {
+                        showGalleryRefPicker = true
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isGenerating)
                     if referenceImage != nil {
                         Button("사진 빼기", role: .destructive) {
                             referenceImage = nil
                             photoPickerItem = nil
                         }
+                        .buttonStyle(.borderless)
                         .disabled(isGenerating)
                     }
                 }
