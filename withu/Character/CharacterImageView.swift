@@ -93,6 +93,8 @@ struct CharacterImageView: View {
     }
 
     /// Asset Catalog 이름 결정. 현재 state asset 없으면 baseFallback asset 시도.
+    /// 마지막으로, 공통 placeholder 이미지("character_placeholder")가 있으면 그걸 씀
+    /// → 첫 캐릭터 생성 전 SF Symbol 대신 사용자가 지정한 사진을 보여줌.
     private func assetNameWithFallback() -> String? {
         if UIImage(named: state.imageAssetName) != nil {
             return state.imageAssetName
@@ -100,6 +102,9 @@ struct CharacterImageView: View {
         if let base = state.baseFallback,
            UIImage(named: base.imageAssetName) != nil {
             return base.imageAssetName
+        }
+        if UIImage(named: "character_placeholder") != nil {
+            return "character_placeholder"
         }
         return nil
     }
