@@ -34,7 +34,7 @@ struct CharacterImageView: View {
         #if canImport(UIKit)
         if shouldAnimate {
             TimelineView(.periodic(from: .now, by: 0.7)) { ctx in
-                let frame = Int(ctx.date.timeIntervalSinceReferenceDate / 0.7) % 2
+                let frame = Int(Int64(ctx.date.timeIntervalSinceReferenceDate / 0.7) % 2)
                 singleFrameView(frameIndex: frame)
             }
         } else {

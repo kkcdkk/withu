@@ -309,7 +309,8 @@ enum CharacterImageStore {
               let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) else { return "0" }
         let mod = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
         let size = (attrs[.size] as? Int) ?? 0
-        return "\(Int(mod * 1000))_\(size)"
+        // Int64 필수 — watchOS(arm64_32)는 Int 가 32비트라 epoch ms(1.7e12)가 Int.max 초과로 크래시.
+        return "\(Int64(mod * 1000))_\(size)"
     }
 
     private static func imageCacheKey(_ state: CharacterState, frame: Int, maxPixelSize: CGFloat?, version: String) -> NSString {
