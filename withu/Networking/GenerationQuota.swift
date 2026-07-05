@@ -27,6 +27,8 @@ enum GenerationQuota {
     private static let countKey   = "withu.genQuota.count.v1"
     private static let dateKey    = "withu.genQuota.date.v1"    // yyyymmdd 정수
     private static let creditsKey = "withu.genQuota.credits.v1"
+    /// 마지막으로 로컬에 반영한 서버 잔액 기준선 — 서버 잔액 '증가분'만 로컬에 더하기 위함.
+    private static let lastSyncedServerCreditsKey = "withu.genQuota.lastSyncedServer.v1"
 
     private static var defaults: UserDefaults? {
         UserDefaults(suiteName: SharedAppState.groupID)
@@ -104,12 +106,24 @@ enum GenerationQuota {
         d.set(credits() + n, forKey: creditsKey)
     }
 
-    /// 서버 잔액(entitlement.credits) 동기화 — 로컬 캔디를 서버 값까지 끌어올림.
-    /// canGenerate 는 로컬 credits 만 보므로, 로그인 구매·서버 적립분이 실제로 쓰이게 한다.
-    /// '끌어올림'(max)이라 로컬-only 적립(미로그인 구매·테스트 코드)을 덮어쓰지 않는다.
+    /// 서버 잔액(entitlement.credits)을 로컬에 반영.
+    /// 서버는 /generate 로 캔디를 차감하지 않으므로(로컬 권위) 서버 잔액은 '누적 적립 총액'.
+    /// 따라서 절대값으로 덮어쓰면 로컬 차감이 재실행/새로고침마다 되돌아온다(캔디 안 닳는 버그).
+    /// → 서버 잔액이 '증가한 만큼(새 구매/적립분)'만 로컬에 더한다.
     static func syncCreditsUp(to serverCredits: Int) {
-        guard let d = defaults, serverCredits > credits() else { return }
-        d.set(serverCredits, forKey: creditsKey)
+        guard let d = defaults else { return }
+        if d.object(forKey: lastSyncedServerCreditsKey) == nil {
+            // 최초 동기화: 서버 적립을 한 번 끌어옴(신규 로그인 대비). 이후엔 증가분만.
+            if serverCredits > credits() { d.set(serverCredits, forKey: creditsKey) }
+            d.set(serverCredits, forKey: lastSyncedServerCreditsKey)
+            return
+        }
+        let lastSynced = d.integer(forKey: lastSyncedServerCreditsKey)
+        let delta = serverCredits - lastSynced
+        if delta > 0 {
+            d.set(credits() + delta, forKey: creditsKey)   // 새로 적립된 만큼만 더함
+        }
+        d.set(serverCredits, forKey: lastSyncedServerCreditsKey)
     }
 
     /// 화면 표시용 보유 캔디 = 실제로 쓸 수 있는 로컬 잔액(credits).
