@@ -347,33 +347,40 @@ struct BatchCharacterGenView: View {
                     .overlay(Image(systemName: "photo")
                         .foregroundStyle(.secondary).font(.caption))
             }
-            VStack(alignment: .leading, spacing: 2) {
-                PhotosPicker(
-                    stateReferenceImages[state] == nil ? "이 상태에 쓸 사진 넣기" : "변경",
-                    selection: Binding(
-                        get: { stateReferencePickerItems[state] },
-                        set: { item in
-                            if let item {
-                                stateReferencePickerItems[state] = item
-                                Task { await loadStateReference(state, item: item) }
-                            } else {
-                                stateReferencePickerItems.removeValue(forKey: state)
-                                stateReferenceImages.removeValue(forKey: state)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    PhotosPicker(
+                        selection: Binding(
+                            get: { stateReferencePickerItems[state] },
+                            set: { item in
+                                if let item {
+                                    stateReferencePickerItems[state] = item
+                                    Task { await loadStateReference(state, item: item) }
+                                } else {
+                                    stateReferencePickerItems.removeValue(forKey: state)
+                                    stateReferenceImages.removeValue(forKey: state)
+                                }
                             }
-                        }
-                    ),
-                    matching: .images
-                )
-                .font(.footnote)
-                .buttonStyle(.borderless)
-                .disabled(isGenerating)
+                        ),
+                        matching: .images
+                    ) {
+                        Label("앨범", systemImage: "photo.on.rectangle")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(isGenerating)
 
-                Button("내 캐릭터에서 고르기") {
-                    galleryRefTarget = .state(state)
+                    Button {
+                        galleryRefTarget = .state(state)
+                    } label: {
+                        Label("내 캐릭터", systemImage: "square.grid.2x2")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.withuPink)
+                    .disabled(isGenerating)
                 }
                 .font(.footnote)
-                .buttonStyle(.borderless)
-                .disabled(isGenerating)
 
                 if stateReferenceImages[state] != nil {
                     Button("이 상태 사진 빼기", role: .destructive) {
@@ -381,7 +388,6 @@ struct BatchCharacterGenView: View {
                         stateReferencePickerItems.removeValue(forKey: state)
                     }
                     .font(.caption2)
-                    .buttonStyle(.borderless)
                     .disabled(isGenerating)
                 }
             }
