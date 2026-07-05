@@ -52,6 +52,7 @@ struct CharacterImageView: View {
     private var shouldAnimate: Bool {
         guard animated else { return false }
         guard CharacterImageStore.hasAnimationFrames(for: state) else { return false }
+        guard !CharacterImageStore.isAnimationDisabled(for: state) else { return false }
         return CharacterImageStore.animationEnabled
     }
 

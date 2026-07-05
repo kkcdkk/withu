@@ -528,6 +528,38 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
+                        // 연속 이미지(2장) — 프레임 순서 바꾸기 + (적용 중이면) 움직임 켜기/끄기
+                        if item.hasFrame1 ?? false {
+                            HStack(spacing: 12) {
+                                Button {
+                                    if CharacterImageStore.swapGalleryFrames(item.id) {
+                                        // 이 항목이 쓰이는 자리에 바뀐 순서로 다시 적용 + 워치 반영
+                                        for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
+                                            apply(item, to: state)
+                                        }
+                                        onChange()
+                                    }
+                                } label: {
+                                    Label("프레임 바꾸기", systemImage: "arrow.left.arrow.right")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
+
+                                let applied = CharacterImageStore.statesUsingGalleryItem(item.id)
+                                if let st = applied.first {
+                                    Toggle("움직임", isOn: Binding(
+                                        get: { !CharacterImageStore.isAnimationDisabled(for: st) },
+                                        set: { on in
+                                            for s in applied { CharacterImageStore.setAnimationDisabled(!on, for: s) }
+                                            WidgetCenter.shared.reloadAllTimelines()
+                                        }
+                                    ))
+                                    .labelsHidden()
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+
                         Button {
                             apply(item, to: backgroundState)
                             selectedItem = nil
