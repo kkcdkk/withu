@@ -43,7 +43,9 @@ enum ImageProcessing {
         } else {
             downsized = image
         }
-        let cutout = try await removeBackground(from: downsized)
+        // Vision 이 일부 이미지에서 hang/초장시간 걸리는 케이스 → timeout 가드.
+        // 실패/타임아웃이면 원본(다운샘플)로 진행 — 무한 로딩("멈춤") 방지.
+        let cutout = await bestEffortTransparent(downsized)
         return normalizeSquare(cutout, target: target)
     }
 
