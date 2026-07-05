@@ -53,18 +53,19 @@ enum CharacterStateResolver {
         let sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
         let sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
 
-        // 2) 수면 — 새 우선순위:
+        // 2) 수면 — 우선순위:
         //    (1순위) iOS Sleep Focus (Filter OR INFocusStatusCenter) OR HealthKit inBed
-        //            → 사용자/시스템 의 명시적 "지금 자" 신호
-        //    (2순위) 프로필 sleep window 안 → 사용자 정의 fallback 시간
-        //  manualSleepOnly 면 caller 가 isFocusActive/inSleepSchedule 둘 다 false 로 넘김.
+        //            → 시스템의 실제 "지금 자" 신호.
+        //    (2순위) 프로필 sleep window(설정 시간) — 단, 시스템 수면 일정이 '없을 때만'.
+        //  즉 시스템 수면 일정/모드가 설정돼 있으면 그것만 따르고, 설정 시간엔 안 잠든다.
+        //  manualSleepOnly 면 caller 가 isFocusActive/inSleepSchedule/hasSleepSchedule 모두 false 로 넘김.
         if isFocusActive || inSleepSchedule {
             return .sleeping
         }
-        if isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
+        if !hasSleepSchedule,
+           isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }
-        _ = hasSleepSchedule  // 시그니처 호환만 유지
 
         // 3) 기상 직후 — 기상 시점부터 1시간
         let wakeStart = sleepEndMin
