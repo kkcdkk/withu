@@ -419,26 +419,31 @@ struct BatchCharacterGenView: View {
                         .frame(width: 64, height: 64)
                         .overlay(Image(systemName: "photo").foregroundStyle(.secondary))
                 }
-                VStack(alignment: .leading) {
-                    PhotosPicker(referenceImage == nil ? "사진 선택" : "다른 사진으로 변경",
-                                 selection: $photoPickerItem,
-                                 matching: .images)
-                        .buttonStyle(.borderless)
-                        .disabled(isGenerating)
-                    Button("내 캐릭터에서 고르기") {
-                        galleryRefTarget = .global
+                VStack(spacing: 8) {
+                    PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                        Label("앨범에서 선택", systemImage: "photo.on.rectangle")
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.bordered)
                     .disabled(isGenerating)
-                    if referenceImage != nil {
-                        Button("사진 빼기", role: .destructive) {
-                            referenceImage = nil
-                            photoPickerItem = nil
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(isGenerating)
+                    Button {
+                        galleryRefTarget = .global
+                    } label: {
+                        Label("내 캐릭터에서", systemImage: "square.grid.2x2")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.bordered)
+                    .tint(.withuPink)
+                    .disabled(isGenerating)
                 }
+            }
+            if referenceImage != nil {
+                Button("사진 빼기", role: .destructive) {
+                    referenceImage = nil
+                    photoPickerItem = nil
+                }
+                .font(.callout)
+                .disabled(isGenerating)
             }
             if referenceImage != nil {
                 VStack(alignment: .leading, spacing: 4) {
