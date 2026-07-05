@@ -67,6 +67,8 @@ struct BatchCharacterGenView: View {
     /// 연속 이미지 ON 일 때 state 의 frame 1 결과. 카드에 우하단 미니 썸네일로 표시.
     @State private var resultsFrame1: [CharacterState: UIImage] = [:]
     @State private var errors: [CharacterState: String] = [:]
+    /// 사용자가 '적용'한 상태 (배치 생성은 갤러리에만 저장 → 적용은 수동).
+    @State private var appliedStates: Set<CharacterState> = []
 
     @State private var showFinishedAlert: Bool = false
     /// 배치 생성 Task — 중단 버튼이 cancel() 호출
@@ -198,7 +200,7 @@ struct BatchCharacterGenView: View {
         .alert("다 만들었어요", isPresented: $showFinishedAlert) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text("\(results.count)개 완성, \(errors.count)개 못 만들었어요. 잘 만들어진 모습은 바로 적용됐어요.")
+            Text("\(results.count)개 완성, \(errors.count)개 못 만들었어요. 아래 '적용' 또는 '모두 적용하기'로 홈/워치에 반영해요.")
         }
         .alert("사진 저장", isPresented: $showSaveResultAlert) {
             Button("확인", role: .cancel) {}
@@ -691,6 +693,17 @@ struct BatchCharacterGenView: View {
             }
 
             if !results.isEmpty {
+                // 모두 적용 — 완성된 모습 전부 홈/위젯/워치에 반영.
+                Button {
+                    applyAll()
+                } label: {
+                    Label("모두 적용하기 (\(results.count)개)", systemImage: "checkmark.circle.fill")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.withuPink)
+
                 // 투명 처리 bulk 토글 — gallery 원본은 raw 유지, active slot 만 갱신.
                 HStack(spacing: 12) {
                     Button {
@@ -756,6 +769,30 @@ struct BatchCharacterGenView: View {
         return useTransparent ? raw : ImageProcessing.flattenedOnWhite(raw)
     }
 
+    /// 이 상태를 홈/위젯/워치에 적용 — 활성 슬롯 쓰기 + 워치 전송 + 위젯 reload.
+    /// (배치 생성은 갤러리에만 저장되므로, 실제 반영은 이 버튼을 눌러야 일어남.)
+    @MainActor
+    private func applyOne(_ state: CharacterState) {
+        guard let img0 = displayedImage(for: state, frame: 0) else { return }
+        CharacterImageStore.saveActiveSlotOnly(img0, for: state, frame: 0)   // stale frame1 정리됨
+        ConnectivityManager.shared.sendCharacterImage(img0, for: state, frame: 0)
+        if let img1 = displayedImage(for: state, frame: 1) {
+            CharacterImageStore.saveActiveSlotOnly(img1, for: state, frame: 1)
+            ConnectivityManager.shared.sendCharacterImage(img1, for: state, frame: 1)
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+        appliedStates.insert(state)
+    }
+
+    /// 완성된 모든 상태 적용.
+    @MainActor
+    private func applyAll() {
+        for state in CharacterState.allCases where results[state] != nil {
+            applyOne(state)
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
     /// bulk — 모든 모습을 '배경 빼기(투명 원본)' 로 active slot 적용 + 워치 push. (Vision 불필요)
     @MainActor
     private func applyTransparentToAll() async {
@@ -807,38 +844,45 @@ struct BatchCharacterGenView: View {
     }
 
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
-        Button {
-            selectedResult = (state, image)
-            revisionText = ""
-            revisionError = nil
-            detailFrame = 0
-        } label: {
-            VStack(spacing: 6) {
-                ZStack(alignment: .bottomTrailing) {
-                    Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    // 연속 이미지 ON 일 때 frame 1 우하단 미니. 메인 화면이 0.7s 간격으로 swap.
-                    if let f1 = resultsFrame1[state] {
-                        Image(uiImage: f1)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 40, height: 40)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.white, lineWidth: 2)
-                            )
-                            .padding(6)
-                    }
-                }
-                HStack {
-                    Text(state.koreanShortLabel).font(.caption).lineLimit(1)
-                    Spacer()
-                    Image(systemName: "checkmark").foregroundStyle(.secondary).font(.caption)
+        VStack(spacing: 6) {
+            ZStack(alignment: .bottomTrailing) {
+                Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                // 연속 이미지 ON 일 때 frame 1 우하단 미니. 메인 화면이 0.7s 간격으로 swap.
+                if let f1 = resultsFrame1[state] {
+                    Image(uiImage: f1)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white, lineWidth: 2))
+                        .padding(6)
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture {   // 이미지 탭 → 자세히 보기(수정/저장)
+                selectedResult = (state, image)
+                revisionText = ""
+                revisionError = nil
+                detailFrame = 0
+            }
+            HStack {
+                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Spacer()
+                if appliedStates.contains(state) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                }
+            }
+            // 이 모습만 적용
+            Button { applyOne(state) } label: {
+                Text(appliedStates.contains(state) ? "적용됨" : "적용")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(appliedStates.contains(state) ? .secondary : .withuPink)
         }
-        .buttonStyle(.plain)
     }
 
     private func errorCard(state: CharacterState, error: String) -> some View {
@@ -913,6 +957,7 @@ struct BatchCharacterGenView: View {
         batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
         saveDescription()                    // 캐릭터 설명을 프로필에 저장 — 단건 생성과 공유
         results.removeAll()
+        appliedStates.removeAll()
         resultsFrame1.removeAll()
         frame0FullRes.removeAll()
         transparentResults.removeAll()          // 이전 배치의 배경제거 캐시 잔존 방지
@@ -1199,6 +1244,32 @@ struct BatchCharacterGenView: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
 
+                    // 연속 이미지(2장)일 때만 — 프레임 순서 바꾸기 + 움직임 켜기/끄기
+                    if hasF1 {
+                        HStack(spacing: 12) {
+                            Button {
+                                let tmp = results[state]
+                                results[state] = resultsFrame1[state]
+                                resultsFrame1[state] = tmp
+                                if appliedStates.contains(state) { applyOne(state) }
+                            } label: {
+                                Label("프레임 바꾸기", systemImage: "arrow.left.arrow.right")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
+
+                            Toggle("움직임", isOn: Binding(
+                                get: { !CharacterImageStore.isAnimationDisabled(for: state) },
+                                set: { on in
+                                    CharacterImageStore.setAnimationDisabled(!on, for: state)
+                                    WidgetCenter.shared.reloadAllTimelines()
+                                }
+                            ))
+                            .labelsHidden()
+                        }
+                        .padding(.horizontal)
+                    }
+
                     VStack(alignment: .leading, spacing: 6) {
                         Text(hasF1 && detailFrame == 1 ? "이 움직임 프레임을 어떻게 바꿀까요" : "어떻게 바꿀까요")
                             .font(.caption).foregroundStyle(.secondary)
@@ -1376,13 +1447,13 @@ struct BatchCharacterGenView: View {
                     transparentResults[state] = nil
                 }
                 displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
-                CharacterImageStore.save(small, for: state, frame: frame)
-                ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
+                // 갤러리에만 저장 — 반영은 '적용' 버튼으로 (바꾼 결과가 아직 적용 전이므로 표시 리셋).
+                CharacterImageStore.save(small, for: state, frame: frame, applyToActiveSlot: false)
+                appliedStates.remove(state)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
                 revisionText = ""
-                WidgetCenter.shared.reloadAllTimelines()
             } else {
                 revisionError = "이미지를 받지 못했어요. 다시 시도해 주세요."
             }

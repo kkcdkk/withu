@@ -99,6 +99,7 @@ enum CharacterImageStore {
     private static let galleryFolder = "gallery"
     private static let metadataName = "metadata.json"
     private static let animationEnabledKey = "withu.animationEnabled.v1"
+    private static let animationDisabledStatesKey = "withu.animationDisabledStates.v1"
     private static let activeSourceMapKey = "withu.activeSourceMap.v1"
     private static let backgroundsFolder = "backgrounds"
     private static let decorationsFolder = "decorations"
@@ -263,6 +264,45 @@ enum CharacterImageStore {
         NotificationCenter.default.post(name: .characterImageChanged, object: nil)
     }
 
+    /// 상태별 움직임 끄기 (전역 animationEnabled 와 별개 — 이 state 만 정적으로).
+    /// frame1 파일은 남겨두고 재생만 막음. CharacterImageView.shouldAnimate 가 확인.
+    static func isAnimationDisabled(for state: CharacterState) -> Bool {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        let set = defaults?.stringArray(forKey: animationDisabledStatesKey) ?? []
+        return set.contains(state.rawValue)
+    }
+
+    static func setAnimationDisabled(_ disabled: Bool, for state: CharacterState) {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        var set = Set(defaults?.stringArray(forKey: animationDisabledStatesKey) ?? [])
+        if disabled { set.insert(state.rawValue) } else { set.remove(state.rawValue) }
+        defaults?.set(Array(set), forKey: animationDisabledStatesKey)
+        evictImageCache()
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+    }
+
+    /// 활성 슬롯의 frame0 ↔ frame1 파일을 맞바꿈 (이미 적용된 애니메이션 캐릭터용).
+    /// 둘 다 있어야 스왑. 성공 시 true.
+    @discardableResult
+    static func swapActiveFrames(for state: CharacterState) -> Bool {
+        guard let f0 = activeFileURL(for: state, frame: 0),
+              let f1 = activeFileURL(for: state, frame: 1),
+              FileManager.default.fileExists(atPath: f0.path),
+              FileManager.default.fileExists(atPath: f1.path) else { return false }
+        let tmp = f0.deletingLastPathComponent().appendingPathComponent("swap_tmp.png")
+        do {
+            try? FileManager.default.removeItem(at: tmp)
+            try FileManager.default.moveItem(at: f0, to: tmp)
+            try FileManager.default.moveItem(at: f1, to: f0)
+            try FileManager.default.moveItem(at: tmp, to: f1)
+        } catch {
+            return false
+        }
+        evictImageCache()
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+        return true
+    }
+
     // MARK: - App Group container
 
     private static var containerURL: URL? {
@@ -412,6 +452,10 @@ enum CharacterImageStore {
         guard let data = image.pngData(),
               let activeURL = activeFileURL(for: state, frame: frame) else { return }
         try? data.write(to: activeURL, options: .atomic)
+        // frame0 저장 시 옛 frame1 제거 (애니 캐릭터면 직후 frame1 을 다시 저장). stale 움직임 방지.
+        if frame == 0, let f1URL = activeFileURL(for: state, frame: 1) {
+            try? FileManager.default.removeItem(at: f1URL)
+        }
         evictImageCache()
         NotificationCenter.default.post(name: .characterImageChanged, object: state)
     }
@@ -447,21 +491,26 @@ enum CharacterImageStore {
     /// 반환: 갤러리에 저장된 GalleryItem (재선택용 id).
     /// - frame 0: 새 갤러리 항목 생성
     /// - frame 1: 같은 state 의 가장 최근 갤러리 항목에 frame 1 파일 추가 + hasFrame1=true
+    /// - applyToActiveSlot: false 면 갤러리에만 저장하고 활성 슬롯(홈/위젯/워치가 보는 곳)은
+    ///   안 건드림. 배치 생성처럼 "만들어만 두고 나중에 버튼으로 적용" 흐름에 사용.
     @discardableResult
-    static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0) -> GalleryItem? {
+    static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0,
+                     applyToActiveSlot: Bool = true) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
         // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
-        if let activeURL = activeFileURL(for: state, frame: frame) {
-            try? data.write(to: activeURL, options: .atomic)
+        if applyToActiveSlot {
+            if let activeURL = activeFileURL(for: state, frame: frame) {
+                try? data.write(to: activeURL, options: .atomic)
+            }
+            // frame0(새 기본 이미지) 저장 시 옛 frame1(움직임)은 무효 → 제거.
+            // 애니메이션 캐릭터면 이 직후 frame1 이 다시 저장된다.
+            // (안 지우면 frame1 없는 새 캐릭터가 옛 frame1 과 섞여 움직이는 버그)
+            if frame == 0, let f1URL = activeFileURL(for: state, frame: 1) {
+                try? FileManager.default.removeItem(at: f1URL)
+            }
+            evictImageCache()
+            NotificationCenter.default.post(name: .characterImageChanged, object: state)
         }
-        // frame0(새 기본 이미지) 저장 시 옛 frame1(움직임)은 무효 → 제거.
-        // 애니메이션 캐릭터면 이 직후 frame1 이 다시 저장된다.
-        // (안 지우면 frame1 없는 새 캐릭터가 옛 frame1 과 섞여 움직이는 버그)
-        if frame == 0, let f1URL = activeFileURL(for: state, frame: 1) {
-            try? FileManager.default.removeItem(at: f1URL)
-        }
-        evictImageCache()
-        NotificationCenter.default.post(name: .characterImageChanged, object: state)
         // 2) 갤러리 — frame 별 분기
         if frame == 0 {
             let item = addToGalleryInternal(data: data, sourceState: state)
@@ -607,6 +656,25 @@ enum CharacterImageStore {
         guard let url, let data = image.pngData() else { return false }
         do {
             try data.write(to: url, options: .atomic)
+        } catch {
+            return false
+        }
+        return true
+    }
+
+    /// 갤러리 항목의 frame0 ↔ frame1 파일을 맞바꿈 (연속 이미지 항목의 프레임 순서 교체).
+    /// 둘 다 있어야 스왑. 성공 시 true.
+    @discardableResult
+    static func swapGalleryFrames(_ id: String) -> Bool {
+        guard let f0 = galleryFileURL(id: id), let f1 = galleryFrame1URL(id: id),
+              FileManager.default.fileExists(atPath: f0.path),
+              FileManager.default.fileExists(atPath: f1.path) else { return false }
+        let tmp = f0.deletingLastPathComponent().appendingPathComponent("\(id)_swap_tmp.png")
+        do {
+            try? FileManager.default.removeItem(at: tmp)
+            try FileManager.default.moveItem(at: f0, to: tmp)
+            try FileManager.default.moveItem(at: f1, to: f0)
+            try FileManager.default.moveItem(at: tmp, to: f1)
         } catch {
             return false
         }

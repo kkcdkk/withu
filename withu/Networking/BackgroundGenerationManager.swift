@@ -317,8 +317,8 @@ final class BackgroundGenerationManager: NSObject {
                 if let colorRef, let colorRefSmall = colorRef.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
                     small = ImageProcessing.colorMatched(small, reference: colorRefSmall)
                 }
-                CharacterImageStore.save(small, for: state, frame: job.frame)
-                ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: job.frame)
+                // 갤러리에만 저장 — 활성 슬롯 적용·워치 전송은 사용자가 '적용' 버튼 누를 때.
+                CharacterImageStore.save(small, for: state, frame: job.frame, applyToActiveSlot: false)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(GenerationQuota.cost(forQuality: job.quality))
                 images["\(job.stateRaw)#\(job.frame)"] = small
