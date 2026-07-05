@@ -69,6 +69,11 @@ struct BatchCharacterGenView: View {
     @State private var showFinishedAlert: Bool = false
     /// 배치 생성 Task — 중단 버튼이 cancel() 호출
     @State private var batchTask: Task<Void, Never>?
+    /// 그만두기를 눌렀으면 완료 alert 를 띄우지 않음
+    @State private var didCancel: Bool = false
+
+    /// 백그라운드 생성 큐 — 화면을 떠나거나 앱을 닫아도 계속되는 실행 주체.
+    private var genManager: BackgroundGenerationManager { .shared }
 
     // 결과 사진 클릭 시 sheet
     @State private var selectedResult: (state: CharacterState, image: UIImage)?
@@ -90,6 +95,19 @@ struct BatchCharacterGenView: View {
     @State private var batchSessionId: String = UUID().uuidString
     /// 사진 선택 후 정사각 자르기 시트
     @State private var cropTarget: CropTarget?
+    /// 참고사진을 내 캐릭터 갤러리에서 고르는 sheet — 전체 또는 상태별.
+    @State private var galleryRefTarget: GalleryRefTarget?
+
+    private enum GalleryRefTarget: Identifiable {
+        case global
+        case state(CharacterState)
+        var id: String {
+            switch self {
+            case .global: return "global"
+            case .state(let s): return s.rawValue
+            }
+        }
+    }
 
     // MARK: - Body
 
@@ -116,7 +134,40 @@ struct BatchCharacterGenView: View {
             ToolbarItem(placement: .topBarTrailing) { candyBadge }
         }
         .scrollDismissesKeyboard(.interactively)
-        .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
+        .onAppear {
+            remainingGenerations = GenerationQuota.remainingToday()
+            // 진행 중이거나 승인 대기 중인 백그라운드 배치가 있으면 이어서 표시
+            if !genManager.jobs.isEmpty {
+                syncFromManager()
+                if !genManager.isActive, genManager.phase == .anchor, results[.idle] != nil {
+                    awaitingIdleApproval = true
+                }
+            }
+        }
+        .onChange(of: genManager.tick) { _, _ in
+            syncFromManager()
+        }
+        .onChange(of: genManager.isActive) { was, now in
+            guard was, !now else { return }
+            syncFromManager()
+            if didCancel {
+                didCancel = false
+            } else if genManager.phase == .anchor {
+                if results[.idle] != nil { awaitingIdleApproval = true }
+            } else if genManager.phase == .rest, !genManager.jobs.isEmpty {
+                // 캔디 소진(402)으로 실패한 게 있으면 완료 알럿 대신 충전 안내.
+                if genManager.jobs.contains(where: { $0.paymentRequired == true }) {
+                    showPaywall = true
+                } else {
+                    showFinishedAlert = true
+                }
+                if errors.filter({ $0.key != .idle }).isEmpty {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                } else {
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                }
+            }
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(onClose: {
                 showPaywall = false
@@ -127,6 +178,18 @@ struct BatchCharacterGenView: View {
             SquareCropView(image: target.image,
                            onDone: { cropped in target.onDone(cropped); cropTarget = nil },
                            onCancel: { cropTarget = nil })
+        }
+        .sheet(item: $galleryRefTarget) { target in
+            GalleryReferencePicker { img in
+                switch target {
+                case .global:
+                    referenceImage = img
+                    photoPickerItem = nil
+                case .state(let state):
+                    stateReferenceImages[state] = img
+                    stateReferencePickerItems.removeValue(forKey: state)
+                }
+            }
         }
         .alert("다 만들었어요", isPresented: $showFinishedAlert) {
             Button("확인", role: .cancel) {}
@@ -190,10 +253,14 @@ struct BatchCharacterGenView: View {
             ForEach(CharacterState.userFacing, id: \.self) { state in
                 stateRow(state)
             }
+            // Form 한 행에 버튼이 여러 개면 행 아무 데나 눌러도 전부 실행됨 —
+            // .borderless 로 각 버튼이 자기 탭만 받게 해야 함.
             HStack {
                 Button("모두 켜기") { selectedStates = Set(CharacterState.userFacing) }
+                    .buttonStyle(.borderless)
                 Spacer()
                 Button("모두 끄기", role: .destructive) { selectedStates = [] }
+                    .buttonStyle(.borderless)
             }
             .disabled(isGenerating)
         } header: {
@@ -289,6 +356,14 @@ struct BatchCharacterGenView: View {
                     matching: .images
                 )
                 .font(.footnote)
+                .buttonStyle(.borderless)
+                .disabled(isGenerating)
+
+                Button("내 캐릭터에서 고르기") {
+                    galleryRefTarget = .state(state)
+                }
+                .font(.footnote)
+                .buttonStyle(.borderless)
                 .disabled(isGenerating)
 
                 if stateReferenceImages[state] != nil {
@@ -297,6 +372,7 @@ struct BatchCharacterGenView: View {
                         stateReferencePickerItems.removeValue(forKey: state)
                     }
                     .font(.caption2)
+                    .buttonStyle(.borderless)
                     .disabled(isGenerating)
                 }
             }
@@ -338,12 +414,19 @@ struct BatchCharacterGenView: View {
                     PhotosPicker(referenceImage == nil ? "사진 선택" : "다른 사진으로 변경",
                                  selection: $photoPickerItem,
                                  matching: .images)
+                        .buttonStyle(.borderless)
                         .disabled(isGenerating)
+                    Button("내 캐릭터에서 고르기") {
+                        galleryRefTarget = .global
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isGenerating)
                     if referenceImage != nil {
                         Button("사진 빼기", role: .destructive) {
                             referenceImage = nil
                             photoPickerItem = nil
                         }
+                        .buttonStyle(.borderless)
                         .disabled(isGenerating)
                     }
                 }
@@ -385,11 +468,52 @@ struct BatchCharacterGenView: View {
                 }
             ))
             .disabled(isGenerating)
+
+            // 상태별 움직임 선택 — '모두' 대신 원하는 상태만 골라서.
+            animatedStateChips
         } header: {
             Text("스타일")
         } footer: {
-            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요.")
+            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 아래에서 움직일 상태만 골라서 켤 수도 있어요.")
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 상태별 움직임 토글 칩 — 선택된 상태만 노출. 상태 행 안의 '움직임' 토글과 같은 값을 공유.
+    @ViewBuilder
+    private var animatedStateChips: some View {
+        let states = CharacterState.userFacing.filter { selectedStates.contains($0) }
+        if !states.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(states, id: \.self) { state in
+                        let on = animatedStates.contains(state)
+                        Button {
+                            if on { animatedStates.remove(state) }
+                            else { animatedStates.insert(state) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(state.symbolEmoji)
+                                Text(state.koreanShortLabel)
+                                    .font(.footnote.weight(on ? .semibold : .regular))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule().fill(on ? Color.withuPink.opacity(0.18)
+                                                  : Color.secondary.opacity(0.08))
+                            )
+                            .overlay(
+                                Capsule().stroke(on ? Color.withuPink : .clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(on ? Color.withuPink : .secondary)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .disabled(isGenerating)
         }
     }
 
@@ -485,12 +609,14 @@ struct BatchCharacterGenView: View {
                       || remainingGenerations < need)
 
             if isGenerating {
-                Text("만드는 동안엔 앱을 그대로 켜 주세요. (\(results.count + errors.count)/\(requiredCount) 완료)")
+                Text("앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요. (\(results.count + errors.count)/\(requiredCount) 완료)")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.secondary)
                 Button(role: .destructive) {
                     batchTask?.cancel()
                     batchTask = nil
+                    didCancel = true
+                    genManager.cancelAll()
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
@@ -722,9 +848,12 @@ struct BatchCharacterGenView: View {
     }
 
     /// 생성에 쓸 reference: 사용자 참고사진 → (idle 외 상태면) 승인된 idle 앵커 → 없음.
+    /// 앱 재시작 후엔 매니저가 디스크에 남긴 idle 원본으로 복구.
     private func resolveReference(for state: CharacterState) -> String? {
         if let user = resolveUserReference(for: state) { return user }
-        if state != .idle, let anchor = idleAnchor { return anchor.pngData()?.base64EncodedString() }
+        if state != .idle, let anchor = idleAnchor ?? genManager.loadFrame0FullRes(.idle) {
+            return anchor.pngData()?.base64EncodedString()
+        }
         return nil
     }
 
@@ -734,10 +863,9 @@ struct BatchCharacterGenView: View {
         return referenceHint.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// 동시 호출 개수. 1 = 순차 (가장 안정적). 연속 이미지 ON 시도 한 번에 한 호출.
-    private static let maxConcurrent: Int = 1
-
     /// 1단계 — idle 을 먼저 만들어 앵커로 삼고, 사용자 승인을 기다린다.
+    /// 생성은 BackgroundGenerationManager (background URLSession) 가 실행 —
+    /// 화면을 끄거나 앱을 나가도 계속되고, 결과는 onChange(tick) 로 동기화된다.
     private func startBatch() async {
         isGenerating = true
         batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
@@ -752,75 +880,112 @@ struct BatchCharacterGenView: View {
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
         idleAnchor = nil
+        idleFullRes = nil
         awaitingIdleApproval = false
 
-        defer {
-            isGenerating = false
-            inProgressStates.removeAll()
-            stateStartedAt.removeAll()
-            remainingGenerations = GenerationQuota.remainingToday()
-        }
+        // 완료 알림 권한 — 처음 한 번만 시스템 시트가 뜸.
+        await NotificationManager.shared.requestAuthorization()
 
         do {
             try await APIClient.shared.preflightPing()
         } catch {
             errors[.idle] = "서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해 주세요."
+            isGenerating = false
             return
         }
 
         // idle 먼저 (앵커, frame 0). 사용자 참고사진이 있으면 그걸 reference 로.
         let idleRef = resolveUserReference(for: .idle)
-        let ok = await runOne(.idle, reference: idleRef,
-                              consistencyPrefix: idleRef != nil,
-                              referenceNote: userRefNote(for: .idle), frame: 0)
-        if ok {
-            // 차감은 runOne 성공 시 이미 됨.
-            WidgetCenter.shared.reloadAllTimelines()   // idle 저장 즉시 위젯 반영
-            awaitingIdleApproval = true   // 승인 대기 → idleApprovalSection 노출
-        }
+        let spec = BackgroundGenJobSpec(
+            state: .idle, frame: 0,
+            prompt: buildPrompt(for: .idle, consistencyPrefix: idleRef != nil,
+                                referenceNote: userRefNote(for: .idle), frame: 0),
+            referenceB64: idleRef, frame0Reference: nil,
+            wantsFrame1: false, frame1Prompt: nil)
+        genManager.start(specs: [spec], quality: quality, artStyle: artStyle,
+                         batchId: batchSessionId, phase: .anchor)
+        syncFromManager()
     }
 
-    /// 2단계 — 승인된 idle 을 앵커로 나머지 선택 상태(+애니메이션)를 생성.
+    /// 2단계 — 승인된 idle 을 앵커로 나머지 선택 상태(+애니메이션)를 백그라운드 생성.
     private func approveIdleAndContinue() async {
         // 연타 재진입 차단 — awaitingIdleApproval 을 await 전에 동기로 끔.
-        guard awaitingIdleApproval, let idle = idleFullRes ?? results[.idle] else { return }
+        guard awaitingIdleApproval,
+              let idle = idleFullRes ?? genManager.loadFrame0FullRes(.idle) ?? results[.idle] else { return }
         awaitingIdleApproval = false
         idleAnchor = idle           // 원본(1024) 우선 — 일관성 reference 품질
         isGenerating = true
+        let anchorB64 = idle.pngData()?.base64EncodedString()
 
-        defer {
-            isGenerating = false
-            inProgressStates.removeAll()
-            stateStartedAt.removeAll()
-            showFinishedAlert = true
-            // 차감은 각 runOne 성공 시 이미 됨 (크래시 안전).
-            remainingGenerations = GenerationQuota.remainingToday()
-            WidgetCenter.shared.reloadAllTimelines()
-            if errors.filter({ $0.key != .idle }).isEmpty {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            } else {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            }
+        var specs: [BackgroundGenJobSpec] = []
+        // idle 의 움직임(frame 1) — frame 0(앵커)을 reference 로.
+        if animatedStates.contains(.idle), let anchorB64 {
+            specs.append(BackgroundGenJobSpec(
+                state: .idle, frame: 1,
+                prompt: buildPrompt(for: .idle, consistencyPrefix: true, frame: 1),
+                referenceB64: anchorB64, frame0Reference: idle,
+                wantsFrame1: false, frame1Prompt: nil))
         }
-
-        // idle 의 움직임(frame 1) — frame 0(앵커)을 reference 로 체이닝.
-        if animatedStates.contains(.idle), let f0Ref = idle.pngData()?.base64EncodedString() {
-            await runOne(.idle, reference: f0Ref, consistencyPrefix: true, frame: 1)
-        }
-
-        // 나머지 선택 상태 (idle 제외) — resolveReference 가 idle 앵커를 reference 로 넣음.
+        // 나머지 선택 상태 (idle 제외) — 사용자 참고사진 > idle 앵커.
         let rest = CharacterState.allCases.filter { selectedStates.contains($0) && $0 != .idle }
-        var iterator = rest.makeIterator()
-        await withTaskGroup(of: Void.self) { group in
-            for _ in 0..<Self.maxConcurrent {
-                guard let state = iterator.next() else { break }
-                addStateTask(group: &group, state: state)
-            }
-            while await group.next() != nil {
-                guard let state = iterator.next() else { continue }
-                addStateTask(group: &group, state: state)
+        for state in rest {
+            let refB64 = resolveUserReference(for: state) ?? anchorB64
+            let animated = animatedStates.contains(state)
+            specs.append(BackgroundGenJobSpec(
+                state: state, frame: 0,
+                prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil,
+                                    referenceNote: userRefNote(for: state), frame: 0),
+                referenceB64: refB64, frame0Reference: nil,
+                wantsFrame1: animated,
+                frame1Prompt: animated ? buildPrompt(for: state, consistencyPrefix: true, frame: 1) : nil))
+        }
+        // 만들 게 없음 (idle 만 선택 + 움직임 없음) — 즉시 완료 처리.
+        guard !specs.isEmpty else {
+            isGenerating = false
+            showFinishedAlert = true
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        genManager.start(specs: specs, quality: quality, artStyle: artStyle,
+                         batchId: batchSessionId, phase: .rest)
+        syncFromManager()
+    }
+
+    /// 매니저(백그라운드 큐)의 작업 상태를 뷰 상태로 동기화.
+    private func syncFromManager() {
+        var progress: Set<CharacterState> = []
+        var started: [CharacterState: Date] = [:]
+        for job in genManager.jobs {
+            guard let state = CharacterState(rawValue: job.stateRaw) else { continue }
+            switch job.status {
+            case .queued, .running:
+                progress.insert(state)
+                started[state] = job.startedAt ?? stateStartedAt[state] ?? Date()
+            case .done:
+                let img = genManager.images["\(job.stateRaw)#\(job.frame)"]
+                    ?? CharacterImageStore.loadFrame(state, frame: job.frame)
+                if let img {
+                    if job.frame == 0 { results[state] = img }
+                    else { resultsFrame1[state] = img }
+                }
+                if job.frame == 0 {
+                    errors.removeValue(forKey: state)
+                    if state == .idle, idleFullRes == nil {
+                        idleFullRes = genManager.loadFrame0FullRes(.idle)
+                    }
+                }
+            case .failed:
+                errors[state] = job.errorMessage ?? "만들지 못했어요"
             }
         }
+        inProgressStates = progress
+        stateStartedAt = started
+        // 앵커(idle)는 rest 단계 작업 목록에 없음 — 화면 재진입 시 활성 슬롯에서 복원.
+        if !genManager.jobs.isEmpty, genManager.phase != .anchor, results[.idle] == nil {
+            results[.idle] = CharacterImageStore.loadFrame(.idle, frame: 0)
+        }
+        isGenerating = genManager.isActive
+        remainingGenerations = GenerationQuota.remainingToday()
     }
 
     /// idle 다시 만들기 (승인 대기 유지).
@@ -869,25 +1034,6 @@ struct BatchCharacterGenView: View {
         // awaitingIdleApproval 유지 — 수정본을 다시 승인/수정 가능
     }
 
-    /// state 하나의 task — frame 0 (+ animated 면 frame 1 도 순차) 실행
-    private func addStateTask(group: inout TaskGroup<Void>, state: CharacterState) {
-        let refB64 = resolveReference(for: state)
-        let note = userRefNote(for: state)
-        let animated = animatedStates.contains(state)
-        group.addTask { @MainActor in
-            // frame 0
-            let ok = await runOne(state, reference: refB64,
-                                  consistencyPrefix: refB64 != nil, referenceNote: note, frame: 0)
-            // frame 1 — frame 0 성공 시에만, frame 0 원본(1024)을 reference 로 체이닝
-            // (128px 썸네일을 reference 로 보내면 캐릭터 디테일이 뭉개져 drift 가 커짐)
-            if ok, animated, let f0 = frame0FullRes[state] ?? results[state],
-               let f0Ref = f0.pngData()?.base64EncodedString() {
-                await runOne(state, reference: f0Ref,
-                             consistencyPrefix: true, frame: 1)
-            }
-        }
-    }
-
     /// 캐릭터 설명을 프로필에 저장 — 다음에 열어도 유지되고 단건 생성과 같은 설명을 씀.
     private func saveDescription() {
         var p = CharacterProfileStore.load()
@@ -898,31 +1044,25 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 실패한 카드 탭 시 재시도. 같은 prompt + reference 그대로.
+    /// 실패한 카드 탭 시 재시도 — 백그라운드 큐에 다시 추가. 같은 prompt + reference 그대로.
     private func retryOne(_ state: CharacterState) async {
         // 이전 에러 표시 제거 + 진행 표시 시작
         errors.removeValue(forKey: state)
         let refB64 = resolveReference(for: state)
-        let ok = await runOne(state, reference: refB64, consistencyPrefix: refB64 != nil,
-                              referenceNote: userRefNote(for: state))
-        if ok {
-            // 차감은 runOne 성공 시 이미 됨.
-            remainingGenerations = GenerationQuota.remainingToday()
-        }
-        WidgetCenter.shared.reloadAllTimelines()
+        let spec = BackgroundGenJobSpec(
+            state: state, frame: 0,
+            prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil,
+                                referenceNote: userRefNote(for: state), frame: 0),
+            referenceB64: refB64, frame0Reference: nil,
+            wantsFrame1: false, frame1Prompt: nil)
+        genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
+        syncFromManager()
     }
 
-    /// 한 state 생성 — 성공 시 true. 결과는 results / errors 에 기록.
-    /// frame == 0: 기본. frame == 1: 애니메이션용 (이전 결과를 reference 로 chain + 다른 포즈).
-    @discardableResult
-    private func runOne(_ state: CharacterState, reference: String?,
-                        consistencyPrefix: Bool, referenceNote: String = "", frame: Int = 0) async -> Bool {
-        inProgressStates.insert(state)
-        stateStartedAt[state] = .now
-        defer {
-            inProgressStates.remove(state)
-            stateStartedAt.removeValue(forKey: state)
-        }
+    /// 한 state 의 생성 프롬프트 조립 (기존 runOne 의 프롬프트 로직).
+    /// frame == 0: 기본. frame == 1: 애니메이션용 (frame 0 을 reference 로 chain + 다른 포즈).
+    private func buildPrompt(for state: CharacterState, consistencyPrefix: Bool,
+                             referenceNote: String = "", frame: Int = 0) -> String {
         let pose = stateHints[state] ?? state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let keepNote = referenceNote.isEmpty ? "" : " Keep especially: \(referenceNote)."
@@ -941,52 +1081,7 @@ struct BatchCharacterGenView: View {
         // AI 에 흰 배경 강제 — 사용자가 post-gen 에 Vision 으로 정제 가능.
         // 격자(체커보드) 방지: "투명"을 격자로 그리는 모델 대비 단색 흰배경 명시.
         prompt += ". Transparent background — only the character, no background fill, no shadows."
-        do {
-            let req = GenerateImageRequest(
-                prompt: prompt,
-                referenceImageBase64: reference,
-                steps: 30,
-                width: 1024,
-                height: 1024,
-                quality: quality,
-                artStyle: artStyle,
-                style: "auto"
-            )
-            let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
-            guard let data = Data(base64Encoded: resp.imageBase64),
-                  let img = UIImage(data: data) else {
-                errors[state] = "이미지를 받지 못했어요"
-                return false
-            }
-            // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
-            let flat: UIImage
-            if frame == 1, let ref0 = frame0FullRes[state] {
-                flat = await ImageProcessing.matchedToReference(img, reference: ref0)
-            } else {
-                flat = img
-            }
-            // 128px 다운샘플 — 메인 화면 200 / 워치 64 / 위젯 60 다 커버, 디스크 절약
-            let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
-            if frame == 0 {
-                results[state] = small
-                frame0FullRes[state] = flat               // frame1 정규화 reference
-                if state == .idle { idleFullRes = flat }   // 앵커 reference 는 원본(1024, 흰배경)으로
-            } else {
-                resultsFrame1[state] = small
-            }
-            CharacterImageStore.save(small, for: state, frame: frame)
-            ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: frame)
-            if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
-            GenerationQuota.record(GenerationQuota.cost(forQuality: quality))   // 성공 1장 = 즉시 차감 (퀄리티별)
-            return true
-        } catch APIError.paymentRequired {
-            showPaywall = true
-            errors[state] = "무료 횟수를 다 썼어요"
-            return false
-        } catch {
-            errors[state] = error.koreanizedDescription
-            return false
-        }
+        return prompt
     }
 
     /// 결과 카드 탭 시 열리는 sheet — 프레임 페이지(좌우 스와이프) + 저장 / 수정
@@ -1176,7 +1271,8 @@ struct BatchCharacterGenView: View {
                let img = UIImage(data: data) {
                 // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
                 let flat: UIImage
-                if frame == 1, let ref0 = frame0FullRes[state] ?? results[state] {
+                if frame == 1, let ref0 = frame0FullRes[state]
+                    ?? genManager.loadFrame0FullRes(state) ?? results[state] {
                     flat = await ImageProcessing.matchedToReference(img, reference: ref0)
                 } else {
                     flat = img

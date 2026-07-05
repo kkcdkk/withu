@@ -86,7 +86,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             SyncCoordinator.syncNow()
             // BG refresh 첫 예약 — 이후는 handler 가 자기 끝에 재예약 (chain).
             withuApp.scheduleNextRefresh()
+            // 백그라운드 캐릭터 생성 — 앱이 죽었다 다시 켜져도 미완료 작업 이어가기.
+            BackgroundGenerationManager.shared.resumeIfNeeded()
         }
         return true
+    }
+
+    /// 백그라운드 URLSession 이벤트로 앱이 깨어났을 때 — completion handler 를 매니저에
+    /// 넘겨 두고, 이벤트 소진 후 매니저가 호출한다 (iOS 요구사항).
+    func application(_ application: UIApplication,
+                     handleEventsForBackgroundURLSession identifier: String,
+                     completionHandler: @escaping () -> Void) {
+        guard identifier == BackgroundGenerationManager.sessionIdentifier else {
+            completionHandler()
+            return
+        }
+        // 동기로 저장해야 함 — Task 로 미루면 세션 이벤트 소진이 먼저 와서
+        // handler 가 nil 인 채 지나가고, iOS 가 백그라운드 실행을 제한할 수 있다.
+        BackgroundGenerationManager.shared.backgroundCompletionHandler = completionHandler
     }
 }
