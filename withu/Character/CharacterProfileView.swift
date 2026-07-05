@@ -88,10 +88,6 @@ struct CharacterProfileView: View {
 
                 statesOverviewSection
 
-                #if DEBUG
-                weatherBackgroundsSection   // 개발자 전용 — 날씨 배경 디폴트 세팅용 (사용자 빌드에선 숨김)
-                #endif
-
                 Section {
                     Toggle("캐릭터 움직이게 하기", isOn: $animationEnabled)
                 } header: {
@@ -141,52 +137,6 @@ struct CharacterProfileView: View {
         .frostedCard(cornerRadius: 18)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
-    }
-
-    // MARK: - Weather backgrounds
-
-    /// 4 날씨 배경의 현재 상태 + 각 condition 의 생성 화면 진입.
-    private var weatherBackgroundsSection: some View {
-        Section {
-            ForEach(WeatherBackgroundCondition.allCases, id: \.self) { cond in
-                NavigationLink {
-                    WeatherBackgroundGenView(initialCondition: cond)
-                } label: {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(uiColor: .tertiarySystemBackground))
-                            if let img = CharacterImageStore.loadBackground(cond) {
-                                Image(uiImage: img)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            } else {
-                                Image(systemName: "photo")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .frame(width: 44, height: 44)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(cond.displayName).font(.callout.weight(.medium))
-                            Text(CharacterImageStore.hasBackground(cond)
-                                 ? "사용자 생성"
-                                 : "기본 (없음)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
-        } header: {
-            Text("🌤 날씨 배경")
-        } footer: {
-            Text("현재 날씨에 따라 메인 화면 · 위젯 · 워치 의 캐릭터 뒤에 자동으로 배경이 합성돼요. 비어 있는 날씨는 배경 없이 캐릭터만 표시. 행을 탭하면 해당 날씨 배경 생성 화면으로.")
-                .font(.caption2)
-        }
     }
 
     // MARK: - States overview
