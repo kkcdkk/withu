@@ -26,6 +26,9 @@ struct ContentView: View {
     /// 활동 종합 메시지 — task / 새로고침 시 갱신
     @State private var activityMessage: String = ""
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
+    /// 사용법 안내를 봤는지 — 첫 실행 후 1회 자동 표시.
+    @AppStorage("withu.seenGuide.v1") private var seenGuide: Bool = false
+    @State private var showGuide: Bool = false
     /// 캐릭터 옆 날씨 그림(해/달/구름/비/눈) 표시 여부. App Group 저장.
     @AppStorage("withu.showWeatherDecoration.v1",
                 store: UserDefaults(suiteName: SharedAppState.groupID))
@@ -91,6 +94,10 @@ struct ContentView: View {
                 await loadAll()
                 activityMessage = computeActivityMessage()
                 health.startObservingChanges()
+                if onboarded && !seenGuide { showGuide = true }
+            }
+            .onChange(of: onboarded) { _, done in
+                if done && !seenGuide { showGuide = true }
             }
             .onChange(of: characterState) { _, newValue in
                 sendStateToWatch(newValue)
@@ -156,6 +163,9 @@ struct ContentView: View {
             set: { _ in }
         )) {
             LoginGateView()
+        }
+        .sheet(isPresented: $showGuide) {
+            HelpGuideView(onDone: { seenGuide = true; showGuide = false })
         }
         .task { await auth.restore() }
     }
@@ -565,6 +575,7 @@ struct SettingsView: View {
     @State private var healthMessage: String = ""
     @State private var healthLoading: Bool = false
     @State private var showWidgetGuide: Bool = false
+    @State private var showGuide: Bool = false
     @State private var showOnboardingConfirm: Bool = false
     @State private var showPaywall: Bool = false
     @State private var showDeleteConfirm: Bool = false
@@ -588,6 +599,13 @@ struct SettingsView: View {
                     } footer: {
                         Text("오늘 \(GenerationQuota.remainingToday())번 생성할 수 있어요.")
                             .font(.caption2)
+                    }
+                    Section {
+                        Button {
+                            showGuide = true
+                        } label: {
+                            Label("사용법 보기", systemImage: "questionmark.circle")
+                        }
                     }
                     watchSection
                     healthSection
@@ -674,6 +692,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showWidgetGuide) {
                 WidgetGuideView()
+            }
+            .sheet(isPresented: $showGuide) {
+                HelpGuideView(onDone: { showGuide = false })
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(onClose: { showPaywall = false })
