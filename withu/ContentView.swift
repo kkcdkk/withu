@@ -195,15 +195,19 @@ struct ContentView: View {
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-            Button {
-                weather.refresh(force: true)
-            } label: {
-                Image(systemName: weather.isFetching ? "arrow.clockwise.circle" : "arrow.clockwise")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            if weather.isFetching {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Button {
+                    weather.refresh(force: true)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .disabled(weather.isFetching)
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 4)
     }

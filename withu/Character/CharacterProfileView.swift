@@ -29,18 +29,6 @@ struct CharacterProfileView: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                 }
-
-                Section {
-                    TextField("예: 코코, 모찌", text: $profile.name)
-                    TextField("성격이나 말투 (선택)", text: $profile.description, axis: .vertical)
-                        .lineLimit(2...5)
-                } header: {
-                    Text("이름과 성격")
-                } footer: {
-                    Text("이름은 캐릭터를 부를 때나 위젯에 표시될 때 쓰여요.")
-                        .font(.caption2)
-                }
-
                 Section {
                     HStack {
                         Text("지금은")
@@ -93,7 +81,7 @@ struct CharacterProfileView: View {
                 } header: {
                     Text("움직임")
                 } footer: {
-                    Text("움직이는 캐릭터로 만든 경우, 살짝살짝 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리에 더 가벼워요. 만들어 둔 그림은 그대로 남아요.")
+                    Text("움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.")
                         .font(.caption2)
                 }
 
@@ -209,7 +197,7 @@ struct CharacterProfileView: View {
         if profile.manualSleepOnly ?? false {
             return "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요."
         }
-        return "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 언제든 자는 걸로 봐요."
+        return "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요."
     }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)
