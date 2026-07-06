@@ -318,7 +318,9 @@ final class BackgroundGenerationManager: NSObject {
                     small = ImageProcessing.colorMatched(small, reference: colorRefSmall)
                 }
                 // 갤러리에만 저장 — 활성 슬롯 적용·워치 전송은 사용자가 '적용' 버튼 누를 때.
-                CharacterImageStore.save(small, for: state, frame: job.frame, applyToActiveSlot: false)
+                // batchId 로 같은 '한번에 만들기' 캐릭터를 묶는다(갤러리 캐릭터별 보기).
+                CharacterImageStore.save(small, for: state, frame: job.frame,
+                                         applyToActiveSlot: false, batchId: job.batchId)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(GenerationQuota.cost(forQuality: job.quality))
                 images["\(job.stateRaw)#\(job.frame)"] = small

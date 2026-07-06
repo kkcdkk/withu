@@ -14,8 +14,13 @@ import WidgetKit
 // MARK: - Landing: 상태별 폴더 목록
 
 struct CharacterGalleryView: View {
+    enum Mode: Hashable { case byState, byCharacter }
+    @State private var mode: Mode = .byState
     @State private var grouped: [CharacterState: [GalleryItem]] = [:]
     @State private var legacy: [GalleryItem] = []
+    /// 캐릭터별('한번에 만들기') 그룹 — batchId 로 묶음.
+    @State private var characters: [(batchId: String, createdAt: Date, items: [GalleryItem])] = []
+    @State private var toastText: String?
 
     private var totalCount: Int {
         grouped.values.reduce(0) { $0 + $1.count } + legacy.count
@@ -29,33 +34,16 @@ struct CharacterGalleryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                SectionHeader("상태별 폴더") {
-                    Text("\(totalCount)개")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                Picker("보기", selection: $mode) {
+                    Text("상태별").tag(Mode.byState)
+                    Text("캐릭터별").tag(Mode.byCharacter)
                 }
-                .padding(.bottom, 2)
+                .pickerStyle(.segmented)
 
-                ForEach(sortedFolders, id: \.self) { state in
-                    NavigationLink {
-                        StateFolderView(state: state, onChange: refresh)
-                    } label: {
-                        folderRow(state)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if !legacy.isEmpty {
-                    NavigationLink {
-                        GalleryGrid(items: legacy, backgroundState: .idle, onChange: refresh) {
-                            legacyHeader
-                        }
-                        .navigationTitle("기타")
-                        .navigationBarTitleDisplayMode(.inline)
-                    } label: {
-                        legacyRow
-                    }
-                    .buttonStyle(.plain)
+                if mode == .byState {
+                    stateFolders
+                } else {
+                    characterFolders
                 }
             }
             .padding(.horizontal, 20)
@@ -66,15 +54,140 @@ struct CharacterGalleryView: View {
         .navigationTitle("캐릭터 갤러리")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { refresh() }
-        .overlay {
-            if totalCount == 0 { emptyState }
+        .overlay(alignment: .bottom) {
+            if let toast = toastText {
+                Text(toast)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 40)
+                    .transition(.opacity)
+            }
         }
+        .overlay {
+            if totalCount == 0 && mode == .byState { emptyState }
+        }
+    }
+
+    @ViewBuilder
+    private var stateFolders: some View {
+        SectionHeader("상태별 폴더") {
+            Text("\(totalCount)개").font(.caption).foregroundStyle(.tertiary)
+        }
+        .padding(.bottom, 2)
+
+        ForEach(sortedFolders, id: \.self) { state in
+            NavigationLink {
+                StateFolderView(state: state, onChange: refresh)
+            } label: {
+                folderRow(state)
+            }
+            .buttonStyle(.plain)
+        }
+
+        if !legacy.isEmpty {
+            NavigationLink {
+                GalleryGrid(items: legacy, backgroundState: .idle, onChange: refresh) {
+                    legacyHeader
+                }
+                .navigationTitle("기타")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                legacyRow
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var characterFolders: some View {
+        if characters.isEmpty {
+            VStack(spacing: 10) {
+                Text("🎨").font(.system(size: 44))
+                Text("'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 60)
+        } else {
+            ForEach(characters, id: \.batchId) { group in
+                characterCard(group)
+            }
+        }
+    }
+
+    private func characterCard(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> some View {
+        VStack(spacing: 8) {
+            NavigationLink {
+                GalleryGrid(items: group.items, backgroundState: .idle, onChange: refresh) {
+                    EmptyView()
+                }
+                .navigationTitle("이 캐릭터")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                HStack(spacing: 14) {
+                    if let rep = representativeImage(group.items) {
+                        Image(uiImage: rep).resizable().scaledToFit()
+                            .frame(width: 44, height: 44)
+                    } else {
+                        Image(systemName: "square.grid.2x2").font(.title3).foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("캐릭터 · \(group.items.count)개 모습").font(.callout.weight(.semibold))
+                        Text(group.createdAt, format: .relative(presentation: .named))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                applyCharacter(group.items)
+            } label: {
+                Label("이 캐릭터로 모두 적용", systemImage: "checkmark.circle.fill")
+                    .font(.callout.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.withuPink)
+        }
+        .frostedCard()
+    }
+
+    /// 대표 썸네일 — idle 있으면 idle, 없으면 첫 항목.
+    private func representativeImage(_ items: [GalleryItem]) -> UIImage? {
+        let rep = items.first { $0.sourceState == CharacterState.idle.rawValue } ?? items.first
+        return rep.flatMap { CharacterImageStore.loadGalleryImage(id: $0.id) }
+    }
+
+    /// 이 캐릭터의 모든 모습을 각 상태 자리에 적용 + 워치 전송 + 위젯 reload.
+    private func applyCharacter(_ items: [GalleryItem]) {
+        var applied = 0
+        for item in items {
+            guard let state = CharacterState(rawValue: item.sourceState) else { continue }
+            if CharacterImageStore.applyGalleryItem(item.id, to: state) {
+                if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
+                    ConnectivityManager.shared.sendCharacterImage(img, for: state, frame: 0)
+                }
+                if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
+                    ConnectivityManager.shared.sendCharacterImage(f1, for: state, frame: 1)
+                }
+                applied += 1
+            }
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation { toastText = "\(applied)개 모습을 모두 적용했어요" }
+        Task { try? await Task.sleep(for: .seconds(1.6)); withAnimation { toastText = nil } }
     }
 
     private func refresh() {
         let g = CharacterImageStore.loadGalleryGrouped()
         grouped = g.byState
         legacy = g.legacy
+        characters = CharacterImageStore.loadGalleryByCharacter()
     }
 
     /// 적용 중인 폴더 → 항목 있는 폴더 → 빈 폴더. 같은 그룹 안은 userFacing 선언 순서.

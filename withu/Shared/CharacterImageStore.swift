@@ -89,6 +89,9 @@ struct GalleryItem: Identifiable, Codable, Equatable {
     /// 연속 이미지 (frame 1) 도 같이 저장됐는지. nil/false 면 frame 0 만.
     /// Optional 인 이유: 옛 메타엔 이 키가 없어 nil → false 로 fallback.
     var hasFrame1: Bool?
+    /// '한번에 만들기'(배치) 세션 식별자 — 같은 batchId 항목들이 한 캐릭터의 여러 상태.
+    /// 단건 생성·옛 항목은 nil. 갤러리 '캐릭터별' 묶기에 사용.
+    var batchId: String?
 
     /// 사용자 친화적 표시용. 필요 시 추가 필드.
 }
@@ -495,7 +498,7 @@ enum CharacterImageStore {
     ///   안 건드림. 배치 생성처럼 "만들어만 두고 나중에 버튼으로 적용" 흐름에 사용.
     @discardableResult
     static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0,
-                     applyToActiveSlot: Bool = true) -> GalleryItem? {
+                     applyToActiveSlot: Bool = true, batchId: String? = nil) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
         // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
         if applyToActiveSlot {
@@ -513,7 +516,7 @@ enum CharacterImageStore {
         }
         // 2) 갤러리 — frame 별 분기
         if frame == 0 {
-            let item = addToGalleryInternal(data: data, sourceState: state)
+            let item = addToGalleryInternal(data: data, sourceState: state, batchId: batchId)
             if let id = item?.id {
                 // 새로 만든 갤러리 항목이 이 state 의 현재 활성 source.
                 setActiveSource(state: state, galleryId: id)
@@ -618,6 +621,27 @@ enum CharacterImageStore {
         return (byState, legacy)
     }
 
+    /// '캐릭터별' 그룹 — batchId('한번에 만들기' 세션)로 묶음. batchId 없는 항목(단건·옛)은 제외.
+    /// 반환: 최신 캐릭터 먼저, 각 그룹 안은 userFacing 상태 순.
+    static func loadGalleryByCharacter() -> [(batchId: String, createdAt: Date, items: [GalleryItem])] {
+        let all = loadGalleryMetadata()   // createdAt desc
+        var groups: [String: [GalleryItem]] = [:]
+        for item in all {
+            guard let bid = item.batchId else { continue }
+            groups[bid, default: []].append(item)
+        }
+        let order = CharacterState.userFacing
+        func rank(_ raw: String) -> Int {
+            CharacterState(rawValue: raw).flatMap { order.firstIndex(of: $0) } ?? order.count
+        }
+        return groups.map { key, value in
+            (batchId: key,
+             createdAt: value.map(\.createdAt).max() ?? Date.distantPast,
+             items: value.sorted { rank($0.sourceState) < rank($1.sourceState) })
+        }
+        .sorted { $0.createdAt > $1.createdAt }
+    }
+
     private static func saveGalleryMetadata(_ items: [GalleryItem]) {
         guard let url = metadataURL,
               let data = try? JSONEncoder().encode(items) else { return }
@@ -626,7 +650,8 @@ enum CharacterImageStore {
 
     @discardableResult
     private static func addToGalleryInternal(data: Data,
-                                              sourceState: CharacterState) -> GalleryItem? {
+                                              sourceState: CharacterState,
+                                              batchId: String? = nil) -> GalleryItem? {
         let id = UUID().uuidString
         guard let url = galleryFileURL(id: id) else { return nil }
         do {
@@ -634,7 +659,8 @@ enum CharacterImageStore {
         } catch {
             return nil
         }
-        let item = GalleryItem(id: id, sourceState: sourceState.rawValue, createdAt: Date())
+        let item = GalleryItem(id: id, sourceState: sourceState.rawValue,
+                               createdAt: Date(), batchId: batchId)
         var all = loadGalleryMetadata()
         all.append(item)
         saveGalleryMetadata(all)
