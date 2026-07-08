@@ -27,6 +27,7 @@ enum CharacterStateResolver {
         isFocusActive: Bool = false,
         isLikelyInWorkout: Bool = false,
         recentStepsPerMinute: Double = 0,
+        phoneWorkoutState: CharacterState? = nil,
         profile: CharacterProfile = CharacterProfile(),
         calendar: Calendar = .current
     ) -> CharacterState {
@@ -48,6 +49,13 @@ enum CharacterStateResolver {
             if recentStepsPerMinute >= 130 { return .running }
             if recentStepsPerMinute >= 40  { return .walking }
             return .energetic
+        }
+
+        // 1.5) 폰 전용 보조 — 워치 심박 신호가 없어도 CoreMotion 활동 분류가
+        //     "10분간 지속되는 걷기/달리기/자전거" 로 판단하면 반영.
+        //     (지속 조건은 MotionActivityManager 가 검사 — 일상 걸음 오탐 방지)
+        if let phoneWorkoutState {
+            return phoneWorkoutState
         }
 
         let hour = calendar.component(.hour, from: now)

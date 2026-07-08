@@ -48,6 +48,7 @@ struct ContentView: View {
             isFocusActive: manualOnly ? false : (focus.isFocused || focus.isFocusFilterSleeping),
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
+            phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
             profile: profile
         )
     }
@@ -151,6 +152,8 @@ struct ContentView: View {
                     _ = await health.fetchInBedSchedule()
                     // 진행 중 운동(HR·걸음 페이스)도 같이 갱신 — 산책/달리기 반영 빨라짐.
                     await health.refreshWorkoutInference()
+                    // 폰 전용 경로(CoreMotion 활동 분류) — 워치 없는 사용자용.
+                    await MotionActivityManager.shared.refresh()
                     SyncCoordinator.syncNow(override: overrideState)
                 }
             }
