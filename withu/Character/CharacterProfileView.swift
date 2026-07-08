@@ -197,6 +197,10 @@ struct CharacterProfileView: View {
         if profile.manualSleepOnly ?? false {
             return "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요."
         }
+        // 수면 모드 신호가 하나도 연결 안 돼 있으면 — 왜 '설정 시간'으로만 자는지 + 켜는 법 안내.
+        if !focus.isAuthorized && focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule {
+            return "지금은 아이폰 수면 모드를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)"
+        }
         return "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요."
     }
 
