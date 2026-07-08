@@ -83,6 +83,8 @@ final class HealthKitManager {
     /// HR 패턴이 "워치 운동 진행 중" 으로 보이는지.
     /// 조건: 5+ sample / 90s AND avg >= 95 bpm.
     private(set) var isLikelyInWorkout: Bool = false
+    /// 최근 10분 평균 걸음 페이스(분당 걸음수) — 진행 중 운동의 걷기/달리기 구분용.
+    private(set) var recentStepsPerMinute: Double = 0
 
     private init() {}
 
@@ -298,6 +300,25 @@ final class HealthKitManager {
         // 5+ samples in 90s = 워치가 운동 모드라 stream 중일 가능성
         // avg >= 95 = 평상시 휴식 (60-80) 보다 명백히 높음
         isLikelyInWorkout = samples.count >= 5 && avg >= 95
+
+        // 최근 10분 걸음 페이스(분당 걸음수) — 진행 중 운동의 걷기/달리기 구분용.
+        // HKWorkout 은 운동이 끝나야 생기므로, 진행 중엔 이 cadence 로 타입을 추정.
+        if let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) {
+            let windowMin = 10.0
+            let stepStart = now.addingTimeInterval(-windowMin * 60)
+            let stepPredicate = HKQuery.predicateForSamples(withStart: stepStart, end: now)
+            let total: Double = await withCheckedContinuation { cont in
+                let q = HKStatisticsQuery(
+                    quantityType: stepType,
+                    quantitySamplePredicate: stepPredicate,
+                    options: .cumulativeSum
+                ) { _, stats, _ in
+                    cont.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                }
+                store.execute(q)
+            }
+            recentStepsPerMinute = total / windowMin
+        }
     }
 
     // MARK: - 현재 수면 일정 안인지

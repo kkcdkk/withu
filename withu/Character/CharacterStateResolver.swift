@@ -26,6 +26,7 @@ enum CharacterStateResolver {
         hasSleepSchedule: Bool = false,
         isFocusActive: Bool = false,
         isLikelyInWorkout: Bool = false,
+        recentStepsPerMinute: Double = 0,
         profile: CharacterProfile = CharacterProfile(),
         calendar: Calendar = .current
     ) -> CharacterState {
@@ -41,8 +42,11 @@ enum CharacterStateResolver {
         }
 
         // 1) 워치 HR stream 패턴이 운동중으로 보이면 — 진행 중인 운동, 아직 HKWorkout 미commit.
-        //    타입 모르므로 .energetic.
+        //    최근 걸음 페이스(분당 걸음수)로 타입 추정: 달리기 cadence 는 보통 150+,
+        //    걷기 90~120. 걸음이 거의 없으면(자전거 등) .energetic.
         if isLikelyInWorkout {
+            if recentStepsPerMinute >= 130 { return .running }
+            if recentStepsPerMinute >= 40  { return .walking }
             return .energetic
         }
 

@@ -47,6 +47,7 @@ struct ContentView: View {
             hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
             isFocusActive: manualOnly ? false : (focus.isFocused || focus.isFocusFilterSleeping),
             isLikelyInWorkout: health.isLikelyInWorkout,
+            recentStepsPerMinute: health.recentStepsPerMinute,
             profile: profile
         )
     }
@@ -148,6 +149,8 @@ struct ContentView: View {
                 guard scenePhase == .active else { return }
                 Task {
                     _ = await health.fetchInBedSchedule()
+                    // 진행 중 운동(HR·걸음 페이스)도 같이 갱신 — 산책/달리기 반영 빨라짐.
+                    await health.refreshWorkoutInference()
                     SyncCoordinator.syncNow(override: overrideState)
                 }
             }

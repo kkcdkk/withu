@@ -463,6 +463,7 @@ enum SyncCoordinator {
             hasSleepSchedule: hasSleepSchedule,
             isFocusActive: isFocusActive,
             isLikelyInWorkout: health.isLikelyInWorkout,
+            recentStepsPerMinute: health.recentStepsPerMinute,
             profile: profile
         )
 
