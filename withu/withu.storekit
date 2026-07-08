@@ -71,36 +71,7 @@
     "_storefront" : "KOR",
     "_storeKitErrors" : []
   },
-  "subscriptionGroups" : [
-    {
-      "id" : "withu-subscriptions",
-      "localizations" : [],
-      "name" : "withu 구독",
-      "subscriptions" : [
-        {
-          "adHocOffers" : [],
-          "codeOffers" : [],
-          "displayPrice" : "3900",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "withu-sub-monthly",
-          "introductoryOffer" : null,
-          "localizations" : [
-            {
-              "description" : "매일 100번씩 AI 캐릭터를 만들 수 있어요.",
-              "displayName" : "withu 구독 (월간)",
-              "locale" : "ko_KR"
-            }
-          ],
-          "productID" : "com.seoyoung.withu.subscription.monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Monthly Subscription",
-          "subscriptionGroupID" : "withu-subscriptions",
-          "type" : "RecurringSubscription"
-        }
-      ]
-    }
-  ],
+  "subscriptionGroups" : [],
   "version" : {
     "major" : 4,
     "minor" : 0

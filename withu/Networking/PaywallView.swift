@@ -2,7 +2,7 @@
 //  PaywallView.swift
 //  withu (iOS)
 //
-//  구독 + 횟수 팩 구매 화면. 한도를 다 썼거나 설정에서 진입.
+//  캔디 팩 구매 화면. 캔디가 부족하거나 설정에서 진입. (구독 없음)
 //  홈 디자인 언어(frosted 카드 · withuPink primary)를 따름.
 //
 
@@ -36,13 +36,6 @@ struct PaywallView: View {
                 VStack(spacing: 20) {
                     header
 
-                    if store.isSubscriber {
-                        subscribedCard
-                    } else if let sub = store.subscription {
-                        subscriptionCard(sub)
-                        subscriptionDisclosure(sub)
-                    }
-
                     if !store.creditPacks.isEmpty {
                         creditSection
                     }
@@ -66,14 +59,15 @@ struct PaywallView: View {
 
                     referralSection
 
-                    Button("구매 복원") {
-                        Task { await store.restore(); onClose() }
+                    HStack(spacing: 16) {
+                        Link("이용약관", destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!)
+                        Link("개인정보처리방침", destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2.weight(.semibold))
+                    .tint(.withuPink)
                     .padding(.top, 4)
 
-                    HelperFooter("구독은 언제든 설정 > Apple ID 에서 해지할 수 있어요. 충전한 횟수는 사라지지 않아요.")
+                    HelperFooter("충전한 캔디는 만료 없이 계속 쓸 수 있어요.")
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -215,79 +209,14 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(spacing: 6) {
-            Text("오늘 \(GenerationQuota.remainingToday())번 만들 수 있어요")
+            Text("캔디 \(GenerationQuota.displayedCandy())개 갖고 있어요")
                 .font(.title3.weight(.semibold))
-            Text(store.isSubscriber
-                 ? "구독 중이에요. 매일 넉넉하게 만들 수 있어요."
-                 : "더 만들고 싶다면 구독하거나 횟수를 충전해요.")
+            Text("더 만들고 싶다면 캔디를 충전해요.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frostedCard(cornerRadius: 18)
-    }
-
-    private var subscribedCard: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.title2)
-                .foregroundStyle(.green)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("구독 중")
-                    .font(.callout.weight(.semibold))
-                Text("하루 \(GenerationQuota.subscriberDailyLimit)번까지 만들 수 있어요.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .frostedCard()
-    }
-
-    private func subscriptionCard(_ product: Product) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("withu 구독")
-                        .font(.callout.weight(.semibold))
-                    Text("매일 \(GenerationQuota.subscriberDailyLimit)번씩 만들 수 있어요")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(product.displayPrice)
-                    .font(.callout.weight(.semibold))
-            }
-            Button {
-                Task { await store.purchase(product); onClose() }
-            } label: {
-                Text("구독하기")
-                    .font(.callout.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.withuPink)
-            .disabled(store.isPurchasing)
-        }
-        .frostedCard()
-    }
-
-    /// 자동 갱신 구독 고지 (App Store 가이드라인 3.1.2 — 가격·기간·자동갱신·해지·약관/개인정보).
-    private func subscriptionDisclosure(_ product: Product) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(product.displayPrice) / 월 자동 갱신 구독이에요. 현재 기간이 끝나기 24시간 전까지 해지하지 않으면 같은 금액으로 자동 갱신돼요. 구독 관리·해지는 기기 설정 > Apple ID > 구독에서 할 수 있어요.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 16) {
-                Link("이용약관", destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!)
-                Link("개인정보처리방침", destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!)
-            }
-            .font(.caption2.weight(.semibold))
-            .tint(.withuPink)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
     }
 
     private var creditSection: some View {

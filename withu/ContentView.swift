@@ -592,12 +592,12 @@ struct SettingsView: View {
                         Button {
                             showPaywall = true
                         } label: {
-                            Label("구독 · 횟수 충전", systemImage: "sparkles")
+                            Label("캔디 충전", systemImage: "sparkles")
                         }
                     } header: {
                         Text("더 만들기")
                     } footer: {
-                        Text("오늘 \(GenerationQuota.remainingToday())번 생성할 수 있어요.")
+                        Text("캔디 \(GenerationQuota.displayedCandy())개 갖고 있어요.")
                             .font(.caption2)
                     }
                     Section {
