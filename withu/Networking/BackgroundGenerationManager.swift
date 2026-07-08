@@ -40,6 +40,8 @@ struct BackgroundGenJob: Codable, Identifiable {
     /// true 면 이 장의 색을 idle 앵커 색에 맞춤 (상태 간 색 통일).
     /// idle 자신·per-state 첨부사진 상태는 false (사진 색 존중).
     var matchIdleColor: Bool?
+    /// 서버로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용. 옛 잡은 nil.
+    var prompt: String?
 }
 
 /// 뷰가 넘겨주는 한 장 스펙. 프롬프트는 뷰가 조립(기존 runOne 로직 그대로).
@@ -208,7 +210,8 @@ final class BackgroundGenerationManager: NSObject {
                                    wantsFrame1: spec.wantsFrame1,
                                    frame1Prompt: spec.frame1Prompt,
                                    status: .queued,
-                                   matchIdleColor: spec.matchIdleColor)
+                                   matchIdleColor: spec.matchIdleColor,
+                                   prompt: spec.prompt)
         let req = GenerateImageRequest(prompt: spec.prompt,
                                        referenceImageBase64: spec.referenceB64,
                                        steps: 30, width: 1024, height: 1024,
@@ -320,7 +323,8 @@ final class BackgroundGenerationManager: NSObject {
                 // 갤러리에만 저장 — 활성 슬롯 적용·워치 전송은 사용자가 '적용' 버튼 누를 때.
                 // batchId 로 같은 '한번에 만들기' 캐릭터를 묶는다(갤러리 캐릭터별 보기).
                 CharacterImageStore.save(small, for: state, frame: job.frame,
-                                         applyToActiveSlot: false, batchId: job.batchId)
+                                         applyToActiveSlot: false, batchId: job.batchId,
+                                         prompt: job.prompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(GenerationQuota.cost(forQuality: job.quality))
                 images["\(job.stateRaw)#\(job.frame)"] = small

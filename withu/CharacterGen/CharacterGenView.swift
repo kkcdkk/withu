@@ -69,6 +69,8 @@ struct CharacterGenView: View {
     @State private var singleDetailFrame: Int = 0   // 결과에서 보고 있는 프레임(0=기본, 1=움직임)
     @State private var isProcessingTransparent: Bool = false
     @State private var revisedPrompt: String?
+    /// 마지막 성공 생성에 실제로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
+    @State private var lastSentPrompt: String?
     @State private var lastError: String?
     @State private var showAppliedAlert: Bool = false
     @State private var showSavedAlert: Bool = false
@@ -869,6 +871,7 @@ struct CharacterGenView: View {
                 resultImage = small
                 lastFrame0FullRes = processed   // frame1 정규화 reference (1024 투명)
                 revisedPrompt = resp.revisedPrompt
+                lastSentPrompt = finalPrompt    // 갤러리 '만든 기록' 저장용
             } else {
                 resultFrame2 = small
             }
@@ -939,7 +942,7 @@ struct CharacterGenView: View {
     // MARK: - Common actions
 
     private func apply(_ image: UIImage, to state: CharacterState) {
-        if CharacterImageStore.save(image, for: state, frame: 0) != nil {
+        if CharacterImageStore.save(image, for: state, frame: 0, prompt: lastSentPrompt) != nil {
             ConnectivityManager.shared.sendCharacterImage(image, for: state, frame: 0)
             // frame 1 — 현재 displayTransparent 모드 존중 (transparent cache 있으면 그걸 우선)
             if let f2 = currentDisplay(frame: 1) {

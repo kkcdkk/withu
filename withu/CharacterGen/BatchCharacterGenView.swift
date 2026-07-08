@@ -1122,7 +1122,8 @@ struct BatchCharacterGenView: View {
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 results[.idle] = small
                 idleFullRes = flat
-                CharacterImageStore.save(small, for: .idle, frame: 0)
+                CharacterImageStore.save(small, for: .idle, frame: 0,
+                                         batchId: batchSessionId, prompt: prompt)
                 ConnectivityManager.shared.sendCharacterImage(small, for: .idle, frame: 0)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
@@ -1459,7 +1460,8 @@ struct BatchCharacterGenView: View {
                 }
                 displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
                 // 갤러리에만 저장 — 반영은 '적용' 버튼으로 (바꾼 결과가 아직 적용 전이므로 표시 리셋).
-                CharacterImageStore.save(small, for: state, frame: frame, applyToActiveSlot: false)
+                CharacterImageStore.save(small, for: state, frame: frame, applyToActiveSlot: false,
+                                         batchId: batchSessionId, prompt: modifiedPrompt)
                 appliedStates.remove(state)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감

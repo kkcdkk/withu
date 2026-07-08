@@ -92,6 +92,8 @@ struct GalleryItem: Identifiable, Codable, Equatable {
     /// '한번에 만들기'(배치) 세션 식별자 — 같은 batchId 항목들이 한 캐릭터의 여러 상태.
     /// 단건 생성·옛 항목은 nil. 갤러리 '캐릭터별' 묶기에 사용.
     var batchId: String?
+    /// 이 이미지를 만들 때 서버로 보낸 프롬프트 — 갤러리 '만든 기록' 표시용. 옛 항목은 nil.
+    var prompt: String?
 
     /// 사용자 친화적 표시용. 필요 시 추가 필드.
 }
@@ -498,7 +500,8 @@ enum CharacterImageStore {
     ///   안 건드림. 배치 생성처럼 "만들어만 두고 나중에 버튼으로 적용" 흐름에 사용.
     @discardableResult
     static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0,
-                     applyToActiveSlot: Bool = true, batchId: String? = nil) -> GalleryItem? {
+                     applyToActiveSlot: Bool = true, batchId: String? = nil,
+                     prompt: String? = nil) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
         // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
         if applyToActiveSlot {
@@ -516,7 +519,8 @@ enum CharacterImageStore {
         }
         // 2) 갤러리 — frame 별 분기
         if frame == 0 {
-            let item = addToGalleryInternal(data: data, sourceState: state, batchId: batchId)
+            let item = addToGalleryInternal(data: data, sourceState: state,
+                                            batchId: batchId, prompt: prompt)
             if let id = item?.id {
                 // 새로 만든 갤러리 항목이 이 state 의 현재 활성 source.
                 setActiveSource(state: state, galleryId: id)
@@ -651,7 +655,8 @@ enum CharacterImageStore {
     @discardableResult
     private static func addToGalleryInternal(data: Data,
                                               sourceState: CharacterState,
-                                              batchId: String? = nil) -> GalleryItem? {
+                                              batchId: String? = nil,
+                                              prompt: String? = nil) -> GalleryItem? {
         let id = UUID().uuidString
         guard let url = galleryFileURL(id: id) else { return nil }
         do {
@@ -660,7 +665,7 @@ enum CharacterImageStore {
             return nil
         }
         let item = GalleryItem(id: id, sourceState: sourceState.rawValue,
-                               createdAt: Date(), batchId: batchId)
+                               createdAt: Date(), batchId: batchId, prompt: prompt)
         var all = loadGalleryMetadata()
         all.append(item)
         saveGalleryMetadata(all)

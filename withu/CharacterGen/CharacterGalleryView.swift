@@ -644,6 +644,28 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
+                        // 만든 기록 — 이 이미지를 만들 때 보낸 프롬프트 (옛 항목엔 없음)
+                        if let prompt = item.prompt, !prompt.isEmpty {
+                            DisclosureGroup {
+                                Text(prompt)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                                Button {
+                                    UIPasteboard.general.string = prompt
+                                } label: {
+                                    Label("프롬프트 복사", systemImage: "doc.on.doc")
+                                        .font(.caption)
+                                }
+                                .padding(.top, 4)
+                            } label: {
+                                Label("만든 기록", systemImage: "text.quote")
+                                    .font(.callout.weight(.medium))
+                            }
+                            .padding(.horizontal)
+                        }
+
                         // 연속 이미지(2장) — 프레임 순서 바꾸기 + (적용 중이면) 움직임 켜기/끄기
                         if item.hasFrame1 ?? false {
                             HStack(spacing: 12) {
