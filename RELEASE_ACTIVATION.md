@@ -85,12 +85,16 @@ kind: `credits` | `free_single` | `sub_days`.
 ---
 
 ## 7. 유료 출시 전 보안 강화 (코드리뷰 지적 — 유료 결제 켜기 전 필수)
-- [ ] 🔴 **StoreKit JWS 서명 검증** — `cloudflare/withu-api/src/auth.js` 의 `decodeJwsPayload` 가 payload만 디코드(서명 미검증). 위조 JWS로 크레딧 무단 적립 가능. x5c 인증서 체인을 Apple root CA까지 검증해야 함. (현재 bundleId 1차 확인 + 멱등 + 온디바이스 검증만 — 무료/베타는 가능, 유료 출시는 이거 먼저.)
+- [ ] 🔴 **`ALLOW_SANDBOX_IAP` 제거** — 정식 출시 시 `cloudflare/withu-api/wrangler.toml` 의 `ALLOW_SANDBOX_IAP = "1"` 줄을 지우고 재배포. 안 지우면 누구나 Sandbox 테스터 계정으로 무료 캔디 무한 적립 가능 (TestFlight 기간에만 켜 둠).
 - [ ] 🔴 **Idempotency 완전 멱등** — 현재 `APIClient.generateImage` 가 호출마다 키 발급. 네트워크 응답 유실 시 재시도 이중차감 가능. 생성 시도 단위 영속 키 + 서버 멱등 응답(결과 재반환) 필요.
 - [ ] **구독 일일 상한** — `db.js` chargeGeneration 의 subscription 분기(현재 무제한)에 일일 카운터. (만료일 체크는 반영 완료.)
 - [ ] **OpenAI 월 사용 한도** — platform.openai.com 대시보드 (코드 밖, 비용 안전망).
 
 ### 코드리뷰에서 이미 반영한 것
+- [x] **StoreKit JWS 서명 검증** — auth.js `verifyAppleJws` 가 ES256 강제 + x5c 체인 전체를 Apple Root CA G3 까지 검증
+- [x] **Sandbox 구매 차단** — db.js `applyPurchase` 가 `environment !== "Production"` 거부 (QA 기간엔 `ALLOW_SANDBOX_IAP=1` 로 임시 허용, §7 참고)
+- [x] **구매 이중 적립 레이스 제거** — 서버: INSERT(PK 클레임) 먼저 → 적립. 클라: StoreManager 가 처리한 transactionId 영속 추적(purchase+updates 이중 경로 dedup)
+- [x] **환불(revocationDate) 반영** — 환불 트랜잭션 적립 거부 + 구독이면 sub_active=0
 - [x] 서버 구독 **만료일 체크** (만료 후 무제한 생성 방지) — db.js
 - [x] JWS payload **bundleId 1차 확인** — db.js
 - [x] refine 시 이전 연속 프레임 잔상 제거 — CharacterGenView

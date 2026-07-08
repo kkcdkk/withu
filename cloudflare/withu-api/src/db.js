@@ -131,35 +131,56 @@ export async function applyPurchase(env, sub, payload) {
   if (payload.bundleId !== "sy.withu") {
     return { ok: false, status: 400 };
   }
-
-  // 멱등 — 이미 적용한 트랜잭션이면 skip
-  const existing = await env.DB
-    .prepare("SELECT 1 FROM iap_transactions WHERE transaction_id = ?")
-    .bind(transactionId).first();
-  if (existing) return { ok: true, alreadyApplied: true };
+  // Sandbox 구매 차단 — Apple 은 Sandbox 구매도 같은 체인으로 서명하므로
+  // 서명만으로는 진짜 결제와 구분 불가(무료 캔디 무한 적립 구멍).
+  // TestFlight/QA 기간엔 ALLOW_SANDBOX_IAP="1" 로 임시 허용, 출시 시 반드시 제거.
+  if (payload.environment !== "Production" && env.ALLOW_SANDBOX_IAP !== "1") {
+    return { ok: false, status: 400 };
+  }
 
   const now = Math.floor(Date.now() / 1000);
+
+  // 환불(revoke)된 트랜잭션 — 적립하지 않고, 구독이면 즉시 비활성화.
+  if (payload.revocationDate) {
+    if (productId === SUBSCRIPTION_PRODUCT) {
+      await env.DB.prepare(
+        "UPDATE entitlements SET sub_active = 0, updated_at = ? WHERE sub = ?"
+      ).bind(now, sub).run();
+    }
+    return { ok: true, revoked: true };
+  }
+
   let kind;
   let expiresAt = null;
-
   if (PRODUCT_CREDITS[productId]) {
     kind = "credits";
-    await env.DB.prepare(
-      "UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?"
-    ).bind(PRODUCT_CREDITS[productId], now, sub).run();
   } else if (productId === SUBSCRIPTION_PRODUCT) {
     kind = "subscription";
     expiresAt = payload.expiresDate ? Math.floor(payload.expiresDate / 1000) : null;
-    await env.DB.prepare(
-      "UPDATE entitlements SET sub_active = 1, sub_expires_at = ?, updated_at = ? WHERE sub = ?"
-    ).bind(expiresAt, now, sub).run();
   } else {
     return { ok: false, status: 400 };   // 알 수 없는 상품
   }
 
-  await env.DB.prepare(
-    "INSERT INTO iap_transactions (transaction_id, original_transaction_id, sub, product_id, kind, expires_at, applied_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).bind(transactionId, payload.originalTransactionId || null, sub, productId, kind, expiresAt, now).run();
+  // 원자 클레임 — INSERT(PK=transaction_id) 를 먼저 실행해 이 트랜잭션의 소유권을
+  // 확정한 뒤에만 적립한다. 동시 요청(구매 직후 purchase()+Transaction.updates 이중
+  // 제출)이 와도 한쪽만 INSERT 에 성공 → 이중 적립 불가. (redeemCode 와 같은 패턴)
+  try {
+    await env.DB.prepare(
+      "INSERT INTO iap_transactions (transaction_id, original_transaction_id, sub, product_id, kind, expires_at, applied_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(transactionId, payload.originalTransactionId || null, sub, productId, kind, expiresAt, now).run();
+  } catch {
+    return { ok: true, alreadyApplied: true };   // PK 충돌 = 이미 적용됨
+  }
+
+  if (kind === "credits") {
+    await env.DB.prepare(
+      "UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?"
+    ).bind(PRODUCT_CREDITS[productId], now, sub).run();
+  } else {
+    await env.DB.prepare(
+      "UPDATE entitlements SET sub_active = 1, sub_expires_at = ?, updated_at = ? WHERE sub = ?"
+    ).bind(expiresAt, now, sub).run();
+  }
 
   return { ok: true };
 }

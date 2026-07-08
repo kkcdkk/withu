@@ -143,10 +143,29 @@ final class StoreManager {
         }
     }
 
+    /// 이미 grant 처리한 transactionId 들 — 같은 트랜잭션이 purchase() 와
+    /// Transaction.updates 두 경로로 동시에 들어와도(Apple 문서화된 동작) 한 번만 적립.
+    /// UserDefaults 영속: grant 후 finish() 전에 앱이 죽어 재실행 시 재전달돼도 중복 적립 방지.
+    private static let processedKey = "withu.iap.processedTransactionIds.v1"
+    private var processedTransactionIds: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: StoreManager.processedKey) ?? [])
+
+    /// 처리 시작 표시. 이미 처리했으면 false (@MainActor 라 check-and-mark 가 원자적).
+    private func markProcessed(_ transactionId: String) -> Bool {
+        guard !processedTransactionIds.contains(transactionId) else { return false }
+        processedTransactionIds.insert(transactionId)
+        // 무한 성장 방지 — 오래된 것부터 버려도 무방(이미 finish 된 트랜잭션은 재전달 안 됨).
+        let capped = Array(processedTransactionIds.suffix(200))
+        UserDefaults.standard.set(capped, forKey: StoreManager.processedKey)
+        return true
+    }
+
     /// 검증된 트랜잭션에 따라 적립.
     /// 로그인 상태면 서버 권위(/iap/verify)로 — 크레딧이 계정에 귀속돼 재설치에도 유지.
     /// 로그인 전이면 로컬 fallback(점진).
     private func grant(for transaction: Transaction, jws: String) async {
+        // 이중 경로(purchase + updates 리스너) 중복 적립 방지 — 첫 도착만 처리.
+        guard markProcessed(String(transaction.id)) else { return }
         if KeychainStore.sessionToken() != nil {
             if let ent = try? await APIClient.shared.verifyPurchase(
                 signedTransaction: jws
