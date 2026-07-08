@@ -3,33 +3,63 @@
   "nonRenewingSubscriptions" : [],
   "products" : [
     {
-      "displayPrice" : "1500",
+      "displayPrice" : "1200",
+      "familyShareable" : false,
+      "internalID" : "withu-credits-10",
+      "localizations" : [
+        {
+          "description" : "캐릭터를 만드는 캔디 10개예요. 만료 없이 계속 사용.",
+          "displayName" : "미니 팩",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.seoyoung.withu.credits.10",
+      "referenceName" : "Credits 10 (미니 팩)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "3300",
       "familyShareable" : false,
       "internalID" : "withu-credits-30",
       "localizations" : [
         {
-          "description" : "AI 캐릭터를 30번 더 만들 수 있어요. 만료 없이 계속 사용.",
-          "displayName" : "30회 충전",
+          "description" : "캐릭터를 만드는 캔디 30개예요. 만료 없이 계속 사용.",
+          "displayName" : "포켓 팩",
           "locale" : "ko_KR"
         }
       ],
       "productID" : "com.seoyoung.withu.credits.30",
-      "referenceName" : "Credits 30",
+      "referenceName" : "Credits 30 (포켓 팩)",
       "type" : "Consumable"
     },
     {
-      "displayPrice" : "4500",
+      "displayPrice" : "4900",
+      "familyShareable" : false,
+      "internalID" : "withu-credits-50",
+      "localizations" : [
+        {
+          "description" : "캐릭터를 만드는 캔디 50개예요. 만료 없이 계속 사용.",
+          "displayName" : "파우치 팩",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.seoyoung.withu.credits.50",
+      "referenceName" : "Credits 50 (파우치 팩)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "8900",
       "familyShareable" : false,
       "internalID" : "withu-credits-100",
       "localizations" : [
         {
-          "description" : "AI 캐릭터를 100번 더 만들 수 있어요. 만료 없이 계속 사용.",
-          "displayName" : "100회 충전",
+          "description" : "캐릭터를 만드는 캔디 100개예요. 개당 가장 저렴해요. 만료 없이 계속 사용.",
+          "displayName" : "파티 팩",
           "locale" : "ko_KR"
         }
       ],
       "productID" : "com.seoyoung.withu.credits.100",
-      "referenceName" : "Credits 100",
+      "referenceName" : "Credits 100 (파티 팩)",
       "type" : "Consumable"
     }
   ],

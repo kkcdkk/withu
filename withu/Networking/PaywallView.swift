@@ -305,6 +305,7 @@ struct PaywallView: View {
 
     private func creditRow(_ pack: Product) -> some View {
         let amount = StoreManager.ProductID.creditAmount[pack.id] ?? 0
+        let name = StoreManager.ProductID.packName[pack.id] ?? "\(amount)회 충전"
         return Button {
             Task { await store.purchase(pack); onClose() }
         } label: {
@@ -318,10 +319,10 @@ struct PaywallView: View {
                             .foregroundStyle(Color.withuPink)
                     )
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(amount)회 충전")
+                    Text(name)
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Text("만료 없이 계속 쓸 수 있어요")
+                    Text("캔디 \(amount)개 · 만료 없이 계속 써요")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

@@ -21,13 +21,22 @@ final class StoreManager {
 
     // MARK: 상품 ID (App Store Connect 등록값과 일치)
     enum ProductID {
+        static let credits10  = "com.seoyoung.withu.credits.10"
         static let credits30  = "com.seoyoung.withu.credits.30"
+        static let credits50  = "com.seoyoung.withu.credits.50"
         static let credits100 = "com.seoyoung.withu.credits.100"
         static let monthlySub = "com.seoyoung.withu.subscription.monthly"
 
-        static let all: [String] = [credits30, credits100, monthlySub]
-        /// consumable 상품 → 적립 횟수
-        static let creditAmount: [String: Int] = [credits30: 30, credits100: 100]
+        static let all: [String] = [credits10, credits30, credits50, credits100, monthlySub]
+        /// consumable 상품 → 적립 캔디 수
+        static let creditAmount: [String: Int] = [
+            credits10: 10, credits30: 30, credits50: 50, credits100: 100,
+        ]
+        /// 팩 표시 이름 (미니 < 포켓 < 파우치 < 파티).
+        static let packName: [String: String] = [
+            credits10: "미니 팩", credits30: "포켓 팩",
+            credits50: "파우치 팩", credits100: "파티 팩",
+        ]
     }
 
     private(set) var products: [Product] = []

@@ -91,11 +91,12 @@ enum GenerationQuota {
         #endif
     }
 
-    /// 퀄리티별 캔디 비용 — 낮음 1 · 보통 2 · 높음 3.
+    /// 퀄리티별 캔디 비용(프레임 1장 기준) — 낮음 1 · 보통 3 · 높음 6.
+    /// 움직이는 캐릭터는 frame0·frame1 을 각각 생성·과금하므로 자동으로 2배가 된다.
     static func cost(forQuality quality: String) -> Int {
         switch quality {
-        case "high":   return 3
-        case "medium": return 2
+        case "high":   return 6
+        case "medium": return 3
         default:       return 1   // low
         }
     }
