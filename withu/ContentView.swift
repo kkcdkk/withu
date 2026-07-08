@@ -153,7 +153,10 @@ struct ContentView: View {
                     // 진행 중 운동(HR·걸음 페이스)도 같이 갱신 — 산책/달리기 반영 빨라짐.
                     await health.refreshWorkoutInference()
                     // 폰 전용 경로(CoreMotion 활동 분류) — 워치 없는 사용자용.
-                    await MotionActivityManager.shared.refresh()
+                    // 워치가 연결돼 있으면 워치(심박) 기준만 쓰므로 생략.
+                    if !connectivity.isPaired {
+                        await MotionActivityManager.shared.refresh()
+                    }
                     SyncCoordinator.syncNow(override: overrideState)
                 }
             }
@@ -741,7 +744,7 @@ struct SettingsView: View {
     }
 
     private var watchSection: some View {
-        Section("애플 워치") {
+        Section {
             HStack {
                 Text("페어링")
                 Spacer()
@@ -772,6 +775,13 @@ struct SettingsView: View {
                 Text(imgState).font(.footnote).foregroundStyle(.secondary)
             }
             Button("지금 바로 동기화") { sendStateToWatch(characterState) }
+        } header: {
+            Text("애플 워치")
+        } footer: {
+            Text(connectivity.isPaired
+                 ? "운동(산책·달리기 등)은 워치 기준으로 알아채요."
+                 : "워치가 없으면 아이폰의 움직임으로 운동을 알아채요. 아이폰을 몸에 지니고 있을 때만 감지돼요.")
+                .font(.caption2)
         }
     }
 

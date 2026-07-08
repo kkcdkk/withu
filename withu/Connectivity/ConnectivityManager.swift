@@ -446,7 +446,10 @@ enum SyncCoordinator {
         focus.refresh()
         // 폰 전용 운동 분류(CoreMotion)도 push 가 없어 폴링 — 캐시 갱신은 비동기,
         // 이번 sync 는 직전 캐시를 쓰고 다음 sync 에 반영된다.
-        Task { await MotionActivityManager.shared.refresh() }
+        // 워치가 연결돼 있으면 워치 기준만 쓰므로 폴링도 생략.
+        if !ConnectivityManager.shared.isPaired {
+            Task { await MotionActivityManager.shared.refresh() }
+        }
 
         // 프로필이 "자동 감지 끔" 이면 Focus + HealthKit inBed 무시,
         // 프로필 sleepStart/End 시간만 fallback 으로 사용.
@@ -490,8 +493,10 @@ enum SyncCoordinator {
     }
 
     /// 폰 전용 운동 추정(CoreMotion 활동 분류) → CharacterState.
-    /// 워치 심박 경로(isLikelyInWorkout)가 못 잡을 때의 보조 신호.
+    /// 정책: 워치가 연결(페어링)돼 있으면 워치(심박) 기준만 쓴다 — 두 신호 충돌 방지.
+    ///       워치가 없을 때만 폰 움직임 기준.
     static func phoneWorkoutState() -> CharacterState? {
+        guard !ConnectivityManager.shared.isPaired else { return nil }
         switch MotionActivityManager.shared.sustainedActivity {
         case .walking: return .walking
         case .running: return .running
