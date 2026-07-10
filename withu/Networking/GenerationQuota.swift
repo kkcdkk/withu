@@ -121,6 +121,13 @@ enum GenerationQuota {
         d.set(serverCredits, forKey: lastSyncedServerCreditsKey)
     }
 
+    /// 로그아웃 시 서버 잔액 기준선 리셋 — 같은 기기에서 다른 계정으로 로그인할 때
+    /// 이전 계정의 기준선으로 delta 를 계산해 새 계정 적립이 왜곡되는 것 방지.
+    /// (로컬 credits 자체는 기기 소유라 유지 — 미로그인 구매분 보호.)
+    static func resetServerBaseline() {
+        defaults?.removeObject(forKey: lastSyncedServerCreditsKey)
+    }
+
     /// 화면 표시용 보유 캔디 = 실제로 쓸 수 있는 로컬 잔액(credits).
     /// canGenerate 가 로컬 credits 만 보므로, 배지도 같은 값을 보여 과대표시(쓸 수 없는데 숫자만 큼)를 막는다.
     /// 서버 적립분은 syncCreditsUp 으로 이미 로컬에 반영됨.

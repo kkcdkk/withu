@@ -95,6 +95,8 @@ final class AuthManager {
         KeychainStore.clear()
         entitlement = nil
         state = .signedOut
+        // 다른 계정으로 로그인할 수 있으니 서버 잔액 기준선 리셋 (delta 왜곡 방지).
+        GenerationQuota.resetServerBaseline()
     }
 
     /// 계정 삭제 — 서버 데이터 삭제 후 로컬 로그아웃. 성공 시 true.

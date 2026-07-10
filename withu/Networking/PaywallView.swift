@@ -221,11 +221,7 @@ struct PaywallView: View {
 
     private var creditSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeader("횟수 충전") {
-                Text("지금 캔디 \(GenerationQuota.displayedCandy())개 보유")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
+            SectionHeader("캔디 충전")   // 보유 캔디는 상단 헤더에 이미 표시 — 중복 제거
             ForEach(store.creditPacks, id: \.id) { pack in
                 creditRow(pack)
             }
@@ -236,7 +232,8 @@ struct PaywallView: View {
         let amount = StoreManager.ProductID.creditAmount[pack.id] ?? 0
         let name = StoreManager.ProductID.packName[pack.id] ?? "\(amount)회 충전"
         return Button {
-            Task { await store.purchase(pack); onClose() }
+            // 적립까지 성공했을 때만 닫기 — 취소/실패면 열어 둬 에러 배너를 보여준다.
+            Task { if await store.purchase(pack) { onClose() } }
         } label: {
             HStack(spacing: 14) {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

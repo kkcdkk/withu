@@ -106,6 +106,9 @@ struct CharacterGalleryView: View {
                 Text("'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요.")
                     .font(.callout).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                Text("하나씩 만든 캐릭터는 '상태별'에서 볼 수 있어요.")
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
             }
             .padding(.top, 60)
         } else {
@@ -754,8 +757,7 @@ struct GalleryGrid<Header: View>: View {
                             Label("삭제", systemImage: "trash")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
+                        .buttonStyle(.bordered)   // destructive role → 빨간색 (위험 동작 구분)
                         .padding(.horizontal)
                     } else {
                         Image(systemName: "photo")

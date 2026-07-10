@@ -80,8 +80,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             HealthKitManager.shared.startObservingChanges()
             // 인앱 결제 — 상품 로드 + 구독 상태 동기화 + 트랜잭션 감시
             StoreManager.shared.start()
-            // Focus 권한 — 처음이면 시스템 시트, 이후엔 즉시 status 갱신.
-            await FocusModeManager.shared.requestAuthorization()
+            // Focus 권한 — 온보딩 완료 후에만 (첫 설치에서 Welcome 화면보다 먼저
+            // 맥락 없는 시스템 시트가 뜨는 것 방지 — 첫 요청은 온보딩 focus 단계가 담당).
+            if UserDefaults.standard.bool(forKey: "withu.onboarded.v1") {
+                await FocusModeManager.shared.requestAuthorization()
+            }
             // 권한 결과 반영해서 즉시 한 번 sync.
             SyncCoordinator.syncNow()
             // BG refresh 첫 예약 — 이후는 handler 가 자기 끝에 재예약 (chain).

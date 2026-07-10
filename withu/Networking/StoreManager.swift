@@ -72,8 +72,10 @@ final class StoreManager {
         didAttemptLoad = true
     }
 
-    /// 구매. 성공 시 크레딧 적립 또는 구독 활성화.
-    func purchase(_ product: Product) async {
+    /// 구매. 성공 시 캔디 적립. 반환: 적립까지 성공했는지 —
+    /// 호출부(페이월)가 성공일 때만 시트를 닫고, 취소/실패면 열어 둬 에러를 보여준다.
+    @discardableResult
+    func purchase(_ product: Product) async -> Bool {
         isPurchasing = true
         defer { isPurchasing = false }
         do {
@@ -84,15 +86,18 @@ final class StoreManager {
                 await grant(for: transaction, jws: verification.jwsRepresentation)
                 await transaction.finish()
                 lastError = nil
+                return true
             case .userCancelled:
-                break
+                return false
             case .pending:
                 lastError = "결제 승인을 기다리고 있어요."
+                return false
             @unknown default:
-                break
+                return false
             }
         } catch {
             lastError = "결제를 완료하지 못했어요. 다시 시도해 주세요."
+            return false
         }
     }
 
@@ -110,34 +115,42 @@ final class StoreManager {
         }
     }
 
-    /// 이미 grant 처리한 transactionId 들 — 같은 트랜잭션이 purchase() 와
-    /// Transaction.updates 두 경로로 동시에 들어와도(Apple 문서화된 동작) 한 번만 적립.
-    /// UserDefaults 영속: grant 후 finish() 전에 앱이 죽어 재실행 시 재전달돼도 중복 적립 방지.
+    /// 적립까지 '완료'한 transactionId — UserDefaults 영속(append 순서 유지 배열).
+    /// grant 도중(적립 전) 앱이 죽으면 여기 없음 → finish 도 안 됐으니 다음 실행 때
+    /// Transaction.updates 로 재전달돼 재시도된다 (결제됐는데 영구 미적립 방지).
     private static let processedKey = "withu.iap.processedTransactionIds.v1"
-    private var processedTransactionIds: Set<String> =
-        Set(UserDefaults.standard.stringArray(forKey: StoreManager.processedKey) ?? [])
+    private var processedTransactionIds: [String] =
+        UserDefaults.standard.stringArray(forKey: StoreManager.processedKey) ?? []
+    /// 지금 grant 진행 중인 transactionId — purchase() 와 updates 리스너가 같은
+    /// 트랜잭션을 동시에 들고 와도(Apple 문서화된 동작) 한쪽만 처리 (메모리만, 재시작 시 소멸).
+    private var inFlightTransactionIds: Set<String> = []
 
-    /// 처리 시작 표시. 이미 처리했으면 false (@MainActor 라 check-and-mark 가 원자적).
-    private func markProcessed(_ transactionId: String) -> Bool {
-        guard !processedTransactionIds.contains(transactionId) else { return false }
-        processedTransactionIds.insert(transactionId)
-        // 무한 성장 방지 — 오래된 것부터 버려도 무방(이미 finish 된 트랜잭션은 재전달 안 됨).
-        let capped = Array(processedTransactionIds.suffix(200))
-        UserDefaults.standard.set(capped, forKey: StoreManager.processedKey)
-        return true
+    /// 적립 완료 영속 기록. 200개 초과 시 오래된 것(배열 앞)부터 버림.
+    private func recordProcessed(_ transactionId: String) {
+        processedTransactionIds.append(transactionId)
+        if processedTransactionIds.count > 200 {
+            processedTransactionIds.removeFirst(processedTransactionIds.count - 200)
+        }
+        UserDefaults.standard.set(processedTransactionIds, forKey: StoreManager.processedKey)
     }
 
     /// 검증된 트랜잭션에 따라 적립.
     /// 로그인 상태면 서버 권위(/iap/verify)로 — 크레딧이 계정에 귀속돼 재설치에도 유지.
     /// 로그인 전이면 로컬 fallback(점진).
     private func grant(for transaction: Transaction, jws: String) async {
-        // 이중 경로(purchase + updates 리스너) 중복 적립 방지 — 첫 도착만 처리.
-        guard markProcessed(String(transaction.id)) else { return }
+        let txId = String(transaction.id)
+        // 이미 적립 완료거나 다른 경로가 처리 중이면 skip (@MainActor 라 check-and-mark 원자적).
+        guard !processedTransactionIds.contains(txId),
+              !inFlightTransactionIds.contains(txId) else { return }
+        inFlightTransactionIds.insert(txId)
+        defer { inFlightTransactionIds.remove(txId) }
+
         if KeychainStore.sessionToken() != nil {
             if let ent = try? await APIClient.shared.verifyPurchase(
                 signedTransaction: jws
             ) {
                 AuthManager.shared.applyEntitlement(ent)
+                recordProcessed(txId)   // 적립 '성공 후'에만 영속 — 도중 종료 시 재시도 가능
                 return
             }
             // 서버 적립 실패 — 아래 로컬 fallback 으로 이 기기에는 적립됨(계정 귀속은 안 됨).
@@ -146,6 +159,7 @@ final class StoreManager {
         if let amount = ProductID.creditAmount[transaction.productID] {
             GenerationQuota.addCredits(amount)
         }
+        recordProcessed(txId)
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {

@@ -439,8 +439,8 @@ struct CharacterGenView: View {
 
             Picker("퀄리티", selection: $quality) {
                 Text("low (약 20초 · 1캔디)").tag("low")
-                Text("medium (약 50초 · 2캔디)").tag("medium")
-                Text("high (1~2분 · 3캔디)").tag("high")
+                Text("medium (약 50초 · 3캔디)").tag("medium")
+                Text("high (1~2분 · 6캔디)").tag("high")
             }
             .pickerStyle(.menu)
             .disabled(isGenerating)

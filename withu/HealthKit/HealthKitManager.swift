@@ -301,23 +301,28 @@ final class HealthKitManager {
         // avg >= 95 = 평상시 휴식 (60-80) 보다 명백히 높음
         isLikelyInWorkout = samples.count >= 5 && avg >= 95
 
-        // 최근 10분 걸음 페이스(분당 걸음수) — 진행 중 운동의 걷기/달리기 구분용.
+        // 최근 걸음 페이스(분당 걸음수) — 진행 중 운동의 걷기/달리기 구분용.
         // HKWorkout 은 운동이 끝나야 생기므로, 진행 중엔 이 cadence 로 타입을 추정.
+        // 10분 창은 운동 시작 초반(대부분 정지였던 시간이 분모에 포함)에 과소평가되므로,
+        // 3분 창과 함께 재서 큰 쪽을 쓴다 — 시작 직후엔 3분이, 안정 구간엔 10분이 잡음.
         if let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) {
-            let windowMin = 10.0
-            let stepStart = now.addingTimeInterval(-windowMin * 60)
-            let stepPredicate = HKQuery.predicateForSamples(withStart: stepStart, end: now)
-            let total: Double = await withCheckedContinuation { cont in
-                let q = HKStatisticsQuery(
-                    quantityType: stepType,
-                    quantitySamplePredicate: stepPredicate,
-                    options: .cumulativeSum
-                ) { _, stats, _ in
-                    cont.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+            func stepsPerMinute(windowMin: Double) async -> Double {
+                let stepStart = now.addingTimeInterval(-windowMin * 60)
+                let stepPredicate = HKQuery.predicateForSamples(withStart: stepStart, end: now)
+                let total: Double = await withCheckedContinuation { cont in
+                    let q = HKStatisticsQuery(
+                        quantityType: stepType,
+                        quantitySamplePredicate: stepPredicate,
+                        options: .cumulativeSum
+                    ) { _, stats, _ in
+                        cont.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                    }
+                    store.execute(q)
                 }
-                store.execute(q)
+                return total / windowMin
             }
-            recentStepsPerMinute = total / windowMin
+            recentStepsPerMinute = max(await stepsPerMinute(windowMin: 10),
+                                       await stepsPerMinute(windowMin: 3))
         }
     }
 

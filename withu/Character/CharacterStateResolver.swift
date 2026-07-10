@@ -54,7 +54,10 @@ enum CharacterStateResolver {
         // 1.5) 폰 전용 보조 — 워치 심박 신호가 없어도 CoreMotion 활동 분류가
         //     "10분간 지속되는 걷기/달리기/자전거" 로 판단하면 반영.
         //     (지속 조건은 MotionActivityManager 가 검사 — 일상 걸음 오탐 방지)
-        if let phoneWorkoutState {
+        //     단 시스템 수면 신호(Focus/수면 일정)가 켜져 있으면 무시 — 밤중에 폰 들고
+        //     서성이는 정도로 수면 상태를 덮지 않는다. (워치 HR 경로는 '명시적 운동
+        //     시작' 신호라 수면보다 우선하는 기존 정책 유지 — 폰 모션은 부수 신호.)
+        if let phoneWorkoutState, !isFocusActive, !inSleepSchedule {
             return phoneWorkoutState
         }
 

@@ -96,11 +96,12 @@ struct ContentView: View {
                 await loadAll()
                 activityMessage = computeActivityMessage()
                 health.startObservingChanges()
-                if onboarded && !seenGuide { showGuide = true }
+                maybeShowGuide()
             }
-            .onChange(of: onboarded) { _, done in
-                if done && !seenGuide { showGuide = true }
-            }
+            .onChange(of: onboarded) { _, _ in maybeShowGuide() }
+            // 신규 사용자는 온보딩 직후 로그인 게이트(fullScreenCover)가 떠 있어
+            // 그 시점의 sheet 표시가 무시됨 — 로그인 완료 시점에 다시 시도.
+            .onChange(of: auth.state) { _, _ in maybeShowGuide() }
             .onChange(of: characterState) { _, newValue in
                 sendStateToWatch(newValue)
             }
@@ -177,6 +178,13 @@ struct ContentView: View {
             HelpGuideView(onDone: { seenGuide = true; showGuide = false })
         }
         .task { await auth.restore() }
+    }
+
+    /// 첫 실행 사용법 안내 — 온보딩·로그인 게이트가 모두 끝난 뒤에만 (cover 위 sheet 무시 방지).
+    private func maybeShowGuide() {
+        if onboarded && auth.state == .signedIn && !seenGuide {
+            showGuide = true
+        }
     }
 
     // MARK: - Sections
@@ -609,13 +617,6 @@ struct SettingsView: View {
                         Text("캔디 \(GenerationQuota.displayedCandy())개 갖고 있어요.")
                             .font(.caption2)
                     }
-                    Section {
-                        Button {
-                            showGuide = true
-                        } label: {
-                            Label("사용법 보기", systemImage: "questionmark.circle")
-                        }
-                    }
                     watchSection
                     healthSection
                     notificationsSection
@@ -637,6 +638,11 @@ struct SettingsView: View {
                             .font(.caption2)
                     }
                     Section {
+                        Button {
+                            showGuide = true
+                        } label: {
+                            Label("사용법 보기", systemImage: "questionmark.circle")
+                        }
                         Button {
                             showWidgetGuide = true
                         } label: {
