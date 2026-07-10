@@ -14,6 +14,9 @@ struct CharacterProfileView: View {
     @State private var health = HealthKitManager.shared
     @State private var focus = FocusModeManager.shared
     @State private var animationEnabled: Bool = CharacterImageStore.animationEnabled
+    /// heroCard 탭 → 이름 편집 (성격 섹션 제거 후 유일한 이름 편집 진입점)
+    @State private var showNameEdit: Bool = false
+    @State private var nameDraft: String = ""
 
     /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
     private var heroState: CharacterState {
@@ -114,8 +117,13 @@ struct CharacterProfileView: View {
         HStack(spacing: 14) {
             KoreanStateChip(state: heroState, size: 64)
             VStack(alignment: .leading, spacing: 4) {
-                Text(profile.name.isEmpty ? "내 캐릭터" : profile.name)
-                    .font(.title3.weight(.semibold))
+                HStack(spacing: 6) {
+                    Text(profile.name.isEmpty ? "내 캐릭터" : profile.name)
+                        .font(.title3.weight(.semibold))
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
                 Text(heroState.caption)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -125,6 +133,20 @@ struct CharacterProfileView: View {
         .frostedCard(cornerRadius: 18)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            nameDraft = profile.name
+            showNameEdit = true
+        }
+        .alert("캐릭터 이름", isPresented: $showNameEdit) {
+            TextField("예: 새싹이", text: $nameDraft)
+            Button("저장") {
+                profile.name = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("캐릭터를 부를 이름을 정해요.")
+        }
     }
 
     // MARK: - States overview

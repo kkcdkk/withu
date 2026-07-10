@@ -375,9 +375,8 @@ struct BatchCharacterGenView: View {
                     } label: {
                         Label("내 캐릭터", systemImage: "square.grid.2x2")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.bordered)   // 보조 액션 — pink 는 만들기 CTA 전용
                     .controlSize(.small)
-                    .tint(.withuPink)
                     .disabled(isGenerating)
                 }
                 .font(.footnote)
@@ -438,8 +437,7 @@ struct BatchCharacterGenView: View {
                         Label("내 캐릭터에서", systemImage: "square.grid.2x2")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.withuPink)
+                    .buttonStyle(.bordered)   // 보조 액션 — pink 는 만들기 CTA 전용
                     .disabled(isGenerating)
                 }
             }

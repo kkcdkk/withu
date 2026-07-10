@@ -379,8 +379,7 @@ struct CharacterGenView: View {
                         Label("내 캐릭터에서", systemImage: "square.grid.2x2")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.withuPink)
+                    .buttonStyle(.bordered)   // 보조 액션 — pink 는 실제 만들기 CTA 전용
                     .disabled(isGenerating)
                 }
             }

@@ -231,6 +231,8 @@ struct PaywallView: View {
     private func creditRow(_ pack: Product) -> some View {
         let amount = StoreManager.ProductID.creditAmount[pack.id] ?? 0
         let name = StoreManager.ProductID.packName[pack.id] ?? "\(amount)회 충전"
+        // 4팩이 다 같아 보이면 고르기 어려움 — 중간 팩 하나만 살짝 강조.
+        let isRecommended = pack.id == StoreManager.ProductID.credits50
         return Button {
             // 적립까지 성공했을 때만 닫기 — 취소/실패면 열어 둬 에러 배너를 보여준다.
             Task { if await store.purchase(pack) { onClose() } }
@@ -245,9 +247,18 @@ struct PaywallView: View {
                             .foregroundStyle(Color.withuPink)
                     )
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(name)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        Text(name)
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        if isRecommended {
+                            Text("가장 인기")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Color.withuPink.opacity(0.18), in: Capsule())
+                                .foregroundStyle(Color.withuPink)
+                        }
+                    }
                     Text("캔디 \(amount)개 · 만료 없이 계속 써요")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -258,6 +269,12 @@ struct PaywallView: View {
                     .foregroundStyle(.primary)
             }
             .frostedCard()
+            .overlay {
+                if isRecommended {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.withuPink.opacity(0.45), lineWidth: 1.5)
+                }
+            }
         }
         .buttonStyle(.plain)
         .disabled(store.isPurchasing)

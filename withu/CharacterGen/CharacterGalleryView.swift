@@ -21,6 +21,8 @@ struct CharacterGalleryView: View {
     /// 캐릭터별('한번에 만들기') 그룹 — batchId 로 묶음.
     @State private var characters: [(batchId: String, createdAt: Date, items: [GalleryItem])] = []
     @State private var toastText: String?
+    /// '모두 적용' 확인 대기 중인 그룹 items — 여러 자리를 한 번에 덮으니 확인 후 실행.
+    @State private var pendingApplyAll: [GalleryItem]?
 
     private var totalCount: Int {
         grouped.values.reduce(0) { $0 + $1.count } + legacy.count
@@ -54,6 +56,18 @@ struct CharacterGalleryView: View {
         .navigationTitle("캐릭터 갤러리")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { refresh() }
+        .alert("이 캐릭터로 모두 적용할까요?", isPresented: Binding(
+            get: { pendingApplyAll != nil },
+            set: { if !$0 { pendingApplyAll = nil } }
+        )) {
+            Button("모두 적용") {
+                if let items = pendingApplyAll { applyCharacter(items) }
+                pendingApplyAll = nil
+            }
+            Button("취소", role: .cancel) { pendingApplyAll = nil }
+        } message: {
+            Text("\(pendingApplyAll?.count ?? 0)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
+        }
         .overlay(alignment: .bottom) {
             if let toast = toastText {
                 Text(toast)
@@ -147,7 +161,7 @@ struct CharacterGalleryView: View {
             .buttonStyle(.plain)
 
             Button {
-                applyCharacter(group.items)
+                pendingApplyAll = group.items
             } label: {
                 Label("이 캐릭터로 모두 적용", systemImage: "checkmark.circle.fill")
                     .font(.callout.weight(.semibold))
@@ -735,30 +749,13 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
-                        Button {
-                            showRemoveBGConfirm = true
-                        } label: {
-                            if isRemovingBackground {
-                                HStack { ProgressView(); Text("배경 빼는 중…") }
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Label("배경 빼기", systemImage: "wand.and.sparkles")
-                                    .frame(maxWidth: .infinity)
-                            }
+                        // 배경 빼기·삭제는 자주 안 쓰는 동작 — 툴바 ⋯ 메뉴로 이동 (버튼 위계 정리).
+                        if isRemovingBackground {
+                            HStack { ProgressView(); Text("배경 빼는 중…") }
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
-                        .padding(.horizontal)
-                        .disabled(isRemovingBackground)
-
-                        Button(role: .destructive) {
-                            showDeleteConfirm = true
-                        } label: {
-                            Label("삭제", systemImage: "trash")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)   // destructive role → 빨간색 (위험 동작 구분)
-                        .padding(.horizontal)
                     } else {
                         Image(systemName: "photo")
                             .font(.largeTitle).foregroundStyle(.secondary)
@@ -770,6 +767,24 @@ struct GalleryGrid<Header: View>: View {
             .navigationTitle("\(stateKoreanLabel(item.sourceState)) 캐릭터")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button {
+                            showRemoveBGConfirm = true
+                        } label: {
+                            Label("배경 빼기", systemImage: "wand.and.sparkles")
+                        }
+                        .disabled(isRemovingBackground)
+                        Divider()
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("삭제", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기") { selectedItem = nil }
                 }
