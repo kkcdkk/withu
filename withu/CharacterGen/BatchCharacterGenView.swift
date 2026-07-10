@@ -434,7 +434,7 @@ struct BatchCharacterGenView: View {
                     Button {
                         galleryRefTarget = .global
                     } label: {
-                        Label("내 캐릭터에서", systemImage: "square.grid.2x2")
+                        Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)   // 보조 액션 — pink 는 만들기 CTA 전용

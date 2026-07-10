@@ -376,7 +376,7 @@ struct CharacterGenView: View {
                     Button {
                         showGalleryRefPicker = true
                     } label: {
-                        Label("내 캐릭터에서", systemImage: "square.grid.2x2")
+                        Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)   // 보조 액션 — pink 는 실제 만들기 CTA 전용
