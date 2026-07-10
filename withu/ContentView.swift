@@ -45,7 +45,9 @@ struct ContentView: View {
             weather: weather.snapshot,
             inSleepSchedule: manualOnly ? false : health.isInBedSchedule,
             hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
-            isFocusActive: manualOnly ? false : (focus.isFocused || focus.isFocusFilterSleeping),
+            // isFocused(INFocusStatusCenter)는 '어떤' 집중 모드인지 구분 못 해
+            // 방해금지·업무에도 잠들던 버그 → 수면 전용 신호(수면 Focus 필터)만 사용.
+            isFocusActive: manualOnly ? false : focus.isFocusFilterSleeping,
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
@@ -133,8 +135,8 @@ struct ContentView: View {
                 focus.refresh()
                 SyncCoordinator.syncNow(override: overrideState)
             }
-            .onChange(of: focus.isFocused) { _, _ in
-                // Focus 토글이 반영되면 워치/위젯도 즉시 갱신.
+            .onChange(of: focus.isFocusFilterSleeping) { _, _ in
+                // 수면 Focus 필터 토글이 반영되면 워치/위젯도 즉시 갱신.
                 sendStateToWatch(characterState)
             }
             // Control Center 로 Focus 토글하면 scenePhase 가 안 바뀌어서
