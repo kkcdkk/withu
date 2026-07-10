@@ -247,10 +247,18 @@ final class ConnectivityManager: NSObject {
             return
         }
         if lastSentMessage == message { return }
+        let stateChanged = lastSentMessage?.state != message.state
 
         do {
             let data = try JSONEncoder().encode(message)
             try session.updateApplicationContext([WatchMessage.payloadKey: data])
+            // 상태(그림)가 바뀌었으면 컴플리케이션 즉시 갱신 채널도 사용.
+            // applicationContext 는 워치 앱이 실행될 때까지 배달이 미뤄질 수 있어
+            // 시계 페이스가 옛 상태로 남는다. 이 채널은 백그라운드에서 워치를 깨워
+            // 컴플리케이션을 바로 갱신 (하루 50회 예산 — state 변화에만 아껴 씀).
+            if stateChanged, session.isComplicationEnabled {
+                session.transferCurrentComplicationUserInfo([WatchMessage.payloadKey: data])
+            }
             lastSentMessage = message
             lastSentAt = Date()
             lastError = nil

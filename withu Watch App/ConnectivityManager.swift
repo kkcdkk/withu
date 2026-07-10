@@ -53,6 +53,9 @@ final class ConnectivityManager: NSObject {
             // 위젯/컴플리케이션이 읽을 수 있게 공유 컨테이너에 저장
             SharedAppState.save(msg)
             WidgetCenter.shared.reloadAllTimelines()
+            // kind 별 명시적 reload — 시스템이 reloadAllTimelines 를 무시하는 케이스 대비
+            WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
+            self.lastComplicationReloadAt = Date()
         } catch {
             self.lastError = "디코드 실패: \(error.localizedDescription)"
         }
@@ -76,6 +79,16 @@ extension ConnectivityManager: WCSessionDelegate {
                              didReceiveApplicationContext applicationContext: [String: Any]) {
         Task { @MainActor in
             self.ingest(applicationContext)
+        }
+    }
+
+    /// iPhone 이 transferCurrentComplicationUserInfo 로 보낸 상태 변화 —
+    /// 백그라운드에서 워치가 깨어나 이 델리게이트로 받고, 컴플리케이션을 즉시 갱신.
+    /// (applicationContext 는 앱 실행 때까지 배달이 밀릴 수 있어 이 채널이 필요)
+    nonisolated func session(_ session: WCSession,
+                             didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        Task { @MainActor in
+            self.ingest(userInfo)
         }
     }
 
