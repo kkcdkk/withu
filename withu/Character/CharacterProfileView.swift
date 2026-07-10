@@ -17,6 +17,9 @@ struct CharacterProfileView: View {
     /// heroCard 탭 → 이름 편집 (성격 섹션 제거 후 유일한 이름 편집 진입점)
     @State private var showNameEdit: Bool = false
     @State private var nameDraft: String = ""
+    /// '최근 수면 시간에 맞추기' 진행/결과 표시
+    @State private var isAligningSleep: Bool = false
+    @State private var sleepAlignMessage: String?
 
     /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
     private var heroState: CharacterState {
@@ -46,6 +49,21 @@ struct CharacterProfileView: View {
                                displayedComponents: .hourAndMinute)
                     DatePicker("일어나는 시간", selection: sleepEndBinding,
                                displayedComponents: .hourAndMinute)
+                    Button {
+                        alignToRecentSleep()
+                    } label: {
+                        HStack {
+                            Label("최근 수면 시간에 맞추기", systemImage: "moon.stars")
+                            Spacer()
+                            if isAligningSleep { ProgressView().controlSize(.small) }
+                        }
+                    }
+                    .disabled(isAligningSleep)
+                    if let msg = sleepAlignMessage {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 } header: {
                     Text("수면 시간")
                 } footer: {
@@ -195,6 +213,27 @@ struct CharacterProfileView: View {
         if health.isInBedSchedule { return "건강 앱 수면 일정이라서 자고 있어요" }
         if inProfileWindow { return "설정한 시간이라서 자고 있어요" }
         return "깨어 있어요"
+    }
+
+    /// 최근 7일 실제 수면 기록(워치 asleep 포함)의 평균 취침/기상을 설정 시간에 반영.
+    /// 워치 수면 추적은 inBed 예측 신호가 없어 설정 시간이 사실상 기준 —
+    /// 그 기준을 실제 수면 패턴에 맞춰주는 버튼.
+    private func alignToRecentSleep() {
+        isAligningSleep = true
+        sleepAlignMessage = nil
+        Task {
+            defer { isAligningSleep = false }
+            guard let w = await health.averageSleepWindow() else {
+                sleepAlignMessage = "최근 수면 기록이 부족해요. 며칠 자고 나면 맞출 수 있어요."
+                return
+            }
+            profile.sleepStartHour = w.startHour
+            profile.sleepStartMinute = w.startMinute
+            profile.sleepEndHour = w.endHour
+            profile.sleepEndMinute = w.endMinute
+            sleepAlignMessage = String(format: "최근 수면에 맞췄어요 — %02d:%02d ~ %02d:%02d",
+                                       w.startHour, w.startMinute, w.endHour, w.endMinute)
+        }
     }
 
     private func isNowInProfileSleepWindow() -> Bool {

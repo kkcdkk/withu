@@ -357,10 +357,21 @@ final class HealthKitManager {
 
         let inBedValue = HKCategoryValueSleepAnalysis.inBed.rawValue
         let inBedSamples = samples.filter { $0.value == inBedValue }
-        // 어떤 시점이든 inBed sample 있음 = 사용자가 수면 일정 설정함
+        // 어떤 시점이든 inBed sample 있음 = 사용자가 수면 일정 설정함.
+        // ⚠️ 워치 수면 추적은 inBed 없이 asleep(수면 단계)만 남기는 경우가 많음 —
+        //    그런 사용자는 예측 신호가 없어 아래 '지금 덮는 샘플' + 프로필 시간이 기준.
         hasSleepSchedule = !inBedSamples.isEmpty
-        let nowInside = inBedSamples.contains { s in
-            s.startDate <= now && now < s.endDate
+        // '지금'을 덮는 수면 샘플은 inBed 뿐 아니라 asleep 도 인정 —
+        // 워치가 밤중에 동기화한 실시간 수면 기록으로도 자는 상태를 잡는다.
+        let asleepValues: Set<Int> = [
+            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+        ]
+        let nowInside = samples.contains { s in
+            (s.value == inBedValue || asleepValues.contains(s.value))
+                && s.startDate <= now && now < s.endDate
         }
         isInBedSchedule = nowInside
         // 진단 — 마지막 (가장 최근 시작) sample 찾기
@@ -371,6 +382,56 @@ final class HealthKitManager {
         lastInBedSampleStart = last?.startDate
         lastInBedSampleEnd = last?.endDate
         return nowInside
+    }
+
+    /// 최근 N일 asleep 샘플로 평균 취침/기상 시각 계산 — '최근 수면 시간에 맞추기'용.
+    /// 밤 단위로 묶고(시작-12h 날짜 버킷), 밤이 2개 미만이면 nil (낮잠 오탐 방지).
+    func averageSleepWindow(days: Int = 7) async -> (startHour: Int, startMinute: Int,
+                                                     endHour: Int, endMinute: Int)? {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+        let now = Date()
+        let windowStart = Calendar.current.date(byAdding: .day, value: -days, to: now) ?? now
+        let predicate = HKQuery.predicateForSamples(withStart: windowStart, end: now)
+        let samples: [HKCategorySample] = await withCheckedContinuation { cont in
+            let q = HKSampleQuery(sampleType: sleepType, predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, s, _ in
+                cont.resume(returning: (s as? [HKCategorySample]) ?? [])
+            }
+            store.execute(q)
+        }
+        let asleepValues: Set<Int> = [
+            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+            HKCategoryValueSleepAnalysis.inBed.rawValue,
+        ]
+        let sleep = samples.filter { asleepValues.contains($0.value) }
+        guard !sleep.isEmpty else { return nil }
+
+        let cal = Calendar.current
+        // '밤' 그룹: 시작 시각 -12h 의 날짜 — 자정 넘김 보정 (23시 취침과 01시 취침이 같은 밤)
+        var nights: [Date: (start: Date, end: Date)] = [:]
+        for s in sleep {
+            let key = cal.startOfDay(for: s.startDate.addingTimeInterval(-12 * 3600))
+            if let n = nights[key] {
+                nights[key] = (min(n.start, s.startDate), max(n.end, s.endDate))
+            } else {
+                nights[key] = (s.startDate, s.endDate)
+            }
+        }
+        guard nights.count >= 2 else { return nil }
+
+        func minutesOfDay(_ d: Date) -> Int {
+            let c = cal.dateComponents([.hour, .minute], from: d)
+            return (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        }
+        // 취침: 18:00 기준 상대 분으로 평균 (자정 wrap 보정). 기상: 자정 기준 그대로.
+        let startRel = nights.values.map { (minutesOfDay($0.start) + 1440 - 18 * 60) % 1440 }
+        let avgStart = (startRel.reduce(0, +) / startRel.count + 18 * 60) % 1440
+        let endMins = nights.values.map { minutesOfDay($0.end) }
+        let avgEnd = endMins.reduce(0, +) / endMins.count
+        return (avgStart / 60, avgStart % 60, avgEnd / 60, avgEnd % 60)
     }
 
     // MARK: - 워크아웃 (지난 N일)
