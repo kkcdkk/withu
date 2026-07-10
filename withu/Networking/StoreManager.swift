@@ -24,7 +24,8 @@ final class StoreManager {
         static let credits10  = "com.seoyoung.withu.credits.10"
         static let credits30  = "com.seoyoung.withu.credits.30"
         static let credits50  = "com.seoyoung.withu.credits.50"
-        static let credits100 = "com.seoyoung.withu.credits.100"
+        // ⚠️ credits.100 은 예전에 사용돼 영구 소각된 ID — candy.100 으로 대체 (ASC 등록값)
+        static let credits100 = "com.seoyoung.withu.candy.100"
 
         static let all: [String] = [credits10, credits30, credits50, credits100]
         /// consumable 상품 → 적립 캔디 수

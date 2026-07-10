@@ -115,8 +115,11 @@ export async function refundGeneration(env, sub, chargedFrom, idemKey) {
 
 // 상품 ID → 적립 (클라 StoreManager.ProductID 와 일치)
 const PRODUCT_CREDITS = {
+  "com.seoyoung.withu.credits.10": 10,
   "com.seoyoung.withu.credits.30": 30,
-  "com.seoyoung.withu.credits.100": 100,
+  "com.seoyoung.withu.credits.50": 50,
+  // credits.100 은 ASC 에서 영구 소각된 ID — candy.100 으로 대체 (StoreManager 와 일치)
+  "com.seoyoung.withu.candy.100": 100,
 };
 const SUBSCRIPTION_PRODUCT = "com.seoyoung.withu.subscription.monthly";
 
