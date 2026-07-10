@@ -29,6 +29,15 @@ struct ContentView: View {
     /// 사용법 안내를 봤는지 — 첫 실행 후 1회 자동 표시.
     @AppStorage("withu.seenGuide.v1") private var seenGuide: Bool = false
     @State private var showGuide: Bool = false
+    #if DEBUG
+    /// 진단/스크린샷용 — `--paywall` 런치 인자로 페이월 바로 열기 (simctl 자동화).
+    @State private var showPaywallDebug: Bool = false
+    private var isPaywallDebugRun: Bool {
+        ProcessInfo.processInfo.arguments.contains("--paywall")
+    }
+    #else
+    private var isPaywallDebugRun: Bool { false }
+    #endif
     /// 캐릭터 옆 날씨 그림(해/달/구름/비/눈) 표시 여부. App Group 저장.
     @AppStorage("withu.showWeatherDecoration.v1",
                 store: UserDefaults(suiteName: SharedAppState.groupID))
@@ -171,7 +180,7 @@ struct ContentView: View {
             OnboardingView(onComplete: { onboarded = true })
         }
         .fullScreenCover(isPresented: Binding(
-            get: { onboarded && auth.state == .signedOut },
+            get: { onboarded && auth.state == .signedOut && !isPaywallDebugRun },
             set: { _ in }
         )) {
             LoginGateView()
@@ -179,6 +188,16 @@ struct ContentView: View {
         .sheet(isPresented: $showGuide) {
             HelpGuideView(onDone: { seenGuide = true; showGuide = false })
         }
+        #if DEBUG
+        .sheet(isPresented: $showPaywallDebug) {
+            PaywallView(onClose: { showPaywallDebug = false })
+        }
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("--paywall") {
+                showPaywallDebug = true
+            }
+        }
+        #endif
         .task { await auth.restore() }
     }
 

@@ -82,7 +82,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             StoreManager.shared.start()
             // Focus 권한 — 온보딩 완료 후에만 (첫 설치에서 Welcome 화면보다 먼저
             // 맥락 없는 시스템 시트가 뜨는 것 방지 — 첫 요청은 온보딩 focus 단계가 담당).
-            if UserDefaults.standard.bool(forKey: "withu.onboarded.v1") {
+            // --paywall 진단 실행(simctl 자동화)에선 팝업이 화면을 가리므로 건너뜀.
+            if UserDefaults.standard.bool(forKey: "withu.onboarded.v1"),
+               !ProcessInfo.processInfo.arguments.contains("--paywall") {
                 await FocusModeManager.shared.requestAuthorization()
             }
             // 권한 결과 반영해서 즉시 한 번 sync.
