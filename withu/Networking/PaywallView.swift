@@ -44,11 +44,21 @@ struct PaywallView: View {
                         ProgressView("불러오는 중…")
                             .padding(.top, 20)
                     } else if store.products.isEmpty {
-                        Text("지금은 충전 상품을 불러올 수 없어요.\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.top, 12)
+                        VStack(spacing: 10) {
+                            Text("지금은 충전 상품을 불러올 수 없어요.\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button {
+                                Task { await store.loadProducts() }
+                            } label: {
+                                Label("다시 시도", systemImage: "arrow.clockwise")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                        .padding(.top, 12)
                     }
 
                     if let err = store.lastError {

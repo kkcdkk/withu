@@ -64,7 +64,19 @@ final class StoreManager {
 
     func loadProducts() async {
         do {
-            products = try await Product.products(for: ProductID.all)
+            // 시뮬레이터에서 StoreKit 구성 미연결이면 요청이 영영 안 돌아올 수 있음
+            // (페이월이 '불러오는 중'으로 멈춘 듯 보임) → 10초 타임아웃으로 탈출.
+            let ids = ProductID.all
+            products = try await withThrowingTaskGroup(of: [Product].self) { group in
+                group.addTask { try await Product.products(for: ids) }
+                group.addTask {
+                    try await Task.sleep(for: .seconds(10))
+                    throw StoreError.timeout
+                }
+                let first = try await group.next()!
+                group.cancelAll()
+                return first
+            }
             lastError = nil
         } catch {
             lastError = "상품 정보를 불러오지 못했어요."
@@ -171,5 +183,5 @@ final class StoreManager {
         }
     }
 
-    enum StoreError: Error { case failedVerification }
+    enum StoreError: Error { case failedVerification, timeout }
 }
