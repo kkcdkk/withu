@@ -269,7 +269,7 @@ struct PaywallView: View {
                                 .foregroundStyle(Color.withuPink)
                         }
                     }
-                    Text("캔디 \(amount)개 · 만료 없이 계속 써요")
+                    Text("캔디 \(amount)개 · 만료 없이 사용할 수 있어요")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
