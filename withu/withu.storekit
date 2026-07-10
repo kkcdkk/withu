@@ -1,79 +1,79 @@
 {
-  "identifier" : "withu-storekit-config",
-  "nonRenewingSubscriptions" : [],
-  "products" : [
+  "identifier": "withu-storekit-config",
+  "nonRenewingSubscriptions": [],
+  "products": [
     {
-      "displayPrice" : "1200",
-      "familyShareable" : false,
-      "internalID" : "withu-credits-10",
-      "localizations" : [
+      "displayPrice": "1100",
+      "familyShareable": false,
+      "internalID": "withu-credits-10",
+      "localizations": [
         {
-          "description" : "캐릭터를 만드는 캔디 10개예요. 만료 없이 계속 사용.",
-          "displayName" : "미니 팩",
-          "locale" : "ko_KR"
+          "description": "캐릭터를 만드는 캔디 10개예요. 만료 없이 계속 사용.",
+          "displayName": "미니 팩",
+          "locale": "ko_KR"
         }
       ],
-      "productID" : "com.seoyoung.withu.credits.10",
-      "referenceName" : "Credits 10 (미니 팩)",
-      "type" : "Consumable"
+      "productID": "com.seoyoung.withu.credits.10",
+      "referenceName": "Credits 10 (미니 팩)",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "3300",
-      "familyShareable" : false,
-      "internalID" : "withu-credits-30",
-      "localizations" : [
+      "displayPrice": "3300",
+      "familyShareable": false,
+      "internalID": "withu-credits-30",
+      "localizations": [
         {
-          "description" : "캐릭터를 만드는 캔디 30개예요. 만료 없이 계속 사용.",
-          "displayName" : "포켓 팩",
-          "locale" : "ko_KR"
+          "description": "캐릭터를 만드는 캔디 30개예요. 만료 없이 계속 사용.",
+          "displayName": "포켓 팩",
+          "locale": "ko_KR"
         }
       ],
-      "productID" : "com.seoyoung.withu.credits.30",
-      "referenceName" : "Credits 30 (포켓 팩)",
-      "type" : "Consumable"
+      "productID": "com.seoyoung.withu.credits.30",
+      "referenceName": "Credits 30 (포켓 팩)",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "4900",
-      "familyShareable" : false,
-      "internalID" : "withu-credits-50",
-      "localizations" : [
+      "displayPrice": "4400",
+      "familyShareable": false,
+      "internalID": "withu-credits-50",
+      "localizations": [
         {
-          "description" : "캐릭터를 만드는 캔디 50개예요. 만료 없이 계속 사용.",
-          "displayName" : "파우치 팩",
-          "locale" : "ko_KR"
+          "description": "캐릭터를 만드는 캔디 50개예요. 만료 없이 계속 사용.",
+          "displayName": "파우치 팩",
+          "locale": "ko_KR"
         }
       ],
-      "productID" : "com.seoyoung.withu.credits.50",
-      "referenceName" : "Credits 50 (파우치 팩)",
-      "type" : "Consumable"
+      "productID": "com.seoyoung.withu.credits.50",
+      "referenceName": "Credits 50 (파우치 팩)",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "8900",
-      "familyShareable" : false,
-      "internalID" : "withu-credits-100",
-      "localizations" : [
+      "displayPrice": "7700",
+      "familyShareable": false,
+      "internalID": "withu-credits-100",
+      "localizations": [
         {
-          "description" : "캐릭터를 만드는 캔디 100개예요. 개당 가장 저렴해요. 만료 없이 계속 사용.",
-          "displayName" : "파티 팩",
-          "locale" : "ko_KR"
+          "description": "캐릭터를 만드는 캔디 100개예요. 개당 가장 저렴해요. 만료 없이 계속 사용.",
+          "displayName": "파티 팩",
+          "locale": "ko_KR"
         }
       ],
-      "productID" : "com.seoyoung.withu.candy.100",
-      "referenceName" : "Credits 100 (파티 팩)",
-      "type" : "Consumable"
+      "productID": "com.seoyoung.withu.candy.100",
+      "referenceName": "Credits 100 (파티 팩)",
+      "type": "Consumable"
     }
   ],
-  "settings" : {
-    "_applicationInternalID" : "withu",
-    "_developerTeamID" : "",
-    "_failTransactionsEnabled" : false,
-    "_locale" : "ko_KR",
-    "_storefront" : "KOR",
-    "_storeKitErrors" : []
+  "settings": {
+    "_applicationInternalID": "withu",
+    "_developerTeamID": "",
+    "_failTransactionsEnabled": false,
+    "_locale": "ko_KR",
+    "_storefront": "KOR",
+    "_storeKitErrors": []
   },
-  "subscriptionGroups" : [],
-  "version" : {
-    "major" : 4,
-    "minor" : 0
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
   }
 }
