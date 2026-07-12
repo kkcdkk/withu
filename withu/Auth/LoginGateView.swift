@@ -22,9 +22,9 @@ struct LoginGateView: View {
                     Circle()
                         .fill(Color.withuPink.opacity(0.22))
                         .frame(width: 200, height: 200)
-                    Image(systemName: "pawprint.fill")
-                        .font(.system(size: 72))
-                        .foregroundStyle(Color.withuPinkText)
+                    // 발바닥 심볼 대신 산책 상태 캐릭터 (번들 placeholder → 앱 정체성)
+                    CharacterImageView(state: .walking)
+                        .frame(width: 150, height: 150)
                 }
 
                 VStack(spacing: 8) {
