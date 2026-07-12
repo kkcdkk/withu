@@ -33,7 +33,7 @@ struct HelpGuideView: View {
              body: String(localized: "워치 페이스를 길게 눌러 편집 → 컴플리케이션 칸에 withu를 넣으면 시계 화면에도 캐릭터가 나와요. 산책·달리기 같은 운동은 워치가 연결돼 있으면 워치(심박)로, 워치가 없으면 아이폰의 움직임으로 알아채요.")),
         Step(icon: "sparkles",
              title: String(localized: "5. 캔디와 품질"),
-             body: String(localized: "캐릭터를 만들 땐 캔디를 써요. 품질이 높을수록 더 예쁘지만 캔디를 더 써요(낮음 1 · 보통 3 · 높음 6, 움직이는 캐릭터는 2배). 캔디는 상점에서 충전할 수 있어요.")),
+             body: String(localized: "캐릭터를 만들 땐 캔디를 써요 — 한 장에 1개, 움직이는 캐릭터는 2개예요. 캔디는 상점에서 충전할 수 있어요.")),
     ]
 
     var body: some View {

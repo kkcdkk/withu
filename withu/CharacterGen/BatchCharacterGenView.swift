@@ -492,13 +492,6 @@ struct BatchCharacterGenView: View {
             }
             .pickerStyle(.segmented).disabled(isGenerating)
 
-            Picker("품질", selection: $quality) {
-                Text("low (약 20초 · 1캔디)").tag("low")
-                Text("medium (약 50초 · 3캔디)").tag("medium")
-                Text("high (1~2분 · 6캔디)").tag("high")
-            }
-            .pickerStyle(.menu).disabled(isGenerating)
-
             // '모두 움직임'은 2프레임 생성이 의미 있는 상태(usesGeneratedMotion)에만 적용.
             let animatable = selectedStates.filter { $0.usesGeneratedMotion }
             if !animatable.isEmpty {

@@ -337,7 +337,7 @@ struct CharacterGenView: View {
         let isNew: Bool = { if case .newGeneration = pendingAction { return true }; return false }()
         let cost = (isNew && generateAnimated && targetState.usesGeneratedMotion) ? unit * 2 : unit
         if hasFreeCreation {
-            return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (지금 품질 기준 \(cost)개).")
+            return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (한 장 1개).")
         }
         return isNew
             ? String(localized: "이번 만들기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
@@ -387,7 +387,7 @@ struct CharacterGenView: View {
                     Text("너무 오래 떠나 있으면 결과가 사라질 수 있으니, 화면에 머무르는 것을 권장해요.")
                         .foregroundStyle(.orange)
                 } else {
-                    Text("평균 low 20초, medium 50초, high 1~2분 정도 걸려요.")
+                    Text("보통 20~30초 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
                 if hasFreeCreation {
@@ -507,53 +507,9 @@ struct CharacterGenView: View {
             .pickerStyle(.segmented)
             .disabled(isGenerating)
 
-            Picker("퀄리티", selection: $quality) {
-                Text("low (약 20초 · 1캔디)").tag("low")
-                Text("medium (약 50초 · 3캔디)").tag("medium")
-                Text("high (1~2분 · 6캔디)").tag("high")
-            }
-            .pickerStyle(.menu)
-            .disabled(isGenerating)
-
-            DisclosureGroup("퀄리티별 미리보기") {
-                qualityPreviewRow(label: "low", asset: "quality_low")
-                qualityPreviewRow(label: "medium", asset: "quality_medium")
-                qualityPreviewRow(label: "high", asset: "quality_high")
-            }
         }
     }
 
-    /// 퀄리티별 예시 한 줄. Assets.xcassets 에 quality_low/medium/high 추가하면 그 사진,
-    /// 없으면 "사진 넣기" placeholder.
-    private func qualityPreviewRow(label: String, asset: String) -> some View {
-        HStack(spacing: 12) {
-            Group {
-                if UIImage(named: asset) != nil {
-                    Image(asset)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    ZStack {
-                        Rectangle().fill(Color(uiColor: .tertiarySystemBackground))
-                        VStack(spacing: 2) {
-                            Image(systemName: "photo")
-                                .foregroundStyle(.secondary)
-                            Text("사진 넣기")
-                                .font(.system(size: 8))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .frame(width: 64, height: 64)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            Text(label)
-                .font(.callout)
-            Spacer()
-        }
-        .padding(.vertical, 2)
-    }
 
     @ViewBuilder
     private var resultSection: some View {
@@ -1184,12 +1140,6 @@ struct WeatherBackgroundGenView: View {
                     Text("pixel").tag("pixel")
                 }
                 .pickerStyle(.segmented).disabled(isGenerating)
-                Picker("퀄리티", selection: $quality) {
-                    Text("빠르게 (약 20초 · 15원)").tag("low")
-                    Text("보통 (약 50초 · 55원)").tag("medium")
-                    Text("선명하게 (1~2분 · 230원)").tag("high")
-                }
-                .pickerStyle(.menu).disabled(isGenerating)
             }
 
             Section {
