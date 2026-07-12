@@ -316,7 +316,7 @@ struct CharacterGenView: View {
 
     private var pendingActionTitle: String {
         GenerationQuota.hasFreeFirstGeneration()
-            ? String(localized: "첫 만들기는 무료예요 🎉")
+            ? String(localized: "첫 만들기는 무료예요")
             : String(localized: "캔디를 사용해요")
     }
 

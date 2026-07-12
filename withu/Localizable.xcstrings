@@ -5461,16 +5461,6 @@
         }
       }
     },
-    "첫 만들기는 무료예요 🎉": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your first creation is free 🎉"
-          }
-        }
-      }
-    },
     "초기화 중…": {
       "localizations": {
         "en": {
@@ -6571,36 +6561,6 @@
         }
       }
     },
-    "🎨 기준 모습이 준비됐어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🎨 Your base look is ready"
-          }
-        }
-      }
-    },
-    "🎨 캐릭터 생성이 끝났어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🎨 Character generation finished"
-          }
-        }
-      }
-    },
-    "🎨 캐릭터를 다 만들었어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🎨 All done creating your character"
-          }
-        }
-      }
-    },
     "🏃 %lld분": {
       "localizations": {
         "en": {
@@ -6637,16 +6597,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "💾 SharedAppState is empty"
-          }
-        }
-      }
-    },
-    "📚 사진에 저장됐어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "📚 Saved to Photos"
           }
         }
       }
@@ -6737,6 +6687,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "🖼️ No PNG file"
+          }
+        }
+      }
+    },
+    "첫 만들기는 무료예요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your first creation is free"
+          }
+        }
+      }
+    },
+    "갤러리에 저장했어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to your gallery"
+          }
+        }
+      }
+    },
+    "캐릭터를 다 만들었어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All done creating your character"
+          }
+        }
+      }
+    },
+    "캐릭터 생성이 끝났어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Character generation finished"
+          }
+        }
+      }
+    },
+    "기준 모습이 준비됐어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your base look is ready"
           }
         }
       }

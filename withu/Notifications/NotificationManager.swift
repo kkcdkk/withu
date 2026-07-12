@@ -107,10 +107,10 @@ final class NotificationManager {
     func notifyGenerationFinished(done: Int, failed: Int) async {
         let content = UNMutableNotificationContent()
         if failed == 0 {
-            content.title = "🎨 캐릭터를 다 만들었어요"
+            content.title = "캐릭터를 다 만들었어요"
             content.body = "\(done)개 모습이 완성돼 바로 적용됐어요. 열어서 확인해 보세요."
         } else {
-            content.title = "🎨 캐릭터 생성이 끝났어요"
+            content.title = "캐릭터 생성이 끝났어요"
             content.body = "\(done)개 완성, \(failed)개는 못 만들었어요. 앱에서 다시 시도할 수 있어요."
         }
         content.sound = .default
@@ -120,7 +120,7 @@ final class NotificationManager {
     /// 기준(idle) 모습이 완성돼 승인을 기다릴 때.
     func notifyAnchorReady() async {
         let content = UNMutableNotificationContent()
-        content.title = "🎨 기준 모습이 준비됐어요"
+        content.title = "기준 모습이 준비됐어요"
         content.body = "마음에 드는지 확인하고 나머지 모습을 이어서 만들어 보세요."
         content.sound = .default
         await schedule(id: ID.generationAnchor, content: content, in: 1)

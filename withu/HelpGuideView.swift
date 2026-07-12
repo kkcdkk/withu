@@ -41,7 +41,6 @@ struct HelpGuideView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 8) {
-                        Text("👋").font(.system(size: 48))
                         Text("withu 사용법")
                             .font(.title2.weight(.bold))
                         Text("캐릭터를 만들고 내 하루에 맞춰 보여줘요.")

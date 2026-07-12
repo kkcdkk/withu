@@ -43,7 +43,7 @@ struct CameraView: View {
                     preview(img)
                 }
                 if showSavedToast {
-                    toast("📚 사진에 저장됐어요")
+                    toast("갤러리에 저장했어요")
                 }
                 if showDeleteHint {
                     toast("드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제")
