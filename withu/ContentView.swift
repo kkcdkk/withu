@@ -436,7 +436,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func actionLink<Dest: View>(title: String, subtitle: String,
+    private func actionLink<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
                                          icon: String, tint: Color,
                                          @ViewBuilder destination: () -> Dest) -> some View {
         NavigationLink {

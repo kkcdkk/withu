@@ -315,12 +315,14 @@ struct CharacterGenView: View {
     // MARK: 캔디 안내 팝업 텍스트
 
     private var pendingActionTitle: String {
-        GenerationQuota.hasFreeFirstGeneration() ? "첫 만들기는 무료예요 🎉" : "캔디를 사용해요"
+        GenerationQuota.hasFreeFirstGeneration()
+            ? String(localized: "첫 만들기는 무료예요 🎉")
+            : String(localized: "캔디를 사용해요")
     }
 
     private var pendingActionConfirmLabel: String {
-        if case .refine = pendingAction { return "다듬기" }
-        return "만들기"
+        if case .refine = pendingAction { return String(localized: "다듬기") }
+        return String(localized: "만들기")
     }
 
     private var pendingActionMessage: String {
@@ -328,9 +330,11 @@ struct CharacterGenView: View {
         let isNew: Bool = { if case .newGeneration = pendingAction { return true }; return false }()
         let cost = (isNew && generateAnimated && targetState.usesGeneratedMotion) ? unit * 2 : unit
         if GenerationQuota.hasFreeFirstGeneration() {
-            return "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (지금 품질 기준 \(cost)개)."
+            return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (지금 품질 기준 \(cost)개).")
         }
-        return "이번 \(isNew ? "만들기" : "다듬기")에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요."
+        return isNew
+            ? String(localized: "이번 만들기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
+            : String(localized: "이번 다듬기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
     }
 
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.

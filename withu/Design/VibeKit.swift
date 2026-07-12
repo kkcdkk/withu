@@ -55,10 +55,10 @@ extension View {
 
 /// 카드 위 작은 라벨 + (선택) 우측 보조 요소. 네비게이션 타이틀이 아닌 그룹 라벨.
 struct SectionHeader<Trailing: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let trailing: Trailing
 
-    init(_ title: String, @ViewBuilder trailing: () -> Trailing = { EmptyView() }) {
+    init(_ title: LocalizedStringKey, @ViewBuilder trailing: () -> Trailing = { EmptyView() }) {
         self.title = title
         self.trailing = trailing()
     }
@@ -153,7 +153,7 @@ enum StatusKind {
 /// 권한·연결 등 상태 한 줄. ✅/⚠️/❌ 텍스트 이모지 대체.
 struct StatusPill: View {
     var kind: StatusKind
-    var label: String
+    var label: LocalizedStringKey
 
     var body: some View {
         HStack(spacing: 5) {
@@ -220,8 +220,8 @@ struct StateEmojiChip: View {
 
 /// 카드·섹션 하단 친절 안내. 평서형 한 줄.
 struct HelperFooter: View {
-    let text: String
-    init(_ text: String) { self.text = text }
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
 
     var body: some View {
         Text(text)

@@ -310,7 +310,7 @@ struct OnboardingView: View {
         HStack {
             Text(label).font(.callout)
             Spacer()
-            StatusPill(kind: result.statusKind ?? .off, label: summaryShortLabel(result))
+            StatusPill(kind: result.statusKind ?? .off, label: LocalizedStringKey(summaryShortLabel(result)))
         }
     }
 
@@ -372,7 +372,7 @@ struct OnboardingView: View {
                     .padding(.top, 4)
             }
             if let kind = result.statusKind {
-                StatusPill(kind: kind, label: result.statusLabel)
+                StatusPill(kind: kind, label: LocalizedStringKey(result.statusLabel))
                     .padding(.top, 12)
             }
             Spacer()

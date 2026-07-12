@@ -33,10 +33,10 @@ final class StoreManager {
             credits10: 10, credits30: 30, credits50: 50, credits100: 100,
         ]
         /// 팩 표시 이름 (미니 < 포켓 < 파우치 < 파티).
-        static let packName: [String: String] = [
-            credits10: "미니 팩", credits30: "포켓 팩",
-            credits50: "파우치 팩", credits100: "파티 팩",
-        ]
+        static var packName: [String: String] { [
+            credits10: String(localized: "미니 팩"), credits30: String(localized: "포켓 팩"),
+            credits50: String(localized: "파우치 팩"), credits100: String(localized: "파티 팩"),
+        ] }
     }
 
     private(set) var products: [Product] = []

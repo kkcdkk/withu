@@ -28,11 +28,11 @@ enum WeatherBackgroundCondition: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .sunny:  return "맑음 ☀️"
-        case .cloudy: return "흐림 ☁️"
-        case .rainy:  return "비 🌧"
-        case .snowy:  return "눈 ❄️"
-        case .night:  return "밤하늘 🌙"
+        case .sunny:  return String(localized: "맑음 ☀️")
+        case .cloudy: return String(localized: "흐림 ☁️")
+        case .rainy:  return String(localized: "비 🌧")
+        case .snowy:  return String(localized: "눈 ❄️")
+        case .night:  return String(localized: "밤하늘 🌙")
         }
     }
 

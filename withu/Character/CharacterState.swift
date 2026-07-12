@@ -84,50 +84,50 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
     /// UI picker/리스트에 쓰는 짧고 깔끔한 한글 라벨. 이모지 없음.
     var koreanShortLabel: String {
         switch self {
-        case .idle:           return "기본"
-        case .sleeping:       return "수면"
-        case .wakingUp:       return "기상"
-        case .eating:         return "식사"
-        case .walking:        return "산책"
-        case .running:        return "달리기"
-        case .cycling:        return "자전거"
-        case .energetic:      return "활기찬"
-        case .beach:          return "해변"
-        case .cloudy:         return "흐림"
-        case .rainyShelter:   return "우산"
-        case .snowPlay:       return "눈놀이"
-        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy: return "산책"
-        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy: return "달리기"
-        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy: return "자전거"
+        case .idle:           return String(localized: "기본")
+        case .sleeping:       return String(localized: "수면")
+        case .wakingUp:       return String(localized: "기상")
+        case .eating:         return String(localized: "식사")
+        case .walking:        return String(localized: "산책")
+        case .running:        return String(localized: "달리기")
+        case .cycling:        return String(localized: "자전거")
+        case .energetic:      return String(localized: "활기찬")
+        case .beach:          return String(localized: "해변")
+        case .cloudy:         return String(localized: "흐림")
+        case .rainyShelter:   return String(localized: "우산")
+        case .snowPlay:       return String(localized: "눈놀이")
+        case .walkingSunny, .walkingCloudy, .walkingRainy, .walkingSnowy: return String(localized: "산책")
+        case .runningSunny, .runningCloudy, .runningRainy, .runningSnowy: return String(localized: "달리기")
+        case .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy: return String(localized: "자전거")
         }
     }
 
     var caption: String {
         switch self {
-        case .idle:           return "느긋한 하루"
-        case .sleeping:       return "쿨쿨… 자고 있어요"
-        case .wakingUp:       return "잠 깨는 중 🥱"
-        case .walking:        return "산책 중 🚶"
-        case .running:        return "달리는 중 🏃"
-        case .cycling:        return "자전거 타는 중 🚴"
-        case .energetic:      return "에너지 넘치는 하루!"
-        case .eating:         return "맛있게 식사 중 🍽️"
-        case .beach:          return "해변에서 일광욕 🏖️"
-        case .cloudy:         return "구름 낀 하루 ☁️"
-        case .rainyShelter:   return "우산 쓰고 비 구경 ☔️"
-        case .snowPlay:       return "눈 속에서 신나게 ❄️"
-        case .walkingSunny:   return "햇살 받으며 산책 🚶☀️"
-        case .walkingCloudy:  return "흐린 날 산책 🚶☁️"
-        case .walkingRainy:   return "비 오는데 산책 🚶☔"
-        case .walkingSnowy:   return "눈길 산책 🚶❄️"
-        case .runningSunny:   return "햇살 아래 달리기 🏃☀️"
-        case .runningCloudy:  return "흐린 날 달리기 🏃☁️"
-        case .runningRainy:   return "비 맞으며 달리기 🏃☔"
-        case .runningSnowy:   return "눈 속 달리기 🏃❄️"
-        case .cyclingSunny:   return "햇살 자전거 🚴☀️"
-        case .cyclingCloudy:  return "흐린 날 자전거 🚴☁️"
-        case .cyclingRainy:   return "비 오는데 자전거 🚴☔"
-        case .cyclingSnowy:   return "눈 속 자전거 🚴❄️"
+        case .idle:           return String(localized: "느긋한 하루")
+        case .sleeping:       return String(localized: "쿨쿨… 자고 있어요")
+        case .wakingUp:       return String(localized: "잠 깨는 중 🥱")
+        case .walking:        return String(localized: "산책 중 🚶")
+        case .running:        return String(localized: "달리는 중 🏃")
+        case .cycling:        return String(localized: "자전거 타는 중 🚴")
+        case .energetic:      return String(localized: "에너지 넘치는 하루!")
+        case .eating:         return String(localized: "맛있게 식사 중 🍽️")
+        case .beach:          return String(localized: "해변에서 일광욕 🏖️")
+        case .cloudy:         return String(localized: "구름 낀 하루 ☁️")
+        case .rainyShelter:   return String(localized: "우산 쓰고 비 구경 ☔️")
+        case .snowPlay:       return String(localized: "눈 속에서 신나게 ❄️")
+        case .walkingSunny:   return String(localized: "햇살 받으며 산책 🚶☀️")
+        case .walkingCloudy:  return String(localized: "흐린 날 산책 🚶☁️")
+        case .walkingRainy:   return String(localized: "비 오는데 산책 🚶☔")
+        case .walkingSnowy:   return String(localized: "눈길 산책 🚶❄️")
+        case .runningSunny:   return String(localized: "햇살 아래 달리기 🏃☀️")
+        case .runningCloudy:  return String(localized: "흐린 날 달리기 🏃☁️")
+        case .runningRainy:   return String(localized: "비 맞으며 달리기 🏃☔")
+        case .runningSnowy:   return String(localized: "눈 속 달리기 🏃❄️")
+        case .cyclingSunny:   return String(localized: "햇살 자전거 🚴☀️")
+        case .cyclingCloudy:  return String(localized: "흐린 날 자전거 🚴☁️")
+        case .cyclingRainy:   return String(localized: "비 오는데 자전거 🚴☔")
+        case .cyclingSnowy:   return String(localized: "눈 속 자전거 🚴❄️")
         }
     }
 
