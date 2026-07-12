@@ -7421,6 +7421,16 @@
           }
         }
       }
+    },
+    "5. 캔디": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5. Candies"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
