@@ -13,6 +13,33 @@ import WidgetKit
 
 // MARK: - Landing: 상태별 폴더 목록
 
+/// 갤러리용 상태 칩 — 이모지 대신 실제 캐릭터 이미지.
+/// 우선순위: 적용 중인 사진 → 그 상태 갤러리의 맨 앞 사진 → withy 기본 캐릭터(번들).
+struct GalleryStateChip: View {
+    var state: CharacterState
+    var firstItem: GalleryItem?
+    var size: CGFloat = 44
+
+    var body: some View {
+        ZStack {
+            Circle().fill(state.tint.opacity(0.22))
+            if !CharacterImageStore.hasImage(for: state),
+               let item = firstItem,
+               let img = CharacterImageStore.loadGalleryImage(id: item.id) {
+                // 적용 전이지만 만들어 둔 사진이 있으면 그 첫 장으로
+                Image(uiImage: img)
+                    .resizable().scaledToFit()
+                    .padding(size * 0.12)
+            } else {
+                // 적용본 → 번들 기본 캐릭터 → 심볼 순 fallback (CharacterImageView)
+                CharacterImageView(state: state)
+                    .padding(size * 0.12)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 struct CharacterGalleryView: View {
     enum Mode: Hashable { case byState, byCharacter }
     @State private var mode: Mode = .byState
@@ -229,7 +256,7 @@ struct CharacterGalleryView: View {
         let subtitle = isEmpty ? "아직 없어요"
             : (applied ? "\(count)개 · 지금 적용 중" : "\(count)개")
         return HStack(spacing: 14) {
-            StateEmojiChip(state: state, size: 44)
+            GalleryStateChip(state: state, firstItem: grouped[state]?.first, size: 44)
                 .overlay(alignment: .topTrailing) {
                     if applied {
                         Circle()
@@ -358,7 +385,7 @@ struct StateFolderView: View {
 
     private var miniHero: some View {
         HStack(spacing: 14) {
-            StateEmojiChip(state: state, size: 56)
+            GalleryStateChip(state: state, firstItem: items.first, size: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.caption)
                     .font(.callout.weight(.semibold))
