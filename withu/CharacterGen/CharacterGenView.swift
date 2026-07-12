@@ -80,6 +80,26 @@ struct CharacterGenView: View {
     /// 사진 선택 후 정사각 자르기 시트
     @State private var cropTarget: CropTarget?
 
+    /// 생성/다듬기 전 캔디 안내 팝업 — 확인해야 실행.
+    private enum PendingAction: Identifiable {
+        case newGeneration
+        case refine(frame: Int)
+        var id: String { if case .refine(let f) = self { return "refine\(f)" } else { return "new" } }
+    }
+    @State private var pendingAction: PendingAction?
+
+    /// 결과 버전 이력 — [0] = 처음 만든 원본, 이후는 다듬은 버전.
+    /// 버전을 탭해 선택하면 그 버전이 현재 결과(적용 대상)가 된다.
+    private struct ResultVersion: Identifiable {
+        let id = UUID()
+        let small: UIImage          // 결과 슬롯(128) 이미지
+        let frame2: UIImage?        // 움직임 프레임 (있으면)
+        let fullRes: UIImage?       // frame1 앵커용 원본(1024)
+        let isRefined: Bool
+    }
+    @State private var versions: [ResultVersion] = []
+    @State private var selectedVersion: Int = 0
+
     var body: some View {
         ZStack {
             backgroundGradient(for: targetState).ignoresSafeArea()
@@ -124,6 +144,22 @@ struct CharacterGenView: View {
                 referenceImage = img
                 photoPickerItem = nil
             }
+        }
+        .alert(pendingActionTitle, isPresented: Binding(
+            get: { pendingAction != nil },
+            set: { if !$0 { pendingAction = nil } }
+        )) {
+            Button(pendingActionConfirmLabel) {
+                switch pendingAction {
+                case .newGeneration: generateTask = Task { await generate() }
+                case .refine(let f): Task { await refine(frame: f) }
+                case nil: break
+                }
+                pendingAction = nil
+            }
+            Button("취소", role: .cancel) { pendingAction = nil }
+        } message: {
+            Text(pendingActionMessage)
         }
         .alert("적용했어요", isPresented: $showAppliedAlert) {
             Button("확인", role: .cancel) {}
@@ -276,6 +312,27 @@ struct CharacterGenView: View {
         .tint(.withuPink)
     }
 
+    // MARK: 캔디 안내 팝업 텍스트
+
+    private var pendingActionTitle: String {
+        GenerationQuota.hasFreeFirstGeneration() ? "첫 만들기는 무료예요 🎉" : "캔디를 사용해요"
+    }
+
+    private var pendingActionConfirmLabel: String {
+        if case .refine = pendingAction { return "다듬기" }
+        return "만들기"
+    }
+
+    private var pendingActionMessage: String {
+        let unit = GenerationQuota.cost(forQuality: quality)
+        let isNew: Bool = { if case .newGeneration = pendingAction { return true }; return false }()
+        let cost = (isNew && generateAnimated && targetState.usesGeneratedMotion) ? unit * 2 : unit
+        if GenerationQuota.hasFreeFirstGeneration() {
+            return "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (지금 품질 기준 \(cost)개)."
+        }
+        return "이번 \(isNew ? "만들기" : "다듬기")에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요."
+    }
+
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.
     private var generateButtonSection: some View {
         let cost = GenerationQuota.cost(forQuality: quality)
@@ -291,11 +348,11 @@ struct CharacterGenView: View {
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
-            } else if remainingGenerations < cost {
+            } else if remainingGenerations < cost && !GenerationQuota.hasFreeFirstGeneration() {
                 Button {
                     showPaywall = true
                 } label: {
-                    Label("더 만들기 (구독·충전)", systemImage: "sparkles")
+                    Label("더 만들기 (충전)", systemImage: "sparkles")
                 }
             } else {
                 // 2프레임 생성이 의미 있는 상태만 토글 노출 — 미세 모션 상태는 자동(절차적) 애니메이션.
@@ -303,7 +360,7 @@ struct CharacterGenView: View {
                     Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                 }
                 Button {
-                    generateTask = Task { await generate() }
+                    pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
                 } label: {
                     Label("이 모습으로 만들기", systemImage: "wand.and.stars")
                         .font(.callout.weight(.semibold))
@@ -322,7 +379,10 @@ struct CharacterGenView: View {
                     Text("평균 low 20초, medium 50초, high 1~2분 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
-                if remainingGenerations < cost {
+                if GenerationQuota.hasFreeFirstGeneration() {
+                    Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
+                        .foregroundStyle(Color.withuPink)
+                } else if remainingGenerations < cost {
                     Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
                 } else {
@@ -488,6 +548,12 @@ struct CharacterGenView: View {
     private var resultSection: some View {
         if resultImage != nil {
             Section("결과") {
+                // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
+                if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
+                    Label("다듬은 버전 \(selectedVersion) 을 보고 있어요", systemImage: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.withuPink)
+                }
                 // 표시할 frame 0, frame 1 — 현재 모드 (raw / transparent) 에 따라
                 let f0 = currentDisplay(frame: 0)
                 let f1 = currentDisplay(frame: 1)
@@ -588,7 +654,7 @@ struct CharacterGenView: View {
                     .frame(minHeight: 80)
                     .font(.callout)
                 Button {
-                    Task { await refine(frame: resultFrame2 != nil ? singleDetailFrame : 0) }
+                    pendingAction = .refine(frame: resultFrame2 != nil ? singleDetailFrame : 0)
                 } label: {
                     if isGenerating {
                         HStack { ProgressView(); Text("다듬는 중…") }
@@ -600,9 +666,64 @@ struct CharacterGenView: View {
             } header: {
                 Text(resultFrame2 != nil && singleDetailFrame == 1 ? "이어서 다듬기 (움직임 프레임)" : "이어서 다듬기")
             } footer: {
-                Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 같은 비용이 들어요.")
+                Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
                     .foregroundStyle(.secondary)
             }
+            versionHistorySection
+        }
+    }
+
+    /// 다듬기 이력 — 원본과 다듬은 버전들을 나란히 보여주고, 탭해서 되돌리거나 고를 수 있게.
+    @ViewBuilder
+    private var versionHistorySection: some View {
+        if versions.count > 1 {
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(versions.enumerated()), id: \.element.id) { idx, v in
+                            VStack(spacing: 4) {
+                                Image(uiImage: v.small)
+                                    .resizable().scaledToFit()
+                                    .frame(width: 72, height: 72)
+                                    .background(Color(.systemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .strokeBorder(idx == selectedVersion ? Color.withuPink : .clear,
+                                                          lineWidth: 2.5)
+                                    }
+                                Text(v.isRefined ? "다듬음 \(idx)" : "원본")
+                                    .font(.caption2.weight(idx == selectedVersion ? .semibold : .regular))
+                                    .foregroundStyle(idx == selectedVersion ? Color.withuPink : .secondary)
+                            }
+                            .onTapGesture { selectVersion(idx) }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            } header: {
+                Text("다듬기 이력")
+            } footer: {
+                Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// 이력에서 버전 선택 — 현재 결과 슬롯을 그 버전으로 교체 (적용 대상 변경).
+    private func selectVersion(_ idx: Int) {
+        guard versions.indices.contains(idx), idx != selectedVersion, !isGenerating else { return }
+        let v = versions[idx]
+        selectedVersion = idx
+        resultImage = v.small
+        resultFrame2 = v.frame2
+        lastFrame0FullRes = v.fullRes
+        if v.frame2 == nil { singleDetailFrame = 0 }
+        // 투명(배경 제거) 캐시는 버전별로 안 들고 있음 — 무효화 후 필요 시 재계산.
+        transparentResult = nil
+        transparentResultFrame2 = nil
+        if displayTransparent {
+            Task { await ensureTransparentResults() }
         }
     }
 
@@ -734,7 +855,8 @@ struct CharacterGenView: View {
     }
 
     private func generate() async {
-        guard GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+        let freeSession = GenerationQuota.hasFreeFirstGeneration()   // 첫 만들기 1회 무료
+        guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
             lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
             return
         }
@@ -770,15 +892,24 @@ struct CharacterGenView: View {
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
         let frame0Succeeded = resultImage !== prevResult
-        // 성공한 장만 차감 (퀄리티별 캔디)
-        if frame0Succeeded { GenerationQuota.record(cost) }
+        // 성공한 장만 차감 (퀄리티별 캔디). 첫 만들기 세션은 무료 — 프레임 2장까지 포함.
+        if frame0Succeeded, !freeSession { GenerationQuota.record(cost) }
         // 연속 이미지 — frame 0 성공 시 그 원본(1024)을 reference 로 frame 1 추가
         if generateAnimated, targetState.usesGeneratedMotion, frame0Succeeded,
            let f0Full = lastFrame0FullRes ?? resultImage,
            let f0Ref = f0Full.pngData()?.base64EncodedString() {
             let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
             await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full)
-            if resultFrame2 != nil { GenerationQuota.record(cost) }
+            if resultFrame2 != nil, !freeSession { GenerationQuota.record(cost) }
+        }
+        if frame0Succeeded {
+            if freeSession { GenerationQuota.markFreeFirstGenerationUsed() }
+            // 새 결과 = 이력 리셋. [0] = 원본.
+            if let img = resultImage {
+                versions = [ResultVersion(small: img, frame2: resultFrame2,
+                                          fullRes: lastFrame0FullRes, isRefined: false)]
+                selectedVersion = 0
+            }
         }
         // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
         if displayTransparent { await ensureTransparentResults() }
@@ -786,7 +917,8 @@ struct CharacterGenView: View {
 
     /// 보고 있는 프레임만 다듬기. frame1 은 frame0 을 앵커로 둬서 캐릭터/크기 일관성 유지.
     private func refine(frame: Int) async {
-        guard GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+        let freeSession = GenerationQuota.hasFreeFirstGeneration()
+        guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
             lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
             return
         }
@@ -812,9 +944,24 @@ struct CharacterGenView: View {
         if frame == 1 {
             prompt += ". Animation frame 2 (for a 2-frame swap loop): \(targetState.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
         }
+        let prevSlot = frame == 1 ? resultFrame2 : resultImage   // 실패 감지 — 옛 이미지 그대로면 차감 안 함
         await send(prompt: prompt, reference: referenceB64, frame: frame,
                    matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil)
-        if (frame == 1 ? resultFrame2 : resultImage) != nil { GenerationQuota.record(GenerationQuota.cost(forQuality: quality)) }
+        let succeeded = (frame == 1 ? resultFrame2 : resultImage) !== prevSlot
+        if succeeded {
+            if freeSession {
+                GenerationQuota.markFreeFirstGenerationUsed()
+            } else {
+                GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
+            }
+            // 다듬은 버전을 이력에 추가하고 선택 — 이전 버전으로 언제든 돌아갈 수 있음.
+            if let img = resultImage {
+                versions.append(ResultVersion(small: img, frame2: resultFrame2,
+                                              fullRes: lastFrame0FullRes, isRefined: true))
+                if versions.count > 8 { versions.remove(at: 1) }   // 원본([0])은 보존, 오래된 다듬기부터 정리
+                selectedVersion = versions.count - 1
+            }
+        }
         refinementPrompt = ""
         // '배경 빼기' 보기 중이면 다듬은 프레임만 즉시 재처리(stale 방지).
         if displayTransparent {
