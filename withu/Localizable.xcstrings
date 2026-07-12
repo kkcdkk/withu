@@ -1,6 +1,193 @@
 {
   "sourceLanguage": "ko",
   "strings": {
+    "- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Character identity\n- Face & expression style\n- Body proportions\n- Art style\n- Colors & shading\n- Line weight\n- Overall design"
+          }
+        }
+      }
+    },
+    "- 캐릭터 정체성\\n- 얼굴·표정 스타일\\n- 몸 비율\\n- 그림 스타일\\n- 색·음영\\n- 선 굵기\\n- 전체 디자인": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Character identity\\n- Face & expression style\\n- Body proportions\\n- Art style\\n- Colors & shading\\n- Line weight\\n- Overall design"
+          }
+        }
+      }
+    },
+    "- 포즈: [원하는 포즈]\n- 행동: [행동]\n- 각도: [정면/측면/3/4]\n- 표정: [필요하면]\n- 소품: [필요하면]": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Pose: [desired pose]\n- Action: [action]\n- Angle: [front/side/3-quarter]\n- Expression: [if needed]\n- Props: [if needed]"
+          }
+        }
+      }
+    },
+    "- 포즈: [원하는 포즈]\\n- 행동: [행동]\\n- 각도: [정면/측면/3/4]\\n- 표정: [필요하면]\\n- 소품: [필요하면]": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- Pose: [desired pose]\\n- Action: [action]\\n- Angle: [front/side/3/4]\\n- Expression: [if needed]\\n- Props: [if needed]"
+          }
+        }
+      }
+    },
+    "— (권한 없음)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "— (no permission)"
+          }
+        }
+      }
+    },
+    "— 비활성": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "— inactive"
+          }
+        }
+      }
+    },
+    "'%@' 배경으로 적용하기": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply as '%@' background"
+          }
+        }
+      }
+    },
+    "'%@' 자리에 적용하기": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply to the '%@' slot"
+          }
+        }
+      }
+    },
+    "'%@' 캐릭터를 어디에 적용할까요?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where should we apply the '%@' character?"
+          }
+        }
+      }
+    },
+    "'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters made with 'Create several states'\nare grouped here."
+          }
+        }
+      }
+    },
+    "'여러 모습 만들기'로 만든 캐릭터가\\n여기에 묶여요.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters made with 'Batch Create'\\nare grouped here."
+          }
+        }
+      }
+    },
+    "'여러 모습 만들기'로 한 캐릭터의 여러 상태를 한 번에, 또는 '단건'으로 하나씩 만들어요. 참고 사진을 넣으면 그 모습을 살려서 그려요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use 'Batch Create' to make several states of one character at once, or 'Single' to make them one at a time. Add a reference photo and we'll keep that look when drawing."
+          }
+        }
+      }
+    },
+    "'위젯 추가'를 누르고 \\\"withu\\\"를 검색해주세요": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap 'Add Widget' and search for \\\"withu\\\""
+          }
+        }
+      }
+    },
+    ")) 권한이 꺼져 있어요": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ")) permission is turned off"
+          }
+        }
+      }
+    },
+    ")) 자리에 적용 중": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ")) slot — applying"
+          }
+        }
+      }
+    },
+    "))' 캐릭터를 어디에 적용할까요?": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "))' — where should this character be applied?"
+          }
+        }
+      }
+    },
+    "%@ %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ 권한이 꺼져 있어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ permission is off"
+          }
+        }
+      }
+    },
     "%@ 끝!": {
       "localizations": {
         "en": {
@@ -37,6 +224,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "To the %@ slot"
+          }
+        }
+      }
+    },
+    "%@ 자리에 적용 중": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applied to %@"
           }
         }
       }
@@ -341,102 +538,204 @@
         }
       }
     },
-    "'%@' 배경으로 적용하기": {
+    "✅ alpha 있음 (RGBA)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apply as '%@' background"
+            "value": "✅ has alpha (RGBA)"
           }
         }
       }
     },
-    "'%@' 자리에 적용하기": {
+    "✅ 활성": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apply to the '%@' slot"
+            "value": "✅ active"
           }
         }
       }
     },
-    "'여러 모습 만들기'로 만든 캐릭터가\\n여기에 묶여요.": {
+    "❌ alpha 없음 (RGB only)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Characters made with 'Batch Create'\\nare grouped here."
+            "value": "❌ no alpha (RGB only)"
           }
         }
       }
     },
-    "'여러 모습 만들기'로 한 캐릭터의 여러 상태를 한 번에, 또는 '단건'으로 하나씩 만들어요. 참고 사진을 넣으면 그 모습을 살려서 그려요.": {
+    "❓ 공유 OFF": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use 'Batch Create' to make several states of one character at once, or 'Single' to make them one at a time. Add a reference photo and we'll keep that look when drawing."
+            "value": "❓ sharing OFF"
           }
         }
       }
     },
-    "'위젯 추가'를 누르고 \\\"withu\\\"를 검색해주세요": {
+    "🍬 캔디 %lld개 충전됐어요! (테스트)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap 'Add Widget' and search for \\\"withu\\\""
+            "value": "🍬 %lld candies added! (test)"
           }
         }
       }
     },
-    ")) 권한이 꺼져 있어요": {
+    "🎉 %lld보 달성!": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ")) permission is turned off"
+            "value": "🎉 %lld steps reached!"
           }
         }
       }
     },
-    ")) 자리에 적용 중": {
+    "🏃 %lld분": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ")) slot — applying"
+            "value": "🏃 %lld min"
           }
         }
       }
     },
-    "))' 캐릭터를 어디에 적용할까요?": {
+    "👟 %lld보": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "))' — where should this character be applied?"
+            "value": "👟 %lld steps"
           }
         }
       }
     },
-    "- 캐릭터 정체성\\n- 얼굴·표정 스타일\\n- 몸 비율\\n- 그림 스타일\\n- 색·음영\\n- 선 굵기\\n- 전체 디자인": {
+    "💤 잘 시간이에요": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "- Character identity\\n- Face & expression style\\n- Body proportions\\n- Art style\\n- Colors & shading\\n- Line weight\\n- Overall design"
+            "value": "💤 Time for bed"
           }
         }
       }
     },
-    "- 포즈: [원하는 포즈]\\n- 행동: [행동]\\n- 각도: [정면/측면/3/4]\\n- 표정: [필요하면]\\n- 소품: [필요하면]": {
+    "💾 SharedAppState 비어 있음": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "- Pose: [desired pose]\\n- Action: [action]\\n- Angle: [front/side/3/4]\\n- Expression: [if needed]\\n- Props: [if needed]"
+            "value": "💾 SharedAppState is empty"
+          }
+        }
+      }
+    },
+    "📸 마지막 사진: %@": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "📸 Last photo: %@"
+          }
+        }
+      }
+    },
+    "📸 마지막 사진: %lld": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "📸 Last photo: %lld"
+          }
+        }
+      }
+    },
+    "📸 사진 미수신": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "📸 No photo received"
+          }
+        }
+      }
+    },
+    "🔄 reload 미호출": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔄 reload not called"
+          }
+        }
+      }
+    },
+    "🔄 마지막 reload: %@": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔄 Last reload: %@"
+          }
+        }
+      }
+    },
+    "🔄 마지막 reload: %lld": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔄 Last reload: %lld"
+          }
+        }
+      }
+    },
+    "🔍 디버그": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔍 Debug"
+          }
+        }
+      }
+    },
+    "🔢 이미지 버전: %lld": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔢 Image version: %lld"
+          }
+        }
+      }
+    },
+    "🖼️ PNG 파일 없음": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🖼️ No PNG file"
           }
         }
       }
@@ -581,6 +880,57 @@
         }
       }
     },
+    "high (1~2분 · 6캔디)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "high (1–2 min · 6 candies)"
+          }
+        }
+      }
+    },
+    "iOS 설정 열기": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open iOS Settings"
+          }
+        }
+      }
+    },
+    "iPhone에서 데이터를\\n기다리는 중…": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for data\\nfrom your iPhone…"
+          }
+        }
+      }
+    },
+    "low (약 20초 · 1캔디)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "low (about 20 sec · 1 candy)"
+          }
+        }
+      }
+    },
+    "medium (약 50초 · 3캔디)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "medium (about 50 sec · 3 candies)"
+          }
+        }
+      }
+    },
     "URL 생성 실패": {
       "localizations": {
         "en": {
@@ -607,56 +957,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "WCSession not activated"
-          }
-        }
-      }
-    },
-    "high (1~2분 · 6캔디)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "high (1–2 min · 6 candies)"
-          }
-        }
-      }
-    },
-    "iOS 설정 열기": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open iOS Settings"
-          }
-        }
-      }
-    },
-    "iPhone에서 데이터를\\n기다리는 중…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waiting for data\\nfrom your iPhone…"
-          }
-        }
-      }
-    },
-    "low (약 20초 · 1캔디)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "low (about 20 sec · 1 candy)"
-          }
-        }
-      }
-    },
-    "medium (약 50초 · 3캔디)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "medium (about 50 sec · 3 candies)"
           }
         }
       }
@@ -702,6 +1002,7 @@
       }
     },
     "withu 캐릭터": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -717,66 +1018,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "withu character state change"
-          }
-        }
-      }
-    },
-    "— (권한 없음)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "— (no permission)"
-          }
-        }
-      }
-    },
-    "— 비활성": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "— inactive"
-          }
-        }
-      }
-    },
-    "✅ alpha 있음 (RGBA)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "✅ has alpha (RGBA)"
-          }
-        }
-      }
-    },
-    "✅ 활성": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "✅ active"
-          }
-        }
-      }
-    },
-    "❌ alpha 없음 (RGB only)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "❌ no alpha (RGB only)"
-          }
-        }
-      }
-    },
-    "❓ 공유 OFF": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "❓ sharing OFF"
           }
         }
       }
@@ -827,6 +1068,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Privacy Policy"
+          }
+        }
+      }
+    },
+    "갤러리에 저장했어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to your gallery"
           }
         }
       }
@@ -952,6 +1203,7 @@
       }
     },
     "검색창에 \\\"withu\\\" 라고 입력해주세요": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1082,6 +1334,7 @@
       }
     },
     "공유": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1277,6 +1530,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Review the base look"
+          }
+        }
+      }
+    },
+    "기준 모습이 준비됐어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your base look is ready"
           }
         }
       }
@@ -1572,6 +1835,7 @@
       }
     },
     "내 캐릭터의 지금 상태를 보여줘요.": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1582,6 +1846,7 @@
       }
     },
     "내 캐릭터의 지금 상태를 시계 페이스에 보여줘요.": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1962,6 +2227,7 @@
       }
     },
     "디코드 실패: %@": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2002,6 +2268,7 @@
       }
     },
     "로그인 없이 둘러보기 (개발용)": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2301,7 +2568,18 @@
         }
       }
     },
+    "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is your 'default' look, made first. The rest will match it.\n· Happy with it? Continue above · Small tweaks: 'Revise & generate' · Different direction: edit the prompt"
+          }
+        }
+      }
+    },
     "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2371,7 +2649,18 @@
         }
       }
     },
+    "모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This description is used for every state. Describe your character's look in one go.\ne.g. \"a pink bunny with freckles and big cute eyes\""
+          }
+        }
+      }
+    },
     "모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\\n예: \\\"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\\\"": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2541,22 +2830,22 @@
         }
       }
     },
-    "밤하늘 시간": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Night sky hours"
-          }
-        }
-      }
-    },
     "밤하늘 🌙": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Night sky 🌙"
+          }
+        }
+      }
+    },
+    "밤하늘 시간": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Night sky hours"
           }
         }
       }
@@ -2791,6 +3080,16 @@
         }
       }
     },
+    "비 🌧": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rain 🌧"
+          }
+        }
+      }
+    },
     "비 맞으며 달리기 🏃☔": {
       "localizations": {
         "en": {
@@ -2817,16 +3116,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cycling in the rain 🚴☔"
-          }
-        }
-      }
-    },
-    "비 🌧": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rain 🌧"
           }
         }
       }
@@ -3251,6 +3540,26 @@
         }
       }
     },
+    "서버 오류 (%@). 잠시 후 다시 시도해 주세요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server error (%@. Please try again in a moment."
+          }
+        }
+      }
+    },
+    "서버 오류 (%lld). 잠시 후 다시 시도해 주세요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server error (%lld. Please try again in a moment."
+          }
+        }
+      }
+    },
     "서버 오류 %@: %@": {
       "localizations": {
         "en": {
@@ -3287,26 +3596,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server error %lld: %lld"
-          }
-        }
-      }
-    },
-    "서버 오류 (%@). 잠시 후 다시 시도해 주세요.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server error (%@. Please try again in a moment."
-          }
-        }
-      }
-    },
-    "서버 오류 (%lld). 잠시 후 다시 시도해 주세요.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server error (%lld. Please try again in a moment."
           }
         }
       }
@@ -3532,6 +3821,7 @@
       }
     },
     "수신 파일 metadata 누락": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3542,6 +3832,7 @@
       }
     },
     "수신 파일 디코드 실패": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3612,6 +3903,7 @@
       }
     },
     "시뮬레이터엔 카메라가 없어요\\n실기기에서 테스트하세요": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4241,22 +4533,22 @@
         }
       }
     },
-    "운동(산책·달리기 등)은 워치 기준으로 알아채요.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Workouts (walks, runs, etc.) are detected via your Apple Watch."
-          }
-        }
-      }
-    },
     "운동·수면·걸음에 맞춰 캐릭터 상태가 바뀌어요": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Your character's state changes with workouts, sleep, and steps"
+          }
+        }
+      }
+    },
+    "운동(산책·달리기 등)은 워치 기준으로 알아채요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workouts (walks, runs, etc.) are detected via your Apple Watch."
           }
         }
       }
@@ -4281,16 +4573,6 @@
         }
       }
     },
-    "움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For characters made as animated, choose whether to show them moving. Turn it off to show a single image and save battery."
-          }
-        }
-      }
-    },
     "움직이는 캐릭터로 만들기": {
       "localizations": {
         "en": {
@@ -4301,22 +4583,32 @@
         }
       }
     },
-    "움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 아래에서 움직일 상태만 골라서 켤 수도 있어요.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
     "움직임": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Animation"
+          }
+        }
+      }
+    },
+    "움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For characters made as animated, choose whether to show them moving. Turn it off to show a single image and save battery."
+          }
+        }
+      }
+    },
+    "움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 아래에서 움직일 상태만 골라서 켤 수도 있어요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
           }
         }
       }
@@ -4462,6 +4754,7 @@
       }
     },
     "원하는 자리를 누르고 \\\"withu\\\"를 찾아주세요": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4951,22 +5244,22 @@
         }
       }
     },
-    "자전거 타는 중 🚴": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Riding a bike 🚴"
-          }
-        }
-      }
-    },
     "자전거 🚴": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Cycling 🚴"
+          }
+        }
+      }
+    },
+    "자전거 타는 중 🚴": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riding a bike 🚴"
           }
         }
       }
@@ -5311,7 +5604,18 @@
         }
       }
     },
+    "지금은 충전 상품을 불러올 수 없어요.\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't load products right now.\nUse a code below or try again shortly."
+          }
+        }
+      }
+    },
     "지금은 충전 상품을 불러올 수 없어요.\\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5461,6 +5765,16 @@
         }
       }
     },
+    "첫 만들기는 무료예요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your first creation is free"
+          }
+        }
+      }
+    },
     "초기화 중…": {
       "localizations": {
         "en": {
@@ -5481,22 +5795,22 @@
         }
       }
     },
-    "최근 48시간 잠자리 기록": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last 48 hours of sleep records"
-          }
-        }
-      }
-    },
     "최근 7일 수면 기록": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Last 7 days of sleep records"
+          }
+        }
+      }
+    },
+    "최근 48시간 잠자리 기록": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 48 hours of sleep records"
           }
         }
       }
@@ -5691,6 +6005,16 @@
         }
       }
     },
+    "캐릭터 생성이 끝났어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Character generation finished"
+          }
+        }
+      }
+    },
     "캐릭터 외형 한 줄 (고급)": {
       "localizations": {
         "en": {
@@ -5741,6 +6065,16 @@
         }
       }
     },
+    "캐릭터를 다 만들었어요": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All done creating your character"
+          }
+        }
+      }
+    },
     "캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.": {
       "localizations": {
         "en": {
@@ -5771,7 +6105,18 @@
         }
       }
     },
+    "캐릭터를 만들면 상태별 폴더에\n차곡차곡 모여요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters you create are collected\nin folders by state."
+          }
+        }
+      }
+    },
     "캐릭터를 만들면 상태별 폴더에\\n차곡차곡 모여요.": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5831,7 +6176,18 @@
         }
       }
     },
+    "캐릭터와 함께 사진을 찍으려면 카메라 접근을\n허용해 주세요.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To take photos with your character,\nplease allow camera access."
+          }
+        }
+      }
+    },
     "캐릭터와 함께 사진을 찍으려면 카메라 접근을\\n허용해 주세요.": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -6537,206 +6893,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "White background"
-          }
-        }
-      }
-    },
-    "🍬 캔디 %lld개 충전됐어요! (테스트)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🍬 %lld candies added! (test)"
-          }
-        }
-      }
-    },
-    "🎉 %lld보 달성!": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🎉 %lld steps reached!"
-          }
-        }
-      }
-    },
-    "🏃 %lld분": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🏃 %lld min"
-          }
-        }
-      }
-    },
-    "👟 %lld보": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "👟 %lld steps"
-          }
-        }
-      }
-    },
-    "💤 잘 시간이에요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "💤 Time for bed"
-          }
-        }
-      }
-    },
-    "💾 SharedAppState 비어 있음": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "💾 SharedAppState is empty"
-          }
-        }
-      }
-    },
-    "📸 마지막 사진: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "📸 Last photo: %@"
-          }
-        }
-      }
-    },
-    "📸 마지막 사진: %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "📸 Last photo: %lld"
-          }
-        }
-      }
-    },
-    "📸 사진 미수신": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "📸 No photo received"
-          }
-        }
-      }
-    },
-    "🔄 reload 미호출": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🔄 reload not called"
-          }
-        }
-      }
-    },
-    "🔄 마지막 reload: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🔄 Last reload: %@"
-          }
-        }
-      }
-    },
-    "🔄 마지막 reload: %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🔄 Last reload: %lld"
-          }
-        }
-      }
-    },
-    "🔍 디버그": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🔍 Debug"
-          }
-        }
-      }
-    },
-    "🔢 이미지 버전: %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🔢 Image version: %lld"
-          }
-        }
-      }
-    },
-    "🖼️ PNG 파일 없음": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "🖼️ No PNG file"
-          }
-        }
-      }
-    },
-    "첫 만들기는 무료예요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your first creation is free"
-          }
-        }
-      }
-    },
-    "갤러리에 저장했어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved to your gallery"
-          }
-        }
-      }
-    },
-    "캐릭터를 다 만들었어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All done creating your character"
-          }
-        }
-      }
-    },
-    "캐릭터 생성이 끝났어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Character generation finished"
-          }
-        }
-      }
-    },
-    "기준 모습이 준비됐어요": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your base look is ready"
           }
         }
       }

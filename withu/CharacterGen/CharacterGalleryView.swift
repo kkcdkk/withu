@@ -223,7 +223,7 @@ struct CharacterGalleryView: View {
         }
         WidgetCenter.shared.reloadAllTimelines()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        withAnimation { toastText = "\(applied)개 모습을 모두 적용했어요" }
+        withAnimation { toastText = String(localized: "\(applied)개 모습을 모두 적용했어요") }
         Task { try? await Task.sleep(for: .seconds(1.6)); withAnimation { toastText = nil } }
     }
 
@@ -254,7 +254,7 @@ struct CharacterGalleryView: View {
         let isEmpty = count == 0
         let applied = CharacterImageStore.hasImage(for: state)
         let subtitle = isEmpty ? "아직 없어요"
-            : (applied ? "\(count)개 · 지금 적용 중" : "\(count)개")
+            : (applied ? String(localized: "\(count)개 · 지금 적용 중") : String(localized: "\(count)개"))
         return HStack(spacing: 14) {
             GalleryStateChip(state: state, firstItem: grouped[state]?.first, size: 44)
                 .overlay(alignment: .topTrailing) {
@@ -389,7 +389,7 @@ struct StateFolderView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.caption)
                     .font(.callout.weight(.semibold))
-                Text(items.isEmpty ? "아직 없어요" : "\(items.count)개")
+                Text(items.isEmpty ? String(localized: "아직 없어요") : String(localized: "\(items.count)개"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -510,7 +510,7 @@ struct GalleryGrid<Header: View>: View {
                 CharacterImageStore.deleteGalleryItem(item.id)
                 selectedItem = nil
                 onChange()
-                withAnimation { toastText = "지웠어요" }
+                withAnimation { toastText = String(localized: "지웠어요") }
                 hideToastAfter(1.0)
             }
             Button("취소", role: .cancel) {}
@@ -838,10 +838,10 @@ struct GalleryGrid<Header: View>: View {
                 ConnectivityManager.shared.sendCharacterImage(f1, for: state, frame: 1)
             }
             onChange()
-            withAnimation { toastText = "\(state.koreanShortLabel) 자리에 적용했어요" }
+            withAnimation { toastText = String(localized: "\(state.koreanShortLabel) 자리에 적용했어요") }
             hideToastAfter(1.6)
         } else {
-            withAnimation { toastText = "적용하지 못했어요" }
+            withAnimation { toastText = String(localized: "적용하지 못했어요") }
             hideToastAfter(1.6)
         }
     }
@@ -861,14 +861,14 @@ struct GalleryGrid<Header: View>: View {
         if let f1 {
             let processed = await ImageProcessing.bestEffortTransparent(f1)
             guard processed !== f1 else {
-                withAnimation { toastText = "배경을 빼지 못했어요" }
+                withAnimation { toastText = String(localized: "배경을 빼지 못했어요") }
                 hideToastAfter(1.6)
                 return
             }
             cutF1 = processed
         }
         guard cut !== img else {
-            withAnimation { toastText = "배경을 빼지 못했어요" }
+            withAnimation { toastText = String(localized: "배경을 빼지 못했어요") }
             hideToastAfter(1.6)
             return
         }
@@ -889,7 +889,7 @@ struct GalleryGrid<Header: View>: View {
             WidgetCenter.shared.reloadAllTimelines()
         }
         onChange()
-        withAnimation { toastText = "배경을 뺐어요" }
+        withAnimation { toastText = String(localized: "배경을 뺐어요") }
         hideToastAfter(1.6)
     }
 
@@ -924,7 +924,7 @@ struct GalleryGrid<Header: View>: View {
         selectedIDs = []
         isSelectionMode = false
         onChange()
-        withAnimation { toastText = "\(count)개를 지웠어요" }
+        withAnimation { toastText = String(localized: "\(count)개를 지웠어요") }
         hideToastAfter(1.2)
     }
 

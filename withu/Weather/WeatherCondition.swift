@@ -49,12 +49,12 @@ enum WeatherCondition: String, Codable, Hashable, CaseIterable {
 
     var caption: String {
         switch self {
-        case .sunny:    return "맑음"
-        case .cloudy:   return "흐림"
-        case .rainy:    return "비"
-        case .snowy:    return "눈"
-        case .foggy:    return "안개"
-        case .thunder:  return "뇌우"
+        case .sunny:    return String(localized: "맑음")
+        case .cloudy:   return String(localized: "흐림")
+        case .rainy:    return String(localized: "비")
+        case .snowy:    return String(localized: "눈")
+        case .foggy:    return String(localized: "안개")
+        case .thunder:  return String(localized: "뇌우")
         case .unknown:  return "?"
         }
     }

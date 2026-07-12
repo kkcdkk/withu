@@ -15,11 +15,11 @@ enum CameraError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:         return "카메라 권한이 없어요. 설정에서 켜주세요."
-        case .noCamera:              return "이 기기에서 카메라를 찾을 수 없어요."
-        case .configurationFailed:   return "카메라 구성에 실패했어요."
-        case .captureFailed:         return "사진 캡처에 실패했어요."
-        case .unavailableOnSimulator:return "시뮬레이터에서는 카메라를 쓸 수 없어요. 실기기로 테스트해주세요."
+        case .notAuthorized:         return String(localized: "카메라 권한이 없어요. 설정에서 켜주세요.")
+        case .noCamera:              return String(localized: "이 기기에서 카메라를 찾을 수 없어요.")
+        case .configurationFailed:   return String(localized: "카메라 구성에 실패했어요.")
+        case .captureFailed:         return String(localized: "사진 캡처에 실패했어요.")
+        case .unavailableOnSimulator:return String(localized: "시뮬레이터에서는 카메라를 쓸 수 없어요. 실기기로 테스트해주세요.")
         }
     }
 }
@@ -137,7 +137,7 @@ final class CameraSession: NSObject {
                   let input = try? AVCaptureDeviceInput(device: device),
                   self.session.canAddInput(input) else {
                 self.session.commitConfiguration()
-                Task { @MainActor in self.lastError = "카메라 전환 실패" }
+                Task { @MainActor in self.lastError = String(localized: "카메라 전환 실패") }
                 return
             }
             self.session.addInput(input)

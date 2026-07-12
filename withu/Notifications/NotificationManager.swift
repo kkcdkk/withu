@@ -38,7 +38,7 @@ final class NotificationManager {
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             await refreshAuthorizationStatus()
-            if !granted { lastError = "사용자가 알림을 허용하지 않았어요." }
+            if !granted { lastError = String(localized: "사용자가 알림을 허용하지 않았어요.") }
         } catch {
             lastError = error.localizedDescription
         }
@@ -58,8 +58,8 @@ final class NotificationManager {
         guard !alreadySentToday(key: ID.stepGoal) else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "🎉 \(Int(stepGoal))보 달성!"
-        content.body = "오늘 \(Int(steps))보 걸었어요. 캐릭터도 신났어요 ✨"
+        content.title = String(localized: "🎉 \(Int(stepGoal))보 달성!")
+        content.body = String(localized: "오늘 \(Int(steps))보 걸었어요. 캐릭터도 신났어요 ✨")
         content.sound = .default
 
         await schedule(id: ID.stepGoal, content: content, in: 1)
@@ -70,8 +70,8 @@ final class NotificationManager {
     /// 같은 식별자로 add 하면 OS 가 알아서 교체.
     func scheduleBedtimeReminder(hour: Int = 22, minute: Int = 30) async {
         let content = UNMutableNotificationContent()
-        content.title = "💤 잘 시간이에요"
-        content.body = "오늘도 수고했어요. 캐릭터가 같이 잘 준비 중이에요."
+        content.title = String(localized: "💤 잘 시간이에요")
+        content.body = String(localized: "오늘도 수고했어요. 캐릭터가 같이 잘 준비 중이에요.")
         content.sound = .default
 
         var components = DateComponents()
@@ -95,8 +95,8 @@ final class NotificationManager {
         guard !alreadySent(key: ID.workoutEnded + ".\(w.start.timeIntervalSince1970)") else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "\(w.activity.displayName) 끝!"
-        content.body = "\(formatDuration(w.duration)) 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요."
+        content.title = String(localized: "\(w.activity.displayName) 끝!")
+        content.body = String(localized: "\(formatDuration(w.duration)) 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요.")
         content.sound = .default
 
         await schedule(id: ID.workoutEnded, content: content, in: 1)
@@ -107,11 +107,11 @@ final class NotificationManager {
     func notifyGenerationFinished(done: Int, failed: Int) async {
         let content = UNMutableNotificationContent()
         if failed == 0 {
-            content.title = "캐릭터를 다 만들었어요"
-            content.body = "\(done)개 모습이 완성돼 바로 적용됐어요. 열어서 확인해 보세요."
+            content.title = String(localized: "캐릭터를 다 만들었어요")
+            content.body = String(localized: "\(done)개 모습이 완성돼 바로 적용됐어요. 열어서 확인해 보세요.")
         } else {
-            content.title = "캐릭터 생성이 끝났어요"
-            content.body = "\(done)개 완성, \(failed)개는 못 만들었어요. 앱에서 다시 시도할 수 있어요."
+            content.title = String(localized: "캐릭터 생성이 끝났어요")
+            content.body = String(localized: "\(done)개 완성, \(failed)개는 못 만들었어요. 앱에서 다시 시도할 수 있어요.")
         }
         content.sound = .default
         await schedule(id: ID.generationDone, content: content, in: 1)
@@ -120,8 +120,8 @@ final class NotificationManager {
     /// 기준(idle) 모습이 완성돼 승인을 기다릴 때.
     func notifyAnchorReady() async {
         let content = UNMutableNotificationContent()
-        content.title = "기준 모습이 준비됐어요"
-        content.body = "마음에 드는지 확인하고 나머지 모습을 이어서 만들어 보세요."
+        content.title = String(localized: "기준 모습이 준비됐어요")
+        content.body = String(localized: "마음에 드는지 확인하고 나머지 모습을 이어서 만들어 보세요.")
         content.sound = .default
         await schedule(id: ID.generationAnchor, content: content, in: 1)
     }
@@ -145,7 +145,7 @@ final class NotificationManager {
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
         let m = Int(seconds) / 60
-        return "\(m)분"
+        return String(localized: "\(m)분")
     }
 
     // MARK: - 중복 방지 (간단한 UserDefaults 마커)

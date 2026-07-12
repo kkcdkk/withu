@@ -14,10 +14,10 @@ enum WeatherError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .locationDenied:   return "위치 권한이 없어요. 설정에서 켜주세요."
-        case .noLocation:       return "현재 위치를 찾지 못했어요."
-        case .network(let e):   return "날씨 통신 실패: \(e.localizedDescription)"
-        case .decoding(let e):  return "날씨 응답 해석 실패: \(e.localizedDescription)"
+        case .locationDenied:   return String(localized: "위치 권한이 없어요. 설정에서 켜주세요.")
+        case .noLocation:       return String(localized: "현재 위치를 찾지 못했어요.")
+        case .network(let e):   return String(localized: "날씨 통신 실패: \(e.localizedDescription)")
+        case .decoding(let e):  return String(localized: "날씨 응답 해석 실패: \(e.localizedDescription)")
         }
     }
 }
@@ -102,7 +102,7 @@ extension WeatherManager: CLLocationManagerDelegate {
                                      didFailWithError error: Error) {
         Task { @MainActor in
             self.isFetching = false
-            self.lastError = "위치 조회 실패: \(error.localizedDescription)"
+            self.lastError = String(localized: "위치 조회 실패: \(error.localizedDescription)")
         }
     }
 }
@@ -143,7 +143,7 @@ extension WeatherManager {
             "&daily=sunrise,sunset&timezone=auto"
 
         guard let url = URL(string: urlString) else {
-            lastError = "URL 생성 실패"
+            lastError = String(localized: "URL 생성 실패")
             return
         }
         do {

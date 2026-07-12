@@ -884,7 +884,7 @@ struct BatchCharacterGenView: View {
             }
             // 이 모습만 적용
             Button { applyOne(state) } label: {
-                Text(appliedStates.contains(state) ? "적용됨" : "적용")
+                Text(appliedStates.contains(state) ? String(localized: "적용됨") : String(localized: "적용"))
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity)
             }
@@ -1234,7 +1234,7 @@ struct BatchCharacterGenView: View {
                     .frame(height: 320)
 
                     Text(hasF1
-                         ? "\(state.koreanShortLabel) · \(detailFrame == 1 ? "움직임 프레임" : "기본")"
+                         ? "\(state.koreanShortLabel) · \(detailFrame == 1 ? String(localized: "움직임 프레임") : String(localized: "기본"))"
                          : state.koreanShortLabel)
                         .font(.callout.weight(.semibold))
 
@@ -1281,7 +1281,7 @@ struct BatchCharacterGenView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(hasF1 && detailFrame == 1 ? "이 움직임 프레임을 어떻게 바꿀까요" : "어떻게 바꿀까요")
+                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 어떻게 바꿀까요") : String(localized: "어떻게 바꿀까요"))
                             .font(.caption).foregroundStyle(.secondary)
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
                             .lineLimit(2...4)
@@ -1298,7 +1298,7 @@ struct BatchCharacterGenView: View {
                                     .overlay(Image(systemName: "photo")
                                         .foregroundStyle(.secondary).font(.caption))
                             }
-                            PhotosPicker(revisionRefImage == nil ? "사진 넣기" : "변경",
+                            PhotosPicker(revisionRefImage == nil ? String(localized: "사진 넣기") : String(localized: "변경"),
                                          selection: $revisionRefItem,
                                          matching: .images)
                                 .font(.footnote)
@@ -1466,7 +1466,7 @@ struct BatchCharacterGenView: View {
                 remainingGenerations = GenerationQuota.remainingToday()
                 revisionText = ""
             } else {
-                revisionError = "이미지를 받지 못했어요. 다시 시도해 주세요."
+                revisionError = String(localized: "이미지를 받지 못했어요. 다시 시도해 주세요.")
             }
         } catch APIError.paymentRequired {
             showPaywall = true

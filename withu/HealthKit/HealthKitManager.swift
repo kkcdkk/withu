@@ -15,11 +15,11 @@ enum HealthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAvailable:
-            return "이 기기에서는 HealthKit을 쓸 수 없어요."
+            return String(localized: "이 기기에서는 HealthKit을 쓸 수 없어요.")
         case .typeUnavailable(let name):
-            return "HealthKit 데이터 타입 사용 불가: \(name)"
+            return String(localized: "HealthKit 데이터 타입 사용 불가: \(name)")
         case .query(let err):
-            return "쿼리 실패: \(err.localizedDescription)"
+            return String(localized: "쿼리 실패: \(err.localizedDescription)")
         }
     }
 }
@@ -557,15 +557,15 @@ final class HealthKitManager {
 extension HKWorkoutActivityType {
     var displayName: String {
         switch self {
-        case .running: return "달리기 🏃"
-        case .cycling: return "자전거 🚴"
-        case .walking: return "걷기 🚶"
-        case .hiking: return "등산 🥾"
-        case .swimming: return "수영 🏊"
-        case .yoga: return "요가 🧘"
+        case .running: return String(localized: "달리기 🏃")
+        case .cycling: return String(localized: "자전거 🚴")
+        case .walking: return String(localized: "걷기 🚶")
+        case .hiking: return String(localized: "등산 🥾")
+        case .swimming: return String(localized: "수영 🏊")
+        case .yoga: return String(localized: "요가 🧘")
         case .traditionalStrengthTraining,
-             .functionalStrengthTraining: return "근력 💪"
-        default: return "운동"
+             .functionalStrengthTraining: return String(localized: "근력 💪")
+        default: return String(localized: "운동")
         }
     }
 }

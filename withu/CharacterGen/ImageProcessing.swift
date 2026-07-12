@@ -24,9 +24,9 @@ enum ImageProcessing {
 
         var errorDescription: String? {
             switch self {
-            case .invalidImage:  return "이미지가 유효하지 않아요."
-            case .noForeground:  return "이미지에서 대상을 찾지 못했어요. 더 또렷한 사진을 시도해보세요."
-            case .renderFailed:  return "이미지 변환 실패."
+            case .invalidImage:  return String(localized: "이미지가 유효하지 않아요.")
+            case .noForeground:  return String(localized: "이미지에서 대상을 찾지 못했어요. 더 또렷한 사진을 시도해보세요.")
+            case .renderFailed:  return String(localized: "이미지 변환 실패.")
             }
         }
     }

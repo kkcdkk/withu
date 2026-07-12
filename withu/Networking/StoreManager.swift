@@ -80,7 +80,7 @@ final class StoreManager {
             }
             lastError = nil
         } catch {
-            lastError = "상품 정보를 불러오지 못했어요."
+            lastError = String(localized: "상품 정보를 불러오지 못했어요.")
         }
         didAttemptLoad = true
     }
@@ -103,13 +103,13 @@ final class StoreManager {
             case .userCancelled:
                 return false
             case .pending:
-                lastError = "결제 승인을 기다리고 있어요."
+                lastError = String(localized: "결제 승인을 기다리고 있어요.")
                 return false
             @unknown default:
                 return false
             }
         } catch {
-            lastError = "결제를 완료하지 못했어요. 다시 시도해 주세요."
+            lastError = String(localized: "결제를 완료하지 못했어요. 다시 시도해 주세요.")
             return false
         }
     }

@@ -30,11 +30,17 @@ struct ContentView: View {
     @AppStorage("withu.seenGuide.v1") private var seenGuide: Bool = false
     @State private var showGuide: Bool = false
     #if DEBUG
-    /// 진단/스크린샷용 — `--paywall` 런치 인자로 페이월 바로 열기 (simctl 자동화).
+    /// 진단/스크린샷용 런치 인자 (simctl 자동화):
+    ///   --paywall 페이월 · --guide 사용법 · --gallery 갤러리 · --home 홈만
+    /// 어느 것이든 있으면 온보딩/로그인 게이트 우회.
     @State private var showPaywallDebug: Bool = false
-    private var isPaywallDebugRun: Bool {
-        ProcessInfo.processInfo.arguments.contains("--paywall")
+    @State private var showGalleryDebug: Bool = false
+    @State private var showGenDebug: Bool = false
+    private var debugScreenArg: String? {
+        ["--paywall", "--guide", "--gallery", "--gen", "--home"]
+            .first(where: ProcessInfo.processInfo.arguments.contains)
     }
+    private var isPaywallDebugRun: Bool { debugScreenArg != nil }
     #else
     private var isPaywallDebugRun: Bool { false }
     #endif
@@ -192,9 +198,19 @@ struct ContentView: View {
         .sheet(isPresented: $showPaywallDebug) {
             PaywallView(onClose: { showPaywallDebug = false })
         }
+        .sheet(isPresented: $showGalleryDebug) {
+            NavigationStack { CharacterGalleryView() }
+        }
+        .sheet(isPresented: $showGenDebug) {
+            NavigationStack { CharacterGenView() }
+        }
         .onAppear {
-            if ProcessInfo.processInfo.arguments.contains("--paywall") {
-                showPaywallDebug = true
+            switch debugScreenArg {
+            case "--paywall": showPaywallDebug = true
+            case "--guide":   showGuide = true
+            case "--gallery": showGalleryDebug = true
+            case "--gen":     showGenDebug = true
+            default: break
             }
         }
         #endif
@@ -358,7 +374,7 @@ struct ContentView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func metricItem(emoji: String, value: String, label: String) -> some View {
+    private func metricItem(emoji: String, value: String, label: LocalizedStringKey) -> some View {
         VStack(spacing: 4) {
             Text(emoji).font(.subheadline)
             Text(value).font(.callout.weight(.semibold))
@@ -378,24 +394,24 @@ struct ContentView: View {
         // 아침 (11시 전) — 활동 적을 때 랜덤 인사
         if hour < 11 && kcal < 100 {
             let morningMessages = [
-                "좋은 아침! 오늘도 함께해요 ☀️",
-                "새 하루 시작이에요 🌱",
-                "기지개 펴고 시작해봐요 🧘",
-                "물 한 잔 마시는 거 잊지 마세요 💧"
+                String(localized: "좋은 아침! 오늘도 함께해요 ☀️"),
+                String(localized: "새 하루 시작이에요 🌱"),
+                String(localized: "기지개 펴고 시작해봐요 🧘"),
+                String(localized: "물 한 잔 마시는 거 잊지 마세요 💧")
             ]
             return morningMessages.randomElement() ?? ""
         }
         // 활발한 날
         if kcal >= 400 || minutes >= 60 || steps >= 10000 {
-            return "오늘 알찬 하루였네요! 평소보다 많이 움직였어요"
+            return String(localized: "오늘 알찬 하루였네요! 평소보다 많이 움직였어요")
         }
         // 보통
         if kcal >= 150 || steps >= 4000 {
-            return "오늘 \(steps)보 걸었어요 🌿"
+            return String(localized: "오늘 \(steps)보 걸었어요 🌿")
         }
         // 잔잔한 날
         let lazyMessages = [
-            "가벼운 산책 어때요 🌿"
+            String(localized: "가벼운 산책 어때요 🌿")
         ]
         return lazyMessages.randomElement() ?? ""
     }
@@ -536,11 +552,11 @@ struct ContentView: View {
     /// 거절돼있어서 해당 기능이 막힌 권한 목록.
     private var deniedPermissions: [String] {
         var list: [String] = []
-        if !health.isAuthorized { list.append("건강") }
+        if !health.isAuthorized { list.append(String(localized: "건강")) }
         if weather.authorizationStatus == .denied || weather.authorizationStatus == .restricted {
-            list.append("위치")
+            list.append(String(localized: "위치"))
         }
-        if notifications.authorizationStatus == .denied { list.append("알림") }
+        if notifications.authorizationStatus == .denied { list.append(String(localized: "알림")) }
         return list
     }
 
@@ -863,9 +879,9 @@ struct SettingsView: View {
 
     private var authStatusLabel: String {
         switch notifications.authorizationStatus {
-        case .notDetermined: return "아직 요청 안 했어요"
-        case .denied: return "거부됨"
-        case .authorized, .provisional, .ephemeral: return "허용됨"
+        case .notDetermined: return String(localized: "아직 요청 안 했어요")
+        case .denied: return String(localized: "거부됨")
+        case .authorized, .provisional, .ephemeral: return String(localized: "허용됨")
         @unknown default: return "—"
         }
     }
@@ -882,7 +898,9 @@ struct SettingsView: View {
         do { _ = try await health.fetchTodayActiveKcal() } catch { errors.append("칼로리") }
         _ = await health.fetchInBedSchedule()
         sendStateToWatch(characterState)
-        healthMessage = errors.isEmpty ? "최신화 완료" : "실패: \(errors.joined(separator: ", "))"
+        healthMessage = errors.isEmpty
+            ? String(localized: "최신화 완료")
+            : String(localized: "실패: \(errors.joined(separator: ", "))")
     }
 }
 
@@ -1041,7 +1059,7 @@ struct AdvancedDiagnosticsView: View {
                             Text(entry.date.formatted(date: .omitted, time: .standard))
                                 .font(.caption.monospaced())
                             Spacer()
-                            Text(entry.sleeping ? "수면 켜짐" : "수면 꺼짐")
+                            Text(entry.sleeping ? String(localized: "수면 켜짐") : String(localized: "수면 꺼짐"))
                                 .font(.caption)
                                 .foregroundStyle(entry.sleeping ? .indigo : .secondary)
                         }
@@ -1211,7 +1229,7 @@ struct AdvancedDiagnosticsView: View {
     private var lastBgRefreshLabel: String {
         let defaults = UserDefaults(suiteName: SharedAppState.groupID)
         guard let date = defaults?.object(forKey: "withu.lastBackgroundRefreshAt") as? Date else {
-            return "한 번도 없음"
+            return String(localized: "한 번도 없음")
         }
         return date.formatted(date: .omitted, time: .standard)
     }

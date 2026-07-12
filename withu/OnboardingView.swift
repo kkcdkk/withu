@@ -43,9 +43,9 @@ private enum PermissionResult: Equatable {
     var statusLabel: String {
         switch self {
         case .pending, .requesting: return ""
-        case .granted: return "연결되었어요"
-        case .denied:  return "나중에 설정에서 켤 수 있어요"
-        case .skipped: return "나중에 설정에서 켤 수 있어요"
+        case .granted: return String(localized: "연결되었어요")
+        case .denied:  return String(localized: "나중에 설정에서 켤 수 있어요")
+        case .skipped: return String(localized: "나중에 설정에서 켤 수 있어요")
         }
     }
 }
@@ -316,10 +316,10 @@ struct OnboardingView: View {
 
     private func summaryShortLabel(_ r: PermissionResult) -> String {
         switch r {
-        case .granted: return "연결됨"
-        case .denied:  return "나중에"
-        case .skipped: return "나중에"
-        case .pending, .requesting: return "아직"
+        case .granted: return String(localized: "연결됨")
+        case .denied:  return String(localized: "나중에")
+        case .skipped: return String(localized: "나중에")
+        case .pending, .requesting: return String(localized: "아직")
         }
     }
 
@@ -416,8 +416,8 @@ struct OnboardingView: View {
     }
 
     private var currentRequestButtonLabel: String {
-        if currentResult == .requesting { return "요청 중…" }
-        return "허용하고 다음으로"
+        if currentResult == .requesting { return String(localized: "요청 중…") }
+        return String(localized: "허용하고 다음으로")
     }
 
     private func currentRequest() async {

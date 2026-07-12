@@ -207,12 +207,12 @@ struct CharacterProfileView: View {
     private var currentSleepSourceLabel: String {
         let inProfileWindow = isNowInProfileSleepWindow()
         if profile.manualSleepOnly ?? false {
-            return inProfileWindow ? "자는 시간이에요" : "깨어 있는 시간이에요"
+            return inProfileWindow ? String(localized: "자는 시간이에요") : String(localized: "깨어 있는 시간이에요")
         }
-        if focus.isFocusFilterSleeping { return "수면 집중 모드라서 자고 있어요" }
-        if health.isInBedSchedule { return "건강 앱 수면 일정이라서 자고 있어요" }
-        if inProfileWindow { return "설정한 시간이라서 자고 있어요" }
-        return "깨어 있어요"
+        if focus.isFocusFilterSleeping { return String(localized: "수면 집중 모드라서 자고 있어요") }
+        if health.isInBedSchedule { return String(localized: "건강 앱 수면 일정이라서 자고 있어요") }
+        if inProfileWindow { return String(localized: "설정한 시간이라서 자고 있어요") }
+        return String(localized: "깨어 있어요")
     }
 
     /// 최근 7일 실제 수면 기록(워치 asleep 포함)의 평균 취침/기상을 설정 시간에 반영.
@@ -224,7 +224,7 @@ struct CharacterProfileView: View {
         Task {
             defer { isAligningSleep = false }
             guard let w = await health.averageSleepWindow() else {
-                sleepAlignMessage = "최근 수면 기록이 부족해요. 며칠 자고 나면 맞출 수 있어요."
+                sleepAlignMessage = String(localized: "최근 수면 기록이 부족해요. 며칠 자고 나면 맞출 수 있어요.")
                 return
             }
             profile.sleepStartHour = w.startHour
@@ -256,14 +256,14 @@ struct CharacterProfileView: View {
 
     private var sleepFooterText: String {
         if profile.manualSleepOnly ?? false {
-            return "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요."
+            return String(localized: "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요.")
         }
         // 수면 모드 신호가 하나도 연결 안 돼 있으면 — 왜 '설정 시간'으로만 자는지 + 켜는 법 안내.
         // (INFocusStatusCenter 권한은 더 이상 수면 판정에 안 쓰므로 조건에서 제외)
         if focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule {
-            return "지금은 아이폰 수면 모드를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)"
+            return String(localized: "지금은 아이폰 수면 모드를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)")
         }
-        return "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요."
+        return String(localized: "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요.")
     }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)

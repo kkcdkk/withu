@@ -223,7 +223,7 @@ struct CharacterGenView: View {
                     mode = m
                 } label: {
                     HStack {
-                        Text(m.rawValue)
+                        Text(LocalizedStringKey(m.rawValue))
                             .foregroundStyle(.primary)
                         Spacer()
                         if mode == m {
@@ -348,7 +348,7 @@ struct CharacterGenView: View {
                     generateTask = nil
                     isGenerating = false
                     generationStartedAt = nil
-                    lastError = "이미지 생성을 그만뒀어요."
+                    lastError = String(localized: "이미지 생성을 그만뒀어요.")
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
@@ -572,7 +572,7 @@ struct CharacterGenView: View {
                     .tabViewStyle(.page(indexDisplayMode: .always))
                     .indexViewStyle(.page(backgroundDisplayMode: .interactive))
                     .frame(height: 260)
-                    Text(singleDetailFrame == 1 ? "2번째 (움직임)" : "1번째")
+                    Text(singleDetailFrame == 1 ? String(localized: "2번째 (움직임)") : String(localized: "1번째"))
                         .font(.caption2).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                 } else if let f0 {
@@ -668,7 +668,7 @@ struct CharacterGenView: View {
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: {
-                Text(resultFrame2 != nil && singleDetailFrame == 1 ? "이어서 다듬기 (움직임 프레임)" : "이어서 다듬기")
+                Text(resultFrame2 != nil && singleDetailFrame == 1 ? String(localized: "이어서 다듬기 (움직임 프레임)") : String(localized: "이어서 다듬기"))
             } footer: {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
                     .foregroundStyle(.secondary)
@@ -696,7 +696,7 @@ struct CharacterGenView: View {
                                             .strokeBorder(idx == selectedVersion ? Color.withuPinkText : .clear,
                                                           lineWidth: 2.5)
                                     }
-                                Text(v.isRefined ? "다듬음 \(idx)" : "원본")
+                                Text(v.isRefined ? String(localized: "다듬음 \(idx)") : String(localized: "원본"))
                                     .font(.caption2.weight(idx == selectedVersion ? .semibold : .regular))
                                     .foregroundStyle(idx == selectedVersion ? Color.withuPinkText : .secondary)
                             }
@@ -735,7 +735,7 @@ struct CharacterGenView: View {
 
     private var importSection: some View {
         Section {
-            PhotosPicker(importedRawImage == nil ? "사진 고르기" : "다른 사진으로 바꾸기",
+            PhotosPicker(importedRawImage == nil ? String(localized: "사진 고르기") : String(localized: "다른 사진으로 바꾸기"),
                          selection: $importPickerItem,
                          matching: .images)
                 .disabled(isProcessing)
@@ -861,7 +861,7 @@ struct CharacterGenView: View {
     private func generate() async {
         let freeSession = GenerationQuota.hasFreeFirstGeneration()   // 첫 만들기 1회 무료
         guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
-            lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
+            lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
             return
         }
         isGenerating = true
@@ -887,7 +887,7 @@ struct CharacterGenView: View {
         do {
             try await APIClient.shared.preflightPing()
         } catch {
-            lastError = "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요."
+            lastError = String(localized: "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요.")
             return
         }
         saveDescription()
@@ -923,12 +923,12 @@ struct CharacterGenView: View {
     private func refine(frame: Int) async {
         let freeSession = GenerationQuota.hasFreeFirstGeneration()
         guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
-            lastError = "캔디가 부족해요. 충전하면 계속 만들 수 있어요."
+            lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
             return
         }
         let currentSlot = frame == 1 ? resultFrame2 : resultImage
         guard currentSlot != nil else {
-            lastError = "기존 이미지를 다시 불러오지 못했어요. 다시 시도해 주세요."
+            lastError = String(localized: "기존 이미지를 다시 불러오지 못했어요. 다시 시도해 주세요.")
             return
         }
         // reference: frame1 이면 frame0 앵커, frame0 이면 자기 자신
@@ -1000,7 +1000,7 @@ struct CharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
-                lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
+                lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")
                 return
             }
             // 모델이 투명 배경으로 줌 — 평탄화 안 함(투명 유지). frame1 은 1번째 기준 크기·위치 정규화.
@@ -1047,7 +1047,7 @@ struct CharacterGenView: View {
                 }
             }
         } catch {
-            lastError = "사진을 불러오지 못했어요."
+            lastError = String(localized: "사진을 불러오지 못했어요.")
         }
     }
 
@@ -1062,7 +1062,7 @@ struct CharacterGenView: View {
         do {
             guard let data = try await item.loadTransferable(type: Data.self),
                   let raw = UIImage(data: data) else {
-                lastError = "사진을 불러오지 못했어요."
+                lastError = String(localized: "사진을 불러오지 못했어요.")
                 return
             }
             // 선택 후 정사각 자르기 → 자른 이미지로 배경 제거 처리
@@ -1070,7 +1070,7 @@ struct CharacterGenView: View {
                 Task { await processImport(cropped) }
             }
         } catch {
-            lastError = "사진을 불러오지 못했어요."
+            lastError = String(localized: "사진을 불러오지 못했어요.")
         }
     }
 
@@ -1103,7 +1103,7 @@ struct CharacterGenView: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             showAppliedAlert = true
         } else {
-            lastError = "저장하지 못했어요. 다시 시도해 주세요."
+            lastError = String(localized: "저장하지 못했어요. 다시 시도해 주세요.")
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
@@ -1164,7 +1164,7 @@ struct WeatherBackgroundGenView: View {
                 HStack {
                     Text("지금 적용된 배경")
                     Spacer()
-                    Text(CharacterImageStore.hasBackground(condition) ? "생성한 그림" : "없음")
+                    Text(CharacterImageStore.hasBackground(condition) ? String(localized: "생성한 그림") : String(localized: "없음"))
                         .foregroundStyle(.secondary)
                         .font(.footnote)
                 }
@@ -1286,7 +1286,7 @@ struct WeatherBackgroundGenView: View {
         }
         do { try await APIClient.shared.preflightPing() }
         catch {
-            lastError = "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요."
+            lastError = String(localized: "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요.")
             return
         }
         // 서버의 SYSTEM_PROMPT 가 매번 캐릭터 가드레일을 prepend 함 (FastAPI proxy).
@@ -1308,7 +1308,7 @@ struct WeatherBackgroundGenView: View {
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let img = UIImage(data: data) else {
-                lastError = "이미지를 불러오지 못했어요. 다시 시도해 주세요."
+                lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")
                 return
             }
             // 배경은 256px 면 충분 (메인 hero 240, 위젯 small ~150). 디스크 절약.
@@ -1325,7 +1325,7 @@ struct WeatherBackgroundGenView: View {
             ConnectivityManager.shared.sendWeatherBackground(image, for: cond)
             showAppliedAlert = true
         } else {
-            lastError = "저장하지 못했어요. 다시 시도해 주세요."
+            lastError = String(localized: "저장하지 못했어요. 다시 시도해 주세요.")
         }
     }
 }

@@ -43,12 +43,12 @@ final class AuthManager {
         switch result {
         case .failure(let error):
             if (error as? ASAuthorizationError)?.code == .canceled { return }
-            lastError = "로그인에 실패했어요. 다시 시도해 주세요."
+            lastError = String(localized: "로그인에 실패했어요. 다시 시도해 주세요.")
         case .success(let auth):
             guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = credential.identityToken,
                   let identityToken = String(data: tokenData, encoding: .utf8) else {
-                lastError = "Apple 로그인 정보를 읽지 못했어요."
+                lastError = String(localized: "Apple 로그인 정보를 읽지 못했어요.")
                 return
             }
             let appleUserId = credential.user
@@ -68,7 +68,7 @@ final class AuthManager {
             state = .signedIn
             lastError = nil
         } catch {
-            lastError = "로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요."
+            lastError = String(localized: "로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요.")
         }
     }
 
@@ -107,7 +107,7 @@ final class AuthManager {
             signOut()
             return true
         } catch {
-            lastError = "계정 삭제에 실패했어요. 잠시 후 다시 시도해 주세요."
+            lastError = String(localized: "계정 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.")
             return false
         }
     }

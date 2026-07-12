@@ -136,7 +136,7 @@ struct PaywallView: View {
         let trimmed = redeemInput.trimmingCharacters(in: .whitespaces)
         if trimmed.uppercased() == GenerationQuota.testCandyCode, GenerationQuota.allowsTestCandyCode {
             GenerationQuota.addCredits(GenerationQuota.testCandyAmount)
-            redeemMessage = "🍬 캔디 \(GenerationQuota.testCandyAmount)개 충전됐어요! (테스트)"
+            redeemMessage = String(localized: "🍬 캔디 \(GenerationQuota.testCandyAmount)개 충전됐어요! (테스트)")
             redeemInput = ""
             return
         }
@@ -145,7 +145,7 @@ struct PaywallView: View {
         do {
             let ent = try await APIClient.shared.redeem(code: trimmed)
             auth.applyEntitlement(ent)
-            redeemMessage = "적용됐어요! 잔액에 반영됐어요."
+            redeemMessage = String(localized: "적용됐어요! 잔액에 반영됐어요.")
             redeemInput = ""
         } catch {
             redeemMessage = error.koreanizedDescription
@@ -210,7 +210,7 @@ struct PaywallView: View {
         do {
             let ent = try await APIClient.shared.applyReferral(code: referralInput)
             auth.applyEntitlement(ent)
-            referralMessage = "초대 코드가 적용됐어요! 보너스를 받았어요."
+            referralMessage = String(localized: "초대 코드가 적용됐어요! 보너스를 받았어요.")
             referralInput = ""
         } catch {
             referralMessage = error.koreanizedDescription

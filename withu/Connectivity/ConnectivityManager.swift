@@ -56,7 +56,7 @@ final class ConnectivityManager: NSObject {
             session = WCSession.isSupported() ? WCSession.default : nil
         }
         guard let session else {
-            lastError = "WCSession 미지원 (iPad?)"
+            lastError = String(localized: "WCSession 미지원 (iPad?)")
             return
         }
         session.delegate = self
@@ -239,7 +239,7 @@ final class ConnectivityManager: NSObject {
     /// 이전과 동일한 메시지면 skip.
     func send(_ message: WatchMessage) {
         guard let session, session.activationState == .activated else {
-            lastError = "WCSession 활성화 안 됨"
+            lastError = String(localized: "WCSession 활성화 안 됨")
             return
         }
         guard session.isPaired, session.isWatchAppInstalled else {
@@ -263,7 +263,7 @@ final class ConnectivityManager: NSObject {
             lastSentAt = Date()
             lastError = nil
         } catch {
-            lastError = "전송 실패: \(error.localizedDescription)"
+            lastError = String(localized: "전송 실패: \(error.localizedDescription)")
         }
     }
 }
@@ -412,21 +412,21 @@ final class FocusModeManager {
     /// 현재 권한 상태 한국어 라벨 (디버그 UI 용).
     var authorizationStatusLabel: String {
         switch INFocusStatusCenter.default.authorizationStatus {
-        case .notDetermined: return "미요청"
-        case .restricted:    return "제한됨"
-        case .denied:        return "거부됨"
-        case .authorized:    return "허용됨"
+        case .notDetermined: return String(localized: "미요청")
+        case .restricted:    return String(localized: "제한됨")
+        case .denied:        return String(localized: "거부됨")
+        case .authorized:    return String(localized: "허용됨")
         @unknown default:    return "?"
         }
     }
 
     /// 현재 Focus 상태를 사용자 친화적으로 표현. nil/true/false 세 케이스 구별.
     var focusStateLabel: String {
-        guard isAuthorized else { return "— (권한 없음)" }
+        guard isAuthorized else { return String(localized: "— (권한 없음)") }
         switch rawFocusedValue {
-        case .none:          return "❓ 공유 OFF"   // 권한 O 이지만 iOS 가 nil 반환 = Focus 별 "공유" 토글 OFF
-        case .some(true):    return "✅ 활성"
-        case .some(false):   return "— 비활성"
+        case .none:          return String(localized: "❓ 공유 OFF")   // 권한 O 이지만 iOS 가 nil 반환 = Focus 별 "공유" 토글 OFF
+        case .some(true):    return String(localized: "✅ 활성")
+        case .some(false):   return String(localized: "— 비활성")
         }
     }
 }
