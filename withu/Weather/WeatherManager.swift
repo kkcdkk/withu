@@ -136,6 +136,10 @@ extension WeatherManager {
 
     private func fetchOpenMeteo(lat: Double, lon: Double) async {
         defer { isFetching = false }
+        // 좌표는 소수 2자리(~1km)로 반올림 — 날씨엔 충분하고, 정확한 위치가
+        // 기기 밖(타사 API)으로 나가지 않게 (App Privacy: '대략적 위치').
+        let lat = (lat * 100).rounded() / 100
+        let lon = (lon * 100).rounded() / 100
         let urlString =
             "https://api.open-meteo.com/v1/forecast" +
             "?latitude=\(lat)&longitude=\(lon)" +
