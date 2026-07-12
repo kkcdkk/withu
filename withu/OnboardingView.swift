@@ -517,6 +517,14 @@ extension Color {
             : UIColor(red: 1.0,  green: 0.85, blue: 0.92, alpha: 1.0)
     })
 
+    /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.
+    /// 라이트 = 연한 새싹색, 다크 = 채도 낮은 딥그린.
+    static let withuGreen = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.30, green: 0.48, blue: 0.36, alpha: 1.0)
+            : UIColor(red: 0.55, green: 0.80, blue: 0.58, alpha: 1.0)
+    })
+
     /// 온보딩 배경 gradient 의 상단 — 거의 흰색-핑크 / 다크 모드 매우 어두운 와인.
     static let withuPinkBackground = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark

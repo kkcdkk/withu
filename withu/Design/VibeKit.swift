@@ -14,12 +14,13 @@ import SwiftUI
 
 // MARK: - 배경 그라데이션
 
-/// 모든 서브 화면 배경. 홈과 같은 톤으로 이어지게 현재 캐릭터 state 의 tint 사용.
-/// top → bottom: tint @ 0.12 → @ 0.04 → 시스템 배경.
+/// 모든 서브 화면 배경. 기조는 브랜드 그린(새싹 캐릭터 색) — 정체성 통일.
+/// 상태 무드(state.tint)는 중간에 아주 옅게만 스며들게.
+/// top → bottom: 그린 @ 0.14 → state tint @ 0.04 → 시스템 배경.
 func backgroundGradient(for state: CharacterState) -> LinearGradient {
     LinearGradient(
         colors: [
-            state.tint.opacity(0.12),
+            Color.withuGreen.opacity(0.14),
             state.tint.opacity(0.04),
             Color(.systemBackground),
         ],

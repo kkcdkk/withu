@@ -211,10 +211,10 @@ struct ContentView: View {
     // MARK: - Sections
 
     private var backgroundGradient: LinearGradient {
-        // 더 옅은 파스텔 톤 — 캐릭터 색 따라 살짝 톤만 변경
+        // 기조는 브랜드 그린(새싹 캐릭터 색) — 상태 무드는 중간에 옅게만 (VibeKit 과 동일)
         LinearGradient(
             colors: [
-                characterState.tint.opacity(0.12),
+                Color.withuGreen.opacity(0.14),
                 characterState.tint.opacity(0.04),
                 Color(.systemBackground)
             ],
