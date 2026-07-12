@@ -35,14 +35,6 @@ struct ContentView: View {
                     }
                 }
 
-                if let err = connectivity.lastError {
-                    Text(err)
-                        .font(.system(size: 9))
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                }
-
-                debugSection
             }
             .padding(.horizontal, 8)
         }
@@ -51,47 +43,6 @@ struct ContentView: View {
         }
     }
 
-    /// 컴플리케이션 갱신 진단용. 사용자가 워치 앱 켜서 직접 확인 가능.
-    private var debugSection: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Divider().padding(.vertical, 4)
-            Text("🔍 디버그").font(.system(size: 10)).bold()
-
-            if let rawState = connectivity.lastReceivedImageState {
-                Text("📸 마지막 사진: \(rawState)").font(.system(size: 9))
-            } else {
-                Text("📸 사진 미수신").font(.system(size: 9)).foregroundStyle(.secondary)
-            }
-
-            Text("🔢 이미지 버전: \(connectivity.characterImageVersion)")
-                .font(.system(size: 9))
-
-            if let rt = connectivity.lastComplicationReloadAt {
-                Text("🔄 마지막 reload: \(rt.formatted(date: .omitted, time: .standard))")
-                    .font(.system(size: 9))
-            } else {
-                Text("🔄 reload 미호출").font(.system(size: 9)).foregroundStyle(.secondary)
-            }
-
-            if let msg = SharedAppState.loadMessage() {
-                Text("💾 SharedAppState: \(msg.state.rawValue)")
-                    .font(.system(size: 9))
-                Text("⏰ msg ts: \(msg.timestamp.formatted(date: .omitted, time: .standard))")
-                    .font(.system(size: 9))
-                // 현재 state 의 PNG alpha 진단
-                if let alphaDesc = CharacterImageStore.alphaInfoDescription(for: msg.state) {
-                    Text("🖼️ PNG: \(alphaDesc)")
-                        .font(.system(size: 9))
-                } else {
-                    Text("🖼️ PNG 파일 없음")
-                        .font(.system(size: 9)).foregroundStyle(.orange)
-                }
-            } else {
-                Text("💾 SharedAppState 비어 있음").font(.system(size: 9)).foregroundStyle(.red)
-            }
-        }
-        .foregroundStyle(.secondary)
-    }
 }
 
 #Preview {
