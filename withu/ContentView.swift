@@ -1041,7 +1041,7 @@ struct AdvancedDiagnosticsView: View {
                 Text("마지막으로 받은 시각")
                 Spacer()
                 Text(focus.focusFilterLastPerformAt.map { $0.formatted(date: .omitted, time: .standard) }
-                     ?? "아직 없어요")
+                     ?? String(localized: "아직 없어요"))
                     .foregroundStyle(.secondary)
             }
             if let last = focus.lastCheckedAt {

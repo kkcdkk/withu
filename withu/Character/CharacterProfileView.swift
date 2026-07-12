@@ -182,8 +182,8 @@ struct CharacterProfileView: View {
                             Text(state.koreanShortLabel)
                                 .font(.callout.weight(.medium))
                             Text(CharacterImageStore.hasImage(for: state)
-                                 ? "내 캐릭터가 적용됐어요"
-                                 : "아직 기본 모습이에요")
+                                 ? String(localized: "내 캐릭터가 적용됐어요")
+                                 : String(localized: "아직 기본 모습이에요"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }

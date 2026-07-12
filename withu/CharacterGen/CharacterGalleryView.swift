@@ -253,7 +253,7 @@ struct CharacterGalleryView: View {
         let count = grouped[state]?.count ?? 0
         let isEmpty = count == 0
         let applied = CharacterImageStore.hasImage(for: state)
-        let subtitle = isEmpty ? "아직 없어요"
+        let subtitle = isEmpty ? String(localized: "아직 없어요")
             : (applied ? String(localized: "\(count)개 · 지금 적용 중") : String(localized: "\(count)개"))
         return HStack(spacing: 14) {
             GalleryStateChip(state: state, firstItem: grouped[state]?.first, size: 44)
