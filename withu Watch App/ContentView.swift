@@ -11,7 +11,9 @@ struct ContentView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
-                if let msg = connectivity.lastMessage {
+                // 실시간 수신(lastMessage)이 아직 없으면 마지막 저장분(SharedAppState)으로 표시 —
+                // iPhone 이 근처에 없어도 워치 단독 실행 시 빈 화면 대신 최근 상태를 보여준다.
+                if let msg = connectivity.lastMessage ?? SharedAppState.loadMessage() {
                     WatchCharacterView(state: msg.state,
                                        lastReceivedAt: connectivity.lastReceivedAt,
                                        imageReloadKey: connectivity.characterImageVersion,
