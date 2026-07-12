@@ -100,6 +100,13 @@ struct CharacterGenView: View {
     @State private var versions: [ResultVersion] = []
     @State private var selectedVersion: Int = 0
 
+    /// 계정 무료 1회 남았는지 — 서버(entitlement)가 진실. 재설치와 무관하게 계정당 1회.
+    private var hasFreeCreation: Bool {
+        (AuthManager.shared.entitlement?.freeSingleRemaining ?? 0) > 0
+    }
+    /// 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed).
+    @State private var lastFreeConsumed: Bool = false
+
     var body: some View {
         ZStack {
             backgroundGradient(for: targetState).ignoresSafeArea()
@@ -315,7 +322,7 @@ struct CharacterGenView: View {
     // MARK: 캔디 안내 팝업 텍스트
 
     private var pendingActionTitle: String {
-        GenerationQuota.hasFreeFirstGeneration()
+        hasFreeCreation
             ? String(localized: "첫 만들기는 무료예요")
             : String(localized: "캔디를 사용해요")
     }
@@ -329,7 +336,7 @@ struct CharacterGenView: View {
         let unit = GenerationQuota.cost(forQuality: quality)
         let isNew: Bool = { if case .newGeneration = pendingAction { return true }; return false }()
         let cost = (isNew && generateAnimated && targetState.usesGeneratedMotion) ? unit * 2 : unit
-        if GenerationQuota.hasFreeFirstGeneration() {
+        if hasFreeCreation {
             return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (지금 품질 기준 \(cost)개).")
         }
         return isNew
@@ -352,7 +359,7 @@ struct CharacterGenView: View {
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
-            } else if remainingGenerations < cost && !GenerationQuota.hasFreeFirstGeneration() {
+            } else if remainingGenerations < cost && !hasFreeCreation {
                 Button {
                     showPaywall = true
                 } label: {
@@ -383,7 +390,7 @@ struct CharacterGenView: View {
                     Text("평균 low 20초, medium 50초, high 1~2분 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
-                if GenerationQuota.hasFreeFirstGeneration() {
+                if hasFreeCreation {
                     Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
                         .foregroundStyle(Color.withuPinkText)
                 } else if remainingGenerations < cost {
@@ -859,8 +866,8 @@ struct CharacterGenView: View {
     }
 
     private func generate() async {
-        let freeSession = GenerationQuota.hasFreeFirstGeneration()   // 첫 만들기 1회 무료
-        guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+        let freeAvailable = hasFreeCreation   // 계정 무료 1회 (서버 판정은 응답에서)
+        guard freeAvailable || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
             lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
             return
         }
@@ -896,7 +903,8 @@ struct CharacterGenView: View {
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
         let frame0Succeeded = resultImage !== prevResult
-        // 성공한 장만 차감 (퀄리티별 캔디). 첫 만들기 세션은 무료 — 프레임 2장까지 포함.
+        // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
+        let freeSession = lastFreeConsumed
         if frame0Succeeded, !freeSession { GenerationQuota.record(cost) }
         // 연속 이미지 — frame 0 성공 시 그 원본(1024)을 reference 로 frame 1 추가
         if generateAnimated, targetState.usesGeneratedMotion, frame0Succeeded,
@@ -907,7 +915,6 @@ struct CharacterGenView: View {
             if resultFrame2 != nil, !freeSession { GenerationQuota.record(cost) }
         }
         if frame0Succeeded {
-            if freeSession { GenerationQuota.markFreeFirstGenerationUsed() }
             // 새 결과 = 이력 리셋. [0] = 원본.
             if let img = resultImage {
                 versions = [ResultVersion(small: img, frame2: resultFrame2,
@@ -921,8 +928,8 @@ struct CharacterGenView: View {
 
     /// 보고 있는 프레임만 다듬기. frame1 은 frame0 을 앵커로 둬서 캐릭터/크기 일관성 유지.
     private func refine(frame: Int) async {
-        let freeSession = GenerationQuota.hasFreeFirstGeneration()
-        guard freeSession || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
+        let freeAvailable = hasFreeCreation
+        guard freeAvailable || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
             lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
             return
         }
@@ -953,9 +960,7 @@ struct CharacterGenView: View {
                    matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil)
         let succeeded = (frame == 1 ? resultFrame2 : resultImage) !== prevSlot
         if succeeded {
-            if freeSession {
-                GenerationQuota.markFreeFirstGenerationUsed()
-            } else {
+            if !lastFreeConsumed {   // 서버가 무료로 소진한 다듬기는 미차감
                 GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
             }
             // 다듬은 버전을 이력에 추가하고 선택 — 이전 버전으로 언제든 돌아갈 수 있음.
@@ -1025,6 +1030,7 @@ struct CharacterGenView: View {
             } else {
                 resultFrame2 = small
             }
+            lastFreeConsumed = resp.freeConsumed ?? false
             if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
         } catch APIError.paymentRequired {
             showPaywall = true

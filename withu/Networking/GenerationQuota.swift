@@ -85,18 +85,6 @@ enum GenerationQuota {
         #endif
     }
 
-    private static let firstFreeUsedKey = "withu.genQuota.firstFreeUsed.v1"
-
-    /// 첫 만들기 1회 무료 — 아직 안 썼으면 true. (신규 사용자가 캔디 0개로도
-    /// 한 번은 만들어볼 수 있게. 움직이는 캐릭터면 그 세션의 두 프레임까지 무료.)
-    static func hasFreeFirstGeneration() -> Bool {
-        !(defaults?.bool(forKey: firstFreeUsedKey) ?? false)
-    }
-
-    static func markFreeFirstGenerationUsed() {
-        defaults?.set(true, forKey: firstFreeUsedKey)
-    }
-
     /// 퀄리티별 캔디 비용(프레임 1장 기준) — 낮음 1 · 보통 3 · 높음 6.
     /// 움직이는 캐릭터는 frame0·frame1 을 각각 생성·과금하므로 자동으로 2배가 된다.
     static func cost(forQuality quality: String) -> Int {

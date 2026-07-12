@@ -26,6 +26,8 @@ struct GenerateImageResponse: Codable {
     let revisedPrompt: String?
     /// 차감 후 갱신된 잔액(로그인 시). 앱 캐시 갱신용.
     var entitlement: Entitlement? = nil
+    /// 서버가 이번 생성을 '계정 무료 1회'로 소진했는지 — true 면 클라는 캔디 미차감.
+    var freeConsumed: Bool? = nil
 }
 
 /// 402 응답 — 무료/크레딧 소진.

@@ -348,11 +348,28 @@ async function generateImage(request, env) {
     return jsonError("OpenAI response did not include image data.", 502);
   }
 
+  // 계정 무료 1회 — 로그인 사용자의 첫 단건 생성이면 서버가 원자적으로 소진.
+  // (기기 재설치와 무관하게 계정당 정확히 1회. 클라는 free_consumed=true 면 캔디 미차감.)
+  let freeConsumed = false;
+  let entitlement = null;
+  if (sub && env.DB && input.kind !== "batch") {
+    try {
+      const r = await env.DB.prepare(
+        "UPDATE entitlements SET free_single_remaining = free_single_remaining - 1, updated_at = ? WHERE sub = ? AND free_single_remaining > 0"
+      ).bind(Math.floor(Date.now() / 1000), sub).run();
+      freeConsumed = (r.meta?.changes ?? 0) > 0;
+      entitlement = await getEntitlement(env, sub);
+    } catch { /* 무료 소진 실패는 생성 자체를 막지 않음 */ }
+  } else if (sub && env.DB) {
+    try { entitlement = await getEntitlement(env, sub); } catch {}
+  }
+
   return Response.json({
     image_base64: image.b64_json,
     seed: 0,
     revised_prompt: image.revised_prompt ?? null,
-    entitlement: null
+    free_consumed: freeConsumed,
+    entitlement
   });
 }
 
