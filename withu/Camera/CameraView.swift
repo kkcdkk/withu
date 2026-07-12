@@ -97,7 +97,7 @@ struct CameraView: View {
             PhotosPicker(selection: $backgroundPickerItem, matching: .images) {
                 Text("또는 앨범 사진으로 만들기")
                     .font(.callout.weight(.medium))
-                    .foregroundStyle(Color.withuPink)
+                    .foregroundStyle(Color.withuPinkText)
             }
             .padding(.bottom, 40)
         }

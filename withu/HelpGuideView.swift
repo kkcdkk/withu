@@ -56,7 +56,7 @@ struct HelpGuideView: View {
                             HStack(alignment: .top, spacing: 14) {
                                 Image(systemName: step.icon)
                                     .font(.title3)
-                                    .foregroundStyle(Color.withuPink)
+                                    .foregroundStyle(Color.withuPinkText)
                                     .frame(width: 32, height: 32)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(step.title)

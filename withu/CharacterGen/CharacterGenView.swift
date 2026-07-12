@@ -381,7 +381,7 @@ struct CharacterGenView: View {
                 }
                 if GenerationQuota.hasFreeFirstGeneration() {
                     Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
-                        .foregroundStyle(Color.withuPink)
+                        .foregroundStyle(Color.withuPinkText)
                 } else if remainingGenerations < cost {
                     Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
@@ -552,7 +552,7 @@ struct CharacterGenView: View {
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
                     Label("다듬은 버전 \(selectedVersion) 을 보고 있어요", systemImage: "sparkles")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.withuPink)
+                        .foregroundStyle(Color.withuPinkText)
                 }
                 // 표시할 frame 0, frame 1 — 현재 모드 (raw / transparent) 에 따라
                 let f0 = currentDisplay(frame: 0)
@@ -689,12 +689,12 @@ struct CharacterGenView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                     .overlay {
                                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .strokeBorder(idx == selectedVersion ? Color.withuPink : .clear,
+                                            .strokeBorder(idx == selectedVersion ? Color.withuPinkText : .clear,
                                                           lineWidth: 2.5)
                                     }
                                 Text(v.isRefined ? "다듬음 \(idx)" : "원본")
                                     .font(.caption2.weight(idx == selectedVersion ? .semibold : .regular))
-                                    .foregroundStyle(idx == selectedVersion ? Color.withuPink : .secondary)
+                                    .foregroundStyle(idx == selectedVersion ? Color.withuPinkText : .secondary)
                             }
                             .onTapGesture { selectVersion(idx) }
                         }

@@ -24,7 +24,7 @@ struct LoginGateView: View {
                         .frame(width: 200, height: 200)
                     Image(systemName: "pawprint.fill")
                         .font(.system(size: 72))
-                        .foregroundStyle(Color.withuPink)
+                        .foregroundStyle(Color.withuPinkText)
                 }
 
                 VStack(spacing: 8) {

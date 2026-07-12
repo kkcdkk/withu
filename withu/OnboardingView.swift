@@ -118,7 +118,7 @@ struct OnboardingView: View {
                         .frame(width: 240, height: 240)
                     Image(systemName: "pawprint.fill")
                         .font(.system(size: 80))
-                        .foregroundStyle(Color.withuPink)
+                        .foregroundStyle(Color.withuPinkText)
                 }
                 VStack(spacing: 8) {
                     Text("with U")
@@ -277,7 +277,7 @@ struct OnboardingView: View {
                     .frame(width: 120, height: 120)
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
-                    .foregroundStyle(Color.withuPink)
+                    .foregroundStyle(Color.withuPinkText)
             }
             VStack(spacing: 8) {
                 Text("준비가 끝났어요")
@@ -515,6 +515,14 @@ extension Color {
         trait.userInterfaceStyle == .dark
             ? UIColor(red: 0.45, green: 0.28, blue: 0.36, alpha: 1.0)
             : UIColor(red: 1.0,  green: 0.85, blue: 0.92, alpha: 1.0)
+    })
+
+    /// 글자·링크·배지 텍스트용 진한 로즈 — 파스텔 withuPink 는 글자로 쓰면
+    /// 대비가 낮아 안 읽힘. 면적(버튼 배경 등)은 withuPink, 텍스트는 이걸 사용.
+    static let withuPinkText = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.95, green: 0.62, blue: 0.72, alpha: 1.0)
+            : UIColor(red: 0.78, green: 0.32, blue: 0.47, alpha: 1.0)
     })
 
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.

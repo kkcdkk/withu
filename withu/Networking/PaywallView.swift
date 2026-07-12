@@ -74,7 +74,7 @@ struct PaywallView: View {
                         Link("개인정보처리방침", destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!)
                     }
                     .font(.caption2.weight(.semibold))
-                    .tint(.withuPink)
+                    .tint(Color.withuPinkText)   // 링크는 글자 — 파스텔은 안 읽혀서 진한 로즈
                     .padding(.top, 4)
 
                     HelperFooter("충전한 캔디는 만료 없이 계속 쓸 수 있어요.")
@@ -170,7 +170,7 @@ struct PaywallView: View {
                     ShareLink(item: "withu 같이 해요! 초대 코드 \(myCode) 를 입력하면 둘 다 보너스를 받아요.") {
                         Image(systemName: "square.and.arrow.up")
                             .font(.title3)
-                            .foregroundStyle(Color.withuPink)
+                            .foregroundStyle(Color.withuPinkText)
                     }
                 }
                 .frostedCard()
@@ -254,7 +254,7 @@ struct PaywallView: View {
                     .overlay(
                         Image(systemName: "wand.and.stars")
                             .font(.title3)
-                            .foregroundStyle(Color.withuPink)
+                            .foregroundStyle(Color.withuPinkText)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
@@ -266,7 +266,7 @@ struct PaywallView: View {
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Color.withuPink.opacity(0.18), in: Capsule())
-                                .foregroundStyle(Color.withuPink)
+                                .foregroundStyle(Color.withuPinkText)
                         }
                     }
                     Text("캔디 \(amount)개 · 만료 없이 사용할 수 있어요")
