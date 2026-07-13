@@ -121,16 +121,18 @@ struct BatchCharacterGenView: View {
         ZStack {
             backgroundGradient(for: .idle).ignoresSafeArea()
             Form {
-                stateListSection
-                identitySection
-                referenceSection
-                optionsSection
-                if !awaitingIdleApproval {
+                if awaitingIdleApproval {
+                    // 기준 모습 승인 단계 — 사진과 버튼이 바로 보이게 이 섹션만 표시
+                    idleApprovalSection
+                } else {
+                    stateListSection
+                    identitySection
+                    referenceSection
+                    optionsSection
                     startSection
-                }
-                idleApprovalSection
-                if !awaitingIdleApproval && (!results.isEmpty || !errors.isEmpty) {
-                    resultsSection
+                    if !results.isEmpty || !errors.isEmpty {
+                        resultsSection
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -575,12 +577,13 @@ struct BatchCharacterGenView: View {
                 Button {
                     batchTask = Task { await approveIdleAndContinue() }
                 } label: {
-                    Label("이 모습으로 나머지 만들기", systemImage: "checkmark.circle.fill")
+                    Label("이 모습으로 나머지 만들기", systemImage: "arrow.right.circle.fill")
                         .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
+                .tint(Color.withuPinkText)
                 .disabled(isGenerating)
 
                 // 마음에 안 들면 — ① 수정해서 생성하기(아래 수정사항 반영)  ② 완전히 새로
@@ -699,7 +702,7 @@ struct BatchCharacterGenView: View {
                 Button {
                     applyAll()
                 } label: {
-                    Label("모두 적용하기 (\(results.count)개)", systemImage: "checkmark.circle.fill")
+                    Label("모두 적용하기 (\(results.count)개)", systemImage: "square.and.arrow.down.on.square.fill")
                         .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
