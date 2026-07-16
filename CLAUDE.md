@@ -94,8 +94,11 @@ Worker 구성 (`src/index.js` 라우팅 · `src/auth.js` Apple JWT/JWS 검증 ·
 - **인증** (`withu/Auth/`): `AuthManager` — Sign in with Apple → `/auth/apple` → 세션 토큰을 `KeychainStore` 에 저장. `LoginGateView` 가 게이트. 계정 삭제 = `DELETE /me` (App Review 5.1.1(v) 필수 기능).
 - **구매** (`Networking/StoreManager.swift`): StoreKit 2. 제품 = 캔디팩 `credits.30`/`credits.100` + 구독 `subscription.monthly` (`withu.storekit` 로컬 테스트 구성). 구매 JWS 를 `/iap/verify` 로 보내 서버 entitlement 에 적립.
 - **캔디 잔액의 권위는 로컬** (`Networking/GenerationQuota.swift`, App Group UserDefaults): 생성 가능 판정·차감 모두 로컬 `credits`. 서버 잔액은 `syncCreditsUp(to:)` 로 **끌어올리기만** (max) — 로컬 적립분을 덮어쓰지 않음. 이 모델을 바꾸면 402 desync 가 재발한다 (커밋 `fd98948` 참고).
-- 캔디 비용은 퀄리티별: low 1 · medium 2 · high 3 (`GenerationQuota.cost(forQuality:)`).
+- 캔디 비용은 퀄리티별: low 1 · medium 2 · high 3 (`GenerationQuota.cost(forQuality:)`). 앱은 low 만 사용.
+- **계정 무료 1회는 '처음 만드는 화면'(단건 CharacterGenView) 전용.** 서버 `/generate` 가 body `kind` 가 nil/"character" 이고 헤더 `X-Withu-Kind != batch` 일 때만 `free_single_remaining` 을 소진한다. 배치(X-Withu-Kind=batch)·날씨 배경(kind=background)·갤러리 다듬기(kind=refine)는 무료를 먹지 않는다 — 예전엔 body kind 만 봐서 배치/배경이 free_single 을 소진하는 버그가 있었음. (또한 2026-07-03 이전 가입 계정은 무료가 5개라 "첫 만들기 무료" 배지가 여러 번 뜨는 게 정상이었음.)
+- **이미지 모델은 gpt-image-2** (클라이언트가 `model: "gpt-image-2"` 명시, 서버 기본은 1.5 — 구 빌드 호환). v2 는 투명 미지원이라 서버가 프롬프트에 **순수 마젠타(#FF00FF) 단색 배경**을 지시하고, 클라이언트가 수신 즉시 `ImageProcessing.chromaKeyRemoved()` (가장자리 연결 BFS 크로마키)로 투명화한다. 이 함수는 마젠타 없으면 no-op — 1.5 투명 결과에도 안전.
 - **DEBUG 빌드는 쿼터 무제한** (`remainingToday() = 9999`, 차감 없음) — 캔디/페이월 흐름은 Release 빌드나 TestFlight 에서만 실제 동작을 검증할 수 있다. 테스트 캔디 코드 `CANDY20` 은 sandbox/DEBUG 전용.
+- **캔디 코드(redeem) 관리**: D1 `redeem_codes` 에 직접 INSERT/DELETE (`cloudflare/withu-api` 에서 `npx wrangler d1 execute withu-prod --remote --command "..."`). 계정당 1회는 `code_redemptions` PK 가 자동 보장. 생성 예: `INSERT INTO redeem_codes (code, kind, amount, max_uses, used_count, expires_at) VALUES ('CANDY25','credits',25,1000000,0,NULL)`. 종료 = `DELETE FROM redeem_codes WHERE code='...'`, 현황 = `SELECT code, amount, used_count FROM redeem_codes`. 운영 중 코드: `CANDY25` (25캔디).
 
 ## 기타 운영 메모
 

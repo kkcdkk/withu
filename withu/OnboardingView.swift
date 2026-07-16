@@ -525,6 +525,13 @@ extension Color {
             : UIColor(red: 0.78, green: 0.32, blue: 0.47, alpha: 1.0)
     })
 
+    /// CTA 버튼용 진한 그린 — 아이폰 메시지 말풍선 초록 톤. 흰 글자와 대비 확보.
+    static let withuCTAGreen = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.16, green: 0.62, blue: 0.29, alpha: 1.0)
+            : UIColor(red: 0.20, green: 0.78, blue: 0.35, alpha: 1.0)
+    })
+
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.
     /// 라이트 = 연한 새싹색, 다크 = 채도 낮은 딥그린.
     static let withuGreen = Color(uiColor: UIColor { trait in

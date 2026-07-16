@@ -215,7 +215,8 @@ final class BackgroundGenerationManager: NSObject {
         let req = GenerateImageRequest(prompt: spec.prompt,
                                        referenceImageBase64: spec.referenceB64,
                                        steps: 30, width: 1024, height: 1024,
-                                       quality: quality, artStyle: artStyle, style: "auto")
+                                       quality: quality, artStyle: artStyle, style: "auto",
+                                       model: "gpt-image-2")
         guard let bodyURL = bodyURL(job.id),
               let body = try? encoder.encode(req),
               (try? body.write(to: bodyURL, options: .atomic)) != nil else {
@@ -302,9 +303,11 @@ final class BackgroundGenerationManager: NSObject {
             if let data, !data.isEmpty,
                let resp = try? decoder.decode(GenerateImageResponse.self, from: data),
                let imgData = Data(base64Encoded: resp.imageBase64),
-               let img = UIImage(data: imgData),
+               let rawImg = UIImage(data: imgData),
                let state = CharacterState(rawValue: jobs[idx].stateRaw) {
                 let job = jobs[idx]
+                // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
+                let img = ImageProcessing.chromaKeyRemoved(rawImg)
                 // frame1: frame0 원본 기준으로 크기·위치 정규화 (기존 runOne 과 동일)
                 let ref0 = job.frame == 1 ? loadFrame0FullRes(state) : nil
                 let flat: UIImage

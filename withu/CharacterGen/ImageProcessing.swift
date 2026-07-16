@@ -283,6 +283,92 @@ enum ImageProcessing {
         return UIImage(cgImage: outCG, scale: cutout.scale, orientation: .up)
     }
 
+    // MARK: - 마젠타 크로마키 (gpt-image-2 배경 제거)
+
+    /// gpt-image-2 는 투명 배경 미지원 → 서버가 순수 마젠타(#FF00FF) 단색 배경을 지시하고,
+    /// 여기서 가장자리에서 4-연결된 마젠타 영역만 투명으로 바꾼다.
+    /// - 가장자리 연결 BFS: 캐릭터 안(볼터치·핑크 옷)은 배경과 연결돼도 마젠타 판정이 아니면 안 지움.
+    /// - 마젠타가 거의 없으면(이미 투명이거나 1.5 결과) 원본 그대로 반환 — 어디에 끼워도 안전한 no-op.
+    static func chromaKeyRemoved(_ image: UIImage) -> UIImage {
+        guard let cg = image.cgImage, cg.width > 0, cg.height > 0 else { return image }
+        let w = cg.width, h = cg.height
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return image }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let data = ctx.data else { return image }
+        let buf = data.bindMemory(to: UInt8.self, capacity: w * h * 4)
+
+        // 마젠타 판정 — 압축/경계 블렌딩 여유를 두되 볼터치 핑크(G≈180)는 통과 못 하게.
+        func isMagenta(_ p: Int) -> Bool {
+            let i = p * 4
+            let r = Int(buf[i]), g = Int(buf[i + 1]), b = Int(buf[i + 2])
+            return buf[i + 3] > 0 && r >= 160 && b >= 160 && g <= 120 && r - g >= 70 && b - g >= 70
+        }
+
+        // 가장자리에서 4-연결된 마젠타 = 진짜 배경. (fillInteriorHoles 와 같은 BFS 패턴)
+        var reached = [Bool](repeating: false, count: w * h)
+        var stack = [Int]()
+        func seed(_ p: Int) {
+            if !reached[p], isMagenta(p) { reached[p] = true; stack.append(p) }
+        }
+        for x in 0..<w { seed(x); seed((h - 1) * w + x) }
+        for y in 0..<h { seed(y * w); seed(y * w + (w - 1)) }
+        while let p = stack.popLast() {
+            let x = p % w, y = p / w
+            if x > 0 { seed(p - 1) }
+            if x < w - 1 { seed(p + 1) }
+            if y > 0 { seed(p - w) }
+            if y < h - 1 { seed(p + w) }
+        }
+
+        var removed = 0
+        for p in 0..<(w * h) where reached[p] {
+            let i = p * 4
+            buf[i] = 0; buf[i + 1] = 0; buf[i + 2] = 0; buf[i + 3] = 0
+            removed += 1
+        }
+        // 마젠타 배경이 사실상 없으면(오검출 방지) 원본 유지 — 1.5 투명 결과 등에 안전.
+        guard removed > (w * h) / 100, let outCG = ctx.makeImage() else { return image }
+
+        // 경계 마젠타 번짐(halo) 정리 — 배경에 인접한 픽셀의 마젠타 끼를 중화.
+        let out = UIImage(cgImage: outCG, scale: image.scale, orientation: .up)
+        return defringeMagenta(out)
+    }
+
+    /// 크로마키 후 외곽선에 남는 마젠타 halo 를 중화 — 투명 픽셀에 4-인접하면서
+    /// 마젠타 끼(r,b 가 g 보다 두드러짐)가 있는 픽셀의 r/b 를 g 쪽으로 당긴다.
+    private static func defringeMagenta(_ image: UIImage) -> UIImage {
+        guard let cg = image.cgImage, cg.width > 0, cg.height > 0 else { return image }
+        let w = cg.width, h = cg.height
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: cs, bitmapInfo: info) else { return image }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let data = ctx.data else { return image }
+        let buf = data.bindMemory(to: UInt8.self, capacity: w * h * 4)
+
+        var touched = 0
+        for p in 0..<(w * h) {
+            let i = p * 4
+            guard buf[i + 3] > 0 else { continue }
+            let x = p % w, y = p / w
+            let nearBG = (x > 0 && buf[(p - 1) * 4 + 3] == 0) || (x < w - 1 && buf[(p + 1) * 4 + 3] == 0)
+                || (y > 0 && buf[(p - w) * 4 + 3] == 0) || (y < h - 1 && buf[(p + w) * 4 + 3] == 0)
+            guard nearBG else { continue }
+            let r = Int(buf[i]), g = Int(buf[i + 1]), b = Int(buf[i + 2])
+            if r - g >= 40 && b - g >= 40 {   // 마젠타 끼 잔여
+                let m = UInt8(min(255, g + 30))
+                buf[i] = min(buf[i], m); buf[i + 2] = min(buf[i + 2], m)
+                touched += 1
+            }
+        }
+        guard touched > 0, let outCG = ctx.makeImage() else { return image }
+        return UIImage(cgImage: outCG, scale: image.scale, orientation: .up)
+    }
+
     // MARK: - 색 맞추기 (프레임2 → 프레임0)
 
     /// 프레임2의 색을 프레임0(reference)에 맞춰 2프레임 스왑 시 미묘한 색 드리프트 제거.

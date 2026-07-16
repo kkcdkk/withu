@@ -90,6 +90,28 @@ function systemPromptFor(artStyle) {
   return COMMON_PROMPT.replace("{styleSection}", styleSection);
 }
 
+// gpt-image-2 는 background=transparent 미지원 — "transparent" 지시를 받으면 가짜 체커보드를
+// 그려버린다. v2 요청은 프롬프트의 transparent 표현을 치환하고, 크로마키용 마젠타 단색 배경을
+// 지시한다 (클라이언트가 수신 후 #FF00FF 를 제거해 투명 PNG 로 만든다).
+function resolveModel(input) {
+  return input.model === "gpt-image-2" ? "gpt-image-2" : OPENAI_IMAGE_MODEL;
+}
+
+const MAGENTA_BACKGROUND_DIRECTIVE = `
+
+[Background — CRITICAL]
+- Fill the ENTIRE background with one solid flat uniform color: pure magenta, exactly #FF00FF (RGB 255, 0, 255)
+- Every single background pixel must be that exact color — no gradients, no shadows, no patterns, no checkerboard, no white
+- Never use magenta or pink-purple tones anywhere on the character itself
+`;
+
+function adaptPromptForModel(prompt, input) {
+  if (resolveModel(input) !== "gpt-image-2" || input.kind === "background") {
+    return prompt;
+  }
+  return prompt.replace(/transparent/gi, "plain") + MAGENTA_BACKGROUND_DIRECTIVE;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -348,11 +370,15 @@ async function generateImage(request, env) {
     return jsonError("OpenAI response did not include image data.", 502);
   }
 
-  // 계정 무료 1회 — 로그인 사용자의 첫 단건 생성이면 서버가 원자적으로 소진.
+  // 계정 무료 1회 — 로그인 사용자의 '처음 만드는 화면' 단건 생성에서만 소진.
   // (기기 재설치와 무관하게 계정당 정확히 1회. 클라는 free_consumed=true 면 캔디 미차감.)
+  // 배치(헤더 X-Withu-Kind=batch)·날씨 배경(kind=background)·갤러리 다듬기(kind=refine)는
+  // 무료를 먹지 않는다 — 예전엔 body kind 만 봐서 배치/배경 생성이 free_single 을 소진했음.
   let freeConsumed = false;
   let entitlement = null;
-  if (sub && env.DB && input.kind !== "batch") {
+  const isSingleCreation = (input.kind == null || input.kind === "character")
+    && request.headers.get("X-Withu-Kind") !== "batch";
+  if (sub && env.DB && isSingleCreation) {
     try {
       const r = await env.DB.prepare(
         "UPDATE entitlements SET free_single_remaining = free_single_remaining - 1, updated_at = ? WHERE sub = ? AND free_single_remaining > 0"
@@ -380,7 +406,7 @@ function buildFullPrompt(input) {
   if (input.kind === "background") {
     return input.prompt;
   }
-  return systemPromptFor(input.art_style) + input.prompt;
+  return adaptPromptForModel(systemPromptFor(input.art_style) + input.prompt, input);
 }
 
 function generateImageFromPrompt(input, env) {
@@ -392,12 +418,13 @@ function generateImageFromPrompt(input, env) {
       ...gatewayHeaders(env)
     },
     body: JSON.stringify({
-      model: OPENAI_IMAGE_MODEL,
+      // 클라이언트가 명시한 경우에만 gpt-image-2 (기본 1.5 — 구 빌드 호환)
+      model: resolveModel(input),
       prompt: buildFullPrompt(input),
       quality: normalizeQuality(input.quality),
       size: normalizeSize(input.width, input.height),
-      // 캐릭터는 투명 배경. 날씨 배경(kind=background)은 풍경이라 불투명 유지.
-      ...(input.kind === "background" ? {} : { background: "transparent" }),
+      // 캐릭터는 투명 배경. 날씨 배경(kind=background)은 풍경. gpt-image-2 는 투명 미지원.
+      ...(input.kind === "background" || resolveModel(input) === "gpt-image-2" ? {} : { background: "transparent" }),
       output_format: "png",
       n: 1
     })
@@ -406,11 +433,13 @@ function generateImageFromPrompt(input, env) {
 
 function editImage(input, env) {
   const form = new FormData();
-  form.append("model", OPENAI_IMAGE_MODEL);
+  form.append("model", resolveModel(input));
   form.append("prompt", buildFullPrompt(input));
   form.append("quality", normalizeQuality(input.quality));
   form.append("size", normalizeSize(input.width, input.height));
-  form.append("background", "transparent");
+  if (resolveModel(input) !== "gpt-image-2") {
+    form.append("background", "transparent");
+  }
   form.append("output_format", "png");
   form.append("n", "1");
   form.append("image", base64ToBlob(input.reference_image_base64), "reference.png");

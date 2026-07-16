@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 import BackgroundTasks
+import UserNotifications
 
 @main
 struct withuApp: App {
@@ -75,6 +76,8 @@ struct withuApp: App {
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // 알림 탭 라우팅 — launch 완료 전에 등록해야 종료 상태에서 탭한 알림도 전달받음.
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         Task { @MainActor in
             ConnectivityManager.shared.activate()
             HealthKitManager.shared.startObservingChanges()

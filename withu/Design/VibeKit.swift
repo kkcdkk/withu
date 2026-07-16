@@ -29,6 +29,101 @@ func backgroundGradient(for state: CharacterState) -> LinearGradient {
     )
 }
 
+// MARK: - CTA 버튼 스타일 (핑크 공용)
+
+/// CTA 공용 스타일 — 진한 그린(아이폰 메시지 초록 톤) 배경 + 흰 글자.
+/// 누르는 동안 어두워지고 살짝 축소돼 '눌림'이 확실히 보인다.
+/// (파스텔 핑크 + .borderedProminent 는 눌림 변화가 안 보인다는 피드백 대응.)
+struct WithuCTAButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CTABody(configuration: configuration)
+    }
+
+    /// isEnabled 는 Environment 라 내부 View 로 감싸야 읽을 수 있음 (비활성 흐림 처리).
+    private struct CTABody: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.withuCTAGreen)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.black.opacity(configuration.isPressed ? 0.22 : 0))
+                        )
+                )
+                .opacity(isEnabled ? 1 : 0.45)
+                .scaleEffect(configuration.isPressed ? 0.97 : 1)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
+    }
+}
+
+// MARK: - 새로고침 버튼 (공용 스피너)
+
+/// 아이콘 새로고침 버튼 — 실행 중엔 미니 스피너로 바뀜.
+/// 즉시 끝나는 동작도 최소 0.5초 스피너를 보여줘 '눌렸다'는 피드백을 준다.
+struct RefreshIconButton: View {
+    var action: () async -> Void
+    @State private var isRunning = false
+
+    var body: some View {
+        if isRunning {
+            ProgressView().controlSize(.mini)
+        } else {
+            Button {
+                Task {
+                    isRunning = true
+                    let started = Date()
+                    await action()
+                    let elapsed = Date().timeIntervalSince(started)
+                    if elapsed < 0.5 { try? await Task.sleep(for: .seconds(0.5 - elapsed)) }
+                    isRunning = false
+                }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Form 행 새로고침 버튼 — 실행 중엔 우측에 미니 스피너 표시 + 재탭 방지.
+struct RefreshRowButton: View {
+    let title: LocalizedStringKey
+    var systemImage: String = "arrow.clockwise.circle.fill"
+    var action: () async -> Void
+    @State private var isRunning = false
+
+    var body: some View {
+        Button {
+            Task {
+                isRunning = true
+                let started = Date()
+                await action()
+                let elapsed = Date().timeIntervalSince(started)
+                if elapsed < 0.5 { try? await Task.sleep(for: .seconds(0.5 - elapsed)) }
+                isRunning = false
+            }
+        } label: {
+            HStack {
+                Label(title, systemImage: systemImage)
+                Spacer()
+                if isRunning { ProgressView().controlSize(.mini) }
+            }
+        }
+        .disabled(isRunning)
+    }
+}
+
 // MARK: - Frosted 카드
 
 /// 모든 카드 표면의 단일 recipe. 솔리드 색·border·그림자 금지.

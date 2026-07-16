@@ -379,6 +379,13 @@ final class FocusModeManager {
         // 2) SetFocusFilterIntent 가 저장한 App Group 플래그 (신뢰성 ↑, 사용자가 한 번 연결 필요)
         let defaults = UserDefaults(suiteName: SharedAppState.groupID)
         isFocusFilterSleeping = defaults?.bool(forKey: Self.focusFilterSleepingKey) ?? false
+        // 예약(자동) 전환 시 iOS 가 잠긴 폰에서 필터 인텐트를 생략/지연해 플래그가 낡는 케이스 보정 —
+        // Focus 상태 공유가 켜져 있고 iOS 가 '지금 집중 모드 아님' 이라고 확언하면 필터 플래그 해제.
+        // (아침에 수면 모드가 자동으로 꺼졌는데 캐릭터가 계속 자던 버그)
+        if isAuthorized, rawFocusedValue == false, isFocusFilterSleeping {
+            isFocusFilterSleeping = false
+            defaults?.set(false, forKey: Self.focusFilterSleepingKey)
+        }
         focusFilterLastPerformAt = defaults?.object(forKey: Self.focusFilterLastPerformKey) as? Date
         // perform 로그 디코드 (newest first)
         let logString = defaults?.string(forKey: Self.focusFilterPerformLogKey) ?? ""
@@ -407,6 +414,35 @@ final class FocusModeManager {
             combined = parts.joined(separator: ",")
         }
         defaults?.set(combined, forKey: focusFilterPerformLogKey)
+    }
+
+    /// 사용자가 수면 Focus 를 실제로 쓰는 중인지 — 필터가 최근 48시간 안에 토글된 적 있으면 true.
+    /// (기준 칩 라벨 표시용.)
+    var recentlyUsedSleepFocus: Bool {
+        guard let last = focusFilterLastPerformAt else { return false }
+        return Date().timeIntervalSince(last) < 48 * 60 * 60
+    }
+
+    /// 수면 Focus 가 마지막으로 '꺼진' 시각 (perform 로그의 최신 false 이벤트).
+    /// resolver 가 "이번 밤(수면 시간대)에 껐으면 안 재움" 판정에 사용.
+    var lastFocusOffAt: Date? {
+        focusFilterPerformLog.first(where: { !$0.sleeping })?.date
+    }
+
+    /// 낡은 필터 플래그 보정판 수면 신호.
+    /// 예약(자동) 해제는 잠긴 폰에서 perform(false) 가 유실될 수 있다 — 플래그가 켜진 시각
+    /// 이후 첫 '일어나는 시간(sleepEnd)' 경계를 지났으면 낡은 신호로 보고 무시한다.
+    /// (수동 낮잠처럼 오후에 켠 경우엔 다음날 아침까지 유효 — 정상 동작 유지.)
+    func filterSleepingCorrected(sleepEndHour: Int, sleepEndMinute: Int, now: Date = Date()) -> Bool {
+        guard isFocusFilterSleeping else { return false }
+        guard let setAt = focusFilterLastPerformAt else { return true }
+        let cal = Calendar.current
+        var wake = cal.date(bySettingHour: sleepEndHour, minute: sleepEndMinute,
+                            second: 0, of: setAt) ?? setAt
+        if wake <= setAt {
+            wake = cal.date(byAdding: .day, value: 1, to: wake) ?? wake
+        }
+        return now < wake
     }
 
     /// 현재 권한 상태 한국어 라벨 (디버그 UI 용).
@@ -464,7 +500,9 @@ enum SyncCoordinator {
         let manualOnly = profile.manualSleepOnly ?? false
         // 수면 판정은 수면 전용 신호(수면 Focus 필터)만 — INFocusStatusCenter 의
         // isFocused 는 방해금지·업무 등 아무 집중 모드에나 true 라 오탐(낮에 잠듦).
-        let isFocusActive = manualOnly ? false : focus.isFocusFilterSleeping
+        // filterSleepingCorrected — 예약(자동) 해제 유실 시 기상 시간 경계로 자동 만료.
+        let isFocusActive = manualOnly ? false : focus.filterSleepingCorrected(
+            sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute)
         let inSleepSchedule = manualOnly ? false : health.isInBedSchedule
         let hasSleepSchedule = manualOnly ? false : health.hasSleepSchedule
 
@@ -476,6 +514,8 @@ enum SyncCoordinator {
             inSleepSchedule: inSleepSchedule,
             hasSleepSchedule: hasSleepSchedule,
             isFocusActive: isFocusActive,
+            isGenericFocusActive: manualOnly ? false : focus.isFocused,
+            focusWokeAt: manualOnly ? nil : focus.lastFocusOffAt,
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: phoneWorkoutState(),

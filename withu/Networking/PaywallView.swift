@@ -111,8 +111,7 @@ struct PaywallView: View {
                         Text("적용").font(.callout.weight(.semibold))
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
+                .buttonStyle(WithuCTAButtonStyle())
                 .disabled(redeemInput.trimmingCharacters(in: .whitespaces).isEmpty || isRedeeming)
             }
             .frostedCard()
@@ -189,8 +188,7 @@ struct PaywallView: View {
                         Text("적용").font(.callout.weight(.semibold))
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
+                .buttonStyle(WithuCTAButtonStyle())
                 .disabled(referralInput.trimmingCharacters(in: .whitespaces).isEmpty || isApplyingReferral)
             }
             .frostedCard()

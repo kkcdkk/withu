@@ -190,12 +190,11 @@ struct CharacterGalleryView: View {
             Button {
                 pendingApplyAll = group.items
             } label: {
-                Label("이 캐릭터로 모두 적용", systemImage: "checkmark.circle.fill")
+                Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
                     .font(.callout.weight(.semibold))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.withuPink)
+            .buttonStyle(WithuCTAButtonStyle())
         }
         .frostedCard()
     }
@@ -447,9 +446,17 @@ struct GalleryGrid<Header: View>: View {
     @State private var selectedIDs: Set<String> = []
     @State private var showBulkDeleteConfirm: Bool = false
 
-    // 배경 빼기 (Vision) — 상세 sheet 에서
+    // 배경 보기 — 상세 sheet 에서 '배경 빼기 / 배경 있기' 미리보기 토글 후 저장.
+    enum BGPreview { case transparent, white }
+    @State private var bgPreview: BGPreview? = nil     // nil = 저장된 그대로
+    @State private var bgCutout: UIImage? = nil        // Vision 결과 캐시 (frame 0)
+    @State private var bgCutoutF1: UIImage? = nil      // Vision 결과 캐시 (frame 1)
     @State private var isRemovingBackground: Bool = false
-    @State private var showRemoveBGConfirm: Bool = false
+
+    // 다듬기 — 이미 만든 캐릭터를 참고로 한 번 더 생성 (캔디 차감, 무료 미적용).
+    @State private var refineText: String = ""
+    @State private var isRefining: Bool = false
+    @State private var showRefineConfirm: Bool = false
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 12)]
 
@@ -651,19 +658,19 @@ struct GalleryGrid<Header: View>: View {
                         if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(spacing: 4) {
-                                    Image(uiImage: img).resizable().scaledToFit()
+                                    Image(uiImage: detailDisplay(img, cutout: bgCutout)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     Text("1번째").font(.caption2).foregroundStyle(.secondary)
                                 }
                                 VStack(spacing: 4) {
-                                    Image(uiImage: f1).resizable().scaledToFit()
+                                    Image(uiImage: detailDisplay(f1, cutout: bgCutoutF1)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     Text("2번째").font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
                             .padding(.horizontal)
                         } else {
-                            Image(uiImage: img)
+                            Image(uiImage: detailDisplay(img, cutout: bgCutout))
                                 .resizable()
                                 .scaledToFit()
                                 .frame(maxHeight: 320)
@@ -748,11 +755,10 @@ struct GalleryGrid<Header: View>: View {
                             selectedItem = nil
                         } label: {
                             Label("'\(backgroundState.koreanShortLabel)' 자리에 적용하기",
-                                  systemImage: "checkmark.circle.fill")
+                                  systemImage: "square.and.arrow.down")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.withuPink)
+                        .buttonStyle(WithuCTAButtonStyle())
                         .padding(.horizontal)
 
                         HStack(spacing: 12) {
@@ -776,13 +782,73 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
-                        // 배경 빼기·삭제는 자주 안 쓰는 동작 — 툴바 ⋯ 메뉴로 이동 (버튼 위계 정리).
-                        if isRemovingBackground {
-                            HStack { ProgressView(); Text("배경 빼는 중…") }
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal)
+                        // 배경 보기 — 빼기/있기 미리보기 토글. 바꾸면 '이대로 저장' 이 나타남.
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 12) {
+                                Button {
+                                    Task { await showTransparentPreview(item, base: img) }
+                                } label: {
+                                    Label("배경 빼기", systemImage: "wand.and.sparkles")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(bgPreview == .transparent ? .withuPinkText : .secondary)
+                                .disabled(isRemovingBackground)
+
+                                Button {
+                                    withAnimation { bgPreview = .white }
+                                } label: {
+                                    Label("배경 있기", systemImage: "square.fill")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(bgPreview == .white ? .withuPinkText : .secondary)
+                                .disabled(isRemovingBackground)
+                            }
+                            if isRemovingBackground {
+                                HStack { ProgressView(); Text("배경 빼는 중…") }
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if bgPreview != nil {
+                                Button {
+                                    Task { await saveBackgroundChoice(item) }
+                                } label: {
+                                    Label("이대로 저장", systemImage: "square.and.arrow.down")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(WithuCTAButtonStyle())
+                                .disabled(isRemovingBackground)
+                            }
                         }
+                        .padding(.horizontal)
+
+                        // 다듬기 — 이 캐릭터를 참고로 한 번 더 생성. 캔디 차감(무료 미적용).
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("다듬기", systemImage: "sparkles")
+                                .font(.callout.weight(.medium))
+                            TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.callout)
+                            Button {
+                                showRefineConfirm = true
+                            } label: {
+                                if isRefining {
+                                    HStack { ProgressView(); Text("다듬는 중…") }
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    Label("이대로 다듬기", systemImage: "wand.and.stars")
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.withuPinkText)
+                            .disabled(isRefining || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            Text("다듬을 때마다 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 결과는 갤러리에 새로 저장돼요.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal)
                     } else {
                         Image(systemName: "photo")
                             .font(.largeTitle).foregroundStyle(.secondary)
@@ -795,32 +861,28 @@ struct GalleryGrid<Header: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Button {
-                            showRemoveBGConfirm = true
-                        } label: {
-                            Label("배경 빼기", systemImage: "wand.and.sparkles")
-                        }
-                        .disabled(isRemovingBackground)
-                        Divider()
-                        Button(role: .destructive) {
-                            showDeleteConfirm = true
-                        } label: {
-                            Label("삭제", systemImage: "trash")
-                        }
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "trash")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기") { selectedItem = nil }
                 }
             }
-            .alert("배경을 뺄까요?", isPresented: $showRemoveBGConfirm) {
-                Button("배경 빼기") { Task { await removeBackground(item) } }
+            .alert("캔디를 사용해요", isPresented: $showRefineConfirm) {
+                Button("다듬기") { Task { await refineItem(item) } }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("이 그림에서 배경을 지워 투명하게 만들어요. 원래대로 되돌릴 수 없어요.")
+                Text("이번 다듬기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
+            }
+            .onAppear {
+                // 시트가 열릴 때마다(항목별) 미리보기·다듬기 입력 초기화
+                bgPreview = nil
+                bgCutout = nil
+                bgCutoutF1 = nil
+                refineText = ""
             }
         }
     }
@@ -846,51 +908,132 @@ struct GalleryGrid<Header: View>: View {
         }
     }
 
-    /// 갤러리 항목의 배경을 Vision 으로 제거해 파일을 교체.
-    /// 연속(2장) 항목은 두 장 모두 성공해야 교체 — 한쪽만 투명해져 애니메이션이
-    /// 어긋나는 것을 방지. 지금 어딘가에 적용 중이면 그 자리(활성 슬롯)와 워치에도 반영.
-    private func removeBackground(_ item: GalleryItem) async {
-        guard let img = CharacterImageStore.loadGalleryImage(id: item.id) else { return }
-        isRemovingBackground = true
-        defer { isRemovingBackground = false }
+    /// 상세 시트에 보여줄 이미지 — 미리보기 선택 반영.
+    /// 배경 빼기 = Vision 결과(원본이 이미 투명이면 그대로), 배경 있기 = 흰색 합성.
+    private func detailDisplay(_ base: UIImage, cutout: UIImage?) -> UIImage {
+        switch bgPreview {
+        case nil:           return base
+        case .transparent:  return cutout ?? base
+        case .white:        return ImageProcessing.flattenedOnWhite(base)
+        }
+    }
 
-        // bestEffortTransparent 는 실패/과다제거 시 원본 인스턴스를 그대로 반환
-        let cut = await ImageProcessing.bestEffortTransparent(img)
-        let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id)
-        var cutF1: UIImage?
-        if let f1 {
-            let processed = await ImageProcessing.bestEffortTransparent(f1)
-            guard processed !== f1 else {
+    /// 이미지에 투명 픽셀이 실제로 있는지 — 32px 로 줄여 알파 스캔 (저비용).
+    private func hasTransparency(_ image: UIImage) -> Bool {
+        guard let small = image.preparingThumbnail(of: CGSize(width: 32, height: 32)),
+              let cg = small.cgImage else { return false }
+        let w = cg.width, h = cg.height
+        var buf = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &buf, width: w, height: h,
+                                  bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        for p in 0..<(w * h) where buf[p * 4 + 3] < 250 { return true }
+        return false
+    }
+
+    /// '배경 빼기' 미리보기 — 원본이 이미 투명이면 즉시, 아니면 Vision 으로 한 번 만들어 캐시.
+    private func showTransparentPreview(_ item: GalleryItem, base: UIImage) async {
+        if bgCutout == nil, !hasTransparency(base) {
+            isRemovingBackground = true
+            defer { isRemovingBackground = false }
+            let cut = await ImageProcessing.bestEffortTransparent(base)
+            guard cut !== base else {
                 withAnimation { toastText = String(localized: "배경을 빼지 못했어요") }
                 hideToastAfter(1.6)
                 return
             }
-            cutF1 = processed
+            bgCutout = cut
+            if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
+                let cutF1 = await ImageProcessing.bestEffortTransparent(f1)
+                bgCutoutF1 = cutF1 !== f1 ? cutF1 : nil
+            }
         }
-        guard cut !== img else {
-            withAnimation { toastText = String(localized: "배경을 빼지 못했어요") }
-            hideToastAfter(1.6)
-            return
-        }
-        CharacterImageStore.replaceGalleryImage(item.id, with: cut)
-        if let cutF1 {
-            CharacterImageStore.replaceGalleryImage(item.id, with: cutF1, frame: 1)
+        withAnimation { bgPreview = .transparent }
+    }
+
+    /// 미리보기 상태(빼기/있기)를 갤러리 파일에 저장.
+    /// 연속(2장) 항목은 두 장 모두 같은 배경으로 교체 — 애니메이션 어긋남 방지.
+    /// 지금 어딘가에 적용 중이면 그 자리(활성 슬롯)와 워치에도 반영.
+    private func saveBackgroundChoice(_ item: GalleryItem) async {
+        guard let img = CharacterImageStore.loadGalleryImage(id: item.id) else { return }
+        let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id)
+        let newImg = detailDisplay(img, cutout: bgCutout)
+        let newF1 = f1.map { detailDisplay($0, cutout: bgCutoutF1) }
+
+        CharacterImageStore.replaceGalleryImage(item.id, with: newImg)
+        if let newF1 {
+            CharacterImageStore.replaceGalleryImage(item.id, with: newF1, frame: 1)
         }
         // 지금 적용 중인 자리에도 새 그림 반영
         let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
         for state in activeStates {
             CharacterImageStore.applyGalleryItem(item.id, to: state)
-            ConnectivityManager.shared.sendCharacterImage(cut, for: state, frame: 0)
-            if let cutF1 {
-                ConnectivityManager.shared.sendCharacterImage(cutF1, for: state, frame: 1)
+            ConnectivityManager.shared.sendCharacterImage(newImg, for: state, frame: 0)
+            if let newF1 {
+                ConnectivityManager.shared.sendCharacterImage(newF1, for: state, frame: 1)
             }
         }
         if !activeStates.isEmpty {
             WidgetCenter.shared.reloadAllTimelines()
         }
+        bgPreview = nil
+        bgCutout = nil
+        bgCutoutF1 = nil
+        frameSwapTick += 1   // 상세 시트 이미지 재로드
         onChange()
-        withAnimation { toastText = String(localized: "배경을 뺐어요") }
+        withAnimation { toastText = String(localized: "저장했어요") }
         hideToastAfter(1.6)
+    }
+
+    /// 이미 만든 캐릭터 다듬기 — 갤러리 이미지를 참고로 한 번 더 생성해 갤러리에 새로 저장.
+    /// kind=refine → 서버가 '계정 무료 1회' 를 소진하지 않음 (무료는 처음 만드는 화면 전용).
+    private func refineItem(_ item: GalleryItem) async {
+        let cost = GenerationQuota.cost(forQuality: "low")
+        guard GenerationQuota.canGenerate(cost) else {
+            withAnimation { toastText = String(localized: "캔디가 부족해요. 설정에서 충전할 수 있어요.") }
+            hideToastAfter(2.0)
+            return
+        }
+        guard let base = CharacterImageStore.loadGalleryImage(id: item.id),
+              let refB64 = base.pngData()?.base64EncodedString() else { return }
+        let trimmed = refineText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isRefining = true
+        defer { isRefining = false }
+
+        let prompt = "Use the reference image as the SAME character. Keep the EXACT same character — identity, face and expression style, body proportions, art style, colors and shading, line thickness, and every design detail. Change ONLY: \(trimmed). Transparent background — only the character, no shadows."
+        let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
+                                       steps: 30, width: 1024, height: 1024,
+                                       quality: "low", artStyle: nil, style: "auto",
+                                       kind: "refine", model: "gpt-image-2")
+        do {
+            let resp = try await APIClient.shared.generateImage(req)
+            guard let data = Data(base64Encoded: resp.imageBase64),
+                  let raw = UIImage(data: data) else {
+                withAnimation { toastText = String(localized: "이미지를 받지 못했어요") }
+                hideToastAfter(1.6)
+                return
+            }
+            // gpt-image-2 마젠타 배경 → 크로마키 투명화
+            let img = ImageProcessing.chromaKeyRemoved(raw)
+            let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
+            if let state = CharacterState(rawValue: item.sourceState) {
+                CharacterImageStore.save(small, for: state, frame: 0, applyToActiveSlot: false,
+                                         batchId: item.batchId, prompt: prompt)
+            }
+            if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+            GenerationQuota.record(cost)
+            refineText = ""
+            selectedItem = nil   // 시트 닫기 — 그리드에 새 항목이 보이게
+            onChange()
+            withAnimation { toastText = String(localized: "다듬은 캐릭터를 갤러리에 저장했어요") }
+            hideToastAfter(2.0)
+        } catch {
+            withAnimation { toastText = error.koreanizedDescription }
+            hideToastAfter(2.5)
+        }
     }
 
     private func saveSelected() async {

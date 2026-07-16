@@ -135,6 +135,8 @@ struct CharacterGenView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
+        // 서버 무료/잔액 스냅샷 최신화 — '첫 만들기 무료' 배지가 옛 캐시로 잘못 뜨는 것 방지.
+        .task { await AuthManager.shared.refreshEntitlement() }
         .sheet(isPresented: $showPaywall) {
             PaywallView(onClose: {
                 showPaywall = false
@@ -377,9 +379,9 @@ struct CharacterGenView: View {
                         .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
-                .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .buttonStyle(WithuCTAButtonStyle())
+                // 참고 사진이 있으면 설명 없이도 생성 가능 (composedPrompt 가 참고사진 템플릿으로 대체)
+                .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && referenceImage == nil)
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
@@ -572,11 +574,10 @@ struct CharacterGenView: View {
                     Button {
                         applyCurrentSelection()
                     } label: {
-                        Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
+                        Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
                             .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.withuPink)
+                    .buttonStyle(WithuCTAButtonStyle())
                     .disabled(isProcessingTransparent)
                     Button("사진 앱에 저장") {
                         let img = (f1 != nil ? currentDisplay(frame: singleDetailFrame) : f0) ?? f0
@@ -626,7 +627,7 @@ struct CharacterGenView: View {
                     if isGenerating {
                         HStack { ProgressView(); Text("다듬는 중…") }
                     } else {
-                        Label("이대로 바꾸기", systemImage: "sparkles")
+                        Label("이대로 다듬기", systemImage: "sparkles")
                     }
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -749,11 +750,10 @@ struct CharacterGenView: View {
                 Button {
                     apply(display, to: targetState)
                 } label: {
-                    Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "checkmark.circle.fill")
+                    Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
                         .font(.callout.weight(.semibold))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
+                .buttonStyle(WithuCTAButtonStyle())
                 .disabled(removeBackground && isProcessing)
                 Button("사진 앱에 저장") {
                     Task { await saveToPhotos(display) }
@@ -940,7 +940,7 @@ struct CharacterGenView: View {
 
     /// frame1(2번째 장면) 프롬프트 — "1번째와 거의 동일, 표정만 살짝" 강제.
     private func animationFrame2Instruction(_ state: CharacterState) -> String {
-        " Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, framing, and the flat solid white background. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(state.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference."
+        " Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, framing, and the flat solid background. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(state.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference."
     }
 
     private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil) async {
@@ -956,15 +956,18 @@ struct CharacterGenView: View {
                 height: 1024,
                 quality: quality,
                 artStyle: artStyle,
-                style: "auto"
+                style: "auto",
+                model: "gpt-image-2"
             )
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),
-                  let img = UIImage(data: data) else {
+                  let rawImg = UIImage(data: data) else {
                 lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")
                 return
             }
-            // 모델이 투명 배경으로 줌 — 평탄화 안 함(투명 유지). frame1 은 1번째 기준 크기·위치 정규화.
+            // gpt-image-2 는 마젠타 단색 배경으로 옴 → 크로마키로 투명화 (1.5 투명 결과엔 no-op).
+            let img = ImageProcessing.chromaKeyRemoved(rawImg)
+            // frame1 은 1번째 기준 크기·위치 정규화.
             let processed: UIImage
             if frame == 1, let ref = matchReference {
                 processed = await ImageProcessing.matchedToReference(img, reference: ref)
@@ -1187,11 +1190,10 @@ struct WeatherBackgroundGenView: View {
                     Button {
                         apply(img, for: condition)
                     } label: {
-                        Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "checkmark.circle.fill")
+                        Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "square.and.arrow.down")
                             .font(.callout.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.withuPink)
+                    .buttonStyle(WithuCTAButtonStyle())
                 } header: {
                     Text("결과")
                 }
@@ -1259,7 +1261,8 @@ struct WeatherBackgroundGenView: View {
                 quality: quality,
                 artStyle: artStyle,
                 style: "auto",
-                kind: "background"   // 서버가 SYSTEM_PROMPT 건너뜀
+                kind: "background",   // 서버가 SYSTEM_PROMPT 건너뜀
+                model: "gpt-image-2"
             )
             let resp = try await APIClient.shared.generateImage(req)
             guard let data = Data(base64Encoded: resp.imageBase64),

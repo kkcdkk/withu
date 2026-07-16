@@ -25,6 +25,8 @@ enum CharacterStateResolver {
         inSleepSchedule: Bool = false,
         hasSleepSchedule: Bool = false,
         isFocusActive: Bool = false,
+        isGenericFocusActive: Bool = false,
+        focusWokeAt: Date? = nil,
         isLikelyInWorkout: Bool = false,
         recentStepsPerMinute: Double = 0,
         phoneWorkoutState: CharacterState? = nil,
@@ -69,17 +71,26 @@ enum CharacterStateResolver {
         let sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
 
         // 2) 수면 — 우선순위:
-        //    (1순위) iOS Sleep Focus (Filter OR INFocusStatusCenter) OR HealthKit inBed
-        //            → 시스템의 실제 "지금 자" 신호.
-        //    (2순위) 프로필 sleep window(설정 시간) — 단, 시스템 수면 일정이 '없을 때만'.
-        //  즉 시스템 수면 일정/모드가 설정돼 있으면 그것만 따르고, 설정 시간엔 안 잠든다.
-        //  manualSleepOnly 면 caller 가 isFocusActive/inSleepSchedule/hasSleepSchedule 모두 false 로 넘김.
+        //    (1순위) iOS Sleep Focus (필터 인텐트) OR HealthKit inBed → "지금 자" 확정 신호.
+        //    (2순위) 아무 집중 모드(INFocusStatusCenter) + 수면 시간대 —
+        //            예약(자동) 수면 모드가 잠긴 폰에서 필터 인텐트를 안 깨우는 케이스 보조.
+        //    (3순위) 수면 시간대 fallback — 신호가 유실돼도 밤에는 잔다. 단,
+        //            '이번 밤(현재 창)에 수면 모드를 껐다'(focusWokeAt) 면 기상으로 존중.
+        //  manualSleepOnly 면 caller 가 Focus/inBed 신호를 모두 false/nil 로 넘김 → 시간만 적용.
         if isFocusActive || inSleepSchedule {
             return .sleeping
         }
-        if !hasSleepSchedule,
+        if isGenericFocusActive,
            isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
+        }
+        if isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
+            let windowStart = windowStartDate(now: now, startMin: sleepStartMin, calendar: calendar)
+            let wokeThisNight = focusWokeAt.map { $0 >= windowStart } ?? false
+            if !wokeThisNight {
+                return .sleeping
+            }
+            // 이번 밤에 수면 모드를 껐음 → 설정 시간이어도 깨어 있음 (아래 로직으로 계속)
         }
 
         // 3) 기상 직후 — 기상 시점부터 1시간
@@ -100,6 +111,13 @@ enum CharacterStateResolver {
         // 5) 비운동 / 비수면 / 비기상 / 비식사 시간은 모두 idle.
         //    날씨는 운동 중일 때만 매핑에 사용 (mapWorkout 안에서).
         return .idle
+    }
+
+    /// 현재 창(occurrence)의 수면 시작 시각 — 가장 최근에 지난 sleepStart 경계.
+    private static func windowStartDate(now: Date, startMin: Int, calendar: Calendar) -> Date {
+        let start = calendar.date(bySettingHour: startMin / 60, minute: startMin % 60,
+                                  second: 0, of: now) ?? now
+        return start <= now ? start : (calendar.date(byAdding: .day, value: -1, to: start) ?? start)
     }
 
     /// 현재 분(0~1439) 이 [start, end) 안에 있는지. start > end 면 자정 넘김.

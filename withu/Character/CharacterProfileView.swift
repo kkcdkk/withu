@@ -20,6 +20,8 @@ struct CharacterProfileView: View {
     /// '최근 수면 시간에 맞추기' 진행/결과 표시
     @State private var isAligningSleep: Bool = false
     @State private var sleepAlignMessage: String?
+    /// 기준 칩에서 '수면 모드 기준' 선택 시 수면 일정 안내 팝업.
+    @State private var showSleepBasisTip: Bool = false
 
     /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
     private var heroState: CharacterState {
@@ -36,14 +38,7 @@ struct CharacterProfileView: View {
                         .listRowBackground(Color.clear)
                 }
                 Section {
-                    HStack {
-                        Text("지금은")
-                        Spacer()
-                        Text(currentSleepSourceLabel)
-                            .foregroundStyle(.secondary)
-                            .font(.callout)
-                            .multilineTextAlignment(.trailing)
-                    }
+                    sleepStatusRow
                     Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
                     DatePicker("잠드는 시간", selection: sleepStartBinding,
                                displayedComponents: .hourAndMinute)
@@ -202,17 +197,89 @@ struct CharacterProfileView: View {
 
     // MARK: - Sleep source indicator + toggle
 
-    /// 지금 자는 상태로 판정되는 이유를 평서형으로.
-    /// 우선순위: (1) 집중 모드 OR 건강 앱 수면 일정 → (2) 설정한 시간
-    private var currentSleepSourceLabel: String {
-        let inProfileWindow = isNowInProfileSleepWindow()
-        if profile.manualSleepOnly ?? false {
-            return inProfileWindow ? String(localized: "자는 시간이에요") : String(localized: "깨어 있는 시간이에요")
+    /// 한눈에 읽히는 수면 상태 행 — 자는 중/깨어 있음 + 기준 칩(탭해서 기준 선택).
+    /// 판정은 CharacterStateResolver 의 수면 규칙과 동일해야 한다.
+    private var sleepStatusRow: some View {
+        HStack(spacing: 10) {
+            Text(isSleepingNow ? "자는 중" : "깨어 있음")
+                .font(.callout.weight(.semibold))
+            Spacer()
+            Menu {
+                Picker("수면 기준", selection: sleepBasisBinding) {
+                    Label("수면 모드 기준", systemImage: "moon.circle.fill").tag(false)
+                    Label("설정 시간 기준", systemImage: "clock.fill").tag(true)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: sleepBasisIcon)
+                        .font(.caption2)
+                    Text(sleepBasisLabel)
+                        .font(.caption.weight(.medium))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.secondary.opacity(0.12), in: Capsule())
+                .foregroundStyle(.secondary)
+            }
         }
-        if focus.isFocusFilterSleeping { return String(localized: "수면 집중 모드라서 자고 있어요") }
-        if health.isInBedSchedule { return String(localized: "건강 앱 수면 일정이라서 자고 있어요") }
-        if inProfileWindow { return String(localized: "설정한 시간이라서 자고 있어요") }
-        return String(localized: "깨어 있어요")
+        .alert("수면 모드 기준으로 자요", isPresented: $showSleepBasisTip) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("수면 모드가 켜지면 자고, 꺼지면 일어나요. 아이폰 건강 앱에서 수면 일정을 만들어두면 수면 모드가 매일 자동으로 켜지고 꺼져서, 캐릭터도 규칙적으로 자고 일어나요.")
+        }
+    }
+
+    /// 기준 칩 선택 — 설정 시간 기준(true) = manualSleepOnly. 수면 모드 선택 시 안내 팝업.
+    private var sleepBasisBinding: Binding<Bool> {
+        Binding(
+            get: { profile.manualSleepOnly ?? false },
+            set: { manual in
+                profile.manualSleepOnly = manual
+                if !manual { showSleepBasisTip = true }
+            }
+        )
+    }
+
+    /// 지금 수면 신호 기준으로 자는 중인지 (resolver 의 수면 분기와 동일).
+    private var isSleepingNow: Bool {
+        let inWindow = isNowInProfileSleepWindow()
+        if profile.manualSleepOnly ?? false { return inWindow }
+        if focus.filterSleepingCorrected(sleepEndHour: profile.sleepEndHour,
+                                         sleepEndMinute: profile.sleepEndMinute)
+            || health.isInBedSchedule { return true }
+        // 예약(자동) 수면 모드가 필터를 안 깨워도 — 아무 집중 모드 + 수면 시간대면 수면.
+        if focus.isFocused, inWindow { return true }
+        // 시간대 fallback — 단 '이번 밤에 수면 모드를 껐으면' 기상 존중 (resolver 와 동일).
+        if inWindow {
+            if let woke = focus.lastFocusOffAt, woke >= currentSleepWindowStart() { return false }
+            return true
+        }
+        return false
+    }
+
+    /// 현재 창의 수면 시작 시각 — 가장 최근에 지난 '잠드는 시간' 경계.
+    private func currentSleepWindowStart(now: Date = Date()) -> Date {
+        let cal = Calendar.current
+        let start = cal.date(bySettingHour: profile.sleepStartHour,
+                             minute: profile.sleepStartMinute, second: 0, of: now) ?? now
+        return start <= now ? start : (cal.date(byAdding: .day, value: -1, to: start) ?? start)
+    }
+
+    /// 수면을 어떤 기준으로 판정 중인지 짧은 라벨.
+    private var sleepBasisLabel: String {
+        if profile.manualSleepOnly ?? false { return String(localized: "설정 시간 기준") }
+        if focus.isFocusFilterSleeping || focus.recentlyUsedSleepFocus { return String(localized: "수면 모드 기준") }
+        if health.isInBedSchedule || health.hasSleepSchedule { return String(localized: "건강 앱 기준") }
+        return String(localized: "설정 시간 기준")
+    }
+
+    private var sleepBasisIcon: String {
+        if profile.manualSleepOnly ?? false { return "clock.fill" }
+        if focus.isFocusFilterSleeping || focus.recentlyUsedSleepFocus { return "moon.circle.fill" }
+        if health.isInBedSchedule || health.hasSleepSchedule { return "heart.fill" }
+        return "clock.fill"
     }
 
     /// 최근 7일 실제 수면 기록(워치 asleep 포함)의 평균 취침/기상을 설정 시간에 반영.

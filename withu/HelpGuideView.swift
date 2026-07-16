@@ -81,8 +81,7 @@ struct HelpGuideView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.withuPink)
+                    .buttonStyle(WithuCTAButtonStyle())
                     .padding(.top, 4)
                 }
                 .padding(.horizontal, 20)

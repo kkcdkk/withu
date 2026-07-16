@@ -18,6 +18,9 @@ struct GenerateImageRequest: Codable {
     /// "background" 이면 raw prompt 그대로 → 풍경/배경 생성용.
     /// var + default → 기존 caller 그대로, 새 caller 만 명시.
     var kind: String? = nil
+    /// 이미지 모델 — "gpt-image-2" 명시 시 서버가 v2 사용 (마젠타 배경 → 클라 크로마키 제거).
+    /// nil 이면 서버 기본(gpt-image-1.5, 진짜 투명 배경).
+    var model: String? = nil
 }
 
 struct GenerateImageResponse: Codable {

@@ -643,8 +643,7 @@ struct BatchCharacterGenView: View {
                         .font(.callout.weight(.semibold))
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.withuPink)
+            .buttonStyle(WithuCTAButtonStyle())
             .disabled(isGenerating || selectedStates.isEmpty
                       || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                       || remainingGenerations < need)
@@ -706,8 +705,7 @@ struct BatchCharacterGenView: View {
                         .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.withuPink)
+                .buttonStyle(WithuCTAButtonStyle())
 
                 // 투명 처리 bulk 토글 — gallery 원본은 raw 유지, active slot 만 갱신.
                 HStack(spacing: 12) {
@@ -741,7 +739,7 @@ struct BatchCharacterGenView: View {
                             Text("저장하는 중…")
                         }
                     } else {
-                        Label("사진 앱에 모두 저장 (\(results.count)장)",
+                        Label("사진 앱에 모두 저장 (\(results.count + resultsFrame1.count)장)",
                               systemImage: "square.and.arrow.down")
                     }
                 }
@@ -1109,10 +1107,12 @@ struct BatchCharacterGenView: View {
         do {
             let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
                                            steps: 30, width: 1024, height: 1024,
-                                           quality: quality, artStyle: artStyle, style: "auto")
+                                           quality: quality, artStyle: artStyle, style: "auto",
+                                           model: "gpt-image-2")
             let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
             if let data = Data(base64Encoded: resp.imageBase64), let img = UIImage(data: data) {
-                let flat = img
+                // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
+                let flat = ImageProcessing.chromaKeyRemoved(img)
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 results[.idle] = small
                 idleFullRes = flat
@@ -1336,8 +1336,7 @@ struct BatchCharacterGenView: View {
                                     .frame(maxWidth: .infinity)
                             }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.withuPink)
+                        .buttonStyle(WithuCTAButtonStyle())
                         .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(.horizontal)
@@ -1423,11 +1422,14 @@ struct BatchCharacterGenView: View {
                 height: 1024,
                 quality: quality,
                 artStyle: artStyle,
-                style: "auto"
+                style: "auto",
+                model: "gpt-image-2"
             )
             let resp = try await APIClient.shared.generateImage(req)
             if let data = Data(base64Encoded: resp.imageBase64),
-               let img = UIImage(data: data) {
+               let rawImg = UIImage(data: data) {
+                // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
+                let img = ImageProcessing.chromaKeyRemoved(rawImg)
                 // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
                 let ref0: UIImage? = frame == 1
                     ? (frame0FullRes[state] ?? genManager.loadFrame0FullRes(state) ?? results[state])
@@ -1516,9 +1518,13 @@ struct BatchCharacterGenView: View {
             return
         }
 
-        // CharacterState 순서대로 정렬 — 사진 앱에서도 같은 순서로 보임
-        let items: [(CharacterState, UIImage)] = CharacterState.allCases.compactMap { s in
-            results[s].map { (s, $0) }
+        // CharacterState 순서대로 정렬 — 사진 앱에서도 같은 순서로 보임.
+        // 움직이는 캐릭터는 2번째 프레임도 바로 뒤에 이어서 저장.
+        let items: [(CharacterState, UIImage)] = CharacterState.allCases.flatMap { s -> [(CharacterState, UIImage)] in
+            var imgs: [(CharacterState, UIImage)] = []
+            if let f0 = results[s] { imgs.append((s, f0)) }
+            if let f1 = resultsFrame1[s] { imgs.append((s, f1)) }
+            return imgs
         }
 
         do {

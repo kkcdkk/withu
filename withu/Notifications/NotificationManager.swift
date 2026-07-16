@@ -16,6 +16,9 @@ final class NotificationManager {
     private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     private(set) var lastError: String?
 
+    /// 생성 완료/기준 모습 알림을 탭함 — ContentView 가 관찰해 배치 화면으로 이동 후 false 로 리셋.
+    var wantsOpenGenerationScreen: Bool = false
+
     @ObservationIgnored private let center = UNUserNotificationCenter.current()
 
     // 같은 종류의 알림이 도배되지 않게 식별자를 고정
@@ -167,5 +170,27 @@ final class NotificationManager {
 
     private func markSent(key: String) {
         UserDefaults.standard.set(true, forKey: key)
+    }
+}
+
+/// 알림 탭/표시 처리 delegate — AppDelegate 가 launch 직후 등록 (cold start 탭도 받기 위해).
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationDelegate()
+
+    /// 생성 관련 알림을 탭하면 만들어진 화면(배치)으로 이동.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse) async {
+        let id = response.notification.request.identifier
+        if id == "withu.notification.generationDone" || id == "withu.notification.generationAnchor" {
+            await MainActor.run {
+                NotificationManager.shared.wantsOpenGenerationScreen = true
+            }
+        }
+    }
+
+    /// 앱이 켜져 있는 동안에도 배너로 표시 (기본은 무표시라 완료를 놓침).
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 }

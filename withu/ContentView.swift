@@ -20,6 +20,8 @@ struct ContentView: View {
 
     @State private var overrideState: CharacterState? = nil
     @State private var showSettings: Bool = false
+    /// 생성 완료 알림 탭 → 배치 화면 push (cold start 는 .task 에서 잡음).
+    @State private var openGenScreenFromNotification: Bool = false
     @State private var profile: CharacterProfile = CharacterProfileStore.load()
     /// 캐릭터 이미지 변경 시 ++. CharacterImageView 의 .id 에 들어가 강제 재생성.
     @State private var imageRefreshKey: Int = 0
@@ -62,7 +64,10 @@ struct ContentView: View {
             hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
             // isFocused(INFocusStatusCenter)는 '어떤' 집중 모드인지 구분 못 해
             // 방해금지·업무에도 잠들던 버그 → 수면 전용 신호(수면 Focus 필터)만 사용.
-            isFocusActive: manualOnly ? false : focus.isFocusFilterSleeping,
+            isFocusActive: manualOnly ? false : focus.filterSleepingCorrected(
+                sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute),
+            isGenericFocusActive: manualOnly ? false : focus.isFocused,
+            focusWokeAt: manualOnly ? nil : focus.lastFocusOffAt,
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
@@ -114,6 +119,12 @@ struct ContentView: View {
                 activityMessage = computeActivityMessage()
                 health.startObservingChanges()
                 maybeShowGuide()
+                // 종료 상태에서 알림을 탭해 켜진 경우 — onChange 등록 전에 delegate 가
+                // 먼저 플래그를 세웠을 수 있어 진입 시 한 번 직접 확인.
+                if notifications.wantsOpenGenerationScreen {
+                    notifications.wantsOpenGenerationScreen = false
+                    openGenScreenFromNotification = true
+                }
             }
             .onChange(of: onboarded) { _, _ in maybeShowGuide() }
             // 신규 사용자는 온보딩 직후 로그인 게이트(fullScreenCover)가 떠 있어
@@ -153,6 +164,15 @@ struct ContentView: View {
             .onChange(of: focus.isFocusFilterSleeping) { _, _ in
                 // 수면 Focus 필터 토글이 반영되면 워치/위젯도 즉시 갱신.
                 sendStateToWatch(characterState)
+            }
+            // 생성 완료/기준 모습 알림 탭 → 만들어진 화면(배치)으로 바로 이동.
+            .navigationDestination(isPresented: $openGenScreenFromNotification) {
+                BatchCharacterGenView()
+            }
+            .onChange(of: notifications.wantsOpenGenerationScreen) { _, wants in
+                guard wants else { return }
+                notifications.wantsOpenGenerationScreen = false
+                openGenScreenFromNotification = true
             }
             // Control Center 로 Focus 토글하면 scenePhase 가 안 바뀌어서
             // .onChange 도 안 옴 → 3초마다 직접 폴링. iOS background 진입 시 Timer
@@ -332,14 +352,7 @@ struct ContentView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button {
-                    Task { await loadAll() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+                RefreshIconButton { await loadAll() }
             }
             .padding(.horizontal, 14)
 
@@ -433,19 +446,19 @@ struct ContentView: View {
             actionLink(title: "함께 사진 찍기",
                        subtitle: "캐릭터와 함께 사진 찍어요",
                        icon: "camera.fill",
-                       tint: .cyan) {
+                       tint: .withuGreen) {
                 CameraView()
             }
             actionLink(title: "캐릭터 갤러리",
                        subtitle: "만든 캐릭터를 모아봐요",
                        icon: "photo.stack",
-                       tint: .brown) {
+                       tint: .mint) {
                 CharacterGalleryView()
             }
             actionLink(title: "내 캐릭터 설정하기",
                        subtitle: "이름 · 수면 · 식사 시간",
                        icon: "person.crop.circle.fill",
-                       tint: .mint) {
+                       tint: .brown) {
                 CharacterProfileView()
             }
         }
@@ -495,14 +508,7 @@ struct ContentView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                Button {
-                    sendStateToWatch(characterState)
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+                RefreshIconButton { sendStateToWatch(characterState) }
             }
             HStack(spacing: 0) {
                 statusItem(label: "페어링", ok: connectivity.isPaired)
@@ -1071,11 +1077,9 @@ struct AdvancedDiagnosticsView: View {
                     Task { await focus.requestAuthorization() }
                 }
             }
-            Button {
+            RefreshRowButton(title: "지금 다시 확인") {
                 focus.refresh()
                 sendStateToWatch(characterState)
-            } label: {
-                Label("지금 다시 확인", systemImage: "arrow.clockwise.circle.fill")
             }
             if focus.isAuthorized && focus.rawFocusedValue == nil {
                 Button {
@@ -1127,14 +1131,10 @@ struct AdvancedDiagnosticsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Button {
-                Task {
-                    _ = try? await health.fetchSleep(days: 7)
-                    _ = await health.fetchInBedSchedule()
-                    sendStateToWatch(characterState)
-                }
-            } label: {
-                Label("수면 기록 다시 가져오기", systemImage: "arrow.clockwise.circle.fill")
+            RefreshRowButton(title: "수면 기록 다시 가져오기") {
+                _ = try? await health.fetchSleep(days: 7)
+                _ = await health.fetchInBedSchedule()
+                sendStateToWatch(characterState)
             }
         } header: {
             Text("건강 앱 수면 정보")
@@ -1163,13 +1163,9 @@ struct AdvancedDiagnosticsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Button {
-                Task {
-                    await health.refreshWorkoutInference()
-                    sendStateToWatch(characterState)
-                }
-            } label: {
-                Label("심박으로 다시 확인", systemImage: "arrow.clockwise.circle.fill")
+            RefreshRowButton(title: "심박으로 다시 확인") {
+                await health.refreshWorkoutInference()
+                sendStateToWatch(characterState)
             }
         } header: {
             Text("운동 감지")
