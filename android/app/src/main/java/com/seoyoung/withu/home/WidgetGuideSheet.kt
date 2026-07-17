@@ -65,6 +65,8 @@ fun WidgetGuideSheet(onClose: () -> Unit) {
             },
             modifier = Modifier
                 .fillMaxSize()
+                // Dialog 창은 배경이 투명 — 불투명 베이스를 먼저 깔아 뒤 화면이 안 비치게.
+                .background(MaterialTheme.colorScheme.background)
                 .background(gradient),
         ) { padding ->
             Column(

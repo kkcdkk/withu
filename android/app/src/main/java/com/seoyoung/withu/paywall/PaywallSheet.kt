@@ -134,7 +134,11 @@ fun PaywallSheet(onClose: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
-        modifier = Modifier.background(gradient),
+        // Dialog 창은 배경이 투명 — fillMaxSize + 불투명 베이스로 뒤 화면이 안 비치게.
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .background(gradient),
     ) { padding ->
         Box(
             Modifier

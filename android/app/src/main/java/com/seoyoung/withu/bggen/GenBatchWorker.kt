@@ -64,6 +64,9 @@ class GenBatchWorker(
             .header("Idempotency-Key", job.id)          // 잡 id 고정 — 재전송 이중차감 방지
             .header("X-Withu-Kind", "batch")
             .header("X-Withu-Batch", job.batchId)
+            // 생성 모니터링 메타 — 배치 항목은 서로 다른 상태(수정 체인 아님)라 세션은 안 붙인다.
+            .header("X-Withu-Platform", "android")
+            .header("X-Withu-State", job.stateRaw)
         val token = BuildConfig.WITHU_API_TOKEN
         if (token.isNotEmpty()) builder.header("X-Withu-Token", token)
 

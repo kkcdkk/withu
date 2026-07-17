@@ -1199,7 +1199,8 @@ private suspend fun refineItem(
             kind = "refine",
             model = "gpt-image-2",
         )
-        val resp = ApiClient.generateImage(req)
+        // 갤러리 다듬기 — 원본 캐릭터(batchId)의 수정 체인에 이어붙인다.
+        val resp = ApiClient.generateImage(req, sessionId = item.batchId, state = item.sourceState)
         val raw = withContext(Dispatchers.Default) { ImageProcessing.fromBase64(resp.imageBase64) }
         if (raw == null) {
             onToast(context.getString(R.string.gallery_no_image_toast), 1.6)

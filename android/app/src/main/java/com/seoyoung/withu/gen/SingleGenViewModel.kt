@@ -25,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -122,6 +123,9 @@ class SingleGenViewModel : ViewModel() {
 
     /** 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed). */
     private var lastFreeConsumed: Boolean = false
+
+    /** 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용. */
+    private var currentSessionId: String = UUID.randomUUID().toString()
 
     /**
      * 성공/실패 햅틱 원샷 이벤트 — iOS UINotificationFeedbackGenerator(.success/.error) 대응.
@@ -336,6 +340,7 @@ class SingleGenViewModel : ViewModel() {
         lastError = null
         resultFrame2 = null
         singleDetailFrame = 0
+        currentSessionId = UUID.randomUUID().toString()   // 새 원본 → 새 수정 체인
         try {
             // 사전 reachability 체크 — 30분 timeout 세션에 매달리지 않도록 (iOS preflightPing 동일).
             try {
@@ -464,7 +469,12 @@ class SingleGenViewModel : ViewModel() {
                 style = "auto",
                 model = "gpt-image-2",
             )
-            val resp = ApiClient.generateImage(req)
+            // frame 0 만 수정 체인(session)에 넣는다 — frame 1(자동 애니메이션)은 수정 횟수에서 제외.
+            val resp = ApiClient.generateImage(
+                req,
+                sessionId = if (frame == 0) currentSessionId else null,
+                state = targetState.raw,
+            )
             coroutineContext.ensureActive()   // '그만두기' 후엔 결과 반영 없이 종료
             val processedPair = withContext(Dispatchers.Default) {
                 val rawImg = ImageProcessing.fromBase64(resp.imageBase64) ?: return@withContext null

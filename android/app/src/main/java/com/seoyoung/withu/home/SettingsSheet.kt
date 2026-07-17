@@ -151,6 +151,9 @@ private fun SettingsContent(
         },
         modifier = Modifier
             .fillMaxSize()
+            // 불투명 베이스를 먼저 깔고 그 위에 반투명 그라데이션 — Dialog 는 창 배경이 투명해서
+            // 이게 없으면 뒤의 홈 화면이 비쳐 타이틀이 겹쳐 보인다("w설정U"). iOS .sheet 는 불투명.
+            .background(MaterialTheme.colorScheme.background)
             .background(gradient),
     ) { padding ->
         Column(

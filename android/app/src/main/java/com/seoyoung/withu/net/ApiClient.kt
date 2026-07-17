@@ -52,6 +52,8 @@ object ApiClient {
         req: GenerateImageRequest,
         kind: String = "single",
         batchId: String? = null,
+        sessionId: String? = null,
+        state: String? = null,
         idempotencyKey: String = UUID.randomUUID().toString(),
     ): GenerateImageResponse = withContext(Dispatchers.IO) {
         val body = json.encodeToString(GenerateImageRequest.serializer(), req)
@@ -62,9 +64,13 @@ object ApiClient {
             .header("Content-Type", "application/json")
             .header("Idempotency-Key", idempotencyKey)
             .header("X-Withu-Kind", kind)
+            // 생성 모니터링 메타 (서버 gen_events 로깅용 — 수정 체인/상태/플랫폼)
+            .header("X-Withu-Platform", "android")
         val token = BuildConfig.WITHU_API_TOKEN
         if (token.isNotEmpty()) builder.header("X-Withu-Token", token)
         if (batchId != null) builder.header("X-Withu-Batch", batchId)
+        if (sessionId != null) builder.header("X-Withu-Session", sessionId)
+        if (state != null) builder.header("X-Withu-State", state)
 
         try {
             client.newCall(builder.build()).execute().use { resp ->

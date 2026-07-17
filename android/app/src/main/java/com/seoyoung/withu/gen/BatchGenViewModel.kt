@@ -431,7 +431,7 @@ class BatchGenViewModel : ViewModel() {
                     prompt = prompt, referenceImageBase64 = refB64,
                     quality = quality, artStyle = artStyle, style = "auto", model = "gpt-image-2",
                 )
-                val resp = ApiClient.generateImage(req, kind = "batch", batchId = batchSessionId)
+                val resp = ApiClient.generateImage(req, kind = "batch", batchId = batchSessionId, state = CharacterState.IDLE.raw)
                 val raw = withContext(Dispatchers.Default) { ImageProcessing.fromBase64(resp.imageBase64) }
                 if (raw != null) {
                     // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
@@ -691,7 +691,7 @@ class BatchGenViewModel : ViewModel() {
                     prompt = modifiedPrompt, referenceImageBase64 = refB64,
                     quality = quality, artStyle = artStyle, style = "auto", model = "gpt-image-2",
                 )
-                val resp = ApiClient.generateImage(req)
+                val resp = ApiClient.generateImage(req, state = state.raw)
                 val rawImg = withContext(Dispatchers.Default) { ImageProcessing.fromBase64(resp.imageBase64) }
                 if (rawImg != null) {
                     // frame1 정규화 기준 — frame0 원본 (메모리 → 큐 디스크 → 128 결과 순 복구)
