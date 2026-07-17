@@ -11,7 +11,7 @@ import java.time.ZoneId
 
 /**
  * CharacterStateResolver 순수 함수 테스트 —
- * 자정 넘김 수면 창 / focusWokeAt 존중 / 운동 1시간 윈도우 / cadence 경계 (00-PLAN §4 F1).
+ * 수면 두 모드(설정 시간/수면 모드 기준) / 운동 1시간 윈도우 / cadence 경계 (00-PLAN §4 F1).
  */
 class CharacterStateResolverTest {
 
@@ -23,28 +23,42 @@ class CharacterStateResolverTest {
     private fun epochMillis(dt: LocalDateTime): Long =
         dt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    // MARK: - 수면 창 (자정 넘김)
+    // MARK: - 수면 창 (자정 넘김) — '설정 시간 기준'(manualSleepOnly=true) 전용
+    // '수면 모드 기준'(기본값)은 시간창만으로 재우지 않고 실제 신호(DND/inBed)만 따른다.
+
+    private val manualProfile = CharacterProfile(manualSleepOnly = true)
 
     @Test
-    fun `자정 전 수면 창 안이면 sleeping`() {
-        assertEquals(CharacterState.SLEEPING, CharacterStateResolver.resolve(now = at(23, 30)))
+    fun `설정 시간 기준 - 자정 전 수면 창 안이면 sleeping`() {
+        assertEquals(CharacterState.SLEEPING,
+            CharacterStateResolver.resolve(now = at(23, 30), profile = manualProfile))
     }
 
     @Test
-    fun `자정 후 수면 창 안이면 sleeping`() {
-        assertEquals(CharacterState.SLEEPING, CharacterStateResolver.resolve(now = at(3, 0)))
+    fun `설정 시간 기준 - 자정 후 수면 창 안이면 sleeping`() {
+        assertEquals(CharacterState.SLEEPING,
+            CharacterStateResolver.resolve(now = at(3, 0), profile = manualProfile))
+    }
+
+    @Test
+    fun `수면 모드 기준(기본) - 신호 없으면 수면 창이어도 idle`() {
+        // 기본 프로필은 '수면 모드 기준' — DND/inBed 신호가 없으면 밤이어도 안 잔다.
+        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(23, 30)))
     }
 
     @Test
     fun `수면 창 밖 낮 시간은 idle`() {
-        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(15, 0)))
+        assertEquals(CharacterState.IDLE,
+            CharacterStateResolver.resolve(now = at(15, 0), profile = manualProfile))
     }
 
     @Test
     fun `기상 후 60분 안이면 wakingUp`() {
-        assertEquals(CharacterState.WAKING_UP, CharacterStateResolver.resolve(now = at(7, 30)))
+        assertEquals(CharacterState.WAKING_UP,
+            CharacterStateResolver.resolve(now = at(7, 30), profile = manualProfile))
         // 60분 경계 밖
-        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(8, 0)))
+        assertEquals(CharacterState.IDLE,
+            CharacterStateResolver.resolve(now = at(8, 0), profile = manualProfile))
     }
 
     @Test
@@ -52,31 +66,6 @@ class CharacterStateResolverTest {
         assertEquals(CharacterState.EATING, CharacterStateResolver.resolve(now = at(12, 10)))
         assertEquals(CharacterState.EATING, CharacterStateResolver.resolve(now = at(18, 29)))
         assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(12, 30)))
-    }
-
-    // MARK: - focusWokeAt (이번 밤 창에서 수면 모드를 껐으면 기상 존중)
-
-    @Test
-    fun `이번 밤에 수면 모드를 껐으면 수면 창이어도 sleeping 아님`() {
-        val now = at(23, 0)
-        val wokeAt = at(22, 30)   // 오늘 22:00 창 시작 이후
-        val result = CharacterStateResolver.resolve(now = now, focusWokeAt = wokeAt)
-        assertEquals(CharacterState.IDLE, result)
-    }
-
-    @Test
-    fun `어제 껐던 기록은 오늘 밤에 영향 없음`() {
-        val now = at(23, 0)
-        val wokeAt = at(22, 30).minusDays(1)   // 어젯밤 — 이번 창 시작(오늘 22:00) 이전
-        val result = CharacterStateResolver.resolve(now = now, focusWokeAt = wokeAt)
-        assertEquals(CharacterState.SLEEPING, result)
-    }
-
-    @Test
-    fun `자정 넘긴 새벽에도 이번 밤 창의 woke 는 유효`() {
-        val now = at(2, 0)                       // 새벽 2시 (창 시작 = 어제 22:00)
-        val wokeAt = at(1, 30)                   // 창 시작 이후
-        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = now, focusWokeAt = wokeAt))
     }
 
     // MARK: - 수면 신호 우선순위
