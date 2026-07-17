@@ -1,8 +1,11 @@
 package com.seoyoung.withu.sync
 
+import androidx.glance.appwidget.updateAll
+import com.seoyoung.withu.WithuApp
 import com.seoyoung.withu.character.CharacterProfileStore
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.character.CharacterStateResolver
+import com.seoyoung.withu.widget.CharacterWidget
 import com.seoyoung.withu.health.HealthManager
 import com.seoyoung.withu.health.SleepSignals
 import com.seoyoung.withu.shared.SharedAppState
@@ -73,12 +76,10 @@ object SyncCoordinator {
     }
 
     /**
-     * 위젯 갱신 트리거 — iOS WidgetCenter.reloadAllTimelines() 대응 호출 지점.
-     * Glance 위젯(CharacterWidget)은 Phase S6 산출물이라 지금은 no-op.
-     * S6/Phase I 에서 아래 주석을 실제 호출로 바꾼다:
-     *   CharacterWidget().updateAll(WithuApp.context)
+     * 위젯 갱신 트리거 — iOS WidgetCenter.reloadAllTimelines() 대응 호출 지점 (Phase I 배선).
+     * Glance CharacterWidget().updateAll — 위젯 미설치/갱신 실패가 sync 를 깨지 않게 삼킨다.
      */
     suspend fun refreshWidgets() {
-        // no-op — 위젯 미구현 (00-PLAN §4 Phase S6 에서 연결)
+        runCatching { CharacterWidget().updateAll(WithuApp.context) }
     }
 }

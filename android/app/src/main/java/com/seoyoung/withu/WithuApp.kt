@@ -2,6 +2,9 @@ package com.seoyoung.withu
 
 import android.app.Application
 import android.content.Context
+import com.seoyoung.withu.bggen.BackgroundGenQueue
+import com.seoyoung.withu.notify.NotificationHelper
+import com.seoyoung.withu.sync.BackgroundRefreshWorker
 
 /**
  * Application — 공유 싱글턴들의 Context 홀더.
@@ -12,10 +15,14 @@ class WithuApp : Application() {
     override fun onCreate() {
         super.onCreate()
         context = applicationContext
-        // F2 훅 지점 (이 순서 유지):
+        // Phase I 배선 (이 순서 유지) — 시작 부수효과라 각각 best-effort:
+        // WorkManager 미초기화 등(테스트/드문 런타임)에도 앱 시작이 죽지 않게 개별 runCatching.
         //  1) NotificationHelper.ensureChannels() — 알림 채널 생성
         //  2) BackgroundGenQueue.resumeIfNeeded() — 프로세스 사망 후 배치 큐 재개
-        // F1 시점엔 해당 모듈이 아직 없으므로 호출하지 않는다 (00-PLAN §4 Phase F).
+        //  3) BackgroundRefreshWorker.schedule() — 15분 주기 상태/위젯 갱신 (§4 Phase I-5)
+        runCatching { NotificationHelper.ensureChannels() }
+        runCatching { BackgroundGenQueue.resumeIfNeeded() }
+        runCatching { BackgroundRefreshWorker.schedule() }
     }
 
     companion object {
