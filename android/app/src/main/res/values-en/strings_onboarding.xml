@@ -7,8 +7,8 @@
     <string name="onboarding_feature1_desc">Create a character with the look and personality you want</string>
     <string name="onboarding_feature2_title">Connect Health data</string>
     <string name="onboarding_feature2_desc">Your character\'s state changes with workouts, sleep, and steps</string>
-    <string name="onboarding_feature3_title">Watch sync</string>
-    <string name="onboarding_feature3_desc">It\'s with you on your Apple Watch face and main screen too</string>
+    <string name="onboarding_feature3_title">Home &amp; widget sync</string>
+    <string name="onboarding_feature3_desc">It\'s with you on your home screen widget and main screen too</string>
     <string name="onboarding_start">Let\'s get started</string>
 
     <string name="onboarding_health_title">Health data</string>
@@ -30,10 +30,10 @@
     <string name="onboarding_notification_detail2">All the main features work even if you don\'t allow this</string>
 
     <string name="onboarding_focus_title">Sleep with your character</string>
-    <string name="onboarding_focus_body">Detects Sleep Focus mode and puts your character to sleep.</string>
-    <string name="onboarding_focus_detail1">For better accuracy, connect withu to your Focus and Sleep filters in Settings</string>
-    <string name="onboarding_focus_detail2">You can see how to connect again in the main screen settings</string>
-    <string name="onboarding_focus_detail3">Without permission, only the sleep times in your profile are used</string>
+    <string name="onboarding_focus_body">Detects Do Not Disturb and puts your character to sleep.</string>
+    <string name="onboarding_focus_detail1">For better accuracy, set up a bedtime schedule in the Clock app</string>
+    <string name="onboarding_focus_detail2">You can see how to set this up again in your profile</string>
+    <string name="onboarding_focus_detail3">Without a Do Not Disturb signal, only the sleep times in your profile are used</string>
 
     <string name="onboarding_request_button">Allow and continue</string>
     <string name="onboarding_requesting">Requesting…</string>
@@ -59,11 +59,9 @@
     <string name="help_step1_title">1. Create your character</string>
     <string name="help_step1_body">Use \'Batch Create\' to make several states of one character at once, or \'Single\' to make them one at a time. Add a reference photo and we\'ll keep that look when drawing.</string>
     <string name="help_step2_title">2. Apply by state</string>
-    <string name="help_step2_body">When you \'Apply\' a creation, that character shows up on your home screen, widget, and Apple Watch to match your current state (sleeping, walking, eating, etc.). You can also apply it everywhere at once with \'Apply this character to all\' in the gallery\'s \'By character\' tab.</string>
-    <string name="help_step3_title">3. Add Home &amp; Lock Screen widgets</string>
-    <string name="help_step3_body">Press and hold your Home or Lock Screen to add a widget, and your character plus info like steps and sleep will show up in it.</string>
-    <string name="help_step4_title">4. Add to Apple Watch</string>
-    <string name="help_step4_body">Long-press your watch face, tap Edit, and add withu to a complication slot to see your character on the watch face. Workouts like walks and runs are detected by your Apple Watch (heart rate) when connected, or by your iPhone\'s motion when there\'s no watch.</string>
-    <string name="help_step5_title">5. Candies</string>
-    <string name="help_step5_body">Creating a character uses candies — 1 per image, 2 for an animated character. Top up candies in the shop.</string>
+    <string name="help_step2_body">When you \'Apply\' a creation, that character shows up on your home screen and widget to match your current state (sleeping, walking, eating, etc.). You can also apply it everywhere at once with \'Apply this character to all\' in the gallery\'s \'By character\' tab.</string>
+    <string name="help_step3_title">3. Add a Home Screen widget</string>
+    <string name="help_step3_body">Press and hold an empty spot on your Home Screen to add a widget, and your character plus info like steps and sleep will show up in it.</string>
+    <string name="help_step4_title">4. Candies</string>
+    <string name="help_step4_body">Creating a character uses candies — 1 per image, 2 for an animated character. Top up candies in the shop.</string>
 </resources>

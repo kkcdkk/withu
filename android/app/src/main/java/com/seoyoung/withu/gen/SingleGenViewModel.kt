@@ -123,6 +123,16 @@ class SingleGenViewModel : ViewModel() {
     /** 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed). */
     private var lastFreeConsumed: Boolean = false
 
+    /**
+     * 성공/실패 햅틱 원샷 이벤트 — iOS UINotificationFeedbackGenerator(.success/.error) 대응.
+     * 햅틱은 Composable(LocalHapticFeedback)에서만 울릴 수 있어, VM 은 신호만 세우고
+     * 화면이 관찰 후 consumeHaptic() 으로 비운다. (VIBRATE 권한 불필요한 Compose 햅틱 경로)
+     */
+    var hapticSignal by mutableStateOf<HapticSignal?>(null)
+        private set
+
+    fun consumeHaptic() { hapticSignal = null }
+
     // 오버레이/다이얼로그
     var pendingAction by mutableStateOf<PendingAction?>(null)
         private set
@@ -554,9 +564,11 @@ class SingleGenViewModel : ViewModel() {
         if (ok) {
             // iOS WidgetCenter.reloadAllTimelines() 대응 (워치 전송은 SCOPE 제외 — 호출부 없음).
             SyncCoordinator.refreshWidgets()
+            hapticSignal = HapticSignal.SUCCESS   // iOS notificationOccurred(.success)
             showAppliedAlert = true
         } else {
             lastError = str(R.string.gen_err_save_failed)
+            hapticSignal = HapticSignal.ERROR     // iOS notificationOccurred(.error)
         }
     }
 
@@ -572,11 +584,16 @@ class SingleGenViewModel : ViewModel() {
             val result = PhotoSaver.save(image)
             if (result.isSuccess) {
                 lastError = null
+                hapticSignal = HapticSignal.SUCCESS   // iOS notificationOccurred(.success)
                 showSavedAlert = true
             } else {
                 lastError = result.exceptionOrNull()?.koreanized()
                     ?: str(R.string.gen_err_save_failed)
+                hapticSignal = HapticSignal.ERROR     // iOS notificationOccurred(.error)
             }
         }
     }
 }
+
+/** 성공/실패 햅틱 종류 — iOS UINotificationFeedbackGenerator.FeedbackType 대응. */
+enum class HapticSignal { SUCCESS, ERROR }

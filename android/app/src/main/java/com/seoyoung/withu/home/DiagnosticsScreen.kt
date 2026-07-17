@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -83,7 +83,7 @@ fun DiagnosticsScreen() {
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text(stringRes(R.string.diag_title), fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
@@ -171,7 +171,8 @@ fun DiagnosticsScreen() {
                 footer = stringRes(R.string.diag_debug_footer),
             ) {
                 DiagValueRow(stringRes(R.string.diag_last_bg)) {
-                    val bgAt = remember { AppPrefs.lastBackgroundRefreshAt }
+                    // remember 제거 — recomposition 마다 최신값 읽기 (iOS 매 렌더 계산 대응)
+                    val bgAt = AppPrefs.lastBackgroundRefreshAt
                     DiagSecondaryText(bgAt?.let { formatTimeShort(it) } ?: stringRes(R.string.diag_never))
                 }
                 DiagDivider()

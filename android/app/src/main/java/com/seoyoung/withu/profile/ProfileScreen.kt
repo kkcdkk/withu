@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Schedule
@@ -216,9 +215,7 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                     SleepStatusRow(
                         profile = profile,
                         dndOn = dndOn,
-                        dndOffAt = dndOffAt,
                         isInBedSchedule = isInBedSchedule,
-                        hasSleepSchedule = hasSleepSchedule,
                         onSetManual = { manual ->
                             profile = profile.copy(manualSleepOnly = manual)
                             // iOS: false 로 set 될 때마다 안내 팝업 (기존값 무관)
@@ -509,23 +506,19 @@ private fun HeroCard(heroState: CharacterState, name: String, onClick: () -> Uni
 private fun SleepStatusRow(
     profile: CharacterProfile,
     dndOn: Boolean,
-    dndOffAt: LocalDateTime?,
     isInBedSchedule: Boolean,
-    hasSleepSchedule: Boolean,
     onSetManual: (Boolean) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    val sleeping = isSleepingNow(profile, dndOn, dndOffAt, isInBedSchedule)
+    val sleeping = isSleepingNow(profile, dndOn, isInBedSchedule)
     val manual = profile.isManualSleepOnly
-    val inWindow = CharacterStateResolver.isNowInSleepWindow(LocalDateTime.now(), profile)
 
-    // 기준 칩 라벨/아이콘 우선순위 (스펙 05 §3-5) —
-    // iOS isFocusFilterSleeping/recentlyUsedSleepFocus ≈ (DND on && 수면 창 안) 근사.
-    val (basisLabelRes, basisIcon) = when {
-        manual -> R.string.profile_basis_manual to Icons.Filled.Schedule
-        dndOn && inWindow -> R.string.profile_basis_focus to Icons.Filled.Nightlight
-        isInBedSchedule || hasSleepSchedule -> R.string.profile_basis_health to Icons.Filled.Favorite
-        else -> R.string.profile_basis_manual to Icons.Filled.Schedule
+    // 기준 칩 라벨/아이콘 — 오로지 사용자가 고른 값(manualSleepOnly)으로만 결정한다 (iOS 파리티).
+    // 살아있는 신호(DND/health)로 추론하지 않는다 — true='설정 시간 기준'(시계), false='수면 모드 기준'(달).
+    val (basisLabelRes, basisIcon) = if (manual) {
+        R.string.profile_basis_manual to Icons.Filled.Schedule
+    } else {
+        R.string.profile_basis_focus to Icons.Filled.Nightlight
     }
 
     Row(
@@ -620,30 +613,14 @@ private fun CheckIcon() {
 private fun isSleepingNow(
     profile: CharacterProfile,
     dndOn: Boolean,
-    dndOffAt: LocalDateTime?,
     isInBedSchedule: Boolean,
 ): Boolean {
-    val now = LocalDateTime.now()
-    val inWindow = CharacterStateResolver.isNowInSleepWindow(now, profile)
-    // 1) 수동 = 수면 창만 기준
+    val inWindow = CharacterStateResolver.isNowInSleepWindow(LocalDateTime.now(), profile)
+    // '설정 시간 기준' — 시간창만 기준 (신호 무시)
     if (profile.isManualSleepOnly) return inWindow
-    // 2) 수면 확정 신호 — (DND on && 수면 창) 또는 진행 중 수면 세션
-    //    (iOS 의 filterSleepingCorrected 와 isFocused+창 분기가 DND 근사에선 하나로 합쳐진다)
-    if ((dndOn && inWindow) || isInBedSchedule) return true
-    // 3) 시간대 fallback — 단 '이번 밤에 수면 모드(DND)를 껐으면' 기상 존중
-    if (inWindow) {
-        val windowStart = currentSleepWindowStart(now, profile)
-        if (dndOffAt != null && !dndOffAt.isBefore(windowStart)) return false
-        return true
-    }
-    return false
-}
-
-/** 현재 창의 수면 시작 시각 — 가장 최근에 지난 '잠드는 시간' 경계 (미래면 어제로 -1일). */
-private fun currentSleepWindowStart(now: LocalDateTime, profile: CharacterProfile): LocalDateTime {
-    val start = now.withHour(profile.sleepStartHour).withMinute(profile.sleepStartMinute)
-        .withSecond(0).withNano(0)
-    return if (!start.isAfter(now)) start else start.minusDays(1)
+    // '수면 모드 기준' — 실제 수면 신호만. (DND on && 수면 창) 또는 진행 중 수면 세션.
+    //    DND(수면 모드)를 꺼두면 밤이어도 깨어 있음 — 시간창만으로는 안 잔다 (iOS 파리티).
+    return (dndOn && inWindow) || isInBedSchedule
 }
 
 /** 수면 섹션 footer 3분기 (스펙 05 §3-5) — footer 2 조건: DND 신호 관측 이력도 수면 일정도 없음. */

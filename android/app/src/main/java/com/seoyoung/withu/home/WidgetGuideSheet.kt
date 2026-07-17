@@ -16,13 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -55,7 +55,7 @@ fun WidgetGuideSheet(onClose: () -> Unit) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = { Text(stringResource(R.string.widget_guide_title), fontWeight = FontWeight.SemiBold) },
                     actions = {
                         TextButton(onClick = onClose) { Text(stringResource(R.string.common_close)) }

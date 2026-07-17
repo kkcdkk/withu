@@ -67,8 +67,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -106,6 +109,29 @@ fun SingleGenScreen(onOpenBatch: () -> Unit) {
 
     // 화면 진입 시 잔량 갱신 (iOS onAppear — 무료 배지가 옛 캐시로 뜨는 것 방지)
     LaunchedEffect(Unit) { vm.refreshQuota() }
+
+    // 폼 스크롤 시 키보드 해제 (iOS .scrollDismissesKeyboard(.interactively) 대응)
+    val scrollState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(scrollState.isScrollInProgress) {
+        if (scrollState.isScrollInProgress) focusManager.clearFocus()
+    }
+
+    // 적용/저장 성공·실패 햅틱 (iOS UINotificationFeedbackGenerator .success/.error)
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(vm.hapticSignal) {
+        when (vm.hapticSignal) {
+            HapticSignal.SUCCESS -> haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            HapticSignal.ERROR -> {
+                // 실패는 두 번 울려 성공과 구분 (Compose 1.7 은 success/error 타입이 없음)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                delay(120)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            null -> Unit
+        }
+        if (vm.hapticSignal != null) vm.consumeHaptic()
+    }
 
     // 앨범 참고사진 픽커 (Photo Picker — 권한 불필요)
     val referencePicker = rememberLauncherForActivityResult(
@@ -146,7 +172,7 @@ fun SingleGenScreen(onOpenBatch: () -> Unit) {
                     .fillMaxSize()
                     .background(gradient)
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -730,13 +756,13 @@ private fun ResultSection(vm: SingleGenViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             )
         } else if (f0 != null) {
+            // iOS: resizable().scaledToFit() — full width, 높이 캡 없음 (260 은 pager 전용).
             Image(
                 bitmap = f0.asImageBitmap(),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 260.dp)
                     .clip(RoundedCornerShape(16.dp)),
             )
         }

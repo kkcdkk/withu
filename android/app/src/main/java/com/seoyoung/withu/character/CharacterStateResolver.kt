@@ -46,8 +46,9 @@ object CharacterStateResolver {
         phoneWorkoutState: CharacterState? = null,
         profile: CharacterProfile = CharacterProfile(),
     ): CharacterState {
-        // 미사용 파라미터 명시 (iOS 도 동일하게 무시)
-        @Suppress("UNUSED_EXPRESSION") sleep; todaySteps; weather; hasSleepSchedule
+        // 미사용 파라미터 명시 (iOS 도 동일하게 무시). focusWokeAt 은 caller 호환용으로만
+        // 남긴 파라미터 — 아래 수면 3순위가 manualSleepOnly 전용으로 바뀌며 미사용이 됨.
+        @Suppress("UNUSED_EXPRESSION") sleep; todaySteps; weather; hasSleepSchedule; focusWokeAt
 
         // 0) HKWorkout(운동 세션) 종료 후 1시간 윈도우 — 가장 신뢰성 있는 신호.
         //    HR 추론보다 앞 — 운동 종료 후에도 HR 이 잠시 stream 되어 isLikelyInWorkout 이
@@ -80,25 +81,22 @@ object CharacterStateResolver {
         val sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
         val sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
 
-        // 2) 수면 — 3단계 신호:
-        //    (1순위) "지금 자" 확정 신호 (iOS Sleep Focus 또는 수면 세션 진행 중).
-        //    (2순위) 아무 집중/DND + 수면 창 안 — 예약 수면 모드가 신호를 안 깨우는 케이스 보조.
-        //    (3순위) 수면 창 fallback — 신호가 유실돼도 밤에는 잔다.
-        //            단 '이번 밤 창에서 수면 모드를 껐으면'(focusWokeAt) 기상으로 존중.
-        //    manualSleepOnly 면 caller 가 신호를 전부 false/null 로 넘김 → 시간만 적용.
+        // 2) 수면 — 프로필의 manualSleepOnly(기준 칩)가 규칙을 가른다 (iOS 파리티):
+        //    · '수면 모드 기준'(manualSleepOnly=false): 실제 수면 신호만 재운다.
+        //        (1순위) iOS Sleep Focus 또는 수면 세션(inBed) 진행 중 → 확정 수면.
+        //        (2순위) 아무 집중/DND + 수면 창 안 — 예약 수면 모드가 신호를 안 깨우는 보조.
+        //        → 수면 신호가 하나도 없으면 밤이어도 깨어 있다 (시간창만으로는 안 잔다).
+        //    · '설정 시간 기준'(manualSleepOnly=true): caller 가 Focus/inBed 신호를 전부
+        //        false/null 로 넘기므로 1·2순위는 안 걸리고, 3순위 시간창만으로 재운다.
         if (isFocusActive || inSleepSchedule) {
             return CharacterState.SLEEPING
         }
         if (isGenericFocusActive && isInRange(nowMin, sleepStartMin, sleepEndMin)) {
             return CharacterState.SLEEPING
         }
-        if (isInRange(nowMin, sleepStartMin, sleepEndMin)) {
-            val windowStart = windowStartDateTime(now, sleepStartMin)
-            val wokeThisNight = focusWokeAt != null && !focusWokeAt.isBefore(windowStart)
-            if (!wokeThisNight) {
-                return CharacterState.SLEEPING
-            }
-            // 이번 밤에 수면 모드를 껐음 → 설정 시간이어도 깨어 있음 (아래 로직으로 계속)
+        // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
+        if (profile.isManualSleepOnly && isInRange(nowMin, sleepStartMin, sleepEndMin)) {
+            return CharacterState.SLEEPING
         }
 
         // 3) 기상 직후 — 기상 시점부터 60분 (자정 넘김 안전)
@@ -132,13 +130,6 @@ object CharacterStateResolver {
             profile.sleepStartHour * 60 + profile.sleepStartMinute,
             profile.sleepEndHour * 60 + profile.sleepEndMinute,
         )
-    }
-
-    /** 현재 창(occurrence)의 수면 시작 시각 — 가장 최근에 지난 sleepStart 경계. */
-    private fun windowStartDateTime(now: LocalDateTime, startMin: Int): LocalDateTime {
-        val start = now.withHour(startMin / 60).withMinute(startMin % 60)
-            .withSecond(0).withNano(0)
-        return if (!start.isAfter(now)) start else start.minusDays(1)
     }
 
     /** 현재 분(0~1439)이 [start, end) 안인지. start > end 면 자정 넘김. */

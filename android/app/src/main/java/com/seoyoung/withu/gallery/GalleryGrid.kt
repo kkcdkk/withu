@@ -996,15 +996,19 @@ private fun GalleryDetailContent(
                     val first = activeStates.firstOrNull()
                     if (first != null) {
                         // on = 첫 적용 상태 기준, set 은 모든 적용 상태에 일괄 (스펙 04 §1.3.4)
-                        val motionOn by produceState(initialValue = true, first, changeTick) {
+                        // initialValue=null 로 두어 IO 로드 완료 전엔 스위치 미노출 — 기본값 true 가
+                        // 먼저 그려지는 첫 프레임 ON 플래시 방지 (iOS 동기 읽기와 동일한 무깜빡, 스펙 04 B-10)
+                        val motionOn by produceState<Boolean?>(initialValue = null, first, changeTick) {
                             value = withContext(Dispatchers.IO) {
                                 !CharacterImageStore.isAnimationDisabled(first)
                             }
                         }
-                        Switch(
-                            checked = motionOn,
-                            onCheckedChange = onToggleMotion,
-                        )
+                        motionOn?.let { on ->
+                            Switch(
+                                checked = on,
+                                onCheckedChange = onToggleMotion,
+                            )
+                        }
                     }
                 }
             }

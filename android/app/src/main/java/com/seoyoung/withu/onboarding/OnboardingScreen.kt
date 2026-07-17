@@ -28,8 +28,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.filled.WbCloudy
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -393,7 +393,7 @@ private fun WelcomeContent() {
         )
         Spacer(Modifier.height(14.dp))
         FeatureRow(
-            icon = Icons.Filled.Watch, tint = WithuColors.systemCyan,
+            icon = Icons.Filled.Widgets, tint = WithuColors.systemCyan,
             title = stringResource(R.string.onboarding_feature3_title),
             desc = stringResource(R.string.onboarding_feature3_desc),
         )

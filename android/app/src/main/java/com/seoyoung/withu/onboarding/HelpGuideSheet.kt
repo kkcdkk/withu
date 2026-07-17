@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -94,14 +93,9 @@ fun HelpGuideSheet(onDone: () -> Unit) {
                 stringResource(R.string.help_step3_body),
             )
             StepCard(
-                Icons.Filled.Watch,
+                Icons.Filled.Cookie,
                 stringResource(R.string.help_step4_title),
                 stringResource(R.string.help_step4_body),
-            )
-            StepCard(
-                Icons.Filled.Cookie,
-                stringResource(R.string.help_step5_title),
-                stringResource(R.string.help_step5_body),
             )
 
             Spacer(Modifier.height(4.dp))

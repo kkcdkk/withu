@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,6 +56,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -89,6 +91,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.roundToInt
 
 /** 프로필 브라운 (iOS systemBrown) — Theme 에 없어 홈/설정에서만 쓰는 로컬 상수. */
 private val ProfileBrown = Color(0xFFA2845E)
@@ -193,6 +196,8 @@ fun HomeScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
                 delay(30_000)
+                // 일일 지표(걸음/kcal/활동분/수면) 재조회 — 세션 중 프리즈 방지 + step-goal 알림 발화 (iOS 30초 타이머 이식)
+                HealthManager.loadAll()
                 HealthManager.fetchInBedSchedule()
                 HealthManager.refreshWorkoutInference()
                 tick++
@@ -207,6 +212,8 @@ fun HomeScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 tick++
                 scope.launch { HealthManager.refreshAuthorizationStatus() }
+                // 복귀 시 일일 지표도 재조회 (세션 중 프리즈 방지)
+                scope.launch { HealthManager.loadAll() }
                 scope.launch { WeatherManager.refresh() }
             }
         }
@@ -233,7 +240,7 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = stringRes(R.string.home_title),
@@ -296,7 +303,7 @@ fun HomeScreen(
                 onOpenGallery = onOpenGallery,
                 onOpenProfile = onOpenProfile,
             )
-            LastUpdateFooter()
+            LastUpdateFooter(tick)
         }
     }
 
@@ -377,7 +384,7 @@ private fun WeatherHeader(
             )
             Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = "${temperatureC.toInt()}°",
+                text = "${temperatureC.roundToInt()}°",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -389,7 +396,13 @@ private fun WeatherHeader(
             )
         }
         Spacer(Modifier.weight(1f))
-        Switch(checked = showWeather, onCheckedChange = onToggleWeather)
+        // 접근성 라벨 — iOS labelsHidden Toggle 의 '날씨 표시' 라벨 대응
+        val weatherToggleLabel = stringRes(R.string.home_weather_toggle)
+        Switch(
+            checked = showWeather,
+            onCheckedChange = onToggleWeather,
+            modifier = Modifier.semantics { contentDescription = weatherToggleLabel },
+        )
         Spacer(Modifier.width(4.dp))
         if (isFetching) {
             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -529,8 +542,9 @@ private fun ActionButtons(
 // MARK: - 마지막 갱신 푸터
 
 @Composable
-private fun LastUpdateFooter() {
-    val bgAt = remember { AppPrefs.lastBackgroundRefreshAt }
+private fun LastUpdateFooter(tick: Int) {
+    // tick(폴링/복귀 시 증가) 마다 재조회 — iOS 매 렌더 계산되는 computed property 대응
+    val bgAt = remember(tick) { AppPrefs.lastBackgroundRefreshAt }
     val text = if (bgAt != null) {
         stringRes(R.string.home_footer_last_update, formatTimeShort(bgAt))
     } else {

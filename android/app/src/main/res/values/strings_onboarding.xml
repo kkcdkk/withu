@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  온보딩 + 사용법 안내 (S5 소유 — 스펙 06 §2 문구 전량, iOS 원문 그대로).
-  워치/집중 모드 언급 문구(feature3, focus 스텝, help step4 등)는 스펙 06 §2 '사용자 확정 필요'
-  항목이지만 지시(온보딩 6스텝 + 사용법 5스텝)에 따라 원문 그대로 노출 — 조정은 후속 확정.
+  온보딩 + 사용법 안내 (S5 소유 — 스펙 06 §2 문구).
+  워치/집중 모드/잠금화면 등 iOS 전용 개념(feature3, focus 스텝, help step3·4)은
+  SCOPE(Wear OS·잠금화면 제외)에 맞춰 Android 실체(홈 화면·위젯 동기화, 방해 금지 모드)로 치환.
 -->
 <resources>
     <!-- welcome -->
@@ -12,8 +12,8 @@
     <string name="onboarding_feature1_desc">원하는 외형과 성격으로 캐릭터를 만들어요</string>
     <string name="onboarding_feature2_title">건강 데이터 연동</string>
     <string name="onboarding_feature2_desc">운동·수면·걸음에 맞춰 캐릭터 상태가 바뀌어요</string>
-    <string name="onboarding_feature3_title">워치 동기화</string>
-    <string name="onboarding_feature3_desc">애플워치 시계 화면과 메인 화면에도 함께해요</string>
+    <string name="onboarding_feature3_title">홈 화면·위젯 동기화</string>
+    <string name="onboarding_feature3_desc">홈 화면 위젯과 메인 화면에 함께해요</string>
     <string name="onboarding_start">시작할게요</string>
 
     <!-- health 스텝 -->
@@ -39,10 +39,10 @@
 
     <!-- focus 스텝 -->
     <string name="onboarding_focus_title">캐릭터와 함께 수면</string>
-    <string name="onboarding_focus_body">수면 집중 모드를 감지해 캐릭터를 재워줘요.</string>
-    <string name="onboarding_focus_detail1">설정에서 집중·수면 필터에 withu 를 연결하면 더 정확해요</string>
-    <string name="onboarding_focus_detail2">연결 방법은 메인 화면 설정에서 다시 볼 수 있어요</string>
-    <string name="onboarding_focus_detail3">허용하지 않으면 프로필에 적은 수면 시간만 써요</string>
+    <string name="onboarding_focus_body">방해 금지 모드를 감지해 캐릭터를 재워줘요.</string>
+    <string name="onboarding_focus_detail1">시계 앱에서 취침 시간 일정을 만들면 더 정확해요</string>
+    <string name="onboarding_focus_detail2">설정 방법은 프로필 화면에서 다시 볼 수 있어요</string>
+    <string name="onboarding_focus_detail3">방해 금지 신호가 없으면 프로필에 적은 수면 시간만 써요</string>
 
     <!-- 권한 스텝 공통 -->
     <string name="onboarding_request_button">허용하고 다음으로</string>
@@ -71,11 +71,9 @@
     <string name="help_step1_title">1. 캐릭터 만들기</string>
     <string name="help_step1_body">\'여러 모습 만들기\'로 한 캐릭터의 여러 상태를 한 번에, 또는 \'단건\'으로 하나씩 만들어요. 참고 사진을 넣으면 그 모습을 살려서 그려요.</string>
     <string name="help_step2_title">2. 상태별로 적용하기</string>
-    <string name="help_step2_body">만든 모습을 \'적용\'하면 지금 상태(자는 중·산책·식사 등)에 맞춰 홈·위젯·워치에 그 캐릭터가 나와요. 갤러리 \'캐릭터별\'에서 \'이 캐릭터로 모두 적용\'으로 한 번에 다 적용할 수도 있어요.</string>
-    <string name="help_step3_title">3. 홈·잠금화면 위젯 추가</string>
-    <string name="help_step3_body">홈 화면이나 잠금 화면을 길게 눌러 위젯을 추가하면, 캐릭터와 걸음·수면 같은 정보가 위젯에 떠요.</string>
-    <string name="help_step4_title">4. 애플워치에 추가</string>
-    <string name="help_step4_body">워치 페이스를 길게 눌러 편집 → 컴플리케이션 칸에 withu를 넣으면 시계 화면에도 캐릭터가 나와요. 산책·달리기 같은 운동은 워치가 연결돼 있으면 워치(심박)로, 워치가 없으면 아이폰의 움직임으로 알아채요.</string>
-    <string name="help_step5_title">5. 캔디</string>
-    <string name="help_step5_body">캐릭터를 만들 땐 캔디를 써요 — 한 장에 1개, 움직이는 캐릭터는 2개예요. 캔디는 상점에서 충전할 수 있어요.</string>
+    <string name="help_step2_body">만든 모습을 \'적용\'하면 지금 상태(자는 중·산책·식사 등)에 맞춰 홈·위젯에 그 캐릭터가 나와요. 갤러리 \'캐릭터별\'에서 \'이 캐릭터로 모두 적용\'으로 한 번에 다 적용할 수도 있어요.</string>
+    <string name="help_step3_title">3. 홈 화면 위젯 추가</string>
+    <string name="help_step3_body">홈 화면의 빈 곳을 길게 눌러 위젯을 추가하면, 캐릭터와 걸음·수면 같은 정보가 위젯에 떠요.</string>
+    <string name="help_step4_title">4. 캔디</string>
+    <string name="help_step4_body">캐릭터를 만들 땐 캔디를 써요 — 한 장에 1개, 움직이는 캐릭터는 2개예요. 캔디는 상점에서 충전할 수 있어요.</string>
 </resources>

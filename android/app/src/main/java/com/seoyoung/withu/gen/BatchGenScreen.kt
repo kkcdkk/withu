@@ -292,7 +292,8 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
 
     // 완료 알럿
     if (vm.showFinishedAlert) {
-        val done = vm.results.size + vm.resultsFrame1.size
+        // A-2c: 완료 알럿 '%d개 완성' — frame1 제외, frame0 결과 수만 (iOS results.count).
+        val done = vm.results.size
         val failed = vm.errors.size
         AlertDialog(
             onDismissRequest = { vm.showFinishedAlert = false },
@@ -335,7 +336,7 @@ private fun StateListSection(
     val cost = GenerationQuota.cost(vm.quality)
     FormSection(
         header = stringResource(R.string.batch_states_header, vm.selectedStates.size),
-        footer = stringResource(R.string.batch_footer_count, vm.requiredCount) + "\n" +
+        footer = stringResource(R.string.batch_footer_count, vm.selectedStates.size) + "\n" +
             stringResource(R.string.batch_footer_cost, vm.needCandy, cost),
     ) {
         CharacterState.userFacing.forEach { state ->
@@ -657,7 +658,8 @@ private fun OptionsSection(vm: BatchGenViewModel) {
 private fun StartSection(vm: BatchGenViewModel, onStart: () -> Unit) {
     val need = vm.needCandy
     val notEnough = vm.remainingGenerations < need
-    val done = vm.results.size + vm.resultsFrame1.size + vm.errors.size
+    // A-2d: 진행 카운터 '만드는 중… %d/%d' — frame1 제외 (iOS results.count + errors.count).
+    val done = vm.results.size + vm.errors.size
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (vm.isGenerating) {
@@ -682,7 +684,7 @@ private fun StartSection(vm: BatchGenViewModel, onStart: () -> Unit) {
             if (notEnough) {
                 WarningBanner(
                     stringResource(
-                        R.string.batch_not_enough, vm.remainingGenerations, vm.requiredCount, need,
+                        R.string.batch_not_enough, vm.remainingGenerations, vm.selectedStates.size, need,
                     ),
                 )
                 WithuPinkButton(
@@ -723,14 +725,7 @@ private fun IdleApprovalSection(vm: BatchGenViewModel) {
             onClick = { vm.approveIdleAndContinue() },
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         )
-        // 수정사항 입력
-        OutlinedTextField(
-            value = vm.idleRevisionText,
-            onValueChange = { vm.idleRevisionText = it },
-            placeholder = { Text(stringResource(R.string.batch_revision_placeholder)) },
-            minLines = 1, maxLines = 3,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        )
+        // B-8: iOS 순서(버튼→필드) — 수정해서 생성하기 버튼/스피너가 입력 필드 위에 온다.
         // 수정해서 생성하기 — 생성 중엔 스피너, 수정사항 비면 비활성.
         if (vm.isGenerating) {
             Row(
@@ -747,6 +742,14 @@ private fun IdleApprovalSection(vm: BatchGenViewModel) {
                 enabled = vm.idleRevisionText.isNotBlank(),
             ) { Text(stringResource(R.string.batch_revise)) }
         }
+        // 수정사항 입력
+        OutlinedTextField(
+            value = vm.idleRevisionText,
+            onValueChange = { vm.idleRevisionText = it },
+            placeholder = { Text(stringResource(R.string.batch_revision_placeholder)) },
+            minLines = 1, maxLines = 3,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
         // 프롬프트 수정해서 다시 — 결과/앵커 비우고 입력 화면 복귀.
         TextButton(onClick = { vm.backToPromptEdit() }) {
             Text(stringResource(R.string.batch_back_to_prompt))
@@ -1038,11 +1041,7 @@ private fun ResultDetailSheet(
                         Text(stringResource(R.string.batch_swap_frames))
                     }
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        stringResource(R.string.batch_motion_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    // B-9: iOS Toggle(...).labelsHidden() — 라벨 없는 스위치.
                     Switch(
                         checked = vm.isMotionOn(state),
                         onCheckedChange = { vm.setMotionOn(state, it) },

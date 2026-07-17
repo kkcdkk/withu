@@ -32,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +67,8 @@ import com.seoyoung.withu.ui.FrostedCard
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuPink
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -100,6 +104,7 @@ fun GalleryLandingScreen(
     val haptics = LocalHapticFeedback.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var mode by remember { mutableStateOf(GalleryMode.BY_STATE) }
     // onAppear + 하위 화면 변경 콜백 대응 — 값 증가 시 재조회 (스펙 04 §3.1)
@@ -138,6 +143,18 @@ fun GalleryLandingScreen(
                 characters = CharacterImageStore.loadGalleryByCharacter(),
             )
         }
+    }
+
+    // 하위 폴더/배치 화면에서 적용·삭제 후 복귀 시 stale 방지 — iOS onAppear{refresh()} 재현 (스펙 04 A-3).
+    // RESUMED 될 때마다 refreshTick 을 올려 폴더 개수·총개수·'적용 중' 점·정렬·배경을 재조회.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTick++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
