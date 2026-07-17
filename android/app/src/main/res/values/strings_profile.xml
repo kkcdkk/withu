@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  내 캐릭터 설정 (S5 소유 — 스펙 05 §2 문구 전량, iOS 원문 그대로).
+  예외: profile_basis_tip_message / profile_sleep_footer_no_signal / profile_sleep_footer_default 는
+  iOS 전용 지시문(아이폰 설정 > 집중 모드 안내)이라 스펙 05 §5 '문구 치환' 규칙에 따라
+  Android 실체(방해 금지 모드/헬스 커넥트)로 치환 — 확정은 구현 PR 리뷰에서.
+-->
+<resources>
+    <string name="profile_nav_title">내 캐릭터 설정</string>
+
+    <!-- 히어로 카드 + 이름 편집 알럿 -->
+    <string name="profile_default_name">내 캐릭터</string>
+    <string name="profile_name_alert_title">캐릭터 이름</string>
+    <string name="profile_name_placeholder">예: 새싹이</string>
+    <string name="profile_name_alert_message">캐릭터를 부를 이름을 정해요.</string>
+
+    <!-- 수면 시간 섹션 -->
+    <string name="profile_sleep_header">수면 시간</string>
+    <string name="profile_sleeping">자는 중</string>
+    <string name="profile_awake">깨어 있음</string>
+    <string name="profile_basis_menu_title">수면 기준</string>
+    <string name="profile_basis_focus">수면 모드 기준</string>
+    <string name="profile_basis_manual">설정 시간 기준</string>
+    <string name="profile_basis_health">건강 앱 기준</string>
+    <string name="profile_basis_tip_title">수면 모드 기준으로 자요</string>
+    <!-- Android 치환: iOS 원문 "아이폰 건강 앱에서 수면 일정을…" → 방해 금지 취침 일정 -->
+    <string name="profile_basis_tip_message">방해 금지 모드가 켜지면 자고, 꺼지면 일어나요. 시계 앱에서 취침 모드 일정을 만들어두면 방해 금지 모드가 매일 자동으로 켜지고 꺼져서, 캐릭터도 규칙적으로 자고 일어나요.</string>
+    <string name="profile_auto_detect">잠든 시간 자동으로 알아채기</string>
+    <string name="profile_sleep_start">잠드는 시간</string>
+    <string name="profile_sleep_end">일어나는 시간</string>
+    <string name="profile_align_button">최근 수면 시간에 맞추기</string>
+    <string name="profile_align_fail">최근 수면 기록이 부족해요. 며칠 자고 나면 맞출 수 있어요.</string>
+    <string name="profile_align_success">최근 수면에 맞췄어요 — %1$02d:%2$02d ~ %3$02d:%4$02d</string>
+    <string name="profile_sleep_footer_manual">자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요.</string>
+    <!-- Android 치환: iOS 원문 "아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu…" → DND 취침 일정 안내 -->
+    <string name="profile_sleep_footer_no_signal">지금은 기기의 방해 금지 신호를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 설정 &gt; 소리 및 진동 &gt; 방해 금지 에서 취침 시간 일정을 켜 주세요. (헬스 커넥트에 수면 기록이 있다면 자동으로 따라가요.)</string>
+    <!-- Android 치환: iOS 원문 "먼저 아이폰의 수면·집중 모드를 따르고…" → 방해 금지·수면 기록 -->
+    <string name="profile_sleep_footer_default">먼저 기기의 방해 금지·수면 기록을 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 시간에 방해 금지 모드가 켜져 있으면 캐릭터가 잠에 들어요.</string>
+
+    <!-- 식사 시간 섹션 -->
+    <string name="profile_meal_header">식사 시간</string>
+    <string name="profile_lunch">점심 시간</string>
+    <string name="profile_dinner">저녁 시간</string>
+    <string name="profile_meal_footer">정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.</string>
+
+    <!-- 밤하늘 시간 섹션 -->
+    <string name="profile_night_header">밤하늘 시간</string>
+    <string name="profile_night_start">밤이 시작되는 시각</string>
+    <string name="profile_night_end">밤이 끝나는 시각</string>
+    <string name="profile_night_footer">날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.</string>
+
+    <!-- 상태별 캐릭터 섹션 -->
+    <string name="profile_states_header">상태별 캐릭터</string>
+    <string name="profile_state_applied">내 캐릭터가 적용됐어요</string>
+    <string name="profile_state_default">아직 기본 모습이에요</string>
+    <string name="profile_states_footer">상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.</string>
+
+    <!-- 움직임 섹션 -->
+    <string name="profile_motion_header">움직임</string>
+    <string name="profile_motion_toggle">캐릭터 움직이게 하기</string>
+    <string name="profile_motion_footer">움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.</string>
+
+    <!-- 고급 (캐릭터 외형 한 줄) -->
+    <string name="profile_advanced_label">캐릭터 외형 한 줄 (고급)</string>
+    <string name="profile_advanced_placeholder">예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터</string>
+    <string name="profile_advanced_hint">캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.</string>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  내 캐릭터 설정 en — iOS Localizable.xcstrings 의 en 값 그대로.
+  Android 치환 3건(basis_tip_message/footer_no_signal/footer_default)은 ko 치환문의 en 대응 번역.
+-->
+<resources>
+    <string name="profile_nav_title">My Character Settings</string>
+
+    <string name="profile_default_name">My Characters</string>
+    <string name="profile_name_alert_title">Character name</string>
+    <string name="profile_name_placeholder">e.g. Sprouty</string>
+    <string name="profile_name_alert_message">Pick a name to call your character.</string>
+
+    <string name="profile_sleep_header">Sleep hours</string>
+    <string name="profile_sleeping">Sleeping</string>
+    <string name="profile_awake">Awake</string>
+    <string name="profile_basis_menu_title">Sleep basis</string>
+    <string name="profile_basis_focus">via Sleep Focus</string>
+    <string name="profile_basis_manual">via set times</string>
+    <string name="profile_basis_health">via Health app</string>
+    <string name="profile_basis_tip_title">Sleep follows Sleep Focus</string>
+    <string name="profile_basis_tip_message">Your character sleeps when Do Not Disturb turns on and wakes when it turns off. Set up a bedtime schedule in the Clock app and Do Not Disturb will turn on and off automatically every day — so your character sleeps and wakes on a regular rhythm too.</string>
+    <string name="profile_auto_detect">Detect sleep time automatically</string>
+    <string name="profile_sleep_start">Bedtime</string>
+    <string name="profile_sleep_end">Wake-up time</string>
+    <string name="profile_align_button">Match recent sleep times</string>
+    <string name="profile_align_fail">Not enough recent sleep records. After a few nights of sleep, we can match it.</string>
+    <string name="profile_align_success">Matched to your recent sleep — %1$02d:%2$02d ~ %3$02d:%4$02d</string>
+    <string name="profile_sleep_footer_manual">Auto-detection is off. Only the times set above will be used.</string>
+    <string name="profile_sleep_footer_no_signal">We can\'t read your device\'s Do Not Disturb right now, so your character only sleeps at the times set above. To have it follow your sleep mode: Settings &gt; Sound &amp; vibration &gt; Do Not Disturb &gt; turn on a bedtime schedule. (If you have sleep records in Health Connect, it follows those automatically.)</string>
+    <string name="profile_sleep_footer_default">Your device\'s Do Not Disturb and sleep records come first; if none is available, the time you set above is used. When Do Not Disturb is on during sleep hours, your character goes to sleep.</string>
+
+    <string name="profile_meal_header">Meal times</string>
+    <string name="profile_lunch">Lunch time</string>
+    <string name="profile_dinner">Dinner time</string>
+    <string name="profile_meal_footer">Your character will be shown eating for 30 minutes from the time you set.</string>
+
+    <string name="profile_night_header">Night sky hours</string>
+    <string name="profile_night_start">When night begins</string>
+    <string name="profile_night_end">When night ends</string>
+    <string name="profile_night_footer">When weather is available, the sun and moon switch automatically with the real sunrise and sunset times. The times you set here are only used when your location is unknown.</string>
+
+    <string name="profile_states_header">Characters by state</string>
+    <string name="profile_state_applied">Your character has been applied</string>
+    <string name="profile_state_default">Still the default look</string>
+    <string name="profile_states_footer">You can decide which character shows for each state. Tap to open that state\'s gallery folder.</string>
+
+    <string name="profile_motion_header">Animation</string>
+    <string name="profile_motion_toggle">Make your character move</string>
+    <string name="profile_motion_footer">For characters made as animated, choose whether to show them moving. Turn it off to show a single image and save battery.</string>
+
+    <string name="profile_advanced_label">Character appearance in one line (advanced)</string>
+    <string name="profile_advanced_placeholder">e.g. a pink bunny, a roly-poly character with big eyes</string>
+    <string name="profile_advanced_hint">This sentence is auto-filled when creating your character. Writing in English gives better results.</string>
+</resources>

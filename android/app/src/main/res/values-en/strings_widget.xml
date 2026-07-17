@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  en 값은 위젯 픽커 노출 문구만 번역. metric/온도 포맷은 iOS 가 로케일 무관 한국어 단위로
+  코드 생성하므로 여기서 생략 → 기본 ko fallback (파리티, 00-PLAN §3-1).
+-->
+<resources>
+    <string name="widget_name">withu character</string>
+    <string name="widget_description">Shows your character\'s current mood.</string>
+</resources>

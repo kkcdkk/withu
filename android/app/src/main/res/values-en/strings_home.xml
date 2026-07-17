@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home/Settings/Diagnostics/Widget-guide strings (S1) — English localization, 1:1 with values/strings_home.xml -->
+<resources>
+    <!-- Home (home_*) -->
+    <string name="home_title">with U</string>
+    <string name="home_weather_loading">Getting the weather…</string>
+    <string name="home_weather_toggle">Show weather</string>
+    <string name="home_metrics_title">Today\'s activity</string>
+    <string name="home_metric_steps">Steps</string>
+    <string name="home_metric_minutes">Active min</string>
+    <string name="home_metric_kcal">kcal</string>
+    <string name="home_metric_sleep">Sleep</string>
+    <string name="home_msg_morning_1">Good morning! Let\'s spend today together ☀️</string>
+    <string name="home_msg_morning_2">A new day begins 🌱</string>
+    <string name="home_msg_morning_3">Stretch and get started 🧘</string>
+    <string name="home_msg_morning_4">Don\'t forget to drink some water 💧</string>
+    <string name="home_msg_active">What a full day! You moved more than usual</string>
+    <string name="home_msg_normal">You walked %1$d steps today 🌿</string>
+    <string name="home_msg_lazy">How about a light walk 🌿</string>
+    <string name="home_btn_gen_title">Create a character to be with</string>
+    <string name="home_btn_gen_sub">Make a companion character</string>
+    <string name="home_btn_camera_title">Take a photo together</string>
+    <string name="home_btn_camera_sub">Take a photo with your character</string>
+    <string name="home_btn_gallery_title">Character gallery</string>
+    <string name="home_btn_gallery_sub">See the characters you made</string>
+    <string name="home_btn_profile_title">Set up my character</string>
+    <string name="home_btn_profile_sub">Name · sleep · meal times</string>
+    <string name="home_footer_last_update">Last updated %1$s</string>
+    <string name="home_footer_waiting">Waiting for background refresh</string>
+    <!-- Permission banner -->
+    <string name="home_perm_health">Health</string>
+    <string name="home_perm_location">Location</string>
+    <string name="home_perm_notifications">Notifications</string>
+    <string name="home_perm_title">%1$s permission is off</string>
+    <string name="home_perm_sub">Some features may be limited. You can turn it on in Settings.</string>
+
+    <!-- Settings sheet (settings_*) -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_more_header">Make more</string>
+    <string name="settings_candy_charge">Buy candy</string>
+    <string name="settings_candy_footer">You have %1$d candy.</string>
+    <string name="settings_health_header">Health data</string>
+    <string name="settings_permission">Permission</string>
+    <string name="settings_health_granted">Allowed</string>
+    <string name="settings_health_denied">Not allowed</string>
+    <string name="settings_health_reask">Ask for health permission again</string>
+    <string name="settings_health_refresh">Refresh today\'s data</string>
+    <string name="settings_health_done">Up to date</string>
+    <string name="settings_health_failed">Failed: %1$s</string>
+    <string name="settings_health_item_sleep">Sleep</string>
+    <string name="settings_health_item_workout">Workout</string>
+    <string name="settings_health_item_steps">Steps</string>
+    <string name="settings_health_item_minutes">Active</string>
+    <string name="settings_health_item_kcal">Calories</string>
+    <string name="settings_notify_header">Notifications</string>
+    <string name="settings_notify_status">Permission status</string>
+    <string name="settings_notify_request">Request notification permission</string>
+    <string name="settings_notify_bedtime">Set a daily 22:30 bedtime reminder</string>
+    <string name="settings_notify_cancel_all">Cancel all scheduled notifications</string>
+    <string name="settings_diagnostics">Look into character state</string>
+    <string name="settings_diagnostics_footer">Details like Focus, Health app sleep records, workout detection, and background refresh. You don\'t normally need to look here.</string>
+    <string name="settings_help_header">Help</string>
+    <string name="settings_help_guide">How to use</string>
+    <string name="settings_widget_guide">Add to home screen</string>
+    <string name="settings_reonboard">See the intro again</string>
+    <string name="settings_reonboard_body">Walk through the permission intro from the start. Permissions you declined can be asked again.</string>
+    <string name="settings_reonboard_confirm">See again</string>
+    <string name="settings_legal_header">Legal</string>
+    <string name="settings_privacy">Privacy Policy</string>
+    <string name="settings_terms">Terms of Service</string>
+
+    <!-- Widget guide sheet (widget_guide_*) -->
+    <string name="widget_guide_title">Put withu on your home screen</string>
+    <string name="widget_guide_home_title">Home screen widget</string>
+    <string name="widget_guide_step_1">Touch and hold an empty spot on the home screen</string>
+    <string name="widget_guide_step_2">Tap \'Widgets\'</string>
+    <string name="widget_guide_step_3">Find \"withu\" in the list</string>
+    <string name="widget_guide_step_4">Pick the size you want and add it</string>
+    <string name="widget_guide_step_num">%1$d.</string>
+
+    <!-- Diagnostics screen (diag_*) -->
+    <string name="diag_title">Look into character state</string>
+    <string name="diag_sleep_header">Health app sleep info</string>
+    <string name="diag_inbed_48h">In-bed records in the last 48h</string>
+    <string name="diag_count_fmt">%1$d</string>
+    <string name="diag_inbed_now">Currently in bedtime window</string>
+    <string name="diag_pill_yes">Yes</string>
+    <string name="diag_pill_no">No</string>
+    <string name="diag_last_inbed_start">Last in-bed start</string>
+    <string name="diag_sleep_7d">Sleep records in the last 7 days</string>
+    <string name="diag_last_sleep_start">Last sleep start</string>
+    <string name="diag_sleep_refetch">Fetch sleep records again</string>
+    <string name="diag_motion_header">Workout detection</string>
+    <string name="diag_workout_likely">Looks like you\'re working out?</string>
+    <string name="diag_pill_likely">Seems so</string>
+    <string name="diag_hr_90s">Heart-rate records in the last 90s</string>
+    <string name="diag_hr_avg">Average heart rate</string>
+    <string name="diag_hr_bpm">%1$d bpm</string>
+    <string name="diag_hr_recheck">Recheck with heart rate</string>
+    <string name="diag_debug_header">Re-align widget</string>
+    <string name="diag_last_bg">Last background refresh</string>
+    <string name="diag_never">Never</string>
+    <string name="diag_state_picker">Pick a state manually</string>
+    <string name="diag_state_auto">Let it decide (recommended)</string>
+    <string name="diag_widget_refresh">Refresh widget now</string>
+    <string name="diag_debug_footer">Background refresh is when the phone briefly wakes the app to re-align the display. The phone decides the timing on its own, from every 30 minutes to a few hours.</string>
+</resources>

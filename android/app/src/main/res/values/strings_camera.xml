@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 카메라 합성 화면 (S6 소유) — 문구는 iOS CameraView/CameraSession/PhotoSaver 원문 그대로 (스펙 12 A-2). -->
+<resources>
+    <!-- 상태 캡슐 -->
+    <string name="camera_status_initializing">초기화 중…</string>
+    <string name="camera_status_ready">준비됨</string>
+    <string name="camera_status_error">에러</string>
+
+    <!-- 토스트 / 힌트 -->
+    <string name="camera_toast_saved">갤러리에 저장했어요</string>
+    <!-- iOS 원본에서 showDeleteHint 는 죽은 상태값 — 문구만 보존 (스펙 12 A-1 주의) -->
+    <string name="camera_delete_hint">드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제</string>
+    <string name="camera_picker_hint">탭하면 캐릭터 추가 · 드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제</string>
+
+    <!-- 권한 거절 회복 화면 -->
+    <string name="camera_permission_title">카메라 권한이 필요해요</string>
+    <string name="camera_permission_body">캐릭터와 함께 사진을 찍으려면 카메라 접근을\n허용해 주세요.</string>
+    <!-- iOS 'iOS 설정 열기' → Android 문구 조정 (스펙 12 A-2 표) -->
+    <string name="camera_permission_open_settings">설정 열기</string>
+    <string name="camera_permission_album_link">또는 앨범 사진으로 만들기</string>
+
+    <!-- 에뮬레이터 분기는 Android 에서 불필요 (가상 카메라 제공) — 문구만 보존 (스펙 12 A-6) -->
+    <string name="camera_emulator_notice">에뮬레이터엔 카메라가 없어요\n실기기에서 테스트하세요</string>
+    <string name="camera_err_simulator">시뮬레이터에서는 카메라를 쓸 수 없어요. 실기기로 테스트해주세요.</string>
+
+    <!-- 캡처 프리뷰 -->
+    <string name="camera_preview_cancel">취소</string>
+    <string name="camera_preview_save">저장</string>
+
+    <!-- CameraError / PhotoSaveError 문구 -->
+    <string name="camera_err_not_authorized">카메라 권한이 없어요. 설정에서 켜주세요.</string>
+    <string name="camera_err_no_camera">이 기기에서 카메라를 찾을 수 없어요.</string>
+    <string name="camera_err_configuration">카메라 구성에 실패했어요.</string>
+    <string name="camera_err_capture">사진 캡처에 실패했어요.</string>
+    <string name="camera_err_switch">카메라 전환 실패</string>
+    <string name="camera_err_photo_permission">사진 저장 권한이 없어요. 설정에서 허용해주세요.</string>
+    <string name="camera_err_save_failed">저장 실패: %1$s</string>
+</resources>

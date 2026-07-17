@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  배치 생성 화면 en (S3 소유).
+  iOS Localizable 카탈로그에 확정된 en 번역이 없는 키는 생략 — 기본 로케일(ko)로 fallback
+  (00-PLAN §3-1). 로케일 무관(원문이 영어)인 키만 여기 둔다.
+-->
+<resources>
+    <string name="batch_style_soft">Soft</string>
+    <string name="batch_style_pixel">Pixel</string>
+</resources>

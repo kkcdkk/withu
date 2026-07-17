@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  온보딩 + 사용법 안내 (S5 소유 — 스펙 06 §2 문구 전량, iOS 원문 그대로).
+  워치/집중 모드 언급 문구(feature3, focus 스텝, help step4 등)는 스펙 06 §2 '사용자 확정 필요'
+  항목이지만 지시(온보딩 6스텝 + 사용법 5스텝)에 따라 원문 그대로 노출 — 조정은 후속 확정.
+-->
+<resources>
+    <!-- welcome -->
+    <string name="onboarding_welcome_title">with U</string>
+    <string name="onboarding_welcome_subtitle">내 캐릭터가 일상에 함께해요</string>
+    <string name="onboarding_feature1_title">내 캐릭터 만들기</string>
+    <string name="onboarding_feature1_desc">원하는 외형과 성격으로 캐릭터를 만들어요</string>
+    <string name="onboarding_feature2_title">건강 데이터 연동</string>
+    <string name="onboarding_feature2_desc">운동·수면·걸음에 맞춰 캐릭터 상태가 바뀌어요</string>
+    <string name="onboarding_feature3_title">워치 동기화</string>
+    <string name="onboarding_feature3_desc">애플워치 시계 화면과 메인 화면에도 함께해요</string>
+    <string name="onboarding_start">시작할게요</string>
+
+    <!-- health 스텝 -->
+    <string name="onboarding_health_title">건강 데이터</string>
+    <string name="onboarding_health_body">걸음·운동·수면 데이터를 캐릭터 상태에 반영해요.</string>
+    <string name="onboarding_health_detail1">운동을 시작하면 캐릭터도 같이 운동해요</string>
+    <string name="onboarding_health_detail2">잠든 시간에는 캐릭터도 잠들어요</string>
+    <string name="onboarding_health_detail3">허용하지 않으면 시간대만 보고 움직여요</string>
+    <string name="onboarding_health_skip_note">허용해도 데이터는 기기 안에서만 처리돼요.</string>
+
+    <!-- location 스텝 -->
+    <string name="onboarding_location_title">지금 날씨를 받아올게요</string>
+    <string name="onboarding_location_body">현재 위치의 날씨를 받아 배경에 반영해요.</string>
+    <string name="onboarding_location_detail1">비·눈·맑음·밤에 따라 배경이 바뀌어요</string>
+    <string name="onboarding_location_detail2">위치는 기기 안에서만 쓰고 서버에 저장하지 않아요</string>
+    <string name="onboarding_location_detail3">허용하지 않으면 배경 없이 캐릭터만 보여요</string>
+
+    <!-- notification 스텝 -->
+    <string name="onboarding_notification_title">알림</string>
+    <string name="onboarding_notification_body">걸음 목표 달성·잠잘 시간·운동 종료를 알려드려요.</string>
+    <string name="onboarding_notification_detail1">방해되지 않게 하루 몇 번만 보내요</string>
+    <string name="onboarding_notification_detail2">허용하지 않아도 주요 기능은 모두 작동해요</string>
+
+    <!-- focus 스텝 -->
+    <string name="onboarding_focus_title">캐릭터와 함께 수면</string>
+    <string name="onboarding_focus_body">수면 집중 모드를 감지해 캐릭터를 재워줘요.</string>
+    <string name="onboarding_focus_detail1">설정에서 집중·수면 필터에 withu 를 연결하면 더 정확해요</string>
+    <string name="onboarding_focus_detail2">연결 방법은 메인 화면 설정에서 다시 볼 수 있어요</string>
+    <string name="onboarding_focus_detail3">허용하지 않으면 프로필에 적은 수면 시간만 써요</string>
+
+    <!-- 권한 스텝 공통 -->
+    <string name="onboarding_request_button">허용하고 다음으로</string>
+    <string name="onboarding_requesting">요청 중…</string>
+    <string name="onboarding_skip">건너뛰기</string>
+    <string name="onboarding_status_granted">연결되었어요</string>
+    <string name="onboarding_status_later">나중에 설정에서 켤 수 있어요</string>
+
+    <!-- done 스텝 -->
+    <string name="onboarding_done_title">준비가 끝났어요</string>
+    <string name="onboarding_done_subtitle">이제 내 캐릭터를 만들어 봐요</string>
+    <string name="onboarding_summary_health">건강 데이터</string>
+    <string name="onboarding_summary_weather">날씨</string>
+    <string name="onboarding_summary_notification">알림</string>
+    <string name="onboarding_summary_sleep">수면 감지</string>
+    <string name="onboarding_summary_connected">연결됨</string>
+    <string name="onboarding_summary_later">나중에</string>
+    <string name="onboarding_summary_pending">아직</string>
+    <string name="onboarding_done_footer">켜지 않은 권한은 메인 화면 설정에서 다시 켤 수 있어요.</string>
+    <string name="onboarding_finish">캐릭터 만들러 가기</string>
+
+    <!-- 사용법 안내 (HelpGuideView) -->
+    <string name="help_nav_title">사용법</string>
+    <string name="help_title">withu 사용법</string>
+    <string name="help_subtitle">캐릭터를 만들고 내 하루에 맞춰 보여줘요.</string>
+    <string name="help_step1_title">1. 캐릭터 만들기</string>
+    <string name="help_step1_body">\'여러 모습 만들기\'로 한 캐릭터의 여러 상태를 한 번에, 또는 \'단건\'으로 하나씩 만들어요. 참고 사진을 넣으면 그 모습을 살려서 그려요.</string>
+    <string name="help_step2_title">2. 상태별로 적용하기</string>
+    <string name="help_step2_body">만든 모습을 \'적용\'하면 지금 상태(자는 중·산책·식사 등)에 맞춰 홈·위젯·워치에 그 캐릭터가 나와요. 갤러리 \'캐릭터별\'에서 \'이 캐릭터로 모두 적용\'으로 한 번에 다 적용할 수도 있어요.</string>
+    <string name="help_step3_title">3. 홈·잠금화면 위젯 추가</string>
+    <string name="help_step3_body">홈 화면이나 잠금 화면을 길게 눌러 위젯을 추가하면, 캐릭터와 걸음·수면 같은 정보가 위젯에 떠요.</string>
+    <string name="help_step4_title">4. 애플워치에 추가</string>
+    <string name="help_step4_body">워치 페이스를 길게 눌러 편집 → 컴플리케이션 칸에 withu를 넣으면 시계 화면에도 캐릭터가 나와요. 산책·달리기 같은 운동은 워치가 연결돼 있으면 워치(심박)로, 워치가 없으면 아이폰의 움직임으로 알아채요.</string>
+    <string name="help_step5_title">5. 캔디</string>
+    <string name="help_step5_body">캐릭터를 만들 땐 캔디를 써요 — 한 장에 1개, 움직이는 캐릭터는 2개예요. 캔디는 상점에서 충전할 수 있어요.</string>
+</resources>
