@@ -67,7 +67,6 @@ struct ContentView: View {
             isFocusActive: manualOnly ? false : focus.filterSleepingCorrected(
                 sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute),
             isGenericFocusActive: manualOnly ? false : focus.isFocused,
-            focusWokeAt: manualOnly ? nil : focus.lastFocusOffAt,
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),

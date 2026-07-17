@@ -416,19 +416,6 @@ final class FocusModeManager {
         defaults?.set(combined, forKey: focusFilterPerformLogKey)
     }
 
-    /// 사용자가 수면 Focus 를 실제로 쓰는 중인지 — 필터가 최근 48시간 안에 토글된 적 있으면 true.
-    /// (기준 칩 라벨 표시용.)
-    var recentlyUsedSleepFocus: Bool {
-        guard let last = focusFilterLastPerformAt else { return false }
-        return Date().timeIntervalSince(last) < 48 * 60 * 60
-    }
-
-    /// 수면 Focus 가 마지막으로 '꺼진' 시각 (perform 로그의 최신 false 이벤트).
-    /// resolver 가 "이번 밤(수면 시간대)에 껐으면 안 재움" 판정에 사용.
-    var lastFocusOffAt: Date? {
-        focusFilterPerformLog.first(where: { !$0.sleeping })?.date
-    }
-
     /// 낡은 필터 플래그 보정판 수면 신호.
     /// 예약(자동) 해제는 잠긴 폰에서 perform(false) 가 유실될 수 있다 — 플래그가 켜진 시각
     /// 이후 첫 '일어나는 시간(sleepEnd)' 경계를 지났으면 낡은 신호로 보고 무시한다.
@@ -515,7 +502,6 @@ enum SyncCoordinator {
             hasSleepSchedule: hasSleepSchedule,
             isFocusActive: isFocusActive,
             isGenericFocusActive: manualOnly ? false : focus.isFocused,
-            focusWokeAt: manualOnly ? nil : focus.lastFocusOffAt,
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: phoneWorkoutState(),
