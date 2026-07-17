@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -157,9 +162,31 @@ private fun FallingParticles(
     }
 }
 
-/** 이모지를 지정 크기(dp→sp)로 렌더 — 폰트 스케일 무시하고 시각 크기 고정. */
+/**
+ * 이모지를 지정 크기(dp→sp)로 렌더 — 폰트 스케일 무시하고 시각 크기 고정.
+ * 이모지 글리프는 nominal fontSize 보다 크게 그려지고 위아래 font padding 이 붙어,
+ * 크기가 딱 맞는 부모 박스 안에서 잘렸다(사용자 리포트: 달 아이콘 잘림).
+ *   → includeFontPadding=false + lineHeight=fontSize + trim 없음 으로 여백 제거,
+ *     fontSize 를 박스의 0.86× 로 낮춰 글리프가 박스 안에 온전히 들어오게 한다.
+ */
 @Composable
 private fun EmojiText(text: String, size: Dp) {
-    val fontSize = with(LocalDensity.current) { size.toSp() }
-    Text(text = text, fontSize = fontSize, maxLines = 1, softWrap = false)
+    val fontSize = with(LocalDensity.current) { (size * 0.86f).toSp() }
+    Text(
+        text = text,
+        fontSize = fontSize,
+        lineHeight = fontSize,
+        maxLines = 1,
+        softWrap = false,
+        textAlign = TextAlign.Center,
+        style = LocalTextStyle.current.merge(
+            TextStyle(
+                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                lineHeightStyle = LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Center,
+                    trim = LineHeightStyle.Trim.None,
+                ),
+            ),
+        ),
+    )
 }
