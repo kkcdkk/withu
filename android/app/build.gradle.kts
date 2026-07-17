@@ -36,6 +36,13 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            // Robolectric — CharacterImageStore 파일/비트맵 테스트에 실제 리소스/Context 필요
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -51,11 +58,25 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.icons.extended)
     implementation(libs.androidx.compose.preview)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    // 위젯(Glance)·배치 큐(WorkManager)·건강(Health Connect)·카메라·위치 — 00-PLAN §4 F1 확정 목록
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.health.connect)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.play.services.location)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.compose.tooling)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }

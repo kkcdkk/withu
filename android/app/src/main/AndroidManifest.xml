@@ -2,8 +2,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 날씨 — Open-Meteo 좌표(반올림 2자리)라 coarse 로 충분 (SCOPE) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- 알림 (API 33+) — 배치 완료/취침 리마인더 등 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 폰 모션 활동 분류 (phoneWorkoutState) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- 배치 생성 백그라운드 실행 (WorkManager setForeground dataSync) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- 사진 저장 — API 28 만 WRITE 필요 (PhotoSaver.needsLegacyWritePermission) -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- 카메라 합성 (스펙 12 Part A) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Health Connect 읽기 6종 (스펙 10 §3.2 대응) -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
 
     <application
+        android:name=".WithuApp"
         android:label="Withy"
         android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
@@ -16,5 +38,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- 위젯 receiver/딥링크/FGS 선언은 Phase I 에서 추가 (00-PLAN §1-1) -->
     </application>
 </manifest>

@@ -2,40 +2,34 @@ package com.seoyoung.withu.store
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import com.seoyoung.withu.character.CharacterState
+import com.seoyoung.withu.shared.CharacterImageStore
 import java.io.File
 
 /**
- * 캐릭터 PNG 저장소 — iOS CharacterImageStore 의 최소 포팅.
- * filesDir/characters/<state>.png = 활성 슬롯, filesDir/gallery/<uuid>.png = 이력.
- * (위젯 공유가 필요해지면 Glance 가 같은 filesDir 를 읽으므로 App Group 같은 개념 불필요)
+ * (Deprecated) 구 화면(ui/HomeScreen, ui/GenerateScreen) 컴파일 유지용 위임 셔틀 —
+ * 실제 저장은 shared/CharacterImageStore. Phase I 에서 구 화면과 함께 삭제 예정 (00-PLAN §1-1).
  */
+@Deprecated("shared/CharacterImageStore 를 사용할 것 — Phase I 에서 삭제")
 object CharacterStore {
 
-    private fun charactersDir(ctx: Context): File =
-        File(ctx.filesDir, "characters").apply { mkdirs() }
-
-    private fun galleryDir(ctx: Context): File =
-        File(ctx.filesDir, "gallery").apply { mkdirs() }
-
-    /** 활성 슬롯 저장 (128px 다운샘플 후 호출 권장) + 갤러리에도 복사. */
+    /** 활성 슬롯 + 갤러리에 저장 (신규 스토어 위임). */
     fun save(ctx: Context, bitmap: Bitmap, state: CharacterState) {
-        val slot = File(charactersDir(ctx), "${state.raw}.png")
-        slot.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val galleryFile = File(galleryDir(ctx), "${System.currentTimeMillis()}_${state.raw}.png")
-        slot.copyTo(galleryFile, overwrite = true)
+        CharacterImageStore.save(bitmap, state)
     }
 
-    fun load(ctx: Context, state: CharacterState): Bitmap? {
-        val f = File(charactersDir(ctx), "${state.raw}.png")
-        if (!f.exists()) return null
-        return BitmapFactory.decodeFile(f.absolutePath)
-    }
+    fun load(ctx: Context, state: CharacterState): Bitmap? =
+        CharacterImageStore.load(state)
 
     fun hasImage(ctx: Context, state: CharacterState): Boolean =
-        File(charactersDir(ctx), "${state.raw}.png").exists()
+        CharacterImageStore.hasImage(state)
 
-    fun galleryFiles(ctx: Context): List<File> =
-        galleryDir(ctx).listFiles()?.sortedByDescending { it.name } ?: emptyList()
+    /** 구 화면 전용 — gallery 폴더의 PNG 파일 목록 (metadata.json 제외). */
+    fun galleryFiles(ctx: Context): List<File> {
+        val dir = File(ctx.filesDir, "gallery")
+        return dir.listFiles()
+            ?.filter { it.extension == "png" }
+            ?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+    }
 }

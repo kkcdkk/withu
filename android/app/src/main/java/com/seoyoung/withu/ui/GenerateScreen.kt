@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.gen.ChromaKey
 import com.seoyoung.withu.net.ApiClient
+import com.seoyoung.withu.net.GenerateImageRequest
 import com.seoyoung.withu.store.CharacterStore
 import kotlinx.coroutines.launch
 
@@ -97,8 +98,9 @@ fun GenerateScreen(onDone: () -> Unit) {
                         val base = if (desc.isEmpty()) state.generationHint
                                    else "$desc, ${state.generationHint}"
                         val finalPrompt = "$base. Only the character on a transparent background — no background fill, no shadows, no extra elements."
+                        // DTO 가 net/ApiModels.kt 로 분리됨 (F1) — 시그니처는 계약 §2-6
                         val resp = ApiClient.generateImage(
-                            ApiClient.GenerateImageRequest(prompt = finalPrompt, artStyle = artStyle)
+                            GenerateImageRequest(prompt = finalPrompt, artStyle = artStyle)
                         )
                         val bytes = Base64.decode(resp.imageBase64, Base64.DEFAULT)
                         val raw = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)

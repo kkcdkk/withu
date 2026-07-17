@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- en 값은 iOS Localizable 카탈로그의 en 원문 그대로 (오타 포함 유지 — 00-PLAN §3-1).
+     en 값을 모르는 키는 생략 → 기본 ko 로 fallback. -->
+<resources>
+    <string name="common_close">Close</string>
+    <string name="common_confirm">OK</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_select">Select</string>
+
+    <string name="err_invalid_response">Something\'s off with the server response. Please try again in a moment.</string>
+    <string name="err_too_many_requests">Too many requests. Please try again in a moment.</string>
+    <string name="err_server_trouble">Something went wrong on the server. Please try again in a moment.</string>
+    <string name="err_unsafe_prompt">Your prompt was flagged by the safety policy. Please tweak the wording and try again.</string>
+    <!-- iOS en 카탈로그 원문에 닫는 괄호 누락 — 원문 유지 -->
+    <string name="err_server_generic">Server error (%1$d. Please try again in a moment.</string>
+    <string name="err_decoding">Couldn\'t read the result. Please try again.</string>
+    <string name="err_payment_required">You\'ve used up your free creations. Please top up candies or subscribe.</string>
+    <string name="err_no_internet">You\'re not connected to the internet. Please check Wi-Fi or cellular.</string>
+    <string name="err_timed_out">The response is taking too long. Please try again in a moment.</string>
+    <string name="err_cannot_connect">Can\'t connect to the server. Please check your network or the server status.</string>
+    <string name="err_connection_lost">Connection lost. Please try again.</string>
+    <string name="err_cancelled">The request was canceled.</string>
+    <string name="err_network_generic">A network error occurred. Please try again.</string>
+    <string name="err_generic">Something went wrong. Please try again in a moment.</string>
+</resources>

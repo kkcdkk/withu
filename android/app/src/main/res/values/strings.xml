@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공통 strings (F1 소유) — 문구는 iOS 원문 그대로. 화면별 strings_*.xml 은 각 S 에이전트 소유. -->
+<resources>
+    <!-- 공통 액션 (common_*) -->
+    <string name="common_close">닫기</string>
+    <string name="common_confirm">확인</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_save">저장</string>
+    <string name="common_delete">삭제</string>
+    <string name="common_select">선택</string>
+
+    <!-- 네트워크 에러 (err_* — ApiError.koreanized 전용, 스펙 11 §2.2 표 전량) -->
+    <string name="err_invalid_response">서버 응답이 이상해요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_too_many_requests">요청이 너무 많아요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_server_trouble">서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_unsafe_prompt">프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요.</string>
+    <string name="err_server_generic">서버 오류 (%1$d). 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_decoding">결과를 읽을 수 없어요. 다시 시도해 주세요.</string>
+    <string name="err_payment_required">무료 횟수를 다 썼어요. 충전하거나 구독해 주세요.</string>
+    <string name="err_no_internet">인터넷에 연결돼 있지 않아요. Wi-Fi 또는 셀룰러를 확인해 주세요.</string>
+    <string name="err_timed_out">응답이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_cannot_connect">서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인해 주세요.</string>
+    <string name="err_connection_lost">연결이 끊겼어요. 다시 시도해 주세요.</string>
+    <string name="err_cancelled">요청이 취소됐어요.</string>
+    <string name="err_network_generic">네트워크 오류가 발생했어요. 다시 시도해 주세요.</string>
+    <string name="err_generic">오류가 발생했어요. 잠시 후 다시 시도해 주세요.</string>
+</resources>
