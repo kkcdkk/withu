@@ -484,7 +484,7 @@ enum SyncCoordinator {
 
         // 프로필이 "자동 감지 끔" 이면 Focus + HealthKit inBed 무시,
         // 프로필 sleepStart/End 시간만 fallback 으로 사용.
-        let manualOnly = profile.manualSleepOnly ?? false
+        let manualOnly = profile.isManualSleepOnly
         // 수면 판정은 수면 전용 신호(수면 Focus 필터)만 — INFocusStatusCenter 의
         // isFocused 는 방해금지·업무 등 아무 집중 모드에나 true 라 오탐(낮에 잠듦).
         // filterSleepingCorrected — 예약(자동) 해제 유실 시 기상 시간 경계로 자동 만료.

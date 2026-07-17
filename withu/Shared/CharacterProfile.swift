@@ -27,8 +27,11 @@ struct CharacterProfile: Codable, Equatable {
     var dinnerHour: Int = 18
     var dinnerMinute: Int = 0
     /// true 면 Focus 모드 / HealthKit 수면 일정을 무시하고 위의 sleepStart/End 시간만으로 sleeping 판정.
-    /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil → false 로 fallback (자동 감지 사용).
+    /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil. **기본값은 '설정 시간 기준'(true)** —
+    /// 설치 직후 별도 설정 없이도 밤에 확실히 자는 경험. '수면 모드 기준'(false)은 opt-in.
     var manualSleepOnly: Bool?
+    /// 수면 기준 — nil(미설정)이면 '설정 시간 기준'(true). 이 프로퍼티만 읽어 기본값을 한 곳에서 관리.
+    var isManualSleepOnly: Bool { manualSleepOnly ?? true }
     /// 야간 fallback 시작 (분, midnight 기준). 위치 권한 없거나 일출/일몰 못 받았을 때 사용.
     /// nil → 20:00 (1200) 기본값.
     var nightFallbackStartMinute: Int?

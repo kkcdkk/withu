@@ -54,7 +54,7 @@ struct ContentView: View {
 
     private var characterState: CharacterState {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
-        let manualOnly = profile.manualSleepOnly ?? false
+        let manualOnly = profile.isManualSleepOnly
         return overrideState ?? CharacterStateResolver.resolve(
             sleep: health.sleep,
             workouts: health.recentWorkouts,

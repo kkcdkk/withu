@@ -23,42 +23,39 @@ class CharacterStateResolverTest {
     private fun epochMillis(dt: LocalDateTime): Long =
         dt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    // MARK: - 수면 창 (자정 넘김) — '설정 시간 기준'(manualSleepOnly=true) 전용
-    // '수면 모드 기준'(기본값)은 시간창만으로 재우지 않고 실제 신호(DND/inBed)만 따른다.
+    // MARK: - 수면 창 (자정 넘김)
+    // 기본값은 '설정 시간 기준'(manualSleepOnly ?? true) — 시간창만으로 재운다.
+    // '수면 모드 기준'(manualSleepOnly=false)은 시간창 무시, 실제 신호(DND/inBed)만 따른다.
 
-    private val manualProfile = CharacterProfile(manualSleepOnly = true)
+    private val focusProfile = CharacterProfile(manualSleepOnly = false)   // 수면 모드 기준
 
     @Test
-    fun `설정 시간 기준 - 자정 전 수면 창 안이면 sleeping`() {
-        assertEquals(CharacterState.SLEEPING,
-            CharacterStateResolver.resolve(now = at(23, 30), profile = manualProfile))
+    fun `설정 시간 기준(기본) - 자정 전 수면 창 안이면 sleeping`() {
+        assertEquals(CharacterState.SLEEPING, CharacterStateResolver.resolve(now = at(23, 30)))
     }
 
     @Test
-    fun `설정 시간 기준 - 자정 후 수면 창 안이면 sleeping`() {
-        assertEquals(CharacterState.SLEEPING,
-            CharacterStateResolver.resolve(now = at(3, 0), profile = manualProfile))
+    fun `설정 시간 기준(기본) - 자정 후 수면 창 안이면 sleeping`() {
+        assertEquals(CharacterState.SLEEPING, CharacterStateResolver.resolve(now = at(3, 0)))
     }
 
     @Test
-    fun `수면 모드 기준(기본) - 신호 없으면 수면 창이어도 idle`() {
-        // 기본 프로필은 '수면 모드 기준' — DND/inBed 신호가 없으면 밤이어도 안 잔다.
-        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(23, 30)))
+    fun `수면 모드 기준 - 신호 없으면 수면 창이어도 idle`() {
+        // '수면 모드 기준'은 DND/inBed 신호가 없으면 밤이어도 안 잔다.
+        assertEquals(CharacterState.IDLE,
+            CharacterStateResolver.resolve(now = at(23, 30), profile = focusProfile))
     }
 
     @Test
     fun `수면 창 밖 낮 시간은 idle`() {
-        assertEquals(CharacterState.IDLE,
-            CharacterStateResolver.resolve(now = at(15, 0), profile = manualProfile))
+        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(15, 0)))
     }
 
     @Test
     fun `기상 후 60분 안이면 wakingUp`() {
-        assertEquals(CharacterState.WAKING_UP,
-            CharacterStateResolver.resolve(now = at(7, 30), profile = manualProfile))
+        assertEquals(CharacterState.WAKING_UP, CharacterStateResolver.resolve(now = at(7, 30)))
         // 60분 경계 밖
-        assertEquals(CharacterState.IDLE,
-            CharacterStateResolver.resolve(now = at(8, 0), profile = manualProfile))
+        assertEquals(CharacterState.IDLE, CharacterStateResolver.resolve(now = at(8, 0)))
     }
 
     @Test

@@ -234,7 +234,7 @@ struct CharacterProfileView: View {
     /// 기준 칩 선택 — 설정 시간 기준(true) = manualSleepOnly. 수면 모드 선택 시 안내 팝업.
     private var sleepBasisBinding: Binding<Bool> {
         Binding(
-            get: { profile.manualSleepOnly ?? false },
+            get: { profile.isManualSleepOnly },
             set: { manual in
                 profile.manualSleepOnly = manual
                 if !manual { showSleepBasisTip = true }
@@ -245,7 +245,7 @@ struct CharacterProfileView: View {
     /// 지금 자는 중인지 (resolver 의 수면 분기와 동일).
     private var isSleepingNow: Bool {
         // '설정 시간 기준' — 시간창 안이면 잔다 (Focus/건강 무시).
-        if profile.manualSleepOnly ?? false { return isNowInProfileSleepWindow() }
+        if profile.isManualSleepOnly { return isNowInProfileSleepWindow() }
         // '수면 모드 기준' — 실제 수면 신호만. Sleep Focus 를 꺼두면 밤이어도 깨어 있음.
         if focus.filterSleepingCorrected(sleepEndHour: profile.sleepEndHour,
                                          sleepEndMinute: profile.sleepEndMinute)
@@ -257,13 +257,13 @@ struct CharacterProfileView: View {
 
     /// 기준 칩 라벨 — 사용자가 고른 값 그대로 표시 (살아있는 신호로 추론하지 않는다).
     private var sleepBasisLabel: String {
-        (profile.manualSleepOnly ?? false)
+        profile.isManualSleepOnly
             ? String(localized: "설정 시간 기준")
             : String(localized: "수면 모드 기준")
     }
 
     private var sleepBasisIcon: String {
-        (profile.manualSleepOnly ?? false) ? "clock.fill" : "moon.circle.fill"
+        profile.isManualSleepOnly ? "clock.fill" : "moon.circle.fill"
     }
 
     /// 최근 7일 실제 수면 기록(워치 asleep 포함)의 평균 취침/기상을 설정 시간에 반영.
@@ -300,13 +300,13 @@ struct CharacterProfileView: View {
     /// 토글 켜짐 = 자동 감지 사용 = manualSleepOnly false.
     private var autoDetectBinding: Binding<Bool> {
         Binding(
-            get: { !(profile.manualSleepOnly ?? false) },
+            get: { !profile.isManualSleepOnly },
             set: { profile.manualSleepOnly = !$0 }
         )
     }
 
     private var sleepFooterText: String {
-        if profile.manualSleepOnly ?? false {
+        if profile.isManualSleepOnly {
             return String(localized: "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요.")
         }
         // 수면 모드 신호가 하나도 연결 안 돼 있으면 — 왜 '설정 시간'으로만 자는지 + 켜는 법 안내.

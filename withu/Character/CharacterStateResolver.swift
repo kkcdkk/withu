@@ -85,7 +85,7 @@ enum CharacterStateResolver {
             return .sleeping
         }
         // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
-        if (profile.manualSleepOnly ?? false),
+        if profile.isManualSleepOnly,
            isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }

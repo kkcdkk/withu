@@ -40,7 +40,9 @@ data class CharacterProfile(
     val nightFallbackEndMinute: Int? = null,
     // 애니메이션 토글은 CharacterImageStore 로 분리 — 위젯도 읽어야 하기 때문 (iOS 파리티).
 ) {
-    val isManualSleepOnly: Boolean get() = manualSleepOnly ?: false
+    // 기본값 '설정 시간 기준'(true) — 설치 직후 별도 설정 없이도 밤에 확실히 자는 경험.
+    // '수면 모드 기준'(false)은 opt-in. (iOS CharacterProfile.isManualSleepOnly 와 동일)
+    val isManualSleepOnly: Boolean get() = manualSleepOnly ?: true
     val effectiveNightFallbackStart: Int get() = nightFallbackStartMinute ?: 1200
     val effectiveNightFallbackEnd: Int get() = nightFallbackEndMinute ?: 360
 }
