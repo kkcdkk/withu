@@ -24,4 +24,70 @@
     <string name="err_cancelled">The request was canceled.</string>
     <string name="err_network_generic">A network error occurred. Please try again.</string>
     <string name="err_generic">Something went wrong. Please try again in a moment.</string>
+
+    <!-- 배치 큐 잡 에러 -->
+    <string name="bggen_err_cancelled">Canceled</string>
+    <string name="bggen_err_prepare">Couldn\'t prepare the request</string>
+    <string name="bggen_err_no_body_file">The request file is missing</string>
+    <string name="bggen_err_payment">You\'ve used up your free creations</string>
+    <string name="bggen_err_no_image">Couldn\'t receive the image</string>
+
+    <!-- 참고사진 고르기 시트 -->
+    <string name="refpicker_title">Pick from My Characters</string>
+    <string name="refpicker_empty_title">No characters yet</string>
+    <string name="refpicker_empty_body">Create a character and you can pick it here as a reference photo.</string>
+    <string name="refpicker_label_fallback">Other</string>
+
+    <!-- 정사각 자르기 -->
+    <string name="crop_hint">Pinch to zoom · drag to reposition</string>
+
+    <!-- 알림 -->
+    <string name="notify_channel_reminder">Reminders</string>
+    <string name="notify_channel_gen_done">Generation complete</string>
+    <string name="notify_channel_gen_progress">Generation progress</string>
+    <string name="notify_auth_granted">Allowed</string>
+    <string name="notify_auth_denied">Denied</string>
+    <string name="notify_auth_not_asked">Not asked yet</string>
+    <string name="notify_anchor_title">Your base look is ready</string>
+    <string name="notify_anchor_body">Check if you like it, then continue making the rest of the looks.</string>
+    <string name="notify_gen_done_title">All characters are ready</string>
+    <string name="notify_gen_done_body">%1$d looks are complete and already applied. Open the app to check them out.</string>
+    <string name="notify_gen_partial_title">Character generation finished</string>
+    <string name="notify_gen_partial_body">%1$d done, %2$d couldn\'t be made. You can retry in the app.</string>
+    <string name="notify_bedtime_title">💤 Time for bed</string>
+    <string name="notify_bedtime_body">Great job today. Your character is getting ready to sleep too.</string>
+    <string name="notify_step_goal_title">🎉 %1$d steps reached!</string>
+    <string name="notify_step_goal_body">You walked %1$d steps today. Your character is excited too ✨</string>
+    <string name="notify_workout_ended_title">%1$s done!</string>
+    <string name="notify_workout_ended_body">You moved well for %1$d minutes. Your character ran along with you.</string>
+    <string name="notify_gen_progress">Creating your character…</string>
+
+    <!-- 페이월 -->
+    <string name="paywall_title">Get More</string>
+    <string name="paywall_coming_soon">Not ready yet. Coming soon!</string>
+    <string name="paywall_balance">You have %1$d candies</string>
+    <string name="paywall_balance_sub">Top up candies to create more.</string>
+    <string name="paywall_section_packs">Candy Top-up</string>
+    <string name="paywall_pack_popular">Most popular</string>
+    <string name="paywall_pack_desc">%1$d candies · never expire</string>
+    <string name="paywall_price_pending">Coming soon</string>
+    <string name="paywall_section_redeem">Promo Code</string>
+    <string name="paywall_code_placeholder">Enter code</string>
+    <string name="paywall_apply">Apply</string>
+    <string name="paywall_test_code_hint">Test: enter \'%1$s\' for %2$d candies</string>
+    <string name="paywall_test_code_success">🍬 %1$d candies added! (test)</string>
+    <string name="paywall_redeem_success">Applied! Your balance has been updated.</string>
+    <string name="paywall_section_referral">Invite Friends</string>
+    <string name="paywall_referral_placeholder">Invite code you received</string>
+    <string name="paywall_referral_success">Invite code applied! You got a bonus.</string>
+    <string name="paywall_terms">Terms of Service</string>
+    <string name="paywall_privacy">Privacy Policy</string>
+    <string name="paywall_footer">Purchased candies never expire.</string>
+
+    <!-- 날씨 에러 -->
+    <string name="weather_err_denied">Location permission is off. Please enable it in Settings.</string>
+    <string name="weather_err_no_location">Couldn\'t find your current location.</string>
+    <string name="weather_err_location_failed">Location lookup failed: %1$s</string>
+    <string name="weather_err_network">Weather request failed: %1$s</string>
+    <string name="weather_err_decoding">Couldn\'t parse the weather response: %1$s</string>
 </resources>
