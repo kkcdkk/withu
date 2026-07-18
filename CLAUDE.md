@@ -100,6 +100,36 @@ Worker 구성 (`src/index.js` 라우팅 · `src/auth.js` Apple JWT/JWS 검증 ·
 - **DEBUG 빌드는 쿼터 무제한** (`remainingToday() = 9999`, 차감 없음) — 캔디/페이월 흐름은 Release 빌드나 TestFlight 에서만 실제 동작을 검증할 수 있다. 테스트 캔디 코드 `CANDY20` 은 sandbox/DEBUG 전용.
 - **캔디 코드(redeem) 관리**: D1 `redeem_codes` 에 직접 INSERT/DELETE (`cloudflare/withu-api` 에서 `npx wrangler d1 execute withu-prod --remote --command "..."`). 계정당 1회는 `code_redemptions` PK 가 자동 보장. 생성 예: `INSERT INTO redeem_codes (code, kind, amount, max_uses, used_count, expires_at) VALUES ('CANDY25','credits',25,1000000,0,NULL)`. 종료 = `DELETE FROM redeem_codes WHERE code='...'`, 현황 = `SELECT code, amount, used_count FROM redeem_codes`. 운영 중 코드: `CANDY25` (25캔디).
 
+## Android 앱 (`android/`)
+
+iOS 앱의 **파리티 포트** — Kotlin + Compose(M3), 같은 Cloudflare Worker 를 그대로 쓴다. **Swift 원본이 진실**: 문구·레이아웃·저장 스키마·캔디 모델을 그대로 옮긴 것이라, Android 쪽을 고칠 때는 대응하는 iOS 파일과 어긋나지 않는지 먼저 확인한다. 스코프·설계 계약은 `android/specs/` 에 있다 (`SCOPE.md`, `00-PLAN.md` = 파일 소유권 지도, `01~12` = 화면별 스펙, `PARITY-GAPS.md` = iOS 대비 남은 갭 목록).
+
+빌드/테스트 (`android/` 디렉터리, `build.sh` 가 JDK 21·ANDROID_HOME 고정):
+```bash
+./build.sh :app:assembleDebug        # Claude 의 기본 검증 루트
+./build.sh test                      # JVM 유닛테스트 (Robolectric)
+./build.sh test --tests "*CharacterStateResolverTest"   # 단일 테스트
+```
+`gradlew` 를 직접 호출하지 말 것 — JAVA_HOME 이 안 잡혀 실패한다. 항상 `./build.sh` 경유.
+
+파리티를 지탱하는 불변 규칙 (`00-PLAN.md §0`):
+- **키·파일명은 iOS 와 바이트 동일**: SharedPreferences 키 (`withu.*.v1`), 저장 스키마 (`characters/<raw>.png`, `gallery/<uuid>.png`+`metadata.json`), `CharacterState.raw` 문자열. **rename 절대 금지** (iOS 와 데이터 호환이 깨짐).
+- **문구는 iOS Localizable 한국어 원문 그대로** (`res/values/strings.xml`, `values-en` = 카탈로그 en). 오타까지 보존. 서버 프롬프트 영문 (`generationHint`) 은 리소스가 아니라 **코드 상수**.
+- **캔디는 로컬 권위** (`quota/GenerationQuota.kt`) — iOS 와 동일. 서버 차감 없음, `syncCreditsUp` 은 max 끌어올리기만. DEBUG = 무제한 9999·차감 no-op.
+- 공유 싱글턴은 `WithuApp.appContext` 를 내부에서 쓴다 — **공유 API 시그니처에 Context 파라미터 없음**. 파일 I/O 는 `Dispatchers.IO`, Compose 에서 저장소 직접 호출 금지.
+- **제외(후속)**: Wear OS, Google 로그인(`/auth/google`), Play Billing 실결제, 날씨 배경 AI. 호출 지점은 no-op + 주석 처리.
+
+주요 대응 관계 (iOS → Android, 로직/스키마 동형):
+- `Shared/CharacterImageStore.swift` → `shared/CharacterImageStore.kt` (활성 슬롯/갤러리/애니 토글/야간 판정)
+- `Character/CharacterStateResolver.swift` → `character/CharacterStateResolver.kt` (순수 함수 상태 결정)
+- `Networking/APIClient.swift` → `net/ApiClient.kt` (+ `ApiModels.kt`/`ApiError.kt`, `okhttp`)
+- `Networking/GenerationQuota.swift` → `quota/GenerationQuota.kt`
+- `CharacterGen/ImageProcessing.swift` (크로마키) → `gen/ImageProcessing.kt` + `gen/ChromaKey.kt`
+- 배치 백그라운드 큐: iOS `BackgroundGenerationManager` (background URLSession) → Android `bggen/` (WorkManager `GenBatchWorker`)
+- 위젯: iOS WidgetKit → Android `widget/` (Glance). 워치/컴플리케이션은 Android 에 없음 (Wear OS 제외).
+- `MainActivity.kt` = 전체 nav graph(11 route) + 온보딩 게이트 + 알림 딥링크. 화면끼리 직접 호출하지 않고 이동은 전부 여기 콜백으로 배선.
+- 서버 토큰은 `local.properties` 의 `WITHU_API_TOKEN` → `BuildConfig` (iOS `APIConfig.swift` 와 같은 커밋-제외 정책).
+
 ## 기타 운영 메모
 
 - **신규 `CharacterState` 추가 시**: rawValue가 디스크/Watch 메시지 호환 키이므로 기존 값 rename 금지. `imageAssetName`, `symbolName`, `caption`, `tint`, `generationHint`, `symbolEmoji` 를 모두 채워야 컴파일/UI가 깨지지 않는다 (enum이라 switch가 강제).
