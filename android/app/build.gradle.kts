@@ -74,6 +74,8 @@ dependencies {
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.androidx.exifinterface)
     implementation(libs.play.services.location)
+    // 폰→워치 상태·이미지 push (Data Layer) — iOS ConnectivityManager 대응
+    implementation(libs.play.services.wearable)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.compose.tooling)

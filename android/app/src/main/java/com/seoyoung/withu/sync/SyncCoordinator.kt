@@ -73,6 +73,8 @@ object SyncCoordinator {
         )
         SharedAppState.save(message)
         refreshWidgets()
+        // 워치 push — iOS syncNow 의 워치 스냅샷/이미지 전송 대응. 미연결/실패는 삼킴.
+        com.seoyoung.withu.watch.WearSyncManager.push()
     }
 
     /**

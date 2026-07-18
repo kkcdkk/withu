@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "withu"
 include(":app")
+include(":wear")
