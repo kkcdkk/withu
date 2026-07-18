@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,7 +59,7 @@ import com.seoyoung.withu.health.HealthManager
 import com.seoyoung.withu.notify.NotificationHelper
 import com.seoyoung.withu.ui.StatusKind
 import com.seoyoung.withu.ui.StatusPill
-import com.seoyoung.withu.ui.WithuPinkButton
+import com.seoyoung.withu.ui.WithuCTAButton
 import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuPink
 import com.seoyoung.withu.ui.theme.withuPinkBackground
@@ -132,7 +134,8 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val healthLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
-        val ok = granted.containsAll(HealthManager.requiredPermissions())
+        // 하나라도 허용되면 GRANTED (부분 허용도 동작 — HealthManager.isAuthorized 와 동일 기준).
+        val ok = HealthManager.requiredPermissions().any { it in granted }
         setResult(OnboardingStep.HEALTH, if (ok) PermissionResult.GRANTED else PermissionResult.DENIED)
     }
     // 위치 권한 (coarse)
@@ -193,7 +196,10 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(onboardingBackground()),
+            .background(onboardingBackground())
+            // edge-to-edge(target 35) — 상단 상태바 인셋만 배경 위에서 소비.
+            // 하단 제스처바는 버튼 Column 에서 따로 처리(배경은 끝까지 채우되 버튼만 띄움).
+            .statusBarsPadding(),
     ) {
         Column(Modifier.fillMaxSize()) {
             // 진행 바 (welcome 제외)
@@ -276,48 +282,53 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             }
         }
 
-        // 하단 bar — 스텝별 버튼.
+        // 하단 bar — 스텝별 버튼. 제스처바(navigationBars)만큼 띄워 겹침 방지(갤럭시 하단바).
         Column(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (step) {
-                OnboardingStep.WELCOME -> WithuPinkButton(
+                OnboardingStep.WELCOME -> WithuCTAButton(
                     text = stringResource(R.string.onboarding_start),
                     onClick = { advance() },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OnboardingStep.DONE -> WithuPinkButton(
+                OnboardingStep.DONE -> WithuCTAButton(
                     text = stringResource(R.string.onboarding_finish),
                     onClick = onComplete,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 else -> {
-                    val result = resultOf(step)
-                    val requesting = result == PermissionResult.REQUESTING
-                    WithuPinkButton(
+                    val requesting = resultOf(step) == PermissionResult.REQUESTING
+                    WithuCTAButton(
                         text = if (requesting) stringResource(R.string.onboarding_requesting)
                         else stringResource(R.string.onboarding_request_button),
                         onClick = { request(step) },
                         enabled = !requesting,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    // pending 일 때만 건너뛰기 노출 (요청 시작하면 숨김).
-                    if (result == PermissionResult.PENDING) {
-                        TextButton(onClick = {
-                            setResult(step, PermissionResult.SKIPPED)
-                            advance()
-                        }) {
-                            Text(
-                                stringResource(R.string.onboarding_skip),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                }
+            }
+            // 건너뛰기 슬롯 — 높이를 항상 예약해 CTA 버튼 위치를 고정한다.
+            // (예전엔 pending 일 때만 노출돼서, 버튼 누르면 슬롯이 사라지며 CTA 가 아래로
+            //  점프해 순간 잘못 눌리던 버그. 이제 스텝 전환/요청 시작에도 버튼이 안 움직임.)
+            Box(Modifier.height(48.dp), contentAlignment = Alignment.Center) {
+                val isPermissionStep = step != OnboardingStep.WELCOME && step != OnboardingStep.DONE
+                if (isPermissionStep && resultOf(step) == PermissionResult.PENDING) {
+                    TextButton(onClick = {
+                        setResult(step, PermissionResult.SKIPPED)
+                        advance()
+                    }) {
+                        Text(
+                            stringResource(R.string.onboarding_skip),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }

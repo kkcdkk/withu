@@ -21,6 +21,9 @@ data class GenerateImageRequest(
     val kind: String? = null,                  // null|"character" → 서버 SYSTEM_PROMPT, "background" → raw
     // gpt-image-2 명시 시 마젠타 배경 → 클라 크로마키. null = gpt-image-1.5 (진짜 투명)
     val model: String? = "gpt-image-2",
+    // 생성 모니터링 표시용 — OpenAI 로는 안 감(서버가 로깅만).
+    @SerialName("user_input") val userInput: String? = null,   // 사용자가 실제 입력한 원문
+    @SerialName("input_field") val inputField: String? = null, // 어떤 입력칸이었는지 라벨
 )
 
 @Serializable

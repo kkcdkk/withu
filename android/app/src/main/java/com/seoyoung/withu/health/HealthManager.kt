@@ -98,7 +98,9 @@ object HealthManager {
         if (isAvailable()) runCatching { HealthConnectClient.getOrCreate(WithuApp.context) }.getOrNull()
         else null
 
-    /** getGrantedPermissions 로 isAuthorized 정확 갱신 — iOS 처럼 추론하지 않는다. */
+    /** getGrantedPermissions 로 isAuthorized 갱신.
+     *  요구 6종 중 '하나라도' 허용되면 authorized — iOS 처럼 부분 허용도 동작(각 조회는 없는 데이터 null 처리).
+     *  containsAll(전부) 로 하면 삼성 헬스에서 심박 등 하나만 꺼도 '허용 안됨' 으로 떠서 사용자가 혼란. */
     suspend fun refreshAuthorizationStatus() = withContext(Dispatchers.IO) {
         val client = clientOrNull()
         if (client == null) {
@@ -106,8 +108,8 @@ object HealthManager {
             return@withContext
         }
         _isAuthorized.value = runCatching {
-            client.permissionController.getGrantedPermissions()
-                .containsAll(requiredPermissions())
+            val granted = client.permissionController.getGrantedPermissions()
+            requiredPermissions().any { it in granted }
         }.getOrDefault(false)
     }
 

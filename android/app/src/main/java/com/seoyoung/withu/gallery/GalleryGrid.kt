@@ -1198,6 +1198,8 @@ private suspend fun refineItem(
             style = "auto",
             kind = "refine",
             model = "gpt-image-2",
+            userInput = trimmed,
+            inputField = "다듬기",
         )
         // 갤러리 다듬기 — 원본 캐릭터(batchId)의 수정 체인에 이어붙인다.
         val resp = ApiClient.generateImage(req, sessionId = item.batchId, state = item.sourceState)

@@ -179,6 +179,22 @@ class SingleGenViewModel : ViewModel() {
         return if (desc.isEmpty()) pose else "$desc, $pose"
     }
 
+    /** 생성 모니터링 표시용 — 사용자가 실제 입력한 원문 + 어떤 칸이었는지 라벨. */
+    private fun rawUserInput(): Pair<String, String> {
+        val desc = prompt.trim()
+        if (referenceImage != null) {
+            val keep = referenceKeep.trim()
+            val change = referenceChange.trim()
+            val parts = buildList {
+                if (change.isNotEmpty()) add("바꿀 것: $change")
+                if (keep.isNotEmpty()) add("그대로: $keep")
+                if (isEmpty() && desc.isNotEmpty()) add(desc)
+            }
+            return parts.joinToString(" / ") to "참고사진"
+        }
+        return desc to "설명"
+    }
+
     /** frame1(2번째 장면) 프롬프트 — "1번째와 동일, 포즈만 변경" 강제 (iOS 원문). */
     private fun animationFrame2Instruction(state: CharacterState): String =
         " Use the reference image as the SAME character. Keep identical: face, outfit, colors, " +
@@ -358,7 +374,8 @@ class SingleGenViewModel : ViewModel() {
             // 성공 판정 = 결과 슬롯 '인스턴스'가 바뀌었는지 — 실패 시 이전 런 이미지가 남아
             // frame1 생성/캔디 차감으로 새는 것 방지 (값 비교 금지, iOS !== 동일 의미론).
             val prevResult = resultImage
-            send(composedPrompt(), referenceB64, frame = 0)
+            val (rawText, rawField) = rawUserInput()
+            send(composedPrompt(), referenceB64, frame = 0, userInput = rawText, inputField = rawField)
             val frame0Succeeded = resultImage !== prevResult
             // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
             val freeSession = lastFreeConsumed
@@ -369,7 +386,7 @@ class SingleGenViewModel : ViewModel() {
                 if (f0Full != null) {
                     val f0Ref = withContext(Dispatchers.Default) { ImageProcessing.toBase64Png(f0Full) }
                     val animPrompt = composedPrompt() + "." + animationFrame2Instruction(targetState)
-                    send(animPrompt, f0Ref, frame = 1, matchReference = f0Full)
+                    send(animPrompt, f0Ref, frame = 1, matchReference = f0Full, inputField = "움직임 프레임")
                     if (resultFrame2 != null && !freeSession) GenerationQuota.record(cost)
                 }
             }
@@ -417,6 +434,7 @@ class SingleGenViewModel : ViewModel() {
             send(
                 refinePrompt, referenceB64, frame,
                 matchReference = if (frame == 1) (lastFrame0FullRes ?: resultImage) else null,
+                userInput = refinementPrompt, inputField = "다듬기",
             )
             val succeeded = (if (frame == 1) resultFrame2 else resultImage) !== prevSlot
             if (succeeded) {
@@ -453,6 +471,8 @@ class SingleGenViewModel : ViewModel() {
         reference: String?,
         frame: Int = 0,
         matchReference: Bitmap? = null,
+        userInput: String? = null,
+        inputField: String? = null,
     ) {
         // 격자(체커보드) 방지 — 일부 모델이 "투명"을 격자로 그림 → 배경 지시 명시 (iOS 원문).
         val finalPrompt = "$prompt. Only the character on a transparent background — " +
@@ -468,6 +488,8 @@ class SingleGenViewModel : ViewModel() {
                 artStyle = artStyle,
                 style = "auto",
                 model = "gpt-image-2",
+                userInput = userInput?.trim(),
+                inputField = inputField,
             )
             // frame 0 만 수정 체인(session)에 넣는다 — frame 1(자동 애니메이션)은 수정 횟수에서 제외.
             val resp = ApiClient.generateImage(
