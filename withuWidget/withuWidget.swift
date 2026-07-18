@@ -84,15 +84,32 @@ struct CharacterProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CharacterEntry>) -> Void) {
-        // 매 15분 새 entry 미리 만들어둠 → iOS 가 reload 자주 안 해도 자동 갱신
+        // 매 15분 새 entry 미리 만들어둠 → iOS 가 reload 안 해도 수면→기상 경계에서 스스로 전환.
+        // (예전 버그: 모든 entry 가 '지금' 상태라 07:00 기상 시각이 지나도 위젯이 계속 자고 있었음.)
         let now = Date()
+        let base = currentEntry()
+        let schedule = SharedAppState.loadSchedule()
+        // 운동 상태는 실시간 신호라 위젯이 예측 못 함 — 지금(i=0) entry 만 앱 계산값 유지.
+        let baseIsLiveWorkout: Bool
+        switch base.state {
+        case .walking, .running, .cycling, .energetic: baseIsLiveWorkout = true
+        default: baseIsLiveWorkout = false
+        }
         var entries: [CharacterEntry] = []
         for i in 0..<8 {
             let date = Calendar.current.date(byAdding: .minute, value: i * 15, to: now) ?? now
-            let base = currentEntry()
+            // '설정 시간 기준'이면 스케줄로 상태 계산 → 수면/기상 경계에서 위젯이 스스로 전환.
+            // (지금 시점도 스케줄로 — 오래 안 열려 base.state 가 stale 이어도 정확.)
+            // 단 지금 운동 중이면 그 값을 유지. '수면 모드 기준'/구버전(스케줄 없음)은 현재 상태 유지.
+            let state: CharacterState
+            if let schedule, schedule.manualSleepOnly, !(i == 0 && baseIsLiveWorkout) {
+                state = schedule.scheduledState(at: date)
+            } else {
+                state = base.state
+            }
             entries.append(CharacterEntry(
                 date: date,
-                state: base.state,
+                state: state,
                 todaySteps: base.todaySteps,
                 todayActiveMinutes: base.todayActiveMinutes,
                 todayActiveKcal: base.todayActiveKcal,

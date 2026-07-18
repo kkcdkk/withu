@@ -62,6 +62,13 @@ enum CharacterProfileStore {
         guard let defaults,
               let data = try? JSONEncoder().encode(profile) else { return }
         defaults.set(data, forKey: key)
+        // 위젯이 미래 수면/기상 전환을 계산하도록 시간 창 요약도 즉시 공유 (프로필 변경 반영).
+        SharedAppState.saveSchedule(SharedAppState.ScheduleInfo(
+            manualSleepOnly: profile.isManualSleepOnly,
+            sleepStartMin: profile.sleepStartHour * 60 + profile.sleepStartMinute,
+            sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
+            lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
+            dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute))
         // 메인 화면 등에 알려서 즉시 갱신
         NotificationCenter.default.post(name: .characterProfileChanged, object: nil)
     }

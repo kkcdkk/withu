@@ -15,9 +15,47 @@ enum SharedAppState {
     static let groupID = "group.com.seoyoung.withu"
 
     private static let messageKey = "withu.currentMessage.v1"
+    private static let scheduleKey = "withu.schedule.v1"
 
     private static var defaults: UserDefaults? {
         UserDefaults(suiteName: groupID)
+    }
+
+    /// 프로필의 시간 창(수면/식사) 요약 — 위젯이 미래 시점 상태를 스스로 계산하게 App Group 에 공유.
+    /// (CharacterProfile 은 위젯 타깃에 없어서 필요한 값만 평문 blob 으로 전달.)
+    struct ScheduleInfo: Codable {
+        let manualSleepOnly: Bool
+        let sleepStartMin: Int
+        let sleepEndMin: Int
+        let lunchMin: Int
+        let dinnerMin: Int
+
+        /// 시간·창만으로 결정되는 스케줄 상태(수면/기상/식사/idle).
+        /// **CharacterStateResolver 규칙 2(수면)·3(기상)·4(식사)·5(idle) 와 동일하게 유지.**
+        func scheduledState(at date: Date, calendar: Calendar = .current) -> CharacterState {
+            let comps = calendar.dateComponents([.hour, .minute], from: date)
+            let nowMin = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+            if Self.inRange(nowMin, sleepStartMin, sleepEndMin) { return .sleeping }
+            if Self.inRange(nowMin, sleepEndMin, (sleepEndMin + 60) % (24 * 60)) { return .wakingUp }
+            if (nowMin >= lunchMin && nowMin < lunchMin + 30)
+                || (nowMin >= dinnerMin && nowMin < dinnerMin + 30) { return .eating }
+            return .idle
+        }
+
+        private static func inRange(_ nowMin: Int, _ start: Int, _ end: Int) -> Bool {
+            let s = start % (24 * 60), e = end % (24 * 60)
+            return s < e ? (nowMin >= s && nowMin < e) : (nowMin >= s || nowMin < e)
+        }
+    }
+
+    static func saveSchedule(_ info: ScheduleInfo) {
+        guard let defaults, let data = try? JSONEncoder().encode(info) else { return }
+        defaults.set(data, forKey: scheduleKey)
+    }
+
+    static func loadSchedule() -> ScheduleInfo? {
+        guard let defaults, let data = defaults.data(forKey: scheduleKey) else { return nil }
+        return try? JSONDecoder().decode(ScheduleInfo.self, from: data)
     }
 
     /// 받은 WatchMessage 를 App Group 에 저장.

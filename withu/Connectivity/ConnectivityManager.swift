@@ -522,6 +522,13 @@ enum SyncCoordinator {
         )
 
         SharedAppState.save(msg)
+        // 위젯이 미래 수면/기상 전환을 스스로 계산하도록 프로필 시간 창을 공유 (매 sync 최신화).
+        SharedAppState.saveSchedule(SharedAppState.ScheduleInfo(
+            manualSleepOnly: profile.isManualSleepOnly,
+            sleepStartMin: profile.sleepStartHour * 60 + profile.sleepStartMinute,
+            sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
+            lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
+            dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute))
         WidgetCenter.shared.reloadAllTimelines()
         ConnectivityManager.shared.send(msg)
     }
