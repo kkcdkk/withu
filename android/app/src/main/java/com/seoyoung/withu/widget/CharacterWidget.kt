@@ -160,20 +160,8 @@ private fun WidgetContent(entry: CharacterEntry, visual: CharVisual) {
     when {
         size.height >= 200.dp -> LargeLayout(entry, visual, root)
         size.width >= 200.dp -> MediumLayout(entry, visual, root)
-        // 1x1(작은 셀) — 캐릭터만 크게 꽉 채우고 텍스트는 생략 (자리를 적게 차지).
-        size.width < 110.dp -> TinyLayout(entry, visual, root)
+        // 작은 크기(1x1 포함)도 SmallLayout — 날씨·캐릭터·걸음 다 표시 (사용자 요청).
         else -> SmallLayout(entry, visual, root)
-    }
-}
-
-@androidx.compose.runtime.Composable
-private fun TinyLayout(entry: CharacterEntry, visual: CharVisual, modifier: GlanceModifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        // 셀에 맞춰 크게 — 1x1 은 캐릭터가 주인공. 날씨 데코는 유지.
-        CharacterVisualBox(visual, entry, imageDp = 60.dp, decoSp = 13.sp, emojiSp = 36.sp)
     }
 }
 
@@ -190,8 +178,8 @@ private fun SmallLayout(entry: CharacterEntry, visual: CharVisual, modifier: Gla
         if (weather != null) {
             Text(weather, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = onSurface()))
         }
-        // 2x2 셀 대비 캐릭터를 크게 — 빈 공간 최소화 (46 → 76dp).
-        CharacterVisualBox(visual, entry, imageDp = 76.dp, decoSp = 14.sp, emojiSp = 40.sp)
+        // 캐릭터 크기 — 작은 셀에서도 날씨·걸음 텍스트와 함께 다 들어가게 60dp.
+        CharacterVisualBox(visual, entry, imageDp = 60.dp, decoSp = 14.sp, emojiSp = 40.sp)
         if (metric.isNotEmpty()) {
             Text(metric, style = TextStyle(fontSize = 9.sp, color = onSurfaceVariant()))
         }
