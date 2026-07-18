@@ -3,7 +3,6 @@ package com.seoyoung.withu.profile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -229,18 +228,14 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                         checked = !profile.isManualSleepOnly,
                         onCheckedChange = { profile = profile.copy(manualSleepOnly = !it) },
                     )
-                    // '수면 모드 기준'(자동 감지)에선 아래 시간이 판정 기준이 아니라 회색+비활성.
-                    val sleepTimesDisabled = !profile.isManualSleepOnly
                     TimeRow(
                         label = stringResource(R.string.profile_sleep_start),
                         hour = profile.sleepStartHour, minute = profile.sleepStartMinute,
-                        enabled = !sleepTimesDisabled,
                         onClick = { editingField = TimeField.SLEEP_START },
                     )
                     TimeRow(
                         label = stringResource(R.string.profile_sleep_end),
                         hour = profile.sleepEndHour, minute = profile.sleepEndMinute,
-                        enabled = !sleepTimesDisabled,
                         onClick = { editingField = TimeField.SLEEP_END },
                     )
                     // 최근 수면 시간에 맞추기 — 워치류 수면 추적은 '설정 시간'이 사실상 판정 기준이라
@@ -249,8 +244,7 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .alpha(if (sleepTimesDisabled) 0.4f else 1f)
-                            .clickable(enabled = !isAligningSleep && !sleepTimesDisabled) {
+                            .clickable(enabled = !isAligningSleep) {
                                 isAligningSleep = true
                                 sleepAlignMessage = null
                                 scope.launch {
@@ -667,19 +661,12 @@ private fun profileWithField(p: CharacterProfile, f: TimeField, h: Int, m: Int):
 
 /** 라벨 + HH:mm 값 행 — 탭하면 시간 피커 (iOS DatePicker 행 대응). */
 @Composable
-private fun TimeRow(
-    label: String,
-    hour: Int,
-    minute: Int,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
+private fun TimeRow(label: String, hour: Int, minute: Int, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(onClick = onClick)
             .padding(vertical = 10.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -102,7 +102,7 @@ struct CharacterProvider: TimelineProvider {
             // (지금 시점도 스케줄로 — 오래 안 열려 base.state 가 stale 이어도 정확.)
             // 단 지금 운동 중이면 그 값을 유지. '수면 모드 기준'/구버전(스케줄 없음)은 현재 상태 유지.
             let state: CharacterState
-            if let schedule, schedule.manualSleepOnly, !(i == 0 && baseIsLiveWorkout) {
+            if let schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
                 state = schedule.scheduledState(at: date)
             } else {
                 state = base.state

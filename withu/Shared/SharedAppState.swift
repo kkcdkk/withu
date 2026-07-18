@@ -29,6 +29,11 @@ enum SharedAppState {
         let sleepEndMin: Int
         let lunchMin: Int
         let dinnerMin: Int
+        /// '수면 모드 기준'인데 신호원이 없어 시간창으로 폴백 중인지 (앱이 계산해 넣음).
+        var scheduleFallback: Bool = false
+
+        /// 위젯이 시간 스케줄로 미래 상태를 예측해도 되는 경우 (설정 시간 기준 또는 폴백).
+        var usesSchedule: Bool { manualSleepOnly || scheduleFallback }
 
         /// 시간·창만으로 결정되는 스케줄 상태(수면/기상/식사/idle).
         /// **CharacterStateResolver 규칙 2(수면)·3(기상)·4(식사)·5(idle) 와 동일하게 유지.**

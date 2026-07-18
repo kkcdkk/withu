@@ -58,6 +58,9 @@ struct ContentView: View {
     private var characterState: CharacterState {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
         let manualOnly = profile.isManualSleepOnly
+        // '수면 모드 기준'인데 취침 Focus·건강앱 수면 신호원이 하나도 없으면 시간창으로 폴백(하단 안내와 동일 조건).
+        let scheduleFallback = !manualOnly
+            && focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule
         return overrideState ?? CharacterStateResolver.resolve(
             now: currentTime,
             sleep: health.sleep,
@@ -74,6 +77,7 @@ struct ContentView: View {
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
+            scheduleFallback: scheduleFallback,
             profile: profile
         )
     }

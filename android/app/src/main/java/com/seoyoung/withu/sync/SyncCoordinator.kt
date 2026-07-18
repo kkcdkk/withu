@@ -48,6 +48,8 @@ object SyncCoordinator {
             isLikelyInWorkout = HealthManager.isLikelyInWorkout.value,
             recentStepsPerMinute = HealthManager.recentStepsPerMinute.value,
             phoneWorkoutState = com.seoyoung.withu.health.MotionActivityManager.phoneWorkoutState(),
+            // '수면 모드 기준'인데 건강앱 수면 일정이 없으면 시간창으로 폴백(신호 없이 절대 안 자던 문제).
+            scheduleFallback = !manual && !HealthManager.hasSleepSchedule.value,
             profile = profile,
         )
     }

@@ -44,6 +44,8 @@ object CharacterStateResolver {
         isLikelyInWorkout: Boolean = false,             // Android: 항상 false (Wear 제외)
         recentStepsPerMinute: Double = 0.0,
         phoneWorkoutState: CharacterState? = null,
+        // '수면 모드 기준'인데 실제 수면 신호원(건강앱 수면 일정)이 없을 때 true → 시간창으로 폴백.
+        scheduleFallback: Boolean = false,
         profile: CharacterProfile = CharacterProfile(),
     ): CharacterState {
         // 미사용 파라미터 명시 (iOS 도 동일하게 무시). focusWokeAt 은 caller 호환용으로만
@@ -104,8 +106,11 @@ object CharacterStateResolver {
         if (isGenericFocusActive && isInRange(nowMin, sleepStartMin, sleepEndMin)) {
             return CharacterState.SLEEPING
         }
-        // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
-        if (profile.isManualSleepOnly && isInRange(nowMin, sleepStartMin, sleepEndMin)) {
+        // 3순위 — 시간창 자체가 수면 신호. '설정 시간 기준' 이거나,
+        // '수면 모드 기준'인데 실제 수면 신호원이 없어 시간으로 폴백해야 할 때.
+        if ((profile.isManualSleepOnly || scheduleFallback) &&
+            isInRange(nowMin, sleepStartMin, sleepEndMin)
+        ) {
             return CharacterState.SLEEPING
         }
 
