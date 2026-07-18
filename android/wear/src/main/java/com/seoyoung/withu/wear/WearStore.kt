@@ -15,7 +15,7 @@ import java.io.File
 object WearStore {
 
     const val PATH_STATE = "/withu/state"
-    const val PATH_IMAGE = "/withu/image"
+    const val PATH_IMAGE_PREFIX = "/withu/image/"
 
     private const val PREFS = "withu_wear"
     private const val KEY_STATE = "state"
@@ -24,6 +24,11 @@ object WearStore {
     private const val KEY_WEATHER_EMOJI = "weatherEmoji"
     private const val KEY_TEMP = "tempC"
     private const val KEY_UPDATED_AT = "updatedAt"
+
+    // 워치가 손목 움직임으로 직접 감지한 활동(산책/달리기/자전거). 폰 없이도 바로 반영.
+    private const val KEY_WATCH_ACT = "watchActivity"
+    private const val KEY_WATCH_ACT_AT = "watchActivityAt"
+    private const val WATCH_ACT_FRESH_MS = 10 * 60 * 1000L  // EXIT 놓쳐도 10분 뒤 자동 해제
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -62,6 +67,35 @@ object WearStore {
         val tempC: Int?,
         val updatedAt: Long,
     )
+
+    // --- 손목 활동 (워치 자체 감지) ---
+
+    fun saveWatchActivity(context: Context, stateRaw: String?) {
+        prefs(context).edit().apply {
+            if (stateRaw == null) {
+                remove(KEY_WATCH_ACT); remove(KEY_WATCH_ACT_AT)
+            } else {
+                putString(KEY_WATCH_ACT, stateRaw)
+                putLong(KEY_WATCH_ACT_AT, System.currentTimeMillis())
+            }
+        }.apply()
+    }
+
+    /** 지금 저장된 손목 활동 raw (freshness 무시) — EXIT 매칭용. */
+    fun currentWatchActivityRaw(context: Context): String? =
+        prefs(context).getString(KEY_WATCH_ACT, null)
+
+    /**
+     * 표시에 쓸 상태 — 손목 활동이 최근(10분 내)이면 그걸 우선(폰 없이도 산책 반영),
+     * 아니면 폰이 push 한 스냅샷 상태.
+     */
+    fun effectiveStateRaw(context: Context): String? {
+        val p = prefs(context)
+        val act = p.getString(KEY_WATCH_ACT, null)
+        val at = p.getLong(KEY_WATCH_ACT_AT, 0L)
+        if (act != null && System.currentTimeMillis() - at < WATCH_ACT_FRESH_MS) return act
+        return p.getString(KEY_STATE, null)
+    }
 
     fun loadSnapshot(context: Context): Snapshot {
         val p = prefs(context)

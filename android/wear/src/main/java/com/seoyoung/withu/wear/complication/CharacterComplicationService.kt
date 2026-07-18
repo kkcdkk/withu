@@ -27,7 +27,7 @@ class CharacterComplicationService : SuspendingComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
         if (request.complicationType != ComplicationType.SMALL_IMAGE) return null
-        return build(WearStore.loadSnapshot(this).stateRaw)
+        return build(WearStore.effectiveStateRaw(this))
     }
 
     private fun build(stateRaw: String?): ComplicationData? {

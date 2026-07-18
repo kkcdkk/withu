@@ -70,6 +70,15 @@ object CharacterStateResolver {
             return CharacterState.ENERGETIC
         }
 
+        // 1.2) 워치 걸음 cadence 만으로도 걷기/달리기 (Android 보강) — iOS 는 애플워치가 workout
+        //      세션을 자동 감지하지만 Samsung/Health Connect 는 일상 산책에 세션을 안 만든다.
+        //      심박이 안 오르는(≥95 미달) 평범한 산책이 위 1) HR 추론에 안 잡혀 '기본'에 머무는 문제.
+        //      워치가 Health Connect 에 쓰는 걸음 빈도로 직접 판정. 수면/집중 신호 켜져 있으면 무시.
+        if (!isFocusActive && !inSleepSchedule) {
+            if (recentStepsPerMinute >= 130) return CharacterState.RUNNING
+            if (recentStepsPerMinute >= 45) return CharacterState.WALKING
+        }
+
         // 1.5) 폰 전용 보조 — 활동 분류가 "10분 지속 걷기/달리기/자전거"로 판단하면 반영.
         //      (지속 조건은 caller 가 검사 — 일상 걸음 오탐 방지)
         //      단 수면 신호가 켜져 있으면 무시 — 밤중에 폰 들고 서성이는 정도로 수면을 덮지 않는다.

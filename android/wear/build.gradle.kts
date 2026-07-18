@@ -55,5 +55,7 @@ dependencies {
     implementation(libs.guava)
     // 폰↔워치 Data Layer
     implementation(libs.play.services.wearable)
+    // 손목 활동 감지 (Activity Recognition)
+    implementation(libs.play.services.location)
     debugImplementation(libs.androidx.compose.tooling)
 }

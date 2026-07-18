@@ -293,7 +293,7 @@ private fun SettingsContent(
                 ) {
                     scope.launch {
                         watchSyncing = true
-                        com.seoyoung.withu.watch.WearSyncManager.push()
+                        com.seoyoung.withu.watch.WearSyncManager.push(force = true)
                         watchState = com.seoyoung.withu.watch.WatchStatus.query()
                         watchSyncing = false
                     }

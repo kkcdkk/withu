@@ -33,9 +33,10 @@ class CharacterTileService : TileService() {
         requestParams: RequestBuilders.TileRequest,
     ): ListenableFuture<TileBuilders.Tile> {
         val snap = WearStore.loadSnapshot(this)
+        val eff = WearStore.effectiveStateRaw(this)
         val tile = TileBuilders.Tile.Builder()
-            .setResourcesVersion(versionFor(snap))
-            .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(layout(snap)))
+            .setResourcesVersion(versionFor(eff))
+            .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(layout(snap, eff)))
             .setFreshnessIntervalMillis(30 * 60 * 1000L)
             .build()
         return Futures.immediateFuture(tile)
@@ -44,9 +45,9 @@ class CharacterTileService : TileService() {
     override fun onTileResourcesRequest(
         requestParams: RequestBuilders.ResourcesRequest,
     ): ListenableFuture<ResourceBuilders.Resources> {
-        val snap = WearStore.loadSnapshot(this)
-        val builder = ResourceBuilders.Resources.Builder().setVersion(versionFor(snap))
-        val bytes = if (snap.stateRaw != null) charImageRgb565(snap.stateRaw) else null
+        val eff = WearStore.effectiveStateRaw(this)
+        val builder = ResourceBuilders.Resources.Builder().setVersion(versionFor(eff))
+        val bytes = if (eff != null) charImageRgb565(eff) else null
         if (bytes != null) {
             builder.addIdToImageMapping(
                 RES_CHAR,
@@ -67,14 +68,17 @@ class CharacterTileService : TileService() {
 
     // --- 레이아웃 ---
 
-    private fun layout(snap: WearStore.Snapshot): LayoutElementBuilders.LayoutElement {
+    private fun layout(
+        snap: WearStore.Snapshot,
+        effStateRaw: String?,
+    ): LayoutElementBuilders.LayoutElement {
         val bg = ModifiersBuilders.Modifiers.Builder()
             .setBackground(
                 ModifiersBuilders.Background.Builder().setColor(argb(TILE_BG)).build(),
             )
             .build()
 
-        if (snap.stateRaw == null) {
+        if (effStateRaw == null) {
             return LayoutElementBuilders.Box.Builder()
                 .setWidth(expand())
                 .setHeight(expand())
@@ -95,7 +99,7 @@ class CharacterTileService : TileService() {
                     .build(),
             )
             .addContent(spacer(6f))
-            .addContent(text(WearCharacter.shortLabel(snap.stateRaw), 16f, 0xFFFFFFFF.toInt()))
+            .addContent(text(WearCharacter.shortLabel(effStateRaw), 16f, 0xFFFFFFFF.toInt()))
 
         val sub = subtitle(snap)
         if (sub.isNotBlank()) {
@@ -160,9 +164,9 @@ class CharacterTileService : TileService() {
         return runCatching { BitmapFactory.decodeResource(resources, id) }.getOrNull()
     }
 
-    private fun versionFor(snap: WearStore.Snapshot): String {
-        val len = snap.stateRaw?.let { WearStore.loadImageBytes(this, it)?.size ?: 0 } ?: 0
-        return "${snap.stateRaw}:${len}:${snap.updatedAt}"
+    private fun versionFor(effStateRaw: String?): String {
+        val len = effStateRaw?.let { WearStore.loadImageBytes(this, it)?.size ?: 0 } ?: 0
+        return "$effStateRaw:$len"
     }
 
     companion object {
