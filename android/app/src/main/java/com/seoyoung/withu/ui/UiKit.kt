@@ -57,6 +57,7 @@ import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuCTAGreen
 import com.seoyoung.withu.ui.theme.withuGreen
 import com.seoyoung.withu.ui.theme.withuPink
+import com.seoyoung.withu.ui.theme.withuPinkText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -265,7 +266,8 @@ fun WithuCTAButton(
     )
 }
 
-/** 온보딩/승인용 핑크 버튼 — CTA 그린이 아니라 withuPink + 흰 글자, 라운드 14 (스펙 06 §5). */
+/** 보조 액션용 로즈 버튼 — 진한 로즈(withuPinkText) + 흰 글자, 라운드 14.
+ *  파스텔 withuPink 는 흰 글자와 대비가 낮아 안 보였음(iOS 도 이 버튼은 withuPinkText 로 tint). */
 @Composable
 fun WithuPinkButton(
     text: String,
@@ -276,7 +278,7 @@ fun WithuPinkButton(
     PressableFilledButton(
         text = text,
         onClick = onClick,
-        background = withuPink(),
+        background = withuPinkText(),
         cornerRadius = 14.dp,
         modifier = modifier,
         enabled = enabled,
@@ -298,11 +300,16 @@ private fun PressableFilledButton(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "ctaScale")
     val shape = RoundedCornerShape(cornerRadius)
+    // 비활성은 투명도(alpha)로 흐리게 하면 배경색이라 흰색처럼 사라져 버튼이 안 보임 →
+    // 표준 Material 비활성색(회색 컨테이너 + 회색 글자)으로 '눌리지 않지만 보이게'.
+    val isDisabled = !enabled || loading
+    val bg = if (isDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f) else background
+    val fg = if (isDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else Color.White
     Box(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(background)
+            .background(bg)
             .background(if (pressed) Color.Black.copy(alpha = 0.22f) else Color.Transparent)
             .clickable(
                 interactionSource = interaction,
@@ -310,7 +317,6 @@ private fun PressableFilledButton(
                 enabled = enabled && !loading,
                 onClick = onClick,
             )
-            .alpha(if (enabled) 1f else 0.45f)
             .padding(horizontal = 14.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -318,14 +324,14 @@ private fun PressableFilledButton(
             CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
                 strokeWidth = 2.dp,
-                color = Color.White,
+                color = fg,
             )
         } else {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+                color = fg,
             )
         }
     }

@@ -214,7 +214,9 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 if (vm.awaitingIdleApproval && vm.results[CharacterState.IDLE] != null) {
-                    // (A) 기준 모습 승인 — 이 섹션만 단독 표시.
+                    // 승인 단계 — '만들어진 모습'(결과)을 먼저 크게 보여주고,
+                    // 그 아래에 '기준 모습 확인'(승인/수정 버튼)을 둔다 (사용자 요청 순서).
+                    ResultsSection(vm = vm, onSaveAll = { guardedSave { vm.saveAllToPhotos() } })
                     IdleApprovalSection(vm)
                 } else {
                     // (B~F) 일반 입력 — iOS 코드 순서: stateList → identity → reference → options → start.
@@ -232,11 +234,11 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
                     )
                     OptionsSection(vm)
                     StartSection(vm = vm, onStart = launchStart)
-                }
 
-                // (G) 결과 — 승인 여부와 무관하게 결과가 있으면 표시.
-                if (vm.results.isNotEmpty() || vm.errors.isNotEmpty()) {
-                    ResultsSection(vm = vm, onSaveAll = { guardedSave { vm.saveAllToPhotos() } })
+                    // (G) 결과 — 입력 화면에서도 결과가 남아있으면 표시.
+                    if (vm.results.isNotEmpty() || vm.errors.isNotEmpty()) {
+                        ResultsSection(vm = vm, onSaveAll = { guardedSave { vm.saveAllToPhotos() } })
+                    }
                 }
             }
         }
@@ -709,21 +711,13 @@ private fun IdleApprovalSection(vm: BatchGenViewModel) {
         header = stringResource(R.string.batch_approval_header),
         footer = stringResource(R.string.batch_approval_footer),
     ) {
-        vm.displayedImage(CharacterState.IDLE, 0)?.let { bmp ->
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 280.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-            )
-        }
-        // CTA — 이 모습으로 나머지 만들기
-        WithuPinkButton(
+        // 기준 모습(만들어진 결과) 이미지는 바로 위 '만들어진 모습' 섹션이 크게 보여주므로
+        // 여기선 확인 버튼만 둔다 (중복 제거 + 결과 아래에 확인 컨트롤 배치).
+        // CTA — 이 모습으로 나머지 만들기 (초록, 주요 진행 액션)
+        WithuCTAButton(
             text = stringResource(R.string.batch_approve),
             onClick = { vm.approveIdleAndContinue() },
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
         // B-8: iOS 순서(버튼→필드) — 수정해서 생성하기 버튼/스피너가 입력 필드 위에 온다.
         // 수정해서 생성하기 — 생성 중엔 스피너, 수정사항 비면 비활성.
