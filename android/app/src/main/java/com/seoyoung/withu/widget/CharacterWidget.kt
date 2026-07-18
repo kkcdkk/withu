@@ -282,8 +282,17 @@ private fun CharacterVisualBox(
                 style = TextStyle(fontSize = emojiSp),
             )
         }
-        // (날씨 데코는 캐릭터 머리 위에 겹쳐 '흰 똥'처럼 보이고 위쪽 날씨 텍스트와 중복 —
-        //  캐릭터에 가까운 이 데코를 제거하고 날씨는 상단 텍스트('☁️ 24°')로만 표시.)
+        // 날씨 데코 — 캐릭터 우상단(TopEnd)에 작게. 예전엔 TopCenter(머리 위)라 '흰 똥'처럼
+        // 보였음 → iOS 홈 히어로처럼 우상단으로 이동.
+        val deco = widgetDecoEmoji(entry)
+        if (deco != null) {
+            Box(
+                modifier = GlanceModifier.fillMaxSize(),
+                contentAlignment = Alignment.TopEnd,
+            ) {
+                Text(deco, style = TextStyle(fontSize = decoSp))
+            }
+        }
     }
 }
 

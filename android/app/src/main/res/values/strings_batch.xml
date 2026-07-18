@@ -58,7 +58,7 @@
     <string name="batch_revising">만드는 중…</string>
     <string name="batch_revision_placeholder">수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)</string>
     <string name="batch_back_to_prompt">프롬프트 수정해서 다시</string>
-    <string name="batch_approval_footer">"먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'"</string>
+    <string name="batch_approval_footer">"먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행\n· 만들어진 사진에서 수정하려면 '수정해서 생성하기' 항목에서 수정사항을 입력해 보세요.\n· 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'"</string>
 
     <!-- 결과 섹션 -->
     <string name="batch_results_header">만들어진 모습</string>
