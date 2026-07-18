@@ -25,6 +25,9 @@ struct ContentView: View {
     @State private var profile: CharacterProfile = CharacterProfileStore.load()
     /// 캐릭터 이미지 변경 시 ++. CharacterImageView 의 .id 에 들어가 강제 재생성.
     @State private var imageRefreshKey: Int = 0
+    // 시간 자체를 상태로 — 관찰값이 안 바뀌어도(예: 수면→기상 경계) 화면이 재판정되게.
+    // 30초 타이머 + foreground 진입 때 갱신. resolver 에 now 로 주입.
+    @State private var currentTime: Date = Date()
     /// 활동 종합 메시지 — task / 새로고침 시 갱신
     @State private var activityMessage: String = ""
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
@@ -56,6 +59,7 @@ struct ContentView: View {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
         let manualOnly = profile.isManualSleepOnly
         return overrideState ?? CharacterStateResolver.resolve(
+            now: currentTime,
             sleep: health.sleep,
             workouts: health.recentWorkouts,
             todaySteps: health.todaySteps,
@@ -157,6 +161,7 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 // Foreground 진입 시 Focus 폴링 + 즉시 sync (iOS 가 Focus 변화를 push 안 함).
                 guard newPhase == .active else { return }
+                currentTime = Date()   // 앱 열 때 화면 상태 즉시 재판정 (열어도 자고 있던 문제)
                 focus.refresh()
                 SyncCoordinator.syncNow(override: overrideState)
             }
@@ -185,6 +190,7 @@ struct ContentView: View {
             // fetch 자체는 store query 라 3초 폴링은 부담. 30초가 균형.
             .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
                 guard scenePhase == .active else { return }
+                currentTime = Date()   // 시간 경과만으로도 화면 재판정 (수면→기상 자동 전환)
                 Task {
                     _ = await health.fetchInBedSchedule()
                     // 진행 중 운동(HR·걸음 페이스)도 같이 갱신 — 산책/달리기 반영 빨라짐.
