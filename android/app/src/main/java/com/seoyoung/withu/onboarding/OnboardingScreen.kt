@@ -130,6 +130,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     // Health Connect 권한 요청 — 결과에 필수 권한이 모두 있으면 granted.
     val healthLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract(),
@@ -137,6 +138,16 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         // 하나라도 허용되면 GRANTED (부분 허용도 동작 — HealthManager.isAuthorized 와 동일 기준).
         val ok = HealthManager.requiredPermissions().any { it in granted }
         setResult(OnboardingStep.HEALTH, if (ok) PermissionResult.GRANTED else PermissionResult.DENIED)
+    }
+    // 폰 모션 감지 권한(ACTIVITY_RECOGNITION) — 건강 스텝에서 먼저 물어보고, 결과와 무관하게
+    // Health Connect 로 이어짐. 허용되면 워치 없이도 산책/달리기/자전거 감지(iOS CoreMotion 대응).
+    val motionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) runCatching { com.seoyoung.withu.health.MotionActivityManager.start(context) }
+        // 모션 허용 여부와 상관없이 건강(Health Connect) 요청으로 진행.
+        if (HealthManager.isAvailable()) healthLauncher.launch(HealthManager.requiredPermissions())
+        else setResult(OnboardingStep.HEALTH, PermissionResult.DENIED)
     }
     // 위치 권한 (coarse)
     val locationLauncher = rememberLauncherForActivityResult(
@@ -168,8 +179,11 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         setResult(s, PermissionResult.REQUESTING)
         when (s) {
             OnboardingStep.HEALTH -> {
-                // 미설치/미지원 기기 → denied 로 처리하고 흐름 유지 (스펙 06 §5).
-                if (HealthManager.isAvailable()) {
+                // 먼저 폰 모션 권한(API29+) → 그 콜백이 Health Connect 로 이어짐 (motionLauncher).
+                // API28 이하는 모션이 install-time 권한이라 바로 건강으로.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    motionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                } else if (HealthManager.isAvailable()) {
                     healthLauncher.launch(HealthManager.requiredPermissions())
                 } else {
                     setResult(s, PermissionResult.DENIED)

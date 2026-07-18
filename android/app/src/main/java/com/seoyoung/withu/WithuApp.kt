@@ -23,6 +23,8 @@ class WithuApp : Application() {
         runCatching { NotificationHelper.ensureChannels() }
         runCatching { BackgroundGenQueue.resumeIfNeeded() }
         runCatching { BackgroundRefreshWorker.schedule() }
+        // 4) 폰 모션 감지 시작 — 권한 있으면 워치 없이 산책/달리기/자전거 반영 (권한 없으면 no-op)
+        runCatching { com.seoyoung.withu.health.MotionActivityManager.start(this) }
     }
 
     companion object {

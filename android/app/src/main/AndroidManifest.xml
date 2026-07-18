@@ -75,6 +75,15 @@
                 android:resource="@xml/character_widget_info" />
         </receiver>
 
+        <!-- 폰 모션 감지(Activity Recognition) 전환 이벤트 수신 — 워치 없이 산책/달리기/자전거 -->
+        <receiver
+            android:name=".health.MotionTransitionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.seoyoung.withu.ACTIVITY_TRANSITION" />
+            </intent-filter>
+        </receiver>
+
         <!-- 배치 생성 Worker 의 FGS(dataSync) — WorkManager 기본 서비스에 타입 병합 -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

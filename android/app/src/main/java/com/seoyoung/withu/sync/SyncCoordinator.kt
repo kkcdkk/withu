@@ -47,7 +47,7 @@ object SyncCoordinator {
             focusWokeAt = if (manual) null else SleepSignals.lastDndOffAt(),
             isLikelyInWorkout = HealthManager.isLikelyInWorkout.value,
             recentStepsPerMinute = HealthManager.recentStepsPerMinute.value,
-            phoneWorkoutState = null,   // 폰 모션 활동 분류는 후속 (호출 지점만 유지)
+            phoneWorkoutState = com.seoyoung.withu.health.MotionActivityManager.phoneWorkoutState(),
             profile = profile,
         )
     }
