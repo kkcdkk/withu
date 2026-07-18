@@ -106,6 +106,8 @@ struct CharacterGenView: View {
     }
     /// 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed).
     @State private var lastFreeConsumed: Bool = false
+    /// 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용.
+    @State private var currentSessionId: String = UUID().uuidString
 
     var body: some View {
         ZStack {
@@ -789,6 +791,21 @@ struct CharacterGenView: View {
         return desc.isEmpty ? pose : "\(desc), \(pose)"
     }
 
+    /// 생성 모니터링 표시용 — 사용자가 실제 입력한 원문 + 어떤 칸이었는지 라벨.
+    private var rawUserInput: (text: String, field: String) {
+        let desc = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if referenceImage != nil {
+            let keep = referenceKeep.trimmingCharacters(in: .whitespacesAndNewlines)
+            let change = referenceChange.trimmingCharacters(in: .whitespacesAndNewlines)
+            var parts: [String] = []
+            if !change.isEmpty { parts.append("바꿀 것: \(change)") }
+            if !keep.isEmpty { parts.append("그대로: \(keep)") }
+            if parts.isEmpty && !desc.isEmpty { parts.append(desc) }
+            return (parts.joined(separator: " / "), "참고사진")
+        }
+        return (desc, "설명")
+    }
+
     /// "항목별로 채우기" 한 줄 — 라벨 + 입력칸.
     private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
@@ -832,6 +849,8 @@ struct CharacterGenView: View {
         lastError = nil
         resultFrame2 = nil
         singleDetailFrame = 0
+        currentSessionId = UUID().uuidString   // 새 원본 → 새 수정 체인
+
         // 새 생성 — 이전 투명(배경 제거) 캐시 무효화. 안 그러면 '배경 빼기' 보기에 옛 이미지가 남음.
         transparentResult = nil
         transparentResultFrame2 = nil
@@ -857,7 +876,9 @@ struct CharacterGenView: View {
         let cost = GenerationQuota.cost(forQuality: quality)
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
-        await send(prompt: composedPrompt, reference: referenceB64, frame: 0)
+        let raw = rawUserInput
+        await send(prompt: composedPrompt, reference: referenceB64, frame: 0,
+                   userInput: raw.text, inputField: raw.field)
         let frame0Succeeded = resultImage !== prevResult
         // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
         let freeSession = lastFreeConsumed
@@ -867,7 +888,8 @@ struct CharacterGenView: View {
            let f0Full = lastFrame0FullRes ?? resultImage,
            let f0Ref = f0Full.pngData()?.base64EncodedString() {
             let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
-            await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full)
+            await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full,
+                       inputField: "움직임 프레임")
             if resultFrame2 != nil, !freeSession { GenerationQuota.record(cost) }
         }
         if frame0Succeeded {
@@ -913,7 +935,8 @@ struct CharacterGenView: View {
         }
         let prevSlot = frame == 1 ? resultFrame2 : resultImage   // 실패 감지 — 옛 이미지 그대로면 차감 안 함
         await send(prompt: prompt, reference: referenceB64, frame: frame,
-                   matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil)
+                   matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil,
+                   userInput: refinementPrompt, inputField: "다듬기")
         let succeeded = (frame == 1 ? resultFrame2 : resultImage) !== prevSlot
         if succeeded {
             if !lastFreeConsumed {   // 서버가 무료로 소진한 다듬기는 미차감
@@ -943,7 +966,8 @@ struct CharacterGenView: View {
         " Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, framing, and the flat solid background. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(state.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference."
     }
 
-    private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil) async {
+    private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil,
+                      userInput: String? = nil, inputField: String? = nil) async {
         // AI 에 흰 배경 강제 — 결과를 사용자가 post-gen 에 Vision 으로 정제할 수 있음.
         // 격자(체커보드) 방지: 일부 모델이 "투명"을 격자 무늬로 그려버림 → 단색 흰배경 명시.
         let finalPrompt = "\(prompt). Only the character on a transparent background — no background fill, no shadows, no extra elements."
@@ -957,9 +981,16 @@ struct CharacterGenView: View {
                 quality: quality,
                 artStyle: artStyle,
                 style: "auto",
-                model: "gpt-image-2"
+                model: "gpt-image-2",
+                userInput: userInput?.trimmingCharacters(in: .whitespacesAndNewlines),
+                inputField: inputField
             )
-            let resp = try await APIClient.shared.generateImage(req)
+            // frame 0 만 수정 체인(session)에 넣는다 — frame 1(자동 애니메이션)은 수정 횟수에서 제외.
+            let resp = try await APIClient.shared.generateImage(
+                req,
+                sessionId: frame == 0 ? currentSessionId : nil,
+                state: targetState.rawValue
+            )
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let rawImg = UIImage(data: data) else {
                 lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")

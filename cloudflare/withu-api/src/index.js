@@ -113,8 +113,16 @@ function adaptPromptForModel(prompt, input) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // 생성 모니터링 대시보드 (관리자 전용, ADMIN_TOKEN 게이트)
+    if (url.pathname === "/admin" || url.pathname === "/admin/") {
+      return adminDashboard(request, env);
+    }
+    if (url.pathname.startsWith("/admin/img/")) {
+      return adminImage(request, env, url.pathname.slice("/admin/img/".length));
+    }
 
     if (url.pathname === "/" || url.pathname === "/health") {
       return Response.json({
@@ -163,7 +171,7 @@ export default {
         return jsonError("Method not allowed", 405);
       }
 
-      return generateImage(request, env);
+      return generateImage(request, env, ctx);
     }
 
     return Response.json(
@@ -309,7 +317,7 @@ async function checkRateLimit(request, env) {
   return null;
 }
 
-async function generateImage(request, env) {
+async function generateImage(request, env, ctx) {
   const authError = checkAuth(request, env);
   if (authError) return authError;
 
@@ -337,9 +345,29 @@ async function generateImage(request, env) {
     return jsonError("prompt is required.", 400);
   }
 
+  // 모니터링 메타 — 헤더에서 세션/상태/플랫폼 수집 (본문은 그대로). logEvent 로 넘긴다.
+  const meta = {
+    sub,
+    sessionId: request.headers.get("X-Withu-Session") || null,
+    state: request.headers.get("X-Withu-State") || null,
+    platform: request.headers.get("X-Withu-Platform") || null,
+    type: eventType(request, input),
+    artStyle: input.art_style ?? null,
+    model: resolveModel(input),
+    prompt: input.prompt,
+    userInput: input.user_input ?? null,     // 사용자가 실제 입력한 원문 (표시용)
+    inputField: input.input_field ?? null,   // 어떤 입력칸이었는지 라벨
+    hadReference: Boolean(input.reference_image_base64),
+    referenceB64: input.reference_image_base64 ?? null,  // R2 refs/<id>.png 저장용 (표시용)
+  };
+  const startedAt = Date.now();
+
   // 입력 안전 가드 — 부적절한 프롬프트/참고사진은 차감·생성 전에 차단
   const safe = await checkPromptSafe(input.prompt, input.reference_image_base64, env);
-  if (!safe.ok) return jsonError(safe.reason, safe.status);
+  if (!safe.ok) {
+    logEvent(env, ctx, { ...meta, status: "blocked", error: safe.reason });
+    return jsonError(safe.reason, safe.status);
+  }
 
   // 차감/게이트는 클라이언트(로컬 캔디)가 담당 — 서버는 생성만.
   // 비용 방어는 IP rate limit + OpenAI 월 한도. (서버-권위 차감은 로그인 강제 + 잔액 일원화 후 재도입.)
@@ -350,6 +378,7 @@ async function generateImage(request, env) {
       ? await editImage(input, env)
       : await generateImageFromPrompt(input, env);
   } catch (error) {
+    logEvent(env, ctx, { ...meta, status: "error", error: error.message });
     return jsonError(error.message, 400);
   }
 
@@ -362,13 +391,25 @@ async function generateImage(request, env) {
   }
 
   if (!openAIResponse.ok) {
-    return jsonError(payload?.error?.message ?? text, openAIResponse.status);
+    const reason = payload?.error?.message ?? text;
+    logEvent(env, ctx, { ...meta, status: "error", error: reason });
+    return jsonError(reason, openAIResponse.status);
   }
 
   const image = payload?.data?.[0];
   if (!image?.b64_json) {
+    logEvent(env, ctx, { ...meta, status: "error", error: "OpenAI response did not include image data." });
     return jsonError("OpenAI response did not include image data.", 502);
   }
+
+  // 성공 — revised prompt·소요시간·결과 이미지(R2)까지 기록. b64 는 R2 저장용으로 넘긴다.
+  logEvent(env, ctx, {
+    ...meta,
+    status: "ok",
+    revisedPrompt: image.revised_prompt ?? null,
+    latencyMs: Date.now() - startedAt,
+    imageB64: image.b64_json,
+  });
 
   // 계정 무료 1회 — 로그인 사용자의 '처음 만드는 화면' 단건 생성에서만 소진.
   // (기기 재설치와 무관하게 계정당 정확히 1회. 클라는 free_consumed=true 면 캔디 미차감.)
@@ -481,4 +522,273 @@ function base64ToBlob(value) {
   } catch {
     throw new Error("reference_image_base64 is invalid.");
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 생성 모니터링 (gen_events 로깅 + /admin 대시보드)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 이벤트 타입 한 축으로 정규화: batch(헤더) > refine/background(본문 kind) > single
+function eventType(request, input) {
+  if (request.headers.get("X-Withu-Kind") === "batch") return "batch";
+  if (input.kind === "background") return "background";
+  if (input.kind === "refine") return "refine";
+  return "single";
+}
+
+// 생성 이벤트 기록 — best-effort. 응답을 지연시키지 않게 ctx.waitUntil 로 뒤에서 실행하고,
+// DB/버킷 미설정이거나 실패해도 조용히 넘어간다 (관측 실패가 생성 자체를 막지 않는다).
+function logEvent(env, ctx, ev) {
+  if (!env.DB) return;
+  const task = (async () => {
+    try {
+      const id = crypto.randomUUID();
+      // 같은 세션의 기존 행 수 = 이번 시도의 수정 회차 (0 = 원본, 1+ = n번째 수정)
+      let refineIndex = 0;
+      if (ev.sessionId) {
+        const row = await env.DB
+          .prepare("SELECT COUNT(*) AS n FROM gen_events WHERE session_id = ?")
+          .bind(ev.sessionId).first();
+        refineIndex = row?.n ?? 0;
+      }
+      const b64ToBytes = (b64) => Uint8Array.from(atob(b64.includes(",") ? b64.split(",").at(-1) : b64), (c) => c.charCodeAt(0));
+      // 결과 이미지는 R2 에만 (성공 시). 서버가 받은 원본 — gpt-image-2 는 마젠타 배경 상태.
+      let imageKey = null;
+      if (ev.imageB64 && env.LOG_BUCKET) {
+        imageKey = `results/${id}.png`;
+        await env.LOG_BUCKET.put(imageKey, b64ToBytes(ev.imageB64), { httpMetadata: { contentType: "image/png" } });
+      }
+      // 참고사진(첨부)도 R2 에 — refs/<id>.png. had_reference 로 존재 여부를 안다.
+      if (ev.referenceB64 && env.LOG_BUCKET) {
+        try {
+          await env.LOG_BUCKET.put(`refs/${id}.png`, b64ToBytes(ev.referenceB64), { httpMetadata: { contentType: "image/png" } });
+        } catch { /* 참고사진 저장 실패는 무시 */ }
+      }
+      await env.DB.prepare(
+        `INSERT INTO gen_events
+           (id, at, sub, session_id, refine_index, type, state, art_style, model, platform,
+            prompt, revised_prompt, had_reference, status, error, latency_ms, image_key,
+            user_input, input_field)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(
+        id, Date.now(), ev.sub ?? null, ev.sessionId ?? null, refineIndex,
+        ev.type, ev.state ?? null, ev.artStyle ?? null, ev.model ?? null, ev.platform ?? null,
+        ev.prompt ?? null, ev.revisedPrompt ?? null, ev.hadReference ? 1 : 0,
+        ev.status, ev.error ?? null, ev.latencyMs ?? null, imageKey,
+        ev.userInput ?? null, ev.inputField ?? null
+      ).run();
+    } catch (e) {
+      console.log("logEvent failed:", e?.message);
+    }
+  })();
+  if (ctx && ctx.waitUntil) ctx.waitUntil(task); else task.catch(() => {});
+}
+
+// 관리자 토큰 확인 — ?token= 또는 Authorization: Bearer. 통과면 null, 아니면 에러 Response.
+function adminGate(request, env) {
+  if (!env.ADMIN_TOKEN) {
+    return new Response("ADMIN_TOKEN 미설정 — 대시보드가 비활성화됨.", { status: 503 });
+  }
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token")
+    || (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  if (token !== env.ADMIN_TOKEN) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  return null;
+}
+
+// GET /admin/img/<eventId>  — R2 에서 결과 이미지 스트리밍 (토큰 게이트)
+async function adminImage(request, env, rawId) {
+  const gate = adminGate(request, env);
+  if (gate) return gate;
+  const id = (rawId || "").replace(/\.png$/i, "").replace(/[^a-f0-9-]/gi, "");
+  if (!id || !env.LOG_BUCKET) return new Response("Not found", { status: 404 });
+  const prefix = new URL(request.url).searchParams.get("kind") === "ref" ? "refs" : "results";
+  const obj = await env.LOG_BUCKET.get(`${prefix}/${id}.png`);
+  if (!obj) return new Response("Not found", { status: 404 });
+  return new Response(obj.body, {
+    headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=86400" },
+  });
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// GET /admin  — 생성 로그 대시보드. 세션(수정 체인)별로 묶어서 보여준다.
+async function adminDashboard(request, env) {
+  const gate = adminGate(request, env);
+  if (gate) return gate;
+  if (!env.DB) return new Response("DB 미설정", { status: 503 });
+
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token") || "";
+  const days = Math.max(1, Math.min(90, parseInt(url.searchParams.get("days") || "7", 10) || 7));
+  const fType = url.searchParams.get("type") || "";
+  const fStatus = url.searchParams.get("status") || "";
+  const fPlatform = url.searchParams.get("platform") || "";
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  const where = ["at >= ?"];
+  const binds = [since];
+  if (fType) { where.push("type = ?"); binds.push(fType); }
+  if (fStatus) { where.push("status = ?"); binds.push(fStatus); }
+  if (fPlatform) { where.push("platform = ?"); binds.push(fPlatform); }
+
+  const { results = [] } = await env.DB.prepare(
+    `SELECT * FROM gen_events WHERE ${where.join(" AND ")} ORDER BY at DESC LIMIT 3000`
+  ).bind(...binds).all();
+
+  // 세션으로 그룹핑 (session_id 없는 행은 자기 id 로 단독 세션)
+  const groups = new Map();
+  for (const r of results) {
+    const key = r.session_id || `solo:${r.id}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  const sessions = [...groups.values()].map((rows) => {
+    rows.sort((a, b) => (a.refine_index - b.refine_index) || (a.at - b.at));
+    return rows;
+  });
+  sessions.sort((a, b) => Math.max(...b.map((r) => r.at)) - Math.max(...a.map((r) => r.at)));
+
+  // 요약 집계
+  const total = results.length;
+  const ok = results.filter((r) => r.status === "ok").length;
+  const errored = results.filter((r) => r.status === "error").length;
+  const blocked = results.filter((r) => r.status === "blocked").length;
+  const edits = sessions.reduce((n, s) => n + Math.max(0, s.length - 1), 0);
+  const avgEdits = sessions.length ? (edits / sessions.length).toFixed(2) : "0";
+  const stateCounts = {};
+  for (const r of results) { const k = r.state || "—"; stateCounts[k] = (stateCounts[k] || 0) + 1; }
+  const topStates = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+  const q = (extra) => {
+    const p = new URLSearchParams({ token, days: String(days) });
+    if (fType) p.set("type", fType);
+    if (fStatus) p.set("status", fStatus);
+    if (fPlatform) p.set("platform", fPlatform);
+    for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); }
+    return "/admin?" + p.toString();
+  };
+  const fmtTime = (ms) => new Date(ms).toISOString().slice(0, 16).replace("T", " ");
+
+  const typeBadge = { single: "🆕 단건", refine: "✏️ 다듬기", batch: "📦 배치", background: "🌤 배경" };
+  const statusDot = { ok: "🟢", error: "🔴", blocked: "🟠" };
+
+  const cards = sessions.map((rows) => {
+    const head = rows[0];
+    const latest = Math.max(...rows.map((r) => r.at));
+    const editCount = Math.max(0, rows.length - 1);
+    const steps = rows.map((r) => {
+      const img = r.image_key
+        ? `<a href="/admin/img/${esc(r.id)}?token=${esc(token)}" target="_blank"><img loading="lazy" src="/admin/img/${esc(r.id)}?token=${esc(token)}"></a>`
+        : `<div class="noimg">${esc(statusDot[r.status] || "")} ${esc(r.status)}</div>`;
+      // 첨부(참고사진) 썸네일 — had_reference 면 R2 refs/<id>.png.
+      // 참고사진 저장 코드 배포 전 기록은 객체가 없어 404 → onerror 로 깨진 아이콘 대신 조용히 숨김.
+      const refImg = r.had_reference
+        ? `<a href="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" target="_blank"><img class="refimg" loading="lazy" src="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" title="첨부한 참고사진" onerror="this.closest('a').style.display='none'"></a>`
+        : "";
+      // 사용자가 실제 입력한 원문 우선. 없으면 서버 합성 프롬프트로 폴백.
+      const label = r.input_field ? `<span class="field">${esc(r.input_field)}</span> ` : "";
+      const shown = r.user_input != null && r.user_input !== "" ? r.user_input : (r.user_input === "" ? "(입력 없음)" : r.prompt || "");
+      // 서버가 실제 보낸 합성 프롬프트는 hover 로만 (노이즈 줄이기).
+      const sentTitle = r.prompt ? ` title="전송 프롬프트: ${esc(r.prompt)}"` : "";
+      const err = r.status !== "ok" ? `<div class="err">${esc(statusDot[r.status])} ${esc(r.error || r.status)}</div>` : "";
+      const refFlag = r.had_reference ? ' <span class="ref">📎참고</span>' : "";
+      const lat = r.latency_ms ? `<span class="lat">${(r.latency_ms / 1000).toFixed(1)}s</span>` : "";
+      return `<div class="step">
+        <div class="stepno">${r.refine_index === 0 ? "원본" : "수정 " + r.refine_index}${refFlag} ${lat}</div>
+        <div class="imgrow">${img}${refImg}</div>
+        <div class="prompt"${sentTitle}>${label}${esc(shown)}</div>
+        ${err}
+      </div>`;
+    }).join("");
+    return `<div class="card">
+      <div class="chead">
+        <span class="state">${esc(head.state || "—")}</span>
+        <span class="pill">${typeBadge[head.type] || esc(head.type)}</span>
+        ${editCount > 0 ? `<span class="pill edits">✏️ ${editCount}번 수정</span>` : ""}
+        <span class="plat">${esc(head.platform || "?")}</span>
+        <span class="time">${esc(fmtTime(latest))}</span>
+        ${head.sub ? `<span class="sub" title="${esc(head.sub)}">👤 ${esc(String(head.sub).slice(0, 8))}</span>` : `<span class="sub anon">익명</span>`}
+      </div>
+      <div class="steps">${steps}</div>
+    </div>`;
+  }).join("");
+
+  const chip = (label, params, active) =>
+    `<a class="chip${active ? " on" : ""}" href="${q(params)}">${esc(label)}</a>`;
+
+  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>withu 생성 로그</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f5f5f7; color: #1d1d1f; }
+  @media (prefers-color-scheme: dark) { body { background: #000; color: #f5f5f7; } .card, .summary { background: #1c1c1e !important; } .chip { background: #2c2c2e !important; color: #f5f5f7 !important; } }
+  header { padding: 16px 20px; position: sticky; top: 0; background: inherit; border-bottom: 1px solid rgba(128,128,128,.2); z-index: 10; }
+  h1 { font-size: 18px; margin: 0 0 10px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { text-decoration: none; padding: 4px 10px; border-radius: 999px; background: #e8e8ed; color: #1d1d1f; font-size: 12px; }
+  .chip.on { background: #0071e3; color: #fff; }
+  .sep { width: 1px; height: 18px; background: rgba(128,128,128,.3); margin: 0 4px; }
+  main { padding: 16px 20px; max-width: 1100px; margin: 0 auto; }
+  .summary { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 20px; }
+  .metric b { font-size: 22px; display: block; }
+  .metric span { font-size: 12px; opacity: .6; }
+  .states { font-size: 12px; opacity: .8; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .card { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .chead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .state { font-weight: 600; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(128,128,128,.15); }
+  .pill.edits { background: #ffcc0033; color: #a06a00; }
+  .plat { font-size: 12px; opacity: .6; }
+  .time { font-size: 12px; opacity: .5; margin-left: auto; }
+  .sub { font-size: 11px; opacity: .6; } .sub.anon { opacity: .4; }
+  .steps { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+  .step { flex: 0 0 180px; }
+  .stepno { font-size: 11px; opacity: .6; margin-bottom: 4px; }
+  .imgrow { display: flex; gap: 6px; align-items: flex-start; }
+  .step img { width: 180px; height: 180px; object-fit: contain; border-radius: 8px; background: repeating-conic-gradient(#0000000d 0% 25%, transparent 0% 50%) 50% / 16px 16px; }
+  .imgrow:has(.refimg) img { width: 132px; height: 132px; }
+  .refimg { width: 42px !important; height: 42px !important; object-fit: cover; border: 1px solid rgba(128,128,128,.3); }
+  .noimg { width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(128,128,128,.1); font-size: 12px; opacity: .7; }
+  .prompt { font-size: 12px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+  .field { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(0,113,227,.15); color: #0071e3; margin-right: 2px; }
+  .rev { font-size: 11px; opacity: .5; margin-top: 4px; }
+  .err { font-size: 11px; color: #d33; margin-top: 4px; }
+  .ref { font-size: 10px; opacity: .7; } .lat { font-size: 10px; opacity: .5; }
+  .empty { text-align: center; opacity: .5; padding: 60px; }
+</style></head><body>
+<header>
+  <h1>withu 생성 로그 <span style="opacity:.5;font-weight:400">· 최근 ${days}일</span></h1>
+  <div class="filters">
+    ${chip("1일", { days: "1" }, days === 1)}${chip("7일", { days: "7" }, days === 7)}${chip("30일", { days: "30" }, days === 30)}
+    <span class="sep"></span>
+    ${chip("전체", { type: "", status: "" }, !fType && !fStatus)}${chip("단건", { type: "single" }, fType === "single")}${chip("다듬기", { type: "refine" }, fType === "refine")}${chip("배치", { type: "batch" }, fType === "batch")}
+    <span class="sep"></span>
+    ${chip("성공", { status: "ok" }, fStatus === "ok")}${chip("실패", { status: "error" }, fStatus === "error")}${chip("차단", { status: "blocked" }, fStatus === "blocked")}
+    <span class="sep"></span>
+    ${chip("iOS", { platform: "ios" }, fPlatform === "ios")}${chip("Android", { platform: "android" }, fPlatform === "android")}
+  </div>
+</header>
+<main>
+  <div class="summary">
+    <div class="metric"><b>${total}</b><span>총 생성</span></div>
+    <div class="metric"><b>${sessions.length}</b><span>캐릭터(세션)</span></div>
+    <div class="metric"><b>${avgEdits}</b><span>평균 수정 횟수</span></div>
+    <div class="metric"><b>${ok}</b><span>성공</span></div>
+    <div class="metric"><b>${errored}</b><span>실패</span></div>
+    <div class="metric"><b>${blocked}</b><span>차단</span></div>
+    <div class="states">${topStates.map(([s, n]) => `<span>${esc(s)} <b>${n}</b></span>`).join("")}</div>
+  </div>
+  ${sessions.length ? cards : `<div class="empty">이 기간에 생성 기록이 없어요.</div>`}
+</main>
+</body></html>`;
+
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }

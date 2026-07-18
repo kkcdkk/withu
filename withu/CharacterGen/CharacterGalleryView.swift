@@ -1007,9 +1007,11 @@ struct GalleryGrid<Header: View>: View {
         let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
                                        steps: 30, width: 1024, height: 1024,
                                        quality: "low", artStyle: nil, style: "auto",
-                                       kind: "refine", model: "gpt-image-2")
+                                       kind: "refine", model: "gpt-image-2",
+                                       userInput: trimmed, inputField: "다듬기")
         do {
-            let resp = try await APIClient.shared.generateImage(req)
+            // 갤러리 다듬기 — 원본 캐릭터(batchId)의 수정 체인에 이어붙인다.
+            let resp = try await APIClient.shared.generateImage(req, sessionId: item.batchId, state: item.sourceState)
             guard let data = Data(base64Encoded: resp.imageBase64),
                   let raw = UIImage(data: data) else {
                 withAnimation { toastText = String(localized: "이미지를 받지 못했어요") }

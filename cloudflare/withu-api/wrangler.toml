@@ -49,6 +49,23 @@ database_id = "1fa6ac78-220c-4b34-8547-bed6d4115077"
 binding = "RATE_KV"
 id = "7c9eb73dbe9b4d76a854b96cf558c5e3"
 
+# --- 생성 모니터링 (프롬프트/결과/수정 체인 로그 + /admin 대시보드) ---
+#
+# 7) 결과 이미지 저장용 R2 버킷:
+#      npx wrangler r2 bucket create withu-gen-logs
+#    (선택) 저장 비용 관리 — 30일 후 자동 삭제 라이프사이클:
+#      npx wrangler r2 bucket lifecycle add withu-gen-logs --prefix results/ --expire-days 30
+[[r2_buckets]]
+binding = "LOG_BUCKET"
+bucket_name = "withu-gen-logs"
+
+# 8) gen_events 테이블 마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+#
+# 9) 대시보드 접근 토큰 (강한 랜덤). 설정해야 /admin 이 열림:
+#      npx wrangler secret put ADMIN_TOKEN
+#    조회: https://withu-api.ysy1398.workers.dev/admin?token=<그 값>
+
 # 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
 [vars]
 APPLE_BUNDLE_ID = "sy.withu"

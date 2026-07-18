@@ -21,6 +21,10 @@ struct GenerateImageRequest: Codable {
     /// 이미지 모델 — "gpt-image-2" 명시 시 서버가 v2 사용 (마젠타 배경 → 클라 크로마키 제거).
     /// nil 이면 서버 기본(gpt-image-1.5, 진짜 투명 배경).
     var model: String? = nil
+    /// 생성 모니터링 표시용 — 사용자가 실제 입력한 원문. OpenAI 로는 안 감(서버가 로깅만).
+    var userInput: String? = nil
+    /// 그 입력이 어떤 칸이었는지 라벨 ("설명"/"다듬기"/"참고사진 수정" 등).
+    var inputField: String? = nil
 }
 
 struct GenerateImageResponse: Codable {

@@ -260,6 +260,9 @@ final class BackgroundGenerationManager: NSObject {
         req.setValue(job.id, forHTTPHeaderField: "Idempotency-Key")
         req.setValue("batch", forHTTPHeaderField: "X-Withu-Kind")
         req.setValue(job.batchId, forHTTPHeaderField: "X-Withu-Batch")
+        // 생성 모니터링 메타 — 배치 항목은 서로 다른 상태(수정 체인 아님)라 세션은 안 붙인다.
+        req.setValue("ios", forHTTPHeaderField: "X-Withu-Platform")
+        req.setValue(job.stateRaw, forHTTPHeaderField: "X-Withu-State")
         req.timeoutInterval = APIConfig.timeout
 
         let task = session.uploadTask(with: req, fromFile: bodyURL)

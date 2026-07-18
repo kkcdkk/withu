@@ -291,7 +291,21 @@ export async function getEntitlement(env, sub) {
 export async function deleteAccount(env, sub) {
   if (!env.DB) return { ok: false, status: 503 };
   try {
+    // 모니터링 결과 이미지(R2)는 D1 batch 밖 — 행 삭제 전에 키를 모아 best-effort 로 지운다.
+    if (env.LOG_BUCKET) {
+      try {
+        const { results = [] } = await env.DB
+          .prepare("SELECT id FROM gen_events WHERE sub = ?")
+          .bind(sub).all();
+        // 결과·참고사진 둘 다 event id 로 키됨 (delete 는 없으면 no-op).
+        await Promise.all(results.flatMap((r) => [
+          env.LOG_BUCKET.delete(`results/${r.id}.png`),
+          env.LOG_BUCKET.delete(`refs/${r.id}.png`),
+        ]));
+      } catch { /* 이미지 정리 실패는 계정 삭제를 막지 않음 */ }
+    }
     await env.DB.batch([
+      env.DB.prepare("DELETE FROM gen_events WHERE sub = ?").bind(sub),
       env.DB.prepare("DELETE FROM generation_log WHERE sub = ?").bind(sub),
       env.DB.prepare("DELETE FROM iap_transactions WHERE sub = ?").bind(sub),
       env.DB.prepare("DELETE FROM code_redemptions WHERE sub = ?").bind(sub),

@@ -238,7 +238,9 @@ actor APIClient {
     /// 이미지 생성. kind: "single"|"batch" (서버 무료 버킷 구분), batchId: 일괄 세션 묶음.
     func generateImage(_ request: GenerateImageRequest,
                        kind: String = "single",
-                       batchId: String? = nil) async throws -> GenerateImageResponse {
+                       batchId: String? = nil,
+                       sessionId: String? = nil,
+                       state: String? = nil) async throws -> GenerateImageResponse {
         let url = APIConfig.baseURL.appendingPathComponent("/generate")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -254,6 +256,14 @@ actor APIClient {
         req.setValue(kind, forHTTPHeaderField: "X-Withu-Kind")
         if let batchId {
             req.setValue(batchId, forHTTPHeaderField: "X-Withu-Batch")
+        }
+        // 생성 모니터링 메타 (서버 gen_events 로깅용 — 수정 체인/상태/플랫폼)
+        req.setValue("ios", forHTTPHeaderField: "X-Withu-Platform")
+        if let sessionId {
+            req.setValue(sessionId, forHTTPHeaderField: "X-Withu-Session")
+        }
+        if let state {
+            req.setValue(state, forHTTPHeaderField: "X-Withu-State")
         }
         req.httpBody = try encoder.encode(request)
 
