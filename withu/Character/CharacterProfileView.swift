@@ -40,10 +40,15 @@ struct CharacterProfileView: View {
                 Section {
                     sleepStatusRow
                     Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
+                    // '수면 모드 기준'(자동 감지)에선 아래 시간 설정이 기준이 아니라 회색+비활성.
                     DatePicker("잠드는 시간", selection: sleepStartBinding,
                                displayedComponents: .hourAndMinute)
+                        .disabled(sleepTimesDisabled)
+                        .opacity(sleepTimesDisabled ? 0.4 : 1)
                     DatePicker("일어나는 시간", selection: sleepEndBinding,
                                displayedComponents: .hourAndMinute)
+                        .disabled(sleepTimesDisabled)
+                        .opacity(sleepTimesDisabled ? 0.4 : 1)
                     Button {
                         alignToRecentSleep()
                     } label: {
@@ -53,7 +58,8 @@ struct CharacterProfileView: View {
                             if isAligningSleep { ProgressView().controlSize(.small) }
                         }
                     }
-                    .disabled(isAligningSleep)
+                    .disabled(isAligningSleep || sleepTimesDisabled)
+                    .opacity(sleepTimesDisabled ? 0.4 : 1)
                     if let msg = sleepAlignMessage {
                         Text(msg)
                             .font(.caption)
@@ -304,6 +310,9 @@ struct CharacterProfileView: View {
             set: { profile.manualSleepOnly = !$0 }
         )
     }
+
+    /// '수면 모드 기준'(자동 감지)에선 잠드는/일어나는 시간이 판정 기준이 아니라 회색+비활성.
+    private var sleepTimesDisabled: Bool { !profile.isManualSleepOnly }
 
     private var sleepFooterText: String {
         if profile.isManualSleepOnly {
