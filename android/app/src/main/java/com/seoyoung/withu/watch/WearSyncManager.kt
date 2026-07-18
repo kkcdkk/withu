@@ -55,7 +55,9 @@ object WearSyncManager {
                     dataMap.putString("state", state.raw)
                     dataMap.putInt("frame", 0)
                     dataMap.putAsset("image", Asset.createFromBytes(bytes))
-                }.asPutDataRequest()
+                    // 워치가 새로 설치돼도 확실히 재전달되게 변화 필드 포함 (dedupe 로 전달 누락 방지).
+                    dataMap.putLong("updatedAt", msg.timestamp)
+                }.asPutDataRequest().setUrgent()
                 Tasks.await(client.putDataItem(imgReq))
             }
         }
