@@ -142,12 +142,14 @@ class CharacterStateResolverTest {
     // MARK: - cadence 경계 (HR 추론)
 
     @Test
-    fun `cadence 130 이상이면 running, 40 이상이면 walking, 미만이면 energetic`() {
+    fun `cadence 145 이상이면 running, 40 이상이면 walking, 미만이면 energetic`() {
         val now = at(15, 0)
         fun resolve(spm: Double) = CharacterStateResolver.resolve(
             now = now, isLikelyInWorkout = true, recentStepsPerMinute = spm,
         )
-        assertEquals(CharacterState.RUNNING, resolve(130.0))
+        assertEquals(CharacterState.RUNNING, resolve(145.0))
+        // 빠른 걸음(120~140)은 달리기가 아니라 산책 — 버그픽스 회귀 방지.
+        assertEquals(CharacterState.WALKING, resolve(140.0))
         assertEquals(CharacterState.WALKING, resolve(129.9))
         assertEquals(CharacterState.WALKING, resolve(40.0))
         assertEquals(CharacterState.ENERGETIC, resolve(39.9))

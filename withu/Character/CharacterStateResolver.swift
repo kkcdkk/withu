@@ -45,9 +45,10 @@ enum CharacterStateResolver {
 
         // 1) 워치 HR stream 패턴이 운동중으로 보이면 — 진행 중인 운동, 아직 HKWorkout 미commit.
         //    최근 걸음 페이스(분당 걸음수)로 타입 추정: 달리기 cadence 는 보통 150+,
-        //    걷기 90~120. 걸음이 거의 없으면(자전거 등) .energetic.
+        //    걷기 90~120(빠른 걸음 ~140). 걸음이 거의 없으면(자전거 등) .energetic.
+        //    임계값 145 — 130 은 빠른 걸음(120~140)을 달리기로 오인해서 상향(2026-07 버그픽스).
         if isLikelyInWorkout {
-            if recentStepsPerMinute >= 130 { return .running }
+            if recentStepsPerMinute >= 145 { return .running }
             if recentStepsPerMinute >= 40  { return .walking }
             return .energetic
         }

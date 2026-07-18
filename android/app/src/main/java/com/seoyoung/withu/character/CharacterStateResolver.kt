@@ -65,7 +65,8 @@ object CharacterStateResolver {
         // 1) 진행 중 운동 (HR stream 추론) — 분당 걸음수로 타입 추정.
         //    달리기 cadence 는 보통 150+, 걷기 90~120. 걸음 거의 없으면(자전거 등) energetic.
         if (isLikelyInWorkout) {
-            if (recentStepsPerMinute >= 130) return CharacterState.RUNNING
+            // 145 — 130 은 빠른 걸음(120~140)을 달리기로 오인. iOS 파리티 버그픽스(2026-07).
+            if (recentStepsPerMinute >= 145) return CharacterState.RUNNING
             if (recentStepsPerMinute >= 40) return CharacterState.WALKING
             return CharacterState.ENERGETIC
         }
@@ -75,7 +76,7 @@ object CharacterStateResolver {
         //      심박이 안 오르는(≥95 미달) 평범한 산책이 위 1) HR 추론에 안 잡혀 '기본'에 머무는 문제.
         //      워치가 Health Connect 에 쓰는 걸음 빈도로 직접 판정. 수면/집중 신호 켜져 있으면 무시.
         if (!isFocusActive && !inSleepSchedule) {
-            if (recentStepsPerMinute >= 130) return CharacterState.RUNNING
+            if (recentStepsPerMinute >= 145) return CharacterState.RUNNING
             if (recentStepsPerMinute >= 45) return CharacterState.WALKING
         }
 
