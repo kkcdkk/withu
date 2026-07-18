@@ -5,9 +5,12 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
+import android.content.ComponentName
 import androidx.wear.tiles.TileService
+import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
 import com.google.android.gms.tasks.Tasks
 import com.seoyoung.withu.wear.WearStore
+import com.seoyoung.withu.wear.complication.CharacterComplicationService
 import com.seoyoung.withu.wear.tile.CharacterTileService
 
 /**
@@ -56,6 +59,13 @@ class WearDataListenerService : WearableListenerService() {
             // Tile 즉시 갱신 — iOS 의 WidgetCenter reload 대응.
             runCatching {
                 TileService.getUpdater(this).requestUpdate(CharacterTileService::class.java)
+            }
+            // 컴플리케이션(시계 페이스)도 즉시 갱신.
+            runCatching {
+                ComplicationDataSourceUpdateRequester.create(
+                    this,
+                    ComponentName(this, CharacterComplicationService::class.java),
+                ).requestUpdateAll()
             }
         }
     }

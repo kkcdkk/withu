@@ -32,6 +32,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -120,6 +121,11 @@ private fun SettingsContent(
     var showPaywall by remember { mutableStateOf(false) }
     var showWidgetGuide by remember { mutableStateOf(false) }
     var showReonboardConfirm by remember { mutableStateOf(false) }
+
+    // 갤럭시 워치 연동 상태 (비동기 조회)
+    var watchState by remember { mutableStateOf<com.seoyoung.withu.watch.WatchStatus.State?>(null) }
+    var watchSyncing by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { watchState = com.seoyoung.withu.watch.WatchStatus.query() }
 
     // 건강 권한 시트 (Health Connect)
     val healthPermissionLauncher = rememberLauncherForActivityResult(
@@ -238,6 +244,60 @@ private fun SettingsContent(
                     title = stringRes(R.string.settings_notify_cancel_all),
                     destructive = true,
                 ) { NotificationHelper.cancelAllScheduled() }
+            }
+
+            // 3.5 갤럭시 워치 연동 (iOS '애플 워치' 섹션 대응)
+            FormSection(
+                header = stringRes(R.string.settings_watch_header),
+                footer = stringRes(R.string.settings_watch_footer),
+            ) {
+                val ws = watchState
+                SettingsValueRow(title = stringRes(R.string.settings_watch_paired)) {
+                    StatusPill(
+                        kind = if (ws?.paired == true) StatusKind.OK else StatusKind.OFF,
+                        text = if (ws?.paired == true) stringRes(R.string.settings_watch_on)
+                        else stringRes(R.string.settings_watch_off),
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                SettingsValueRow(title = stringRes(R.string.settings_watch_app)) {
+                    StatusPill(
+                        kind = if (ws?.appInstalled == true) StatusKind.OK else StatusKind.OFF,
+                        text = if (ws?.appInstalled == true) stringRes(R.string.settings_watch_installed)
+                        else stringRes(R.string.settings_watch_not_installed),
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                SettingsValueRow(title = stringRes(R.string.settings_watch_reachable)) {
+                    StatusPill(
+                        kind = if (ws?.reachable == true) StatusKind.OK else StatusKind.OFF,
+                        text = if (ws?.reachable == true) stringRes(R.string.settings_watch_on)
+                        else stringRes(R.string.settings_watch_waiting),
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                SettingsValueRow(title = stringRes(R.string.settings_watch_last_sync)) {
+                    Text(
+                        text = ws?.lastSyncAt?.takeIf { it > 0 }?.let {
+                            java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
+                                .format(java.util.Date(it))
+                        } ?: stringRes(R.string.settings_watch_sync_never),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                SettingsButtonRow(
+                    title = stringRes(R.string.settings_watch_sync_now),
+                    enabled = !watchSyncing,
+                ) {
+                    scope.launch {
+                        watchSyncing = true
+                        com.seoyoung.withu.watch.WearSyncManager.push()
+                        watchState = com.seoyoung.withu.watch.WatchStatus.query()
+                        watchSyncing = false
+                    }
+                }
             }
 
             // 4. 진단 링크

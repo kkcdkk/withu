@@ -21,6 +21,7 @@ playServicesWearable = "18.2.0"
 wearCompose = "1.4.1"
 wearTiles = "1.4.1"
 wearProtolayout = "1.2.1"
+wearComplications = "1.2.1"
 guava = "33.3.1-android"
 
 [libraries]
@@ -59,6 +60,8 @@ androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "co
 androidx-wear-tiles = { group = "androidx.wear.tiles", name = "tiles", version.ref = "wearTiles" }
 androidx-wear-protolayout = { group = "androidx.wear.protolayout", name = "protolayout", version.ref = "wearProtolayout" }
 androidx-wear-protolayout-material = { group = "androidx.wear.protolayout", name = "protolayout-material", version.ref = "wearProtolayout" }
+# 워치 컴플리케이션(시계 페이스 캐릭터) — iOS ComplicationExtension 대응
+androidx-wear-complications-datasource = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "wearComplications" }
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 
 [plugins]

@@ -60,6 +60,7 @@ object WearSyncManager {
                 }.asPutDataRequest().setUrgent()
                 Tasks.await(client.putDataItem(imgReq))
             }
+            WatchStatus.markSynced()
         }
     }
 }

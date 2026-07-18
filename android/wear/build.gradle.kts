@@ -50,6 +50,8 @@ dependencies {
     implementation(libs.androidx.wear.tiles)
     implementation(libs.androidx.wear.protolayout)
     implementation(libs.androidx.wear.protolayout.material)
+    // 컴플리케이션(시계 페이스)
+    implementation(libs.androidx.wear.complications.datasource)
     implementation(libs.guava)
     // 폰↔워치 Data Layer
     implementation(libs.play.services.wearable)

@@ -40,6 +40,25 @@
             </intent-filter>
         </service>
 
+        <!-- 시계 페이스 컴플리케이션 (캐릭터). iOS withuComplicationExtension 대응. -->
+        <service
+            android:name=".complication.CharacterComplicationService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/complication_label"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SMALL_IMAGE" />
+            <!-- 0 = 주기 갱신 없음. 데이터 도착 시 requestUpdateAll 로 즉시 갱신. -->
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0" />
+        </service>
+
         <!-- 폰 Data Layer 수신 — 상태/이미지 도착 시 저장 + Tile 갱신 -->
         <service
             android:name=".sync.WearDataListenerService"

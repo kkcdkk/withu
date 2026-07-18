@@ -52,6 +52,20 @@
     <string name="settings_health_item_steps">걸음</string>
     <string name="settings_health_item_minutes">활동</string>
     <string name="settings_health_item_kcal">칼로리</string>
+    <!-- 갤럭시 워치 연동 (iOS '애플 워치' 섹션 대응) -->
+    <string name="settings_watch_header">갤럭시 워치</string>
+    <string name="settings_watch_paired">페어링</string>
+    <string name="settings_watch_app">앱 설치</string>
+    <string name="settings_watch_reachable">연결 상태</string>
+    <string name="settings_watch_on">연결됨</string>
+    <string name="settings_watch_off">안 됨</string>
+    <string name="settings_watch_installed">설치됨</string>
+    <string name="settings_watch_not_installed">안 됨</string>
+    <string name="settings_watch_waiting">대기 중</string>
+    <string name="settings_watch_last_sync">마지막 전송</string>
+    <string name="settings_watch_sync_never">아직 없음</string>
+    <string name="settings_watch_sync_now">지금 바로 동기화</string>
+    <string name="settings_watch_footer">운동(산책·달리기 등)은 워치가 연결돼 있으면 워치 기준으로 알아채요.</string>
     <string name="settings_notify_header">알림</string>
     <string name="settings_notify_status">권한 상태</string>
     <string name="settings_notify_request">알림 권한 요청</string>

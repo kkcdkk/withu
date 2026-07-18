@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 폰이 '워치 앱 설치됨'을 감지하는 capability. 폰 WatchStatus 의 CAPABILITY 와 문자열 일치해야 함. -->
+<resources>
+    <string-array name="android_wear_capabilities">
+        <item>withu_wear_app</item>
+    </string-array>
+</resources>
