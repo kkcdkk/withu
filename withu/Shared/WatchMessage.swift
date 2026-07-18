@@ -25,6 +25,8 @@ struct WatchMessage: Codable, Equatable, Sendable {
     var weatherSunrise: Date? = nil
     /// 오늘 일몰 (위치 local time). 옵셔널.
     var weatherSunset: Date? = nil
+    /// 프로필 시간 창 요약 — 워치 컴플리케이션이 미래 수면/기상 전환을 스스로 계산하게 함께 전송.
+    var schedule: SharedAppState.ScheduleInfo? = nil
     let timestamp: Date
 
     /// 직렬화/역직렬화 키. 양쪽이 같은 이름을 쓰게 명시.
@@ -40,6 +42,7 @@ struct WatchMessage: Codable, Equatable, Sendable {
          weatherTempC: Double? = nil,
          weatherSunrise: Date? = nil,
          weatherSunset: Date? = nil,
+         schedule: SharedAppState.ScheduleInfo? = nil,
          timestamp: Date = Date()) {
         self.state = state
         self.todaySteps = todaySteps
@@ -50,6 +53,7 @@ struct WatchMessage: Codable, Equatable, Sendable {
         self.weatherTempC = weatherTempC
         self.weatherSunrise = weatherSunrise
         self.weatherSunset = weatherSunset
+        self.schedule = schedule
         self.timestamp = timestamp
     }
 }

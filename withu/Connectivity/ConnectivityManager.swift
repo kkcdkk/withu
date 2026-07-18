@@ -512,6 +512,16 @@ enum SyncCoordinator {
             profile: profile
         )
 
+        // 프로필 시간 창 요약 — 위젯(App Group)과 워치 컴플리케이션(WatchMessage 동봉) 둘 다 예측에 사용.
+        let scheduleInfo = SharedAppState.ScheduleInfo(
+            manualSleepOnly: profile.isManualSleepOnly,
+            sleepStartMin: profile.sleepStartHour * 60 + profile.sleepStartMinute,
+            sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
+            lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
+            dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute,
+            scheduleFallback: scheduleFallback,
+            overrideActive: override != nil)
+
         let msg = WatchMessage(
             state: state,
             todaySteps: health.todaySteps,
@@ -522,18 +532,12 @@ enum SyncCoordinator {
             weatherTempC: weather.snapshot?.temperatureC,
             weatherSunrise: weather.snapshot?.sunrise,
             weatherSunset: weather.snapshot?.sunset,
+            schedule: scheduleInfo,
             timestamp: Date()
         )
 
         SharedAppState.save(msg)
-        // 위젯이 미래 수면/기상 전환을 스스로 계산하도록 프로필 시간 창을 공유 (매 sync 최신화).
-        SharedAppState.saveSchedule(SharedAppState.ScheduleInfo(
-            manualSleepOnly: profile.isManualSleepOnly,
-            sleepStartMin: profile.sleepStartHour * 60 + profile.sleepStartMinute,
-            sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
-            lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
-            dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute,
-            scheduleFallback: scheduleFallback))
+        SharedAppState.saveSchedule(scheduleInfo)
         WidgetCenter.shared.reloadAllTimelines()
         ConnectivityManager.shared.send(msg)
     }

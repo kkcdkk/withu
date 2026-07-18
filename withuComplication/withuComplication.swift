@@ -61,11 +61,38 @@ struct CharacterProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CharacterEntry>) -> Void) {
-        let entry = currentEntry()
-        // 30분마다 자동 새로고침. 실제 즉시 갱신은 ConnectivityManager 가
-        // 메시지 받을 때 WidgetCenter.reloadAllTimelines 로 강제 reload.
-        let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        guard let msg = SharedAppState.loadMessage() else {
+            let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
+            completion(Timeline(entries: [.placeholder], policy: .after(next)))
+            return
+        }
+        // iOS 위젯과 동일 — 미래 entry 를 각 시각의 스케줄 상태로 계산해 수면→기상 경계에서 스스로 전환.
+        // (예전 버그: 단일 entry 라 아이폰이 늦게 sync 하면 기상 시각 지나도 계속 자고 있었음.)
+        let now = Date.now
+        let base = CharacterEntry(from: msg)
+        let baseIsLiveWorkout: Bool
+        switch base.state {
+        case .walking, .running, .cycling, .energetic: baseIsLiveWorkout = true
+        default: baseIsLiveWorkout = false
+        }
+        var entries: [CharacterEntry] = []
+        for i in 0..<8 {
+            let date = Calendar.current.date(byAdding: .minute, value: i * 15, to: now) ?? now
+            let state: CharacterState
+            if let schedule = msg.schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
+                state = schedule.scheduledState(at: date)
+            } else {
+                state = base.state
+            }
+            entries.append(CharacterEntry(
+                date: date,
+                state: state,
+                todaySteps: base.todaySteps,
+                todayActiveMinutes: base.todayActiveMinutes,
+                todayActiveKcal: base.todayActiveKcal
+            ))
+        }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 
     private func currentEntry() -> CharacterEntry {
