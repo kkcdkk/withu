@@ -75,16 +75,17 @@ iOS 앱이 저장 후에는 `WidgetCenter.shared.reloadAllTimelines()` 로 위�
 
 ## 상태 결정 로직 (`Character/CharacterStateResolver.swift`)
 
-순수 함수. HealthKit/날씨/시간 → `CharacterState`. **우선순위**: 운동 (최근 1시간) → 수면 (HealthKit 일정 또는 `CharacterProfile` 의 sleep window) → 기상 직후 1시간 → 식사 시간 → 날씨. `now`/`calendar` 주입 가능 — 시간 의존 로직 테스트 가능하게 설계됨.
+순수 함수. HealthKit/날씨/시간 → `CharacterState`. **우선순위**: 운동 (최근 1시간) → 수면 (HealthKit 일정 또는 `CharacterProfile` 의 sleep window) → 기상 직후 1시간 → 식사 시간 → 날씨. `now`/`calendar` 주입 가능 — 시간 의존 로직 테스트 가능하게 설계됨. 운동 신호는 HealthKit 워크아웃 외에 CoreMotion 실시간 감지 (`HealthKit/MotionActivityManager.swift` — 워치 없이 산책/달리기/자전거, cadence 임계값으로 걷기/달리기 구분) 도 들어온다.
 
 ## 백엔드 — Cloudflare Worker (`cloudflare/withu-api/`)
 
 앱은 `withu/Networking/APIConfig.swift` 의 `baseURL` 한 곳만 본다. Debug/Release 모두 배포된 Worker (`https://withu-api.ysy1398.workers.dev`) 를 사용. **이 파일은 skip-worktree 로 커밋 제외** (`apiToken` 실값이 로컬에만 있음) — diff 에 안 보여도 정상이고, 수정 시 커밋하지 말 것. (예전 FastAPI proxy `~/dev/withu-server/` 는 레거시 — 필요 시 APIConfig 주석 참고.)
 
 Worker 구성 (`src/index.js` 라우팅 · `src/auth.js` Apple JWT/JWS 검증 · `src/db.js` D1):
-- **라우트**: `GET /health`, `POST /auth/apple` (identityToken → sessionToken), `GET|DELETE /me`, `POST /iap/verify` (StoreKit 2 signed transaction → entitlement), `POST /redeem`, `POST /referral/apply`, `POST /generate`.
-- **바인딩/시크릿**: D1 `withu-prod` (마이그레이션 `migrations/0001~0005`, 적용은 `npx wrangler d1 migrations apply withu-prod --remote`), KV `RATE_KV` (IP 일일 상한 60/일), secrets `OPENAI_API_KEY` / `WITHU_API_TOKEN` / `SESSION_SECRET`, flag `ENFORCE_AUTH` (미설정이면 /generate 는 X-Withu-Token 경로 허용 — shadow 배포).
+- **라우트**: `GET /health`, `POST /auth/apple` (identityToken → sessionToken), `GET|DELETE /me`, `POST /iap/verify` (StoreKit 2 signed transaction → entitlement), `POST /redeem`, `POST /referral/apply`, `POST /generate`, `GET /admin` (생성 모니터링 대시보드).
+- **바인딩/시크릿**: D1 `withu-prod` (마이그레이션 `migrations/0001~0007`, 적용은 `npx wrangler d1 migrations apply withu-prod --remote`), KV `RATE_KV` (IP 일일 상한 60/일), R2 `LOG_BUCKET` (`withu-gen-logs`), secrets `OPENAI_API_KEY` / `WITHU_API_TOKEN` / `SESSION_SECRET` / `ADMIN_TOKEN`, flag `ENFORCE_AUTH` (미설정이면 /generate 는 X-Withu-Token 경로 허용 — shadow 배포). var `ALLOW_SANDBOX_IAP="1"` 은 TestFlight 기간 한정 — 정식 출시 시 제거 필수 (wrangler.toml 주석·RELEASE_ACTIVATION.md 참고).
 - `/generate` 는 프롬프트 길이 제한 + OpenAI Moderation 사전검사 (참고사진 포함). **서버는 캔디를 차감하지 않는다** — 차감은 클라이언트 (아래 캔디 섹션).
+- **생성 모니터링**: `/generate` 매 호출을 D1 `gen_events` 에 1행 기록 (type/state/프롬프트/사용자 원문 입력/status), 결과 이미지는 R2 `results/<id>.png`, 참고사진은 `refs/<id>.png`. `/admin?token=<ADMIN_TOKEN>` 대시보드에서 세션(수정 체인)·계정별로 조회. 관측용 로그라 서버 차감(generation_log)과는 별개.
 - 개발: `npm run dev` / 배포: `npm run deploy` (해당 디렉터리에서).
 
 `APIClient` 는 `actor` — URLSession 동시 호출 직렬화. `convertFromSnakeCase` / `convertToSnakeCase` 로 서버 (snake_case) ↔ Swift (camelCase) 변환. 이미지 생성이 medium 1–3분, high 2–5분 걸리니 `timeout = 1800`, `resourceTimeout = 3600`, `waitsForConnectivity = true` — 짧게 줄이면 iOS가 잘못된 "offline" 보고를 한다.
@@ -117,7 +118,7 @@ iOS 앱의 **파리티 포트** — Kotlin + Compose(M3), 같은 Cloudflare Work
 - **문구는 iOS Localizable 한국어 원문 그대로** (`res/values/strings.xml`, `values-en` = 카탈로그 en). 오타까지 보존. 서버 프롬프트 영문 (`generationHint`) 은 리소스가 아니라 **코드 상수**.
 - **캔디는 로컬 권위** (`quota/GenerationQuota.kt`) — iOS 와 동일. 서버 차감 없음, `syncCreditsUp` 은 max 끌어올리기만. DEBUG = 무제한 9999·차감 no-op.
 - 공유 싱글턴은 `WithuApp.appContext` 를 내부에서 쓴다 — **공유 API 시그니처에 Context 파라미터 없음**. 파일 I/O 는 `Dispatchers.IO`, Compose 에서 저장소 직접 호출 금지.
-- **제외(후속)**: Wear OS, Google 로그인(`/auth/google`), Play Billing 실결제, 날씨 배경 AI. 호출 지점은 no-op + 주석 처리.
+- **제외(후속)**: Google 로그인(`/auth/google`), Play Billing 실결제, 날씨 배경 AI. 호출 지점은 no-op + 주석 처리.
 
 주요 대응 관계 (iOS → Android, 로직/스키마 동형):
 - `Shared/CharacterImageStore.swift` → `shared/CharacterImageStore.kt` (활성 슬롯/갤러리/애니 토글/야간 판정)
@@ -126,9 +127,12 @@ iOS 앱의 **파리티 포트** — Kotlin + Compose(M3), 같은 Cloudflare Work
 - `Networking/GenerationQuota.swift` → `quota/GenerationQuota.kt`
 - `CharacterGen/ImageProcessing.swift` (크로마키) → `gen/ImageProcessing.kt` + `gen/ChromaKey.kt`
 - 배치 백그라운드 큐: iOS `BackgroundGenerationManager` (background URLSession) → Android `bggen/` (WorkManager `GenBatchWorker`)
-- 위젯: iOS WidgetKit → Android `widget/` (Glance). 워치/컴플리케이션은 Android 에 없음 (Wear OS 제외).
+- 위젯: iOS WidgetKit → Android `widget/` (Glance).
+- 워치: iOS watchOS 앱/컴플리케이션 → **Wear OS 모듈 `android/wear/`** (`:wear` Gradle 모듈, 빌드는 `./build.sh :wear:assembleDebug`). 캐릭터 Tile + 컴플리케이션 + 워치 단독 손목 모션 감지(`motion/`), 폰→워치는 Data Layer (`wear/.../sync/`, 폰 쪽 송신은 `app/.../watch/WearSyncManager.kt`). 이미지 DataItem 에 `updatedAt` 을 넣어야 갱신이 전달된다.
 - `MainActivity.kt` = 전체 nav graph(11 route) + 온보딩 게이트 + 알림 딥링크. 화면끼리 직접 호출하지 않고 이동은 전부 여기 콜백으로 배선.
 - 서버 토큰은 `local.properties` 의 `WITHU_API_TOKEN` → `BuildConfig` (iOS `APIConfig.swift` 와 같은 커밋-제외 정책).
+
+Play 스토어 배포 자료 (문구·아이콘·피처그래픽·스크린샷·체크리스트)는 `android/release-assets/` (`RELEASE-PLAY.md`).
 
 ## 기타 운영 메모
 
@@ -136,4 +140,5 @@ iOS 앱의 **파리티 포트** — Kotlin + Compose(M3), 같은 Cloudflare Work
 - **App Group ID** (`group.com.seoyoung.withu`) 는 4개 타깃 Capabilities에 등록되어 있어야 한다. 새 타깃 추가 시 누락되면 `containerURL` 이 nil 반환 → 공유 깨짐.
 - **Vision 배경 제거** (`CharacterGen/ImageProcessing.swift`)는 iOS 17+ `VNGenerateForegroundInstanceMaskRequest` — 외부 호출/비용 없음. 단, 기본 생성은 서버에서 `background=transparent` PNG 로 받아 Vision 없이 그대로 사용.
 - **프롬프트 실험** 은 `tools/prompt_lab.py` — 로컬 미니 서버가 브라우저 UI 를 띄우고 Worker 로 중계. 상태별 `generationHint` 튜닝은 앱 빌드 없이 여기서.
+- **법적 문서**: 원문은 `legal/*.md`, 공개 페이지는 `docs/` (개인정보처리방침·이용약관 HTML, `en/` 영문판) — 스토어 심사에 제출되는 URL 소스이므로 두 쪽을 같이 고칠 것.
 - **배치 생성은 백그라운드 실행** (`Networking/BackgroundGenerationManager.swift`): background URLSession + 디스크 영속 작업 큐 (Application Support/bggen/jobs.json, 순차 1개씩). 화면 꺼짐/앱 종료에도 진행되고 끝나면 로컬 알림. 앱이 죽은 사이 완료된 upload task 는 응답 본문이 유실될 수 있어(iOS 한계) 본문 없는 2xx 는 1회 재큐잉. 캔디 차감은 이 매니저의 process() 성공 시점 — 뷰(BatchCharacterGenView)는 tick 관찰로 미러링만 한다.
