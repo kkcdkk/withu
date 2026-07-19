@@ -1307,16 +1307,29 @@ struct AdvancedDiagnosticsView: View {
     }
 
     /// 위젯이 마지막으로 타임라인을 계산한 시각·상태 — "위젯이 정말 갱신됐는지" 진단용.
+    /// 홈/잠금화면 인스턴스별로 따로 보여준다 (잠금화면에만 갱신이 안 닿는 케이스 구분).
     private var widgetTimelineLabel: String {
         let defaults = UserDefaults(suiteName: SharedAppState.groupID)
-        guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt") as? Date else {
-            return String(localized: "없음")
+        let families: [(key: String, label: String)] = [
+            ("systemSmall", "홈S"), ("systemMedium", "홈M"), ("systemLarge", "홈L"),
+            ("accessoryCircular", "잠금원형"), ("accessoryRectangular", "잠금직사각"),
+            ("accessoryInline", "잠금한줄"),
+        ]
+        var parts: [String] = []
+        for f in families {
+            guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt.\(f.key)") as? Date else { continue }
+            let time = date.formatted(date: .omitted, time: .shortened)
+            let raw = defaults?.string(forKey: "withu.widget.lastTimelineState.\(f.key)") ?? ""
+            let stateLabel = CharacterState(rawValue: raw)?.koreanShortLabel ?? "?"
+            parts.append("\(f.label) \(time)·\(stateLabel)")
         }
-        let time = date.formatted(date: .omitted, time: .shortened)
-        if let raw = defaults?.string(forKey: "withu.widget.lastTimelineState"),
-           let state = CharacterState(rawValue: raw) {
-            return "\(time) · \(state.koreanShortLabel)"
+        if parts.isEmpty {
+            // 구버전 키 fallback
+            guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt") as? Date else {
+                return String(localized: "없음")
+            }
+            return date.formatted(date: .omitted, time: .shortened)
         }
-        return time
+        return parts.joined(separator: "  ")
     }
 }

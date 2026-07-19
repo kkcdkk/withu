@@ -141,9 +141,14 @@ struct CharacterProvider: TimelineProvider {
         }
         // 진단 — 위젯이 실제로 타임라인을 계산한 시각과 첫 상태 기록.
         // (설정 > 캐릭터 상태 살펴보기에서 "위젯이 정말 갱신됐는지" 확인용.)
+        // 홈/잠금화면 인스턴스가 따로 계산하므로 family 별로도 기록 —
+        // "홈은 갱신되는데 잠금화면만 안 닿는" 케이스를 폰에서 구분하기 위함.
         let diag = UserDefaults(suiteName: SharedAppState.groupID)
         diag?.set(now, forKey: "withu.widget.lastTimelineAt")
         diag?.set(entries.first?.state.rawValue ?? "", forKey: "withu.widget.lastTimelineState")
+        let famKey = String(describing: context.family)
+        diag?.set(now, forKey: "withu.widget.lastTimelineAt.\(famKey)")
+        diag?.set(entries.first?.state.rawValue ?? "", forKey: "withu.widget.lastTimelineState.\(famKey)")
 
         completion(Timeline(entries: entries, policy: .atEnd))
     }
