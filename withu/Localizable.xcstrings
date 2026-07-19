@@ -4727,12 +4727,32 @@
         }
       }
     },
-    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 열기'를 추가하세요." : {
+    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요. 앱이 열리지 않고 조용히 반영돼요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To reflect workouts or sleep instantly, add 'Open Withy' to the Workout/Sleep mode triggers in Shortcuts automation."
+            "value" : "To reflect workouts or sleep instantly, add 'Withy Refresh Character' to the Workout/Sleep mode triggers in Shortcuts automation. It runs quietly without opening the app."
+          }
+        }
+      }
+    },
+    "캐릭터 새로고침" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh Character"
+          }
+        }
+      }
+    },
+    "지금 상태(운동·수면·날씨)에 맞춰 캐릭터와 위젯을 조용히 새로 맞춰요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quietly re-aligns your character and widgets to your current state (workout, sleep, weather)."
           }
         }
       }
