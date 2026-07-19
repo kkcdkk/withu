@@ -81,7 +81,7 @@ bucket_name = "withu-gallery"
 # 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
 [vars]
 APPLE_BUNDLE_ID = "sy.withu"
-# TestFlight/QA 기간에만 "1" — Sandbox 구매도 서버 적립 허용.
-# ⚠️ 정식 출시 시 반드시 이 줄을 지우고 재배포할 것 (RELEASE_ACTIVATION.md 참고).
-#    안 지우면 누구나 Sandbox 테스터 계정으로 무료 캔디 무한 적립 가능.
-ALLOW_SANDBOX_IAP = "1"
+# TestFlight/QA 로 결제를 검증할 때만 아래 주석을 풀어 "1" (Sandbox 구매도 서버 적립 허용).
+# ⚠️ QA 끝나면 반드시 다시 주석 처리 후 재배포 — 켜둔 채 운영하면 누구나
+#    Sandbox 테스터 계정으로 무료 캔디 무한 적립 가능 (2026-07-19 제거, RELEASE_ACTIVATION.md).
+# ALLOW_SANDBOX_IAP = "1"
