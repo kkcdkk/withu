@@ -19,6 +19,10 @@ extension Notification.Name {
     static let characterImageChanged = Notification.Name("withu.characterImageChanged")
     /// 날씨 배경 이미지가 변경됨.
     static let weatherBackgroundChanged = Notification.Name("withu.weatherBackgroundChanged")
+    /// 갤러리 항목이 추가/변경/삭제됨 — iOS 앱의 클라우드 백업 동기화 트리거.
+    /// 삭제면 userInfo["deletedId"], 신규 저장이면 userInfo["addedId"] 에 해당 id
+    /// (관찰자는 iOS 앱뿐 — 위젯/워치엔 무해). 서버 복원(importGalleryItem)은 알림 안 쏨.
+    static let galleryChanged = Notification.Name("withu.galleryChanged")
 }
 
 /// 배경 레이어용 날씨 카테고리 — 4 날씨 + 야간.
@@ -549,6 +553,7 @@ enum CharacterImageStore {
         }
         all[idx].hasFrame1 = true
         saveGalleryMetadata(all)
+        NotificationCenter.default.post(name: .galleryChanged, object: nil)
         return all[idx]
     }
 
@@ -669,7 +674,42 @@ enum CharacterImageStore {
         var all = loadGalleryMetadata()
         all.append(item)
         saveGalleryMetadata(all)
+        NotificationCenter.default.post(name: .galleryChanged, object: nil,
+                                        userInfo: ["addedId": id])
         return item
+    }
+
+    /// 서버 백업 복원용 — 외부에서 받은 항목을 id/메타를 보존한 채 갤러리에 저장.
+    /// 같은 id 가 이미 있으면 no-op(중복 방지). 활성 슬롯/매핑은 건드리지 않음.
+    /// .galleryChanged 는 안 쏨 — 복원 루프 방지, 화면 갱신은 동기화 쪽이 따로 알림.
+    @discardableResult
+    static func importGalleryItem(id: String, imageData: Data, frame1Data: Data?,
+                                  sourceState: String, createdAt: Date,
+                                  batchId: String?, prompt: String?) -> Bool {
+        var all = loadGalleryMetadata()
+        guard !all.contains(where: { $0.id == id }),
+              let url = galleryFileURL(id: id) else { return false }
+        do {
+            try imageData.write(to: url, options: .atomic)
+        } catch {
+            return false
+        }
+        var hasFrame1 = false
+        if let frame1Data, let f1URL = galleryFrame1URL(id: id) {
+            try? frame1Data.write(to: f1URL, options: .atomic)
+            hasFrame1 = FileManager.default.fileExists(atPath: f1URL.path)
+        }
+        all.append(GalleryItem(id: id, sourceState: sourceState, createdAt: createdAt,
+                               hasFrame1: hasFrame1, batchId: batchId, prompt: prompt))
+        saveGalleryMetadata(all)
+        return true
+    }
+
+    /// 갤러리 파일의 원본 PNG 데이터 (frame 0/1). 백업 업로드용 — 재인코딩 없이 그대로.
+    static func galleryImageData(id: String, frame: Int = 0) -> Data? {
+        let url = frame == 1 ? galleryFrame1URL(id: id) : galleryFileURL(id: id)
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try? Data(contentsOf: url)
     }
 
     /// 갤러리에서 이미지 로드.
@@ -756,6 +796,8 @@ enum CharacterImageStore {
         let staleKeys = map.compactMap { $1 == id ? $0 : nil }
         for k in staleKeys { map.removeValue(forKey: k) }
         if !staleKeys.isEmpty { saveActiveSourceMap(map) }
+        NotificationCenter.default.post(name: .galleryChanged, object: nil,
+                                        userInfo: ["deletedId": id])
         return true
     }
     #endif

@@ -34,6 +34,7 @@ final class AuthManager {
             return
         }
         state = .signedIn            // 낙관적 — 캐시된 토큰 신뢰, 백그라운드 검증
+        GallerySyncManager.shared.kick()   // 갤러리 클라우드 백업/복원 (재설치 후 복원 포함)
         await refreshEntitlement()
         await checkCredentialState()
     }
@@ -67,6 +68,7 @@ final class AuthManager {
             if let ent = resp.entitlement { GenerationQuota.syncCreditsUp(to: ent.credits) }
             state = .signedIn
             lastError = nil
+            GallerySyncManager.shared.kick()   // 로그인 성공 — 갤러리 백업/복원 동기화
         } catch {
             lastError = String(localized: "로그인 처리에 실패했어요. 잠시 후 다시 시도해 주세요.")
         }

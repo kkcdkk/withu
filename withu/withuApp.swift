@@ -26,6 +26,8 @@ struct withuApp: App {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await AuthManager.shared.checkCredentialState() }
+                // 갤러리 클라우드 백업 동기화 (로그인 상태일 때만 내부에서 동작)
+                GallerySyncManager.shared.kick()
             }
         }
         // iOS 가 ~30분 ~ 수 시간 마다 깨워서 호출. 사용자 습관 따라 자동 조정.
@@ -96,6 +98,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             withuApp.scheduleNextRefresh()
             // 백그라운드 캐릭터 생성 — 앱이 죽었다 다시 켜져도 미완료 작업 이어가기.
             BackgroundGenerationManager.shared.resumeIfNeeded()
+            // 갤러리 클라우드 백업 — 저장/삭제 알림 구독 시작 (실제 동기화는 로그인 시).
+            GallerySyncManager.shared.start()
         }
         return true
     }

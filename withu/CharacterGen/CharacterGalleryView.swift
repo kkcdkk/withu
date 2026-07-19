@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import Combine
 import Photos
 import WidgetKit
 
@@ -83,6 +84,10 @@ struct CharacterGalleryView: View {
         .navigationTitle("캐릭터 갤러리")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { refresh() }
+        // 서버 백업에서 복원 완료 — 화면 떠 있는 동안 도착해도 바로 보이게.
+        .onReceive(NotificationCenter.default.publisher(for: .gallerySyncDidImport)) { _ in
+            refresh()
+        }
         .alert("이 캐릭터로 모두 적용할까요?", isPresented: Binding(
             get: { pendingApplyAll != nil },
             set: { if !$0 { pendingApplyAll = nil } }
@@ -402,7 +407,13 @@ struct StateFolderView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(state.tint.opacity(0.18))
                 .frame(width: 96, height: 96)
-                .overlay(Text(state.symbolEmoji).font(.system(size: 44)))
+                .overlay(
+                    // 이모지 대신 번들 기본 일러스트 — 투명 PNG 라 tint 배경과 어울림.
+                    Image(state.imageAssetName)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(12)
+                )
             Text("\(state.koreanShortLabel) 캐릭터가 아직 없어요")
                 .font(.callout.weight(.semibold))
             Text("이 순간에 어울리는 캐릭터를 만들어 보세요.")

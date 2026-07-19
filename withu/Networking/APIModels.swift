@@ -87,6 +87,34 @@ struct RedeemRequest: Codable {
     let code: String
 }
 
+// MARK: - 갤러리 클라우드 백업
+
+/// GET /gallery 응답의 항목 (서버 gallery_items 메타 — snake_case → camelCase).
+struct GalleryBackupItem: Codable {
+    let id: String
+    let sourceState: String?
+    let createdAt: Int?      // epoch 초 (클라 업로드 값 그대로)
+    let hasFrame1: Bool?
+    let batchId: String?
+    let prompt: String?
+}
+
+/// GET /gallery 응답.
+struct GalleryListResponse: Codable {
+    let items: [GalleryBackupItem]
+}
+
+/// PUT /gallery/<id> 요청 (convertToSnakeCase → image_b64 / frame1_b64 …).
+struct GalleryUploadRequest: Codable {
+    let imageB64: String
+    let frame1B64: String?
+    let sourceState: String
+    let createdAt: Int       // epoch 초
+    let hasFrame1: Bool
+    let batchId: String?
+    let prompt: String?
+}
+
 /// POST /referral/apply 요청.
 struct ReferralRequest: Codable {
     let code: String

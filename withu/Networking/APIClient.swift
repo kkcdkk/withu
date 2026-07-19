@@ -187,6 +187,72 @@ actor APIClient {
         try await postCode(path: "/referral/apply", body: ReferralRequest(code: code))
     }
 
+    // MARK: - 갤러리 클라우드 백업 (Bearer 필요)
+
+    /// 서버에 백업된 갤러리 목록 (메타만 — 이미지는 downloadGalleryImage 로 따로).
+    func fetchGalleryList() async throws -> [GalleryBackupItem] {
+        let url = APIConfig.baseURL.appendingPathComponent("/gallery")
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 30   // 생성용 session 의 30분 timeout 상속 방지
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        return try await send(req, decode: GalleryListResponse.self).items
+    }
+
+    /// 갤러리 항목 업로드 (frame0 + 있으면 frame1). 로컬 PNG 그대로 — 재가공 없음.
+    func uploadGalleryItem(_ body: GalleryUploadRequest, id: String) async throws {
+        let url = APIConfig.baseURL.appendingPathComponent("/gallery/\(id)")
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.timeoutInterval = 120
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        req.httpBody = try encoder.encode(body)
+        try await sendDiscardingBody(req)
+    }
+
+    /// 갤러리 항목 이미지 다운로드 (frame 0/1). 원본 PNG Data 그대로 반환.
+    func downloadGalleryImage(id: String, frame: Int = 0) async throws -> Data {
+        var url = APIConfig.baseURL.appendingPathComponent("/gallery/\(id).png")
+        if frame == 1 {
+            url.append(queryItems: [URLQueryItem(name: "frame", value: "1")])
+        }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 120
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (data, response) = try await session.data(for: req)
+            guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else {
+                let detail = (try? decoder.decode(APIErrorDetail.self, from: data))?.detail
+                    ?? String(data: data, encoding: .utf8) ?? ""
+                throw APIError.server(status: http.statusCode, detail: detail)
+            }
+            return data
+        } catch let error as APIError {
+            throw error
+        } catch {
+            throw APIError.transport(error)
+        }
+    }
+
+    /// 갤러리 항목 서버 삭제 (멱등 — 이미 없어도 성공).
+    func deleteGalleryItem(id: String) async throws {
+        let url = APIConfig.baseURL.appendingPathComponent("/gallery/\(id)")
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.timeoutInterval = 30
+        if let sessionToken = KeychainStore.sessionToken() {
+            req.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        }
+        try await sendDiscardingBody(req)
+    }
+
     private func postCode<B: Encodable>(path: String, body: B) async throws -> Entitlement {
         let url = APIConfig.baseURL.appendingPathComponent(path)
         var req = URLRequest(url: url)
