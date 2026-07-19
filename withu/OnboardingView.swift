@@ -121,7 +121,7 @@ struct OnboardingView: View {
                         .foregroundStyle(Color.withuPinkText)
                 }
                 VStack(spacing: 8) {
-                    Text("with U")
+                    Text("Withy")
                         .font(.title3.weight(.semibold))
                     Text("내 캐릭터가 일상에 함께해요")
                         .font(.callout)
@@ -249,7 +249,7 @@ struct OnboardingView: View {
             title: "캐릭터와 함께 수면",
             body: "수면 집중 모드를 감지해 캐릭터를 재워줘요.",
             details: [
-                (symbol: "moon.zzz", text: "설정에서 집중·수면 필터에 withu 를 연결하면 더 정확해요"),
+                (symbol: "moon.zzz", text: "설정에서 집중·수면 필터에 Withy 를 연결하면 더 정확해요"),
                 (symbol: "gearshape", text: "연결 방법은 메인 화면 설정에서 다시 볼 수 있어요"),
                 (symbol: "bed.double.fill", text: "허용하지 않으면 프로필에 적은 수면 시간만 써요")
             ],
@@ -381,18 +381,24 @@ struct OnboardingView: View {
 
     // MARK: - Bottom bar
 
-    @ViewBuilder
     private var bottomBar: some View {
-        switch step {
-        case .welcome:
-            primaryButton("시작할게요") { advance() }
-        case .health, .location, .notification, .focus:
-            VStack(spacing: 8) {
+        VStack(spacing: 8) {
+            switch step {
+            case .welcome:
+                primaryButton("시작할게요") { advance() }
+            case .health, .location, .notification, .focus:
                 primaryButton(currentRequestButtonLabel) {
                     Task { await currentRequest() }
                 }
                 .disabled(currentResult == .requesting)
-                if currentResult == .pending {
+            case .done:
+                primaryButton("캐릭터 만들러 가기") { onComplete() }
+            }
+            // 건너뛰기 슬롯 — 높이를 항상 예약해 CTA 버튼 위치를 모든 스텝에서 고정.
+            // (예전엔 pending 일 때만 노출돼서, 허용을 누르면 슬롯이 사라지며 버튼이
+            //  아래로 점프해 헷갈리던 문제. Android OnboardingScreen 과 동일 처리.)
+            ZStack {
+                if step != .welcome && step != .done && currentResult == .pending {
                     Button("건너뛰기") {
                         markSkippedAndAdvance()
                     }
@@ -400,8 +406,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
                 }
             }
-        case .done:
-            primaryButton("캐릭터 만들러 가기") { onComplete() }
+            .frame(height: 28)
         }
     }
 
@@ -474,7 +479,8 @@ struct OnboardingView: View {
                 .font(.callout.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.withuPink)
+                // 파스텔(withuPink=새싹 그린)은 흰 글자 대비가 약함 — CTA 는 진한 그린 (Android WithuCTAButton 과 동일).
+                .background(Color.withuCTAGreen)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
@@ -503,26 +509,28 @@ private extension Task where Success == Never, Failure == Never {
 // MARK: - withu Theme colors (light/dark adaptive)
 
 extension Color {
-    /// withu 의 메인 핑크. 라이트 = 파스텔, 다크 = 채도 낮은 와인.
+    // 2026-07: 브랜드 색 전환 — 연핑크 → 그린(기존 withuGreen 새싹 톤 기준).
+    // 프로퍼티 이름은 사용처가 많아 호환을 위해 유지 (withuPink* = 그린 계열 값).
+    /// withu 의 메인 액센트 (구 핑크 자리). 라이트 = 새싹 그린(withuGreen 과 동일 톤), 다크 = 딥그린.
     static let withuPink = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.55, green: 0.32, blue: 0.42, alpha: 1.0)
-            : UIColor(red: 1.0,  green: 0.78, blue: 0.85, alpha: 1.0)
+            ? UIColor(red: 0.30, green: 0.48, blue: 0.36, alpha: 1.0)
+            : UIColor(red: 0.55, green: 0.80, blue: 0.58, alpha: 1.0)
     })
 
     /// 캐릭터 원 배경, soft chip 배경 등 더 옅은 톤.
     static let withuPinkSoft = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.45, green: 0.28, blue: 0.36, alpha: 1.0)
-            : UIColor(red: 1.0,  green: 0.85, blue: 0.92, alpha: 1.0)
+            ? UIColor(red: 0.26, green: 0.40, blue: 0.31, alpha: 1.0)
+            : UIColor(red: 0.72, green: 0.89, blue: 0.74, alpha: 1.0)
     })
 
-    /// 글자·링크·배지 텍스트용 진한 로즈 — 파스텔 withuPink 는 글자로 쓰면
+    /// 글자·링크·배지 텍스트용 진한 그린 — 파스텔 withuPink 는 글자로 쓰면
     /// 대비가 낮아 안 읽힘. 면적(버튼 배경 등)은 withuPink, 텍스트는 이걸 사용.
     static let withuPinkText = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.95, green: 0.62, blue: 0.72, alpha: 1.0)
-            : UIColor(red: 0.78, green: 0.32, blue: 0.47, alpha: 1.0)
+            ? UIColor(red: 0.62, green: 0.86, blue: 0.66, alpha: 1.0)
+            : UIColor(red: 0.20, green: 0.50, blue: 0.28, alpha: 1.0)
     })
 
     /// CTA 버튼용 진한 그린 — 아이폰 메시지 말풍선 초록 톤. 흰 글자와 대비 확보.
@@ -540,10 +548,18 @@ extension Color {
             : UIColor(red: 0.55, green: 0.80, blue: 0.58, alpha: 1.0)
     })
 
-    /// 온보딩 배경 gradient 의 상단 — 거의 흰색-핑크 / 다크 모드 매우 어두운 와인.
+    /// 홈 '함께할 캐릭터 생성하기' 버튼 전용 — 브랜드 그린 전환 후에도 이 버튼만
+    /// 원래 연핑크 유지 (사용자 지정). 라이트 = 파스텔, 다크 = 채도 낮은 와인.
+    static let withuHeroPink = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.55, green: 0.32, blue: 0.42, alpha: 1.0)
+            : UIColor(red: 1.0,  green: 0.78, blue: 0.85, alpha: 1.0)
+    })
+
+    /// 온보딩 배경 gradient 의 상단 — 거의 흰색-그린 / 다크 모드 매우 어두운 딥그린.
     static let withuPinkBackground = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.12, green: 0.08, blue: 0.10, alpha: 1.0)
-            : UIColor(red: 1.0,  green: 0.95, blue: 0.97, alpha: 1.0)
+            ? UIColor(red: 0.08, green: 0.11, blue: 0.09, alpha: 1.0)
+            : UIColor(red: 0.95, green: 0.99, blue: 0.96, alpha: 1.0)
     })
 }

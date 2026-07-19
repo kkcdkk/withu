@@ -97,30 +97,54 @@ struct RefreshIconButton: View {
 }
 
 /// Form 행 새로고침 버튼 — 실행 중엔 우측에 미니 스피너 표시 + 재탭 방지.
+/// 완료 후엔 아이콘이 잠깐 체크마크로 바뀌어 '실행됐다'는 걸 보여준다 (showsDone 으로 끌 수 있음).
 struct RefreshRowButton: View {
     let title: LocalizedStringKey
     var systemImage: String = "arrow.clockwise.circle.fill"
+    var role: ButtonRole? = nil
+    var showsDone: Bool = true
     var action: () async -> Void
     @State private var isRunning = false
+    @State private var showDone = false
+    @State private var runID = 0  // 체크마크 표시 중 재탭 시 이전 타이머가 새 표시를 지우지 않게
 
     var body: some View {
-        Button {
-            Task {
-                isRunning = true
-                let started = Date()
-                await action()
-                let elapsed = Date().timeIntervalSince(started)
-                if elapsed < 0.5 { try? await Task.sleep(for: .seconds(0.5 - elapsed)) }
-                isRunning = false
-            }
+        Button(role: role) {
+            Task { await run() }
         } label: {
             HStack {
-                Label(title, systemImage: systemImage)
+                Label {
+                    Text(title)
+                } icon: {
+                    if showDone {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else {
+                        Image(systemName: systemImage)
+                    }
+                }
                 Spacer()
                 if isRunning { ProgressView().controlSize(.mini) }
             }
         }
         .disabled(isRunning)
+    }
+
+    private func run() async {
+        runID += 1
+        let id = runID
+        isRunning = true
+        showDone = false
+        let started = Date()
+        await action()
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed < 0.5 { try? await Task.sleep(for: .seconds(0.5 - elapsed)) }
+        isRunning = false
+        if showsDone {
+            showDone = true
+            try? await Task.sleep(for: .seconds(1.8))
+            if runID == id { showDone = false }
+        }
     }
 }
 

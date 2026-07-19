@@ -28,7 +28,7 @@ struct LoginGateView: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text("withu 시작하기")
+                    Text("Withy 시작하기")
                         .font(.title3.weight(.semibold))
                     Text("내 일상과 함께하는 나의 캐릭터")
                         .font(.callout)

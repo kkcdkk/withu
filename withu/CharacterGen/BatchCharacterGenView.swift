@@ -533,7 +533,11 @@ struct BatchCharacterGenView: View {
                             else { animatedStates.insert(state) }
                         } label: {
                             HStack(spacing: 4) {
-                                Text(state.symbolEmoji)
+                                // 이모지 대신 번들 기본 일러스트 썸네일
+                                Image(state.imageAssetName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
                                 Text(state.koreanShortLabel)
                                     .font(.footnote.weight(on ? .semibold : .regular))
                             }
@@ -1365,7 +1369,7 @@ struct BatchCharacterGenView: View {
     private func saveOneToPhotos(_ image: UIImage) async {
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         guard status == .authorized || status == .limited else {
-            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → withu 에서 허용해 주세요."
+            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → Withy 에서 허용해 주세요."
             showSaveResultAlert = true
             return
         }
@@ -1513,7 +1517,7 @@ struct BatchCharacterGenView: View {
 
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         guard status == .authorized || status == .limited else {
-            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → withu 에서 허용해 주세요."
+            saveResultMessage = "사진 추가 권한이 거부됐어요. 설정 → Withy 에서 허용해 주세요."
             showSaveResultAlert = true
             return
         }

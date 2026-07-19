@@ -146,7 +146,7 @@ final class ConnectivityManager: NSObject {
             return
         }
         guard session.isWatchAppInstalled else {
-            lastImageTransferState = "Apple Watch 에 withu 앱이 설치돼 있지 않아요."
+            lastImageTransferState = "Apple Watch 에 Withy 앱이 설치돼 있지 않아요."
             return
         }
         let resized = Self.downsampled(image, maxPixelSize: Self.watchImageMaxPixelSize)
@@ -433,7 +433,7 @@ final class FocusModeManager {
     /// 현재 권한 상태 한국어 라벨 (디버그 UI 용).
     var authorizationStatusLabel: String {
         switch INFocusStatusCenter.default.authorizationStatus {
-        case .notDetermined: return String(localized: "미요청")
+        case .notDetermined: return String(localized: "요청 안 함")
         case .restricted:    return String(localized: "제한됨")
         case .denied:        return String(localized: "거부됨")
         case .authorized:    return String(localized: "허용됨")
@@ -443,11 +443,11 @@ final class FocusModeManager {
 
     /// 현재 Focus 상태를 사용자 친화적으로 표현. nil/true/false 세 케이스 구별.
     var focusStateLabel: String {
-        guard isAuthorized else { return String(localized: "— (권한 없음)") }
+        guard isAuthorized else { return String(localized: "권한 없음") }
         switch rawFocusedValue {
-        case .none:          return String(localized: "❓ 공유 OFF")   // 권한 O 이지만 iOS 가 nil 반환 = Focus 별 "공유" 토글 OFF
-        case .some(true):    return String(localized: "✅ 활성")
-        case .some(false):   return String(localized: "— 비활성")
+        case .none:          return String(localized: "공유 꺼짐")   // 권한 O 이지만 iOS 가 nil 반환 = Focus 별 "공유" 토글 OFF
+        case .some(true):    return String(localized: "켜짐")
+        case .some(false):   return String(localized: "꺼짐")
         }
     }
 }
@@ -561,9 +561,9 @@ enum SyncCoordinator {
 /// 이후 Sleep Focus on/off 마다 iOS 가 백그라운드에서 perform() 호출.
 @available(iOS 16.0, *)
 struct SleepFocusFilterIntent: SetFocusFilterIntent {
-    static var title: LocalizedStringResource = "withu 캐릭터 상태 변경"
+    static var title: LocalizedStringResource = "Withy 캐릭터 상태 변경"
     static var description: IntentDescription? = IntentDescription(
-        "집중 모드가 켜질 때 withu 캐릭터를 자는 모습으로 바꿔요."
+        "집중 모드가 켜질 때 Withy 캐릭터를 자는 모습으로 바꿔요."
     )
 
     /// ⚠ Default 는 반드시 false — Focus OFF 시 iOS 가 perform() 을 default 값으로 다시 호출함.

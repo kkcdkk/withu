@@ -103,7 +103,7 @@ struct CharacterProfileView: View {
                 } header: {
                     Text("움직임")
                 } footer: {
-                    Text("움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.")
+                    Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
                         .font(.caption2)
                 }
 
@@ -324,7 +324,7 @@ struct CharacterProfileView: View {
         // 수면 모드 신호가 하나도 연결 안 돼 있으면 — 왜 '설정 시간'으로만 자는지 + 켜는 법 안내.
         // (INFocusStatusCenter 권한은 더 이상 수면 판정에 안 쓰므로 조건에서 제외)
         if focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule {
-            return String(localized: "지금은 아이폰 수면 모드를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)")
+            return String(localized: "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)")
         }
         return String(localized: "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요.")
     }

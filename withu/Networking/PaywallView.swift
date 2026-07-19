@@ -166,7 +166,7 @@ struct PaywallView: View {
                             .font(.title3.weight(.semibold))
                     }
                     Spacer()
-                    ShareLink(item: "withu 같이 해요! 초대 코드 \(myCode) 를 입력하면 둘 다 보너스를 받아요.") {
+                    ShareLink(item: "Withy 같이 해요! 초대 코드 \(myCode) 를 입력하면 둘 다 보너스를 받아요.") {
                         Image(systemName: "square.and.arrow.up")
                             .font(.title3)
                             .foregroundStyle(Color.withuPinkText)

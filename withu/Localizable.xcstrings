@@ -46,22 +46,12 @@
         }
       }
     },
-    "— (권한 없음)" : {
+    "권한 없음" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "— (no permission)"
-          }
-        }
-      }
-    },
-    "— 비활성" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "— inactive"
+            "value" : "No permission"
           }
         }
       }
@@ -130,13 +120,13 @@
         }
       }
     },
-    "'위젯 추가'를 누르고 \\\"withu\\\"를 검색해주세요" : {
+    "'위젯 추가'를 누르고 \\\"Withy\\\"를 검색해주세요" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap 'Add Widget' and search for \\\"withu\\\""
+            "value" : "Tap 'Add Widget' and search for \\\"Withy\\\""
           }
         }
       }
@@ -560,12 +550,12 @@
         }
       }
     },
-    "✅ 활성" : {
+    "켜짐" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "✅ active"
+            "value" : "On"
           }
         }
       }
@@ -580,12 +570,12 @@
         }
       }
     },
-    "❓ 공유 OFF" : {
+    "공유 꺼짐" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "❓ sharing OFF"
+            "value" : "Sharing off"
           }
         }
       }
@@ -872,12 +862,12 @@
         }
       }
     },
-    "Apple Watch 에 withu 앱이 설치돼 있지 않아요." : {
+    "Apple Watch 에 Withy 앱이 설치돼 있지 않아요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The withu app isn't installed on your Apple Watch."
+            "value" : "The Withy app isn't installed on your Apple Watch."
           }
         }
       }
@@ -1011,66 +1001,66 @@
         }
       }
     },
-    "with U" : {
+    "Withy" : {
 
     },
-    "withu 같이 해요! 초대 코드 %@ 를 입력하면 둘 다 보너스를 받아요." : {
+    "Withy 같이 해요! 초대 코드 %@ 를 입력하면 둘 다 보너스를 받아요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Join me on withu! Enter invite code %@ and we both get a bonus."
+            "value" : "Join me on Withy! Enter invite code %@ and we both get a bonus."
           }
         }
       }
     },
-    "withu 같이 해요! 초대 코드 %lld 를 입력하면 둘 다 보너스를 받아요." : {
+    "Withy 같이 해요! 초대 코드 %lld 를 입력하면 둘 다 보너스를 받아요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Join me on withu! Enter invite code %lld and we both get a bonus."
+            "value" : "Join me on Withy! Enter invite code %lld and we both get a bonus."
           }
         }
       }
     },
-    "withu 사용법" : {
+    "Withy 사용법" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How to use withu"
+            "value" : "How to use Withy"
           }
         }
       }
     },
-    "withu 시작하기" : {
+    "Withy 시작하기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get started with withu"
+            "value" : "Get started with Withy"
           }
         }
       }
     },
-    "withu 캐릭터" : {
+    "Withy 캐릭터" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "withu Character"
+            "value" : "Withy Character"
           }
         }
       }
     },
-    "withu 캐릭터 상태 변경" : {
+    "Withy 캐릭터 상태 변경" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "withu character state change"
+            "value" : "Withy character state change"
           }
         }
       }
@@ -1155,12 +1145,12 @@
         }
       }
     },
-    "건강 권한 다시 묻기" : {
+    "권한 변경" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ask for Health permission again"
+            "value" : "Change Health permission in the Settings app"
           }
         }
       }
@@ -1267,13 +1257,13 @@
         }
       }
     },
-    "검색창에 \\\"withu\\\" 라고 입력해주세요" : {
+    "검색창에 \\\"Withy\\\" 라고 입력해주세요" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Type \\\"withu\\\" in the search bar"
+            "value" : "Type \\\"Withy\\\" in the search bar"
           }
         }
       }
@@ -1358,22 +1348,12 @@
         }
       }
     },
-    "계정·서버 이용 기록과 이 기기에 만든 캐릭터·갤러리를 모두 삭제해요. 충전한 횟수·무료 혜택도 함께 사라지고 되돌릴 수 없어요." : {
+    "계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deletes your account, server usage history, and all characters and gallery items made on this device. Purchased candies and free benefits are also lost and can't be restored."
-          }
-        }
-      }
-    },
-    "계정과 서버 이용 기록, 이 기기의 캐릭터·갤러리가 모두 삭제돼요. 충전한 횟수·무료 혜택도 사라지며 되돌릴 수 없어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your account, server usage history, and this device's characters and gallery will all be deleted. Purchased candies and free benefits will also be lost — this can't be undone."
+            "value" : "Your account, server records, this device's characters and gallery, and purchase history will all be deleted — this can't be undone."
           }
         }
       }
@@ -1439,12 +1419,12 @@
         }
       }
     },
-    "권한 안내 화면을 처음부터 다시 봐요. 거절한 권한도 다시 한 번 물어볼 수 있어요." : {
+    "권한 안내를 처음부터 다시 보고, 거절한 권한도 다시 물어봐요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "See the permission guide from the beginning again. Permissions you declined can be asked once more."
+            "value" : "Shows the permission guide from the start and asks declined permissions again."
           }
         }
       }
@@ -1469,12 +1449,12 @@
         }
       }
     },
-    "그런 것 같아요" : {
+    "알림 권한은 설정 앱에서 변경" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seems right"
+            "value" : "Change notification permission in the Settings app"
           }
         }
       }
@@ -2645,7 +2625,7 @@
         }
       }
     },
-    "맞아요" : {
+    "예" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2655,12 +2635,12 @@
         }
       }
     },
-    "매일 22:30 취침 리마인더 설정" : {
+    "취침 리마인더 시간" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set a daily 10:30 PM bedtime reminder"
+            "value" : "Bedtime reminder time"
           }
         }
       }
@@ -2847,7 +2827,7 @@
         }
       }
     },
-    "미요청" : {
+    "요청 안 함" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3099,12 +3079,12 @@
         }
       }
     },
-    "백그라운드 갱신은 폰이 앱을 잠깐 깨워 화면을 새로 맞춘 시각이에요. 30분에서 몇 시간 간격으로 폰이 알아서 정해요. 워치 동기화는 앱을 처음 켜거나 워치 앱을 새로 설치하면 한 번 자동으로 이뤄져요." : {
+    "백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요. 워치 동기화는 첫 실행이나 워치 앱 설치 때 자동으로 한 번 돼요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Background refresh is when your phone briefly wakes the app to update the screen. The phone decides the timing on its own, anywhere from 30 minutes to a few hours. Watch sync happens automatically once when you first open the app or reinstall the Apple Watch app."
+            "value" : "Background refresh runs automatically every 30 minutes to a few hours. Watch sync happens automatically once on first launch or when the watch app is installed."
           }
         }
       }
@@ -3401,12 +3381,12 @@
         }
       }
     },
-    "사진 추가 권한이 거부됐어요. 설정 → withu 에서 허용해 주세요." : {
+    "사진 추가 권한이 거부됐어요. 설정 → Withy 에서 허용해 주세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photo add permission was denied. Please allow it in Settings → withu."
+            "value" : "Photo add permission was denied. Please allow it in Settings → Withy."
           }
         }
       }
@@ -3832,12 +3812,12 @@
         }
       }
     },
-    "설정에서 집중·수면 필터에 withu 를 연결하면 더 정확해요" : {
+    "설정에서 집중·수면 필터에 Withy 를 연결하면 더 정확해요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For better accuracy, connect withu to your Focus and Sleep filters in Settings"
+            "value" : "For better accuracy, connect Withy to your Focus and Sleep filters in Settings"
           }
         }
       }
@@ -4157,7 +4137,7 @@
         }
       }
     },
-    "아니에요" : {
+    "아니요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4207,12 +4187,12 @@
         }
       }
     },
-    "아직 요청 안 했어요" : {
+    "취침 리마인더를 %@에 맞췄어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not requested yet"
+            "value" : "Bedtime reminder set for %@"
           }
         }
       }
@@ -4547,7 +4527,7 @@
         }
       }
     },
-    "오늘 데이터 새로고침" : {
+    "데이터 새로고침" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4707,12 +4687,12 @@
         }
       }
     },
-    "운동 중으로 보이나요" : {
+    "운동 중 추정" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Does this look like a workout?"
+            "value" : "Workout likely"
           }
         }
       }
@@ -4747,22 +4727,22 @@
         }
       }
     },
-    "운동이나 수면을 시작하는 순간 바로 캐릭터를 바꾸고 싶다면, '단축어' 앱의 자동화에서 '운동' 또는 '수면 모드' 트리거에 'withu 앱 열기' 동작을 더해주세요." : {
+    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 열기'를 추가하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If you want the character to change the moment you start a workout or sleep, add an 'Open withu' action to the 'Workout' or 'Sleep mode' trigger in the Shortcuts app's Automation."
+            "value" : "To reflect workouts or sleep instantly, add 'Open Withy' to the Workout/Sleep mode triggers in Shortcuts automation."
           }
         }
       }
     },
-    "움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요." : {
+    "움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For characters made as animated, choose whether to show them moving. Turn it off to show a single image and save battery."
+            "value" : "For characters made as animated, choose whether the character moves."
           }
         }
       }
@@ -4847,12 +4827,12 @@
         }
       }
     },
-    "워치 페이스를 길게 눌러 편집 → 컴플리케이션 칸에 withu를 넣으면 시계 화면에도 캐릭터가 나와요. 산책·달리기 같은 운동은 워치가 연결돼 있으면 워치(심박)로, 워치가 없으면 아이폰의 움직임으로 알아채요." : {
+    "워치 페이스를 길게 눌러 편집 → 컴플리케이션 칸에 Withy를 넣으면 시계 화면에도 캐릭터가 나와요. 산책·달리기 같은 운동은 워치가 연결돼 있으면 워치(심박)로, 워치가 없으면 아이폰의 움직임으로 알아채요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Long-press your watch face, tap Edit, and add withu to a complication slot to see your character on the watch face. Workouts like walks and runs are detected by your Apple Watch (heart rate) when connected, or by your iPhone's motion when there's no watch."
+            "value" : "Long-press your watch face, tap Edit, and add Withy to a complication slot to see your character on the watch face. Workouts like walks and runs are detected by your Apple Watch (heart rate) when connected, or by your iPhone's motion when there's no watch."
           }
         }
       }
@@ -4867,12 +4847,12 @@
         }
       }
     },
-    "워치가 없으면 아이폰의 움직임으로 운동을 알아채요. 아이폰을 몸에 지니고 있을 때만 감지돼요." : {
+    "워치가 없으면 아이폰을 지니고 있을 때의 움직임으로 운동을 알아채요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Without an Apple Watch, workouts are detected from your iPhone's motion. Detection only works while you're carrying your iPhone."
+            "value" : "Without a watch, workouts are detected from your iPhone's motion while you carry it."
           }
         }
       }
@@ -4947,13 +4927,13 @@
         }
       }
     },
-    "원하는 자리를 누르고 \\\"withu\\\"를 찾아주세요" : {
+    "원하는 자리를 누르고 \\\"Withy\\\"를 찾아주세요" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap the spot you want and find \\\"withu\\\""
+            "value" : "Tap the spot you want and find \\\"Withy\\\""
           }
         }
       }
@@ -5442,12 +5422,12 @@
         }
       }
     },
-    "자동으로 맡기기 (추천)" : {
+    "자동 (추천)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leave it to us (recommended)"
+            "value" : "Auto (recommended)"
           }
         }
       }
@@ -5823,12 +5803,12 @@
         }
       }
     },
-    "지금은 아이폰 수면 모드를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)" : {
+    "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "We can't read your iPhone's Sleep Focus right now, so your character only sleeps at the times set above. To have it follow Sleep Focus: iPhone Settings > Focus > Sleep > Add Filter > turn on withu. (If you use a sleep schedule in the Health app, it follows that automatically.)"
+            "value" : "To connect with Sleep Focus: iPhone Settings > Focus > Sleep > Add Filter > turn on Withy. (If you use a sleep schedule in the Health app, it follows that automatically.)"
           }
         }
       }
@@ -5884,32 +5864,32 @@
         }
       }
     },
-    "집중 모드 신호 기록 (최근 %lld번)" : {
+    "신호 기록 (최근 %lld회)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus signal history (last %lld"
+            "value" : "Signal history (last %lld)"
           }
         }
       }
     },
-    "집중 모드, 건강 앱 수면 기록, 운동 감지, 백그라운드 갱신 같은 자세한 정보예요. 평소엔 보지 않아도 돼요." : {
+    "집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detailed info like Focus modes, Health app sleep records, workout detection, and background refresh. You usually don't need to look at this."
+            "value" : "Check Focus, sleep records, workout detection, and background refresh status."
           }
         }
       }
     },
-    "집중 모드가 켜질 때 withu 캐릭터를 자는 모습으로 바꿔요." : {
+    "집중 모드가 켜질 때 Withy 캐릭터를 자는 모습으로 바꿔요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When a Focus turns on, your withu character goes to sleep."
+            "value" : "When a Focus turns on, your Withy character goes to sleep."
           }
         }
       }
@@ -5990,16 +5970,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "See the intro again"
-          }
-        }
-      }
-    },
-    "처음이라면 이걸 추천해요. 한 가지씩 만들고 싶으면 아래에서 골라요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If it's your first time, we recommend this. If you'd rather create one at a time, pick below."
           }
         }
       }
@@ -6487,12 +6457,12 @@
         }
       }
     },
-    "캔디 %lld개 갖고 있어요." : {
+    "보유 캔디 %lld개" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You have %lld candies."
+            "value" : "Candies: %lld"
           }
         }
       }
@@ -6771,16 +6741,6 @@
         }
       }
     },
-    "프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 선택한 옵션에 따라 비용이 들어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Draws a new character from your prompt. Each creation costs candies based on the options you choose."
-          }
-        }
-      }
-    },
     "하나씩 만든 캐릭터는 '상태별'에서 볼 수 있어요." : {
       "localizations" : {
         "en" : {
@@ -6791,12 +6751,12 @@
         }
       }
     },
-    "한 번도 없음" : {
+    "알림을 모두 취소했어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Never"
+            "value" : "All notifications canceled"
           }
         }
       }
@@ -7041,12 +7001,12 @@
         }
       }
     },
-    "홈 화면에 withu 두기" : {
+    "홈 화면에 Withy 두기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Put withu on your Home Screen"
+            "value" : "Put Withy on your Home Screen"
           }
         }
       }

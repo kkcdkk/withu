@@ -85,6 +85,7 @@ final class NotificationManager {
         let request = UNNotificationRequest(identifier: ID.bedtime, content: content, trigger: trigger)
         do {
             try await center.add(request)
+            lastError = nil   // 성공 — 설정 화면이 lastError 로 성공/실패를 구분한다
         } catch {
             lastError = error.localizedDescription
         }

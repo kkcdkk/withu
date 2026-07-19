@@ -221,9 +221,6 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-        } footer: {
-            Text("처음이라면 이걸 추천해요. 한 가지씩 만들고 싶으면 아래에서 골라요.")
-                .font(.caption2)
         }
     }
 
@@ -248,11 +245,7 @@ struct CharacterGenView: View {
         } header: {
             Text("생성 옵션")
         } footer: {
-            switch mode {
-            case .aiGenerate:
-                Text("프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 선택한 옵션에 따라 비용이 들어요.")
-                    .foregroundStyle(.secondary)
-            case .importPhoto:
+            if mode == .importPhoto {
                 Text("가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.")
                     .foregroundStyle(.secondary)
             }

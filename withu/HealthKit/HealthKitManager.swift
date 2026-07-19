@@ -114,8 +114,19 @@ final class HealthKitManager {
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthError.notAvailable
         }
-        try await store.requestAuthorization(toShare: [], read: readTypes)
-        isAuthorized = true
+        // async 버전은 성공 여부를 안 돌려줘서 completion 버전으로 Bool 을 받는다.
+        // 한계: HealthKit 은 read 권한의 실제 허용/거부를 조회하는 API 가 없어서
+        // 이 success 는 "요청 절차가 정상 처리됨"까지만 뜻한다 (사용자가 거부해도 true 일 수 있음).
+        let success: Bool = try await withCheckedThrowingContinuation { continuation in
+            store.requestAuthorization(toShare: [], read: readTypes) { ok, error in
+                if let error {
+                    continuation.resume(throwing: HealthError.query(error))
+                } else {
+                    continuation.resume(returning: ok)
+                }
+            }
+        }
+        isAuthorized = success
     }
 
     // MARK: - 수면 (지난 N일)

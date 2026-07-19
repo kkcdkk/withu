@@ -95,7 +95,7 @@ struct ContentView: View {
                 .padding(.top, 8)
             }
             .background(backgroundGradient.ignoresSafeArea())
-            .navigationTitle("with U")
+            .navigationTitle("Withy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -449,7 +449,7 @@ struct ContentView: View {
             actionLink(title: "함께할 캐릭터 생성하기",
                        subtitle: "함께할 캐릭터를 만들어요",
                        icon: "wand.and.stars",
-                       tint: .withuPink) {
+                       tint: .withuHeroPink) {
                 CharacterGenView()
             }
             actionLink(title: "함께 사진 찍기",
@@ -642,7 +642,7 @@ struct SettingsView: View {
     let sendStateToWatch: (CharacterState) -> Void
 
     @State private var healthMessage: String = ""
-    @State private var healthLoading: Bool = false
+    @State private var notifMessage: String = ""
     @State private var showWidgetGuide: Bool = false
     @State private var showGuide: Bool = false
     @State private var showOnboardingConfirm: Bool = false
@@ -651,6 +651,8 @@ struct SettingsView: View {
     @State private var isDeletingAccount: Bool = false
     @State private var deleteError: String?
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
+    // 취침 리마인더 시간 — 자정 기준 분 단위 (기본 22:30)
+    @AppStorage("withu.bedtimeReminderMinutes.v1") private var bedtimeReminderMinutes: Int = 22 * 60 + 30
 
     var body: some View {
         NavigationStack {
@@ -666,12 +668,19 @@ struct SettingsView: View {
                     } header: {
                         Text("더 만들기")
                     } footer: {
-                        Text("캔디 \(GenerationQuota.displayedCandy())개 갖고 있어요.")
+                        Text("보유 캔디 \(GenerationQuota.displayedCandy())개")
                             .font(.caption2)
                     }
                     watchSection
                     healthSection
                     notificationsSection
+                    Section {
+                        NavigationLink {
+                            CharacterProfileView()
+                        } label: {
+                            Label("내 캐릭터 설정하기", systemImage: "person.crop.circle.fill")
+                        }
+                    }
                     Section {
                         NavigationLink {
                             AdvancedDiagnosticsView(
@@ -686,7 +695,7 @@ struct SettingsView: View {
                             Label("캐릭터 상태 살펴보기", systemImage: "gauge.with.dots.needle.50percent")
                         }
                     } footer: {
-                        Text("집중 모드, 건강 앱 수면 기록, 운동 감지, 백그라운드 갱신 같은 자세한 정보예요. 평소엔 보지 않아도 돼요.")
+                        Text("집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.")
                             .font(.caption2)
                     }
                     Section {
@@ -743,7 +752,7 @@ struct SettingsView: View {
                         } header: {
                             Text("계정")
                         } footer: {
-                            Text("계정·서버 이용 기록과 이 기기에 만든 캐릭터·갤러리를 모두 삭제해요. 충전한 횟수·무료 혜택도 함께 사라지고 되돌릴 수 없어요.")
+                            Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
                                 .font(.caption2)
                         }
                     }
@@ -773,7 +782,7 @@ struct SettingsView: View {
                 }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("권한 안내 화면을 처음부터 다시 봐요. 거절한 권한도 다시 한 번 물어볼 수 있어요.")
+                Text("권한 안내를 처음부터 다시 보고, 거절한 권한도 다시 물어봐요.")
             }
             .alert("계정을 삭제할까요?", isPresented: $showDeleteConfirm) {
                 Button("삭제", role: .destructive) {
@@ -790,7 +799,7 @@ struct SettingsView: View {
                 }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("계정과 서버 이용 기록, 이 기기의 캐릭터·갤러리가 모두 삭제돼요. 충전한 횟수·무료 혜택도 사라지며 되돌릴 수 없어요.")
+                Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
             }
             .alert("계정 삭제 실패", isPresented: Binding(get: { deleteError != nil },
                                                   set: { if !$0 { deleteError = nil } })) {
@@ -832,13 +841,16 @@ struct SettingsView: View {
             if let imgState = connectivity.lastImageTransferState {
                 Text(imgState).font(.footnote).foregroundStyle(.secondary)
             }
-            Button("지금 바로 동기화") { sendStateToWatch(characterState) }
+            RefreshRowButton(title: "지금 바로 동기화",
+                             systemImage: "applewatch.radiowaves.left.and.right") {
+                sendStateToWatch(characterState)
+            }
         } header: {
             Text("애플 워치")
         } footer: {
             Text(connectivity.isPaired
                  ? "운동(산책·달리기 등)은 워치 기준으로 알아채요."
-                 : "워치가 없으면 아이폰의 움직임으로 운동을 알아채요. 아이폰을 몸에 지니고 있을 때만 감지돼요.")
+                 : "워치가 없으면 아이폰을 지니고 있을 때의 움직임으로 운동을 알아채요.")
                 .font(.caption2)
         }
     }
@@ -851,22 +863,23 @@ struct SettingsView: View {
                 StatusPill(kind: health.isAuthorized ? .ok : .off,
                            label: health.isAuthorized ? "허용됨" : "허용 안 됨")
             }
-            Button("건강 권한 다시 묻기") {
-                Task {
-                    try? await health.requestAuthorization()
+            // iOS HealthKit 권한 시트는 1회성 — 이미 결정된 뒤에는 requestAuthorization 이
+            // 아무 UI 도 띄우지 않아서, 변경은 설정 앱으로 안내한다.
+            Button("권한 변경") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
                 }
             }
-            Button("오늘 데이터 새로고침") {
-                Task { await reloadHealth() }
+            RefreshRowButton(title: "데이터 새로고침") {
+                await reloadHealth()
             }
-            .disabled(healthLoading)
             if !healthMessage.isEmpty {
                 Text(healthMessage).font(.footnote).foregroundStyle(.secondary)
             }
         } header: {
             Text("건강 데이터")
         } footer: {
-            Text("운동이나 수면을 시작하는 순간 바로 캐릭터를 바꾸고 싶다면, '단축어' 앱의 자동화에서 '운동' 또는 '수면 모드' 트리거에 'withu 앱 열기' 동작을 더해주세요.")
+            Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 열기'를 추가하세요.")
                 .font(.caption2)
         }
     }
@@ -878,23 +891,60 @@ struct SettingsView: View {
                 Spacer()
                 Text(authStatusLabel).foregroundStyle(.secondary)
             }
-            if notifications.authorizationStatus != .authorized {
+            if notifications.authorizationStatus == .denied {
+                // 거부된 뒤에는 requestAuthorization 이 무반응 — 설정 앱으로 안내.
+                Button("알림 권한은 설정 앱에서 변경") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } else if notifications.authorizationStatus != .authorized {
                 Button("알림 권한 요청") {
                     Task { await notifications.requestAuthorization() }
                 }
             }
-            Button("매일 22:30 취침 리마인더 설정") {
-                Task { await notifications.scheduleBedtimeReminder() }
+            DatePicker("취침 리마인더 시간",
+                       selection: bedtimeReminderDate,
+                       displayedComponents: .hourAndMinute)
+            RefreshRowButton(title: "저장",
+                             systemImage: "bell.badge") {
+                let hour = bedtimeReminderMinutes / 60
+                let minute = bedtimeReminderMinutes % 60
+                await notifications.scheduleBedtimeReminder(hour: hour, minute: minute)
+                let time = String(format: "%02d:%02d", hour, minute)
+                notifMessage = notifications.lastError
+                    ?? String(localized: "취침 리마인더를 \(time)에 맞췄어요")
             }
-            Button("등록된 알림 모두 취소", role: .destructive) {
+            RefreshRowButton(title: "등록된 알림 모두 취소",
+                             systemImage: "bell.slash",
+                             role: .destructive) {
                 notifications.cancelAll()
+                notifMessage = String(localized: "알림을 모두 취소했어요")
+            }
+            if !notifMessage.isEmpty {
+                Text(notifMessage).font(.footnote).foregroundStyle(.secondary)
             }
         }
     }
 
+    /// 분 단위 저장값 <-> DatePicker 용 Date 변환 (날짜 부분은 무시, 시:분만 의미).
+    private var bedtimeReminderDate: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: bedtimeReminderMinutes / 60,
+                                      minute: bedtimeReminderMinutes % 60,
+                                      second: 0, of: Date()) ?? Date()
+            },
+            set: { newDate in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                bedtimeReminderMinutes = (c.hour ?? 22) * 60 + (c.minute ?? 30)
+            }
+        )
+    }
+
     private var authStatusLabel: String {
         switch notifications.authorizationStatus {
-        case .notDetermined: return String(localized: "아직 요청 안 했어요")
+        case .notDetermined: return String(localized: "요청 안 함")
         case .denied: return String(localized: "거부됨")
         case .authorized, .provisional, .ephemeral: return String(localized: "허용됨")
         @unknown default: return "—"
@@ -903,8 +953,6 @@ struct SettingsView: View {
 
 
     private func reloadHealth() async {
-        healthLoading = true
-        defer { healthLoading = false }
         var errors: [String] = []
         do { _ = try await health.fetchSleep(days: 7) } catch { errors.append("수면") }
         do { _ = try await health.fetchWorkouts(days: 7) } catch { errors.append("운동") }
@@ -942,7 +990,7 @@ struct WidgetGuideView: View {
                             steps: [
                                 "홈 화면 빈 곳을 길게 눌러주세요",
                                 "왼쪽 위 더하기 버튼을 눌러주세요",
-                                "검색창에 \"withu\" 라고 입력해주세요",
+                                "검색창에 \"Withy\" 라고 입력해주세요",
                                 "원하는 크기를 골라 추가해주세요",
                             ]
                         )
@@ -953,7 +1001,7 @@ struct WidgetGuideView: View {
                             steps: [
                                 "잠금 화면을 길게 누른 뒤 '맞춤 설정'을 눌러주세요",
                                 "꾸밀 잠금 화면을 고르고 위젯 영역을 눌러주세요",
-                                "'위젯 추가'를 누르고 \"withu\"를 검색해주세요",
+                                "'위젯 추가'를 누르고 \"Withy\"를 검색해주세요",
                                 "원형·사각형·한 줄 중에서 골라주세요",
                             ]
                         )
@@ -964,7 +1012,7 @@ struct WidgetGuideView: View {
                             steps: [
                                 "워치 화면을 길게 누른 뒤 '편집'을 눌러주세요",
                                 "위젯을 올리는 화면까지 옆으로 넘겨주세요",
-                                "원하는 자리를 누르고 \"withu\"를 찾아주세요",
+                                "원하는 자리를 누르고 \"Withy\"를 찾아주세요",
                                 "고른 다음 크라운을 눌러 마무리해주세요",
                             ]
                         )
@@ -972,7 +1020,7 @@ struct WidgetGuideView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("홈 화면에 withu 두기")
+            .navigationTitle("홈 화면에 Withy 두기")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1056,7 +1104,7 @@ struct AdvancedDiagnosticsView: View {
                 Text("마지막으로 받은 시각")
                 Spacer()
                 Text(focus.focusFilterLastPerformAt.map { $0.formatted(date: .omitted, time: .standard) }
-                     ?? String(localized: "아직 없어요"))
+                     ?? String(localized: "없음"))
                     .foregroundStyle(.secondary)
             }
             if let last = focus.lastCheckedAt {
@@ -1068,7 +1116,7 @@ struct AdvancedDiagnosticsView: View {
                 }
             }
             if !focus.focusFilterPerformLog.isEmpty {
-                DisclosureGroup("집중 모드 신호 기록 (최근 \(focus.focusFilterPerformLog.count)번)") {
+                DisclosureGroup("신호 기록 (최근 \(focus.focusFilterPerformLog.count)회)") {
                     ForEach(Array(focus.focusFilterPerformLog.enumerated()), id: \.offset) { _, entry in
                         HStack {
                             Text(entry.date.formatted(date: .omitted, time: .standard))
@@ -1116,7 +1164,7 @@ struct AdvancedDiagnosticsView: View {
                 Text("지금 잠자리 시간대")
                 Spacer()
                 StatusPill(kind: health.isInBedSchedule ? .ok : .off,
-                           label: health.isInBedSchedule ? "맞아요" : "아니에요")
+                           label: health.isInBedSchedule ? "예" : "아니요")
             }
             if let start = health.lastInBedSampleStart {
                 HStack {
@@ -1153,10 +1201,10 @@ struct AdvancedDiagnosticsView: View {
     private var motionSection: some View {
         Section {
             HStack {
-                Text("운동 중으로 보이나요")
+                Text("운동 중 추정")
                 Spacer()
                 StatusPill(kind: health.isLikelyInWorkout ? .ok : .off,
-                           label: health.isLikelyInWorkout ? "그런 것 같아요" : "아니에요")
+                           label: health.isLikelyInWorkout ? "예" : "아니요")
             }
             HStack {
                 Text("최근 90초 심박 기록")
@@ -1190,24 +1238,21 @@ struct AdvancedDiagnosticsView: View {
                     .foregroundStyle(.secondary)
             }
             Picker("상태 직접 고르기", selection: $overrideState) {
-                Text("자동으로 맡기기 (추천)").tag(CharacterState?.none)
+                Text("자동 (추천)").tag(CharacterState?.none)
                 ForEach(CharacterState.allCases, id: \.self) { state in
                     Text(state.koreanShortLabel).tag(CharacterState?.some(state))
                 }
             }
             .pickerStyle(.menu)
-            Button {
+            RefreshRowButton(title: "위젯 지금 새로고침") {
                 sendStateToWatch(characterState)
                 WidgetCenter.shared.reloadAllTimelines()
                 WidgetCenter.shared.reloadTimelines(ofKind: "withuWidget")
                 WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
-            } label: {
-                Label("위젯 지금 새로고침", systemImage: "arrow.clockwise.circle.fill")
             }
-            Button {
+            RefreshRowButton(title: "워치로 모든 그림 다시 동기화",
+                             systemImage: "applewatch.radiowaves.left.and.right") {
                 ConnectivityManager.shared.sendAllToWatch()
-            } label: {
-                Label("워치로 모든 그림 다시 동기화", systemImage: "applewatch.radiowaves.left.and.right")
             }
             HStack {
                 Text("워치로 보내는 중")
@@ -1226,7 +1271,7 @@ struct AdvancedDiagnosticsView: View {
         } header: {
             Text("위젯·워치 다시 맞추기")
         } footer: {
-            Text("백그라운드 갱신은 폰이 앱을 잠깐 깨워 화면을 새로 맞춘 시각이에요. 30분에서 몇 시간 간격으로 폰이 알아서 정해요. 워치 동기화는 앱을 처음 켜거나 워치 앱을 새로 설치하면 한 번 자동으로 이뤄져요.")
+            Text("백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요. 워치 동기화는 첫 실행이나 워치 앱 설치 때 자동으로 한 번 돼요.")
                 .font(.caption2)
         }
     }
@@ -1234,7 +1279,7 @@ struct AdvancedDiagnosticsView: View {
     private var lastBgRefreshLabel: String {
         let defaults = UserDefaults(suiteName: SharedAppState.groupID)
         guard let date = defaults?.object(forKey: "withu.lastBackgroundRefreshAt") as? Date else {
-            return String(localized: "한 번도 없음")
+            return String(localized: "없음")
         }
         return date.formatted(date: .omitted, time: .standard)
     }
