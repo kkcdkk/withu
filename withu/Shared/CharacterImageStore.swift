@@ -139,7 +139,7 @@ enum CharacterImageStore {
         guard let data = image.pngData(),
               let url = decorationFileURL(for: cond) else { return false }
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .noFileProtection])
             NotificationCenter.default.post(name: .weatherBackgroundChanged, object: cond)
             return true
         } catch {
@@ -210,7 +210,7 @@ enum CharacterImageStore {
         guard let data = image.pngData(),
               let url = backgroundFileURL(for: cond) else { return false }
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .noFileProtection])
             NotificationCenter.default.post(name: .weatherBackgroundChanged, object: cond)
             return true
         } catch {
@@ -316,6 +316,19 @@ enum CharacterImageStore {
 
     private static var containerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedAppState.groupID)
+    }
+
+    /// 기존 파일들의 보호 등급 완화 — 재부팅 후 첫 잠금해제 전에 잠금화면 위젯이 렌더되면
+    /// 기본 보호 등급 파일은 안 읽혀 사용자 그림 대신 번들 일러스트로 구워지는 문제 방지.
+    /// 신규 파일은 쓰기 옵션(.noFileProtection)으로 처리되고, 이건 과거 파일용 멱등 보정.
+    static func relaxFileProtection() {
+        guard let container = containerURL else { return }
+        let fm = FileManager.default
+        guard let subpaths = try? fm.subpathsOfDirectory(atPath: container.path) else { return }
+        for rel in subpaths where rel.hasSuffix(".png") || rel.hasSuffix(".json") {
+            try? fm.setAttributes([.protectionKey: FileProtectionType.none],
+                                  ofItemAtPath: container.appendingPathComponent(rel).path)
+        }
     }
 
     private static func ensureFolder(_ name: String) -> URL? {
@@ -460,7 +473,7 @@ enum CharacterImageStore {
     static func saveActiveSlotOnly(_ image: UIImage, for state: CharacterState, frame: Int = 0) {
         guard let data = image.pngData(),
               let activeURL = activeFileURL(for: state, frame: frame) else { return }
-        try? data.write(to: activeURL, options: .atomic)
+        try? data.write(to: activeURL, options: [.atomic, .noFileProtection])
         // frame0 저장 시 옛 frame1 제거 (애니 캐릭터면 직후 frame1 을 다시 저장). stale 움직임 방지.
         if frame == 0, let f1URL = activeFileURL(for: state, frame: 1) {
             try? FileManager.default.removeItem(at: f1URL)
@@ -510,7 +523,7 @@ enum CharacterImageStore {
         // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
         if applyToActiveSlot {
             if let activeURL = activeFileURL(for: state, frame: frame) {
-                try? data.write(to: activeURL, options: .atomic)
+                try? data.write(to: activeURL, options: [.atomic, .noFileProtection])
             }
             // frame0(새 기본 이미지) 저장 시 옛 frame1(움직임)은 무효 → 제거.
             // 애니메이션 캐릭터면 이 직후 frame1 이 다시 저장된다.
@@ -547,7 +560,7 @@ enum CharacterImageStore {
         let item = all[idx]
         guard let url = galleryFrame1URL(id: item.id) else { return nil }
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .noFileProtection])
         } catch {
             return nil
         }
@@ -654,7 +667,7 @@ enum CharacterImageStore {
     private static func saveGalleryMetadata(_ items: [GalleryItem]) {
         guard let url = metadataURL,
               let data = try? JSONEncoder().encode(items) else { return }
-        try? data.write(to: url, options: .atomic)
+        try? data.write(to: url, options: [.atomic, .noFileProtection])
     }
 
     @discardableResult
@@ -665,7 +678,7 @@ enum CharacterImageStore {
         let id = UUID().uuidString
         guard let url = galleryFileURL(id: id) else { return nil }
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .noFileProtection])
         } catch {
             return nil
         }
@@ -690,19 +703,35 @@ enum CharacterImageStore {
         guard !all.contains(where: { $0.id == id }),
               let url = galleryFileURL(id: id) else { return false }
         do {
-            try imageData.write(to: url, options: .atomic)
+            try imageData.write(to: url, options: [.atomic, .noFileProtection])
         } catch {
             return false
         }
         var hasFrame1 = false
         if let frame1Data, let f1URL = galleryFrame1URL(id: id) {
-            try? frame1Data.write(to: f1URL, options: .atomic)
+            try? frame1Data.write(to: f1URL, options: [.atomic, .noFileProtection])
             hasFrame1 = FileManager.default.fileExists(atPath: f1URL.path)
         }
         all.append(GalleryItem(id: id, sourceState: sourceState, createdAt: createdAt,
                                hasFrame1: hasFrame1, batchId: batchId, prompt: prompt))
         saveGalleryMetadata(all)
         return true
+    }
+
+    /// 활성 슬롯 파일의 원본 PNG 데이터 (frame 0/1). 투명화 보정(backfill)용.
+    static func activeImageData(for state: CharacterState, frame: Int = 0) -> Data? {
+        guard let url = activeFileURL(for: state, frame: frame),
+              FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try? Data(contentsOf: url)
+    }
+
+    /// 활성 슬롯 파일 제자리 교체 — 투명화 보정(backfill)용.
+    /// 파일 버전(mtime/size)이 바뀌므로 앱/위젯의 디코드 캐시는 자동 무효화된다.
+    static func rewriteActiveImage(_ data: Data, for state: CharacterState, frame: Int = 0) {
+        guard let url = activeFileURL(for: state, frame: frame),
+              FileManager.default.fileExists(atPath: url.path) else { return }
+        try? data.write(to: url, options: [.atomic, .noFileProtection])
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
     }
 
     /// 갤러리 파일의 원본 PNG 데이터 (frame 0/1). 백업 업로드용 — 재인코딩 없이 그대로.
@@ -726,7 +755,7 @@ enum CharacterImageStore {
         let url = frame == 1 ? galleryFrame1URL(id: id) : galleryFileURL(id: id)
         guard let url, let data = image.pngData() else { return false }
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .noFileProtection])
         } catch {
             return false
         }
@@ -760,7 +789,7 @@ enum CharacterImageStore {
               let data = img.pngData(),
               let activeURL = activeFileURL(for: state) else { return false }
         do {
-            try data.write(to: activeURL, options: .atomic)
+            try data.write(to: activeURL, options: [.atomic, .noFileProtection])
         } catch {
             return false
         }
@@ -768,7 +797,7 @@ enum CharacterImageStore {
         if let f1 = loadGalleryFrame1(id: id),
            let f1Data = f1.pngData(),
            let f1URL = activeFileURL(for: state, frame: 1) {
-            try? f1Data.write(to: f1URL, options: .atomic)
+            try? f1Data.write(to: f1URL, options: [.atomic, .noFileProtection])
         } else if let f1URL = activeFileURL(for: state, frame: 1) {
             try? FileManager.default.removeItem(at: f1URL)
         }

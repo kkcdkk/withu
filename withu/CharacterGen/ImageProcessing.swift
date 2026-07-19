@@ -11,6 +11,7 @@ import Foundation
 import UIKit
 import Vision
 import CoreImage
+import WidgetKit
 
 enum ImageProcessing {
 
@@ -281,6 +282,63 @@ enum ImageProcessing {
         }
         guard filled > 0, let outCG = cutCtx.makeImage() else { return cutout }
         return UIImage(cgImage: outCG, scale: cutout.scale, orientation: .up)
+    }
+
+    // MARK: - 투명화 공용 후처리 (크로마키 → Vision 폴백)
+
+    /// 생성 수신 공용 후처리: 크로마키(마젠타)로 투명화하고, 그래도 배경이 남아 있으면
+    /// (모서리 불투명 = 모델이 마젠타 지시를 무시하고 실제 배경을 그린 케이스) Vision 으로
+    /// 한 번 더 배경을 제거한다. 불투명 그림은 잠금화면(vibrant)에서 통짜 사각형이 되고
+    /// 워치 틴트 페이스에서도 뭉개지므로, 저장 전에 반드시 투명화한다. Vision 실패 시 크로마키 결과 유지.
+    static func transparentized(_ image: UIImage) async -> UIImage {
+        let keyed = chromaKeyRemoved(image)
+        guard hasOpaqueCorners(keyed) else { return keyed }
+        return (try? await removeBackground(from: keyed)) ?? keyed
+    }
+
+    /// 네 모서리 중 불투명한 곳이 있으면 true — 배경 잔존 판정 (16px 축소본으로 검사).
+    static func hasOpaqueCorners(_ image: UIImage) -> Bool {
+        guard let cg = image.cgImage else { return false }
+        let w = 16, h = 16
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h,
+                                  bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4]
+        return corners.contains { pixels[$0 + 3] > 24 }
+    }
+
+    /// 저장돼 있는 '배경 안 지워진' 그림 일괄 보정 — 활성 슬롯 전체 + 갤러리.
+    /// 이전 버전에서 크로마키가 실패한 채 저장된 그림을 Vision 으로 투명화해,
+    /// 사용자가 만든 캐릭터가 잠금화면/워치에서도 그대로 보이게 한다.
+    /// 멱등: 이미 투명이면 건너뜀. 실패한 항목은 다음 실행 때 재시도. 앱 시작 시 백그라운드 실행.
+    static func backfillTransparency() async {
+        var changed = false
+        for state in CharacterState.allCases {
+            for frame in 0...1 {
+                guard let data = CharacterImageStore.activeImageData(for: state, frame: frame),
+                      let img = UIImage(data: data), hasOpaqueCorners(img),
+                      let fixed = try? await removeBackground(from: img),
+                      let out = fixed.pngData() else { continue }
+                CharacterImageStore.rewriteActiveImage(out, for: state, frame: frame)
+                changed = true
+            }
+        }
+        for item in CharacterImageStore.loadGalleryMetadata() {
+            let frames = (item.hasFrame1 ?? false) ? [0, 1] : [0]
+            for frame in frames {
+                guard let data = CharacterImageStore.galleryImageData(id: item.id, frame: frame),
+                      let img = UIImage(data: data), hasOpaqueCorners(img),
+                      let fixed = try? await removeBackground(from: img) else { continue }
+                CharacterImageStore.replaceGalleryImage(item.id, with: fixed, frame: frame)
+                changed = true
+            }
+        }
+        if changed {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     // MARK: - 마젠타 크로마키 (gpt-image-2 배경 제거)

@@ -1030,7 +1030,7 @@ struct GalleryGrid<Header: View>: View {
                 return
             }
             // gpt-image-2 마젠타 배경 → 크로마키 투명화
-            let img = ImageProcessing.chromaKeyRemoved(raw)
+            let img = await ImageProcessing.transparentized(raw)
             let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
             if let state = CharacterState(rawValue: item.sourceState) {
                 CharacterImageStore.save(small, for: state, frame: 0, applyToActiveSlot: false,

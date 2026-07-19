@@ -990,7 +990,7 @@ struct CharacterGenView: View {
                 return
             }
             // gpt-image-2 는 마젠타 단색 배경으로 옴 → 크로마키로 투명화 (1.5 투명 결과엔 no-op).
-            let img = ImageProcessing.chromaKeyRemoved(rawImg)
+            let img = await ImageProcessing.transparentized(rawImg)
             // frame1 은 1번째 기준 크기·위치 정규화.
             let processed: UIImage
             if frame == 1, let ref = matchReference {

@@ -310,7 +310,7 @@ final class BackgroundGenerationManager: NSObject {
                let state = CharacterState(rawValue: jobs[idx].stateRaw) {
                 let job = jobs[idx]
                 // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
-                let img = ImageProcessing.chromaKeyRemoved(rawImg)
+                let img = await ImageProcessing.transparentized(rawImg)
                 // frame1: frame0 원본 기준으로 크기·위치 정규화 (기존 runOne 과 동일)
                 let ref0 = job.frame == 1 ? loadFrame0FullRes(state) : nil
                 let flat: UIImage

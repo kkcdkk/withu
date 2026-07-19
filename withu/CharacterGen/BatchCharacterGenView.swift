@@ -1116,7 +1116,7 @@ struct BatchCharacterGenView: View {
             let resp = try await APIClient.shared.generateImage(req, kind: "batch", batchId: batchSessionId)
             if let data = Data(base64Encoded: resp.imageBase64), let img = UIImage(data: data) {
                 // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
-                let flat = ImageProcessing.chromaKeyRemoved(img)
+                let flat = await ImageProcessing.transparentized(img)
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 results[.idle] = small
                 idleFullRes = flat
@@ -1433,7 +1433,7 @@ struct BatchCharacterGenView: View {
             if let data = Data(base64Encoded: resp.imageBase64),
                let rawImg = UIImage(data: data) {
                 // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
-                let img = ImageProcessing.chromaKeyRemoved(rawImg)
+                let img = await ImageProcessing.transparentized(rawImg)
                 // frame1: 1번째 기준으로 크기·위치·흰배경 강제. frame0: 흰배경 평탄화.
                 let ref0: UIImage? = frame == 1
                     ? (frame0FullRes[state] ?? genManager.loadFrame0FullRes(state) ?? results[state])

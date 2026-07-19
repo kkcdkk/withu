@@ -101,6 +101,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             // 갤러리 클라우드 백업 — 저장/삭제 알림 구독 시작 (실제 동기화는 로그인 시).
             GallerySyncManager.shared.start()
         }
+        // 저장 파일 일회성 보정 (멱등, 백그라운드):
+        //  1) 보호 등급 완화 — 재부팅 후 첫 잠금해제 전 잠금화면 렌더에서도 그림이 읽히게
+        //  2) 배경 안 지워진 그림 Vision 투명화 — 잠금화면 통짜 사각형 방지. 완료 시 위젯 reload.
+        Task.detached(priority: .utility) {
+            CharacterImageStore.relaxFileProtection()
+            await ImageProcessing.backfillTransparency()
+        }
         return true
     }
 
