@@ -271,6 +271,12 @@ fun PaywallSheet(onClose: () -> Unit) {
                             },
                         )
                     }
+                    Text(
+                        text = stringResource(R.string.paywall_referral_desc),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
                     referralMessage?.let {
                         Text(
                             text = it,

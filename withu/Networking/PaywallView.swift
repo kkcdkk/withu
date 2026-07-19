@@ -193,6 +193,11 @@ struct PaywallView: View {
             }
             .frostedCard()
 
+            Text("입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+
             if let msg = referralMessage {
                 Text(msg)
                     .font(.caption)
@@ -217,7 +222,7 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(spacing: 6) {
-            Text("캔디 \(GenerationQuota.displayedCandy())개 갖고 있어요")
+            Text("보유하고 있는 캔디는 \(GenerationQuota.displayedCandy())개예요")
                 .font(.title3.weight(.semibold))
             Text("더 만들고 싶다면 캔디를 충전해요.")
                 .font(.callout)

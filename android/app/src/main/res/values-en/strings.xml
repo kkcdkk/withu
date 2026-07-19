@@ -79,6 +79,7 @@
     <string name="paywall_redeem_success">Applied! Your balance has been updated.</string>
     <string name="paywall_section_referral">Invite Friends</string>
     <string name="paywall_referral_placeholder">Invite code you received</string>
+    <string name="paywall_referral_desc">Enter a code and you both get 5 candies. Invite rewards apply for up to 10 friends.</string>
     <string name="paywall_referral_success">Invite code applied! You got a bonus.</string>
     <string name="paywall_terms">Terms of Service</string>
     <string name="paywall_privacy">Privacy Policy</string>

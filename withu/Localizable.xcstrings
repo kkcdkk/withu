@@ -6467,12 +6467,22 @@
         }
       }
     },
-    "캔디 %lld개 갖고 있어요" : {
+    "보유하고 있는 캔디는 %lld개예요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "You have %lld candies"
+          }
+        }
+      }
+    },
+    "입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a code and you both get 5 candies. Invite rewards apply for up to 10 friends."
           }
         }
       }

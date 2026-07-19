@@ -233,7 +233,8 @@ export async function redeemCode(env, sub, codeRaw) {
 
 // 추천 보상량 (운영 정책에 맞게 조정)
 const REFERRER_REWARD_CREDITS = 5;   // 추천한 사람
-const REFEREE_REWARD_FREE_SINGLE = 3; // 추천받은 사람
+const REFEREE_REWARD_CREDITS = 5;    // 추천받은 사람 (코드 입력) — 캔디로 지급
+const REFERRER_REWARD_MAX = 10;      // 추천인 보상 상한 (계정 farming 악용 방지) — 초과해도 입력자 보상은 지급
 
 /// 친구 추천코드 적용. 자기추천/중복 차단, 양쪽 보상.
 export async function applyReferral(env, sub, codeRaw) {
@@ -256,12 +257,18 @@ export async function applyReferral(env, sub, codeRaw) {
     return { ok: false, status: 409, reason: "already" };
   }
 
-  await env.DB.batch([
+  // 입력한 사람은 항상 지급, 추천인은 최대 10명까지만 (방금 INSERT 포함 카운트).
+  const cnt = await env.DB.prepare("SELECT COUNT(*) AS n FROM referrals WHERE referrer_sub = ?")
+    .bind(referrer.sub).first();
+  const rewards = [
     env.DB.prepare("UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?")
-      .bind(REFERRER_REWARD_CREDITS, now, referrer.sub),
-    env.DB.prepare("UPDATE entitlements SET free_single_remaining = free_single_remaining + ?, updated_at = ? WHERE sub = ?")
-      .bind(REFEREE_REWARD_FREE_SINGLE, now, sub),
-  ]);
+      .bind(REFEREE_REWARD_CREDITS, now, sub),
+  ];
+  if ((cnt?.n ?? Number.MAX_SAFE_INTEGER) <= REFERRER_REWARD_MAX) {
+    rewards.push(env.DB.prepare("UPDATE entitlements SET credits = credits + ?, updated_at = ? WHERE sub = ?")
+      .bind(REFERRER_REWARD_CREDITS, now, referrer.sub));
+  }
+  await env.DB.batch(rewards);
   return { ok: true };
 }
 

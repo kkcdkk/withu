@@ -66,7 +66,7 @@
     <!-- 페이월 (paywall_* — 스펙 07 §2 표 전량 + Android 신규 '준비 중') -->
     <string name="paywall_title">더 만들기</string>
     <string name="paywall_coming_soon">아직 준비 중이에요. 곧 열릴게요!</string>
-    <string name="paywall_balance">캔디 %1$d개 갖고 있어요</string>
+    <string name="paywall_balance">보유하고 있는 캔디는 %1$d개예요</string>
     <string name="paywall_balance_sub">더 만들고 싶다면 캔디를 충전해요.</string>
     <string name="paywall_section_packs">캔디 충전</string>
     <string name="paywall_pack_popular">가장 인기</string>
@@ -80,6 +80,7 @@
     <string name="paywall_redeem_success">적용됐어요! 잔액에 반영됐어요.</string>
     <string name="paywall_section_referral">친구 초대</string>
     <string name="paywall_referral_placeholder">받은 초대 코드</string>
+    <string name="paywall_referral_desc">입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요.</string>
     <string name="paywall_referral_success">초대 코드가 적용됐어요! 보너스를 받았어요.</string>
     <string name="paywall_terms">이용약관</string>
     <string name="paywall_privacy">개인정보처리방침</string>
