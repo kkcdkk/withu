@@ -1,4 +1,4 @@
-# TestFlight 노트 — v1.1.0 (빌드 23)
+# TestFlight 노트 — v1.1.0 (빌드 24)
 
 App Store Connect → TestFlight → 이 빌드 → "테스트 정보 / 이 빌드에서 테스트할 사항"에 붙여넣기용.
 스토어 업데이트 심사 제출 시 "이 버전의 새로운 기능"에도 아래 첫 블록 사용.
@@ -15,7 +15,22 @@ App Store Connect → TestFlight → 이 빌드 → "테스트 정보 / 이 빌�
 • 설정 개편 — 내 캐릭터 설정 바로가기가 생겼고, 권한 버튼이 실제로 동작하며, 취침 리마인더 시간을 직접 고를 수 있어요.
 • 잠금화면 위젯의 캐릭터 얼굴이 다시 또렷하게 보여요. 워치 색상 페이스에서도 얼굴이 보여요.
 • 단축어 'Withy 캐릭터 새로고침' 추가 — 운동 시작 자동화에 연결하면 앱을 열지 않아도 캐릭터가 바로 바뀌어요.
+• 친구 초대 보상이 커졌어요 — 코드를 입력하면 두 사람 모두 캔디 5개를 받아요.
 • 곳곳의 안내 문구를 간결하게 다듬었어요.
+```
+
+## What's New (English — 스토어 en-US 로컬라이제이션용)
+
+```
+A big update for Withy!
+
+• Cloud backup for your characters — sign in and your gallery comes back even after switching phones or reinstalling.
+• A fresh green theme, and the app name is now Withy everywhere.
+• Settings, reworked — a shortcut to My Character, permission buttons that actually work, and a bedtime reminder you can set to any time.
+• Your character's face is crisp again on the Lock Screen widget, and now shows on tinted watch faces too.
+• New 'Withy Refresh Character' shortcut — hook it to a workout automation and your character updates instantly without opening the app.
+• Bigger invite rewards — enter a friend's code and you both get 5 candies.
+• Cleaner, shorter text throughout the app.
 ```
 
 ## 이 빌드에서 테스트할 사항 (테스터 안내)
