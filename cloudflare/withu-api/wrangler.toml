@@ -66,6 +66,18 @@ bucket_name = "withu-gen-logs"
 #      npx wrangler secret put ADMIN_TOKEN
 #    조회: https://withu-api.ysy1398.workers.dev/admin?token=<그 값>
 
+# --- 갤러리 클라우드 백업 (계정별 캐릭터 이미지 보관) ---
+#
+# 10) 갤러리 이미지 저장용 R2 버킷. 관측 로그(LOG_BUCKET)와 분리 —
+#     로그 lifecycle(30일 자동 삭제) 정책과 무관하게 사용자 데이터를 보존한다:
+#      npx wrangler r2 bucket create withu-gallery
+[[r2_buckets]]
+binding = "GALLERY_BUCKET"
+bucket_name = "withu-gallery"
+
+# 11) gallery_items 테이블 마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+
 # 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
 [vars]
 APPLE_BUNDLE_ID = "sy.withu"

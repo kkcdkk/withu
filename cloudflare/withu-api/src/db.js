@@ -304,6 +304,23 @@ export async function deleteAccount(env, sub) {
         ]));
       } catch { /* 이미지 정리 실패는 계정 삭제를 막지 않음 */ }
     }
+    // 갤러리 백업 이미지(R2) — gallery/<sub>/ prefix 전체 list-and-delete (best-effort).
+    // 계정 삭제 시 개인 이미지가 서버에 남으면 안 됨 (Apple 5.1.1(v)).
+    if (env.GALLERY_BUCKET) {
+      try {
+        let cursor;
+        do {
+          const listed = await env.GALLERY_BUCKET.list({ prefix: `gallery/${sub}/`, cursor });
+          await Promise.all(listed.objects.map((o) => env.GALLERY_BUCKET.delete(o.key)));
+          cursor = listed.truncated ? listed.cursor : undefined;
+        } while (cursor);
+      } catch { /* 이미지 정리 실패는 계정 삭제를 막지 않음 */ }
+    }
+    // gallery_items 는 0008 마이그레이션 이후에만 존재 — 미적용 상태로 배포된 창에서
+    // 계정 삭제(Apple 5.1.1(v) 필수)가 통째로 막히지 않게 batch 밖 best-effort 로 분리.
+    try {
+      await env.DB.prepare("DELETE FROM gallery_items WHERE sub = ?").bind(sub).run();
+    } catch { /* 테이블 미존재(마이그레이션 전) — 계정 삭제를 막지 않음 */ }
     await env.DB.batch([
       env.DB.prepare("DELETE FROM gen_events WHERE sub = ?").bind(sub),
       env.DB.prepare("DELETE FROM generation_log WHERE sub = ?").bind(sub),
