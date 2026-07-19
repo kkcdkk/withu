@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// 릴리스 서명 정보 — local.properties(커밋 제외)에서 읽음. app 모듈과 같은 업로드 키.
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 // Wear OS 컴패니언 앱 — iOS 'withu Watch App' 대응.
@@ -20,9 +28,22 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        val storePath = localProps.getProperty("WITHU_UPLOAD_STORE_FILE")
+        if (storePath != null && rootProject.file(storePath).exists()) {
+            create("release") {
+                storeFile = rootProject.file(storePath)
+                storePassword = localProps.getProperty("WITHU_UPLOAD_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("WITHU_UPLOAD_KEY_ALIAS")
+                keyPassword = localProps.getProperty("WITHU_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     buildFeatures {
