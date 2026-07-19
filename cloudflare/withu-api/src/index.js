@@ -1,5 +1,6 @@
 import { verifyAppleIdentityToken, signSession, subFromRequest, verifyAppleJws } from "./auth.js";
 import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
+import UPNG from "upng-js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1.5";
 
@@ -166,6 +167,15 @@ export default {
       return referralHandler(request, env);
     }
 
+    // 갤러리 클라우드 백업 — 계정별 캐릭터 갤러리 (재설치/기기 변경 후 로그인 복원용)
+    if (url.pathname === "/gallery") {
+      if (request.method !== "GET") return jsonError("Method not allowed", 405);
+      return galleryList(request, env);
+    }
+    if (url.pathname.startsWith("/gallery/")) {
+      return galleryItemHandler(request, env, url);
+    }
+
     if (url.pathname === "/generate") {
       if (request.method !== "POST") {
         return jsonError("Method not allowed", 405);
@@ -285,6 +295,161 @@ async function referralHandler(request, env) {
 
   const entitlement = await getEntitlement(env, sub);
   return Response.json({ entitlement });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 갤러리 클라우드 백업 (계정별 — 재설치/기기 변경 후 로그인하면 복원)
+// 로컬(App Group)이 권위, 서버는 백업 — 캔디와 같은 모델(서버가 로컬을 덮어쓰지 않음).
+// 이미지는 R2 gallery/<sub>/<id>.png (+<id>_f1.png 애니 프레임), 메타는 D1 gallery_items.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GALLERY_MAX_ITEMS = 400;                    // 계정당 항목 상한
+const GALLERY_MAX_IMAGE_BYTES = 6 * 1024 * 1024;  // 이미지 1장 6MB 제한
+const GALLERY_DAILY_PUT_LIMIT = 500;              // 계정당 일일 업로드 상한 (반복 업로드 남용/비용 방어 — 400개 전체 첫 백업은 하루에 가능)
+const GALLERY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function galleryObjectKey(sub, id, frame) {
+  return `gallery/${sub}/${id}${frame ? "_f1" : ""}.png`;
+}
+
+function galleryB64ToBytes(b64) {
+  return Uint8Array.from(atob(b64.includes(",") ? b64.split(",").at(-1) : b64), (c) => c.charCodeAt(0));
+}
+
+// GET /gallery (Bearer) → { items: [{ id, source_state, created_at, has_frame1, batch_id, prompt }] }
+async function galleryList(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+  const { results = [] } = await env.DB.prepare(
+    "SELECT id, source_state, created_at, has_frame1, batch_id, prompt FROM gallery_items WHERE sub = ? ORDER BY created_at DESC"
+  ).bind(sub).all();
+  return Response.json({
+    items: results.map((r) => ({
+      id: r.id,
+      source_state: r.source_state,
+      created_at: r.created_at,
+      has_frame1: r.has_frame1 === 1,
+      batch_id: r.batch_id,
+      prompt: r.prompt,
+    })),
+  });
+}
+
+// /gallery/<id> (PUT/DELETE) · /gallery/<id>.png (GET, ?frame=1 이면 애니 프레임)
+async function galleryItemHandler(request, env, url) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  if (!env.GALLERY_BUCKET) return jsonError("갤러리 백업이 아직 설정되지 않았어요.", 503);
+  const sub = await subFromRequest(request, env);
+  if (!sub) return jsonError("Unauthorized", 401);
+
+  const raw = url.pathname.slice("/gallery/".length);
+  const isPng = raw.toLowerCase().endsWith(".png");
+  const id = isPng ? raw.slice(0, -4) : raw;
+  if (!GALLERY_UUID_RE.test(id)) return jsonError("잘못된 갤러리 id 예요.", 400);
+
+  if (isPng && request.method === "GET") return galleryImage(env, sub, id, url);
+  if (!isPng && request.method === "PUT") return galleryPut(request, env, sub, id);
+  if (!isPng && request.method === "DELETE") return galleryDelete(env, sub, id);
+  return jsonError("Method not allowed", 405);
+}
+
+// 계정(sub) 기준 일일 업로드 상한. 점진 배포: RATE_KV 바인딩이 있을 때만 동작 (checkRateLimit 과 동일 패턴).
+async function checkGalleryPutLimit(env, sub) {
+  if (!env.RATE_KV) return null;
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `gput:${sub}:${day}`;
+  const used = parseInt((await env.RATE_KV.get(key)) || "0", 10);
+  if (used >= GALLERY_DAILY_PUT_LIMIT) {
+    return jsonError("오늘 백업 업로드 한도에 도달했어요.", 429);
+  }
+  await env.RATE_KV.put(key, String(used + 1), { expirationTtl: 60 * 60 * 48 });
+  return null;
+}
+
+// PUT /gallery/<id> — R2 저장 + D1 upsert. 클라 후처리 완료본 PNG 그대로(재가공 없음).
+async function galleryPut(request, env, sub, id) {
+  const rateError = await checkGalleryPutLimit(env, sub);
+  if (rateError) return rateError;
+  let body;
+  try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
+  const imageB64 = body.image_b64 || body.imageB64;
+  if (!imageB64) return jsonError("image_b64 필요", 400);
+
+  // 같은 id 가 다른 계정 소유면 충돌 (UUID 라 사실상 없음 — 방어)
+  const existing = await env.DB.prepare("SELECT sub FROM gallery_items WHERE id = ?").bind(id).first();
+  if (existing && existing.sub !== sub) return jsonError("다른 계정의 항목이에요.", 409);
+
+  // 계정당 상한 — 신규 항목일 때만 검사
+  if (!existing) {
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM gallery_items WHERE sub = ?").bind(sub).first();
+    if ((row?.n ?? 0) >= GALLERY_MAX_ITEMS) {
+      return jsonError(`백업 보관함이 가득 찼어요 (${GALLERY_MAX_ITEMS}개). 갤러리에서 안 쓰는 캐릭터를 지워 주세요.`, 409);
+    }
+  }
+
+  const frame1B64 = body.frame1_b64 || body.frame1B64 || null;
+  let bytes, frame1Bytes = null;
+  try {
+    bytes = galleryB64ToBytes(imageB64);
+    if (frame1B64) frame1Bytes = galleryB64ToBytes(frame1B64);
+  } catch {
+    return jsonError("image_b64 형식 오류", 400);
+  }
+  if (bytes.byteLength > GALLERY_MAX_IMAGE_BYTES
+    || (frame1Bytes && frame1Bytes.byteLength > GALLERY_MAX_IMAGE_BYTES)) {
+    return jsonError("이미지가 너무 커요 (장당 6MB 제한).", 413);
+  }
+
+  await env.GALLERY_BUCKET.put(galleryObjectKey(sub, id, 0), bytes, { httpMetadata: { contentType: "image/png" } });
+  if (frame1Bytes) {
+    await env.GALLERY_BUCKET.put(galleryObjectKey(sub, id, 1), frame1Bytes, { httpMetadata: { contentType: "image/png" } });
+  } else {
+    // 프레임 없는 재업로드면 옛 _f1 고아 객체 정리 (없으면 no-op) — ?frame=1 이 옛 프레임을 서빙하지 않게.
+    await env.GALLERY_BUCKET.delete(galleryObjectKey(sub, id, 1));
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO gallery_items (id, sub, source_state, created_at, has_frame1, batch_id, prompt, bytes, uploaded_at)
+     VALUES (?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET
+       source_state = excluded.source_state, created_at = excluded.created_at,
+       has_frame1 = excluded.has_frame1, batch_id = excluded.batch_id,
+       prompt = excluded.prompt, bytes = excluded.bytes, uploaded_at = excluded.uploaded_at`
+  ).bind(
+    id, sub, body.source_state ?? null, body.created_at ?? now,
+    frame1Bytes ? 1 : 0, body.batch_id ?? null, body.prompt ?? null,
+    bytes.byteLength, now
+  ).run();
+
+  return Response.json({ ok: true });
+}
+
+// GET /gallery/<id>.png — 본인(sub) 소유 확인 후 R2 스트림. ?frame=1 이면 frame1.
+async function galleryImage(env, sub, id, url) {
+  const row = await env.DB.prepare("SELECT sub FROM gallery_items WHERE id = ?").bind(id).first();
+  if (!row || row.sub !== sub) return jsonError("Not found", 404);
+  const frame = url.searchParams.get("frame") === "1" ? 1 : 0;
+  const obj = await env.GALLERY_BUCKET.get(galleryObjectKey(sub, id, frame));
+  if (!obj) return jsonError("Not found", 404);
+  return new Response(obj.body, {
+    headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=86400" },
+  });
+}
+
+// DELETE /gallery/<id> — 본인 소유 확인 후 D1 행 + R2 객체(프레임 포함) 삭제.
+// 이미 없으면 ok (멱등 — 클라 pendingDeletes 재시도가 깨끗이 끝나게).
+async function galleryDelete(env, sub, id) {
+  const row = await env.DB.prepare("SELECT sub FROM gallery_items WHERE id = ?").bind(id).first();
+  if (!row) return Response.json({ ok: true });
+  if (row.sub !== sub) return jsonError("Not found", 404);
+  await env.DB.prepare("DELETE FROM gallery_items WHERE id = ? AND sub = ?").bind(id, sub).run();
+  await Promise.all([
+    env.GALLERY_BUCKET.delete(galleryObjectKey(sub, id, 0)),
+    env.GALLERY_BUCKET.delete(galleryObjectKey(sub, id, 1)),
+  ]);
+  return Response.json({ ok: true });
 }
 
 // 공유 시크릿 토큰 검증. 점진 배포: env.WITHU_API_TOKEN 이 설정돼 있을 때만 강제.
@@ -528,6 +693,22 @@ function base64ToBlob(value) {
 // 생성 모니터링 (gen_events 로깅 + /admin 대시보드)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// 대시보드 썸네일용 — 마젠타(#FF00FF) 배경·투명 배경을 흰색 불투명으로 평탄화.
+// gpt-image-2 결과가 핫핑크로 보이는 걸 없앤다. 실패(디코드 등)하면 호출부가 원본을 저장.
+function flattenBackgroundToWhite(bytes) {
+  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const img = UPNG.decode(buf);
+  const rgba = new Uint8Array(UPNG.toRGBA8(img)[0]);
+  for (let i = 0; i < rgba.length; i += 4) {
+    const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2], a = rgba[i + 3];
+    // 근사 마젠타(배경) 또는 (거의)투명 픽셀 → 흰색 불투명
+    if ((r > 180 && g < 90 && b > 180) || a < 24) {
+      rgba[i] = 255; rgba[i + 1] = 255; rgba[i + 2] = 255; rgba[i + 3] = 255;
+    }
+  }
+  return new Uint8Array(UPNG.encode([rgba.buffer], img.width, img.height, 0));
+}
+
 // 이벤트 타입 한 축으로 정규화: batch(헤더) > refine/background(본문 kind) > single
 function eventType(request, input) {
   if (request.headers.get("X-Withu-Kind") === "batch") return "batch";
@@ -552,11 +733,14 @@ function logEvent(env, ctx, ev) {
         refineIndex = row?.n ?? 0;
       }
       const b64ToBytes = (b64) => Uint8Array.from(atob(b64.includes(",") ? b64.split(",").at(-1) : b64), (c) => c.charCodeAt(0));
-      // 결과 이미지는 R2 에만 (성공 시). 서버가 받은 원본 — gpt-image-2 는 마젠타 배경 상태.
+      // 결과 이미지는 R2 에만 (성공 시). gpt-image-2 는 마젠타(#FF00FF) 배경으로 오므로
+      // 대시보드용으로 마젠타·투명 배경을 흰색으로 평탄화해 저장 (원본 픽셀은 클라가 따로 크로마키).
       let imageKey = null;
       if (ev.imageB64 && env.LOG_BUCKET) {
         imageKey = `results/${id}.png`;
-        await env.LOG_BUCKET.put(imageKey, b64ToBytes(ev.imageB64), { httpMetadata: { contentType: "image/png" } });
+        let bytes = b64ToBytes(ev.imageB64);
+        try { bytes = flattenBackgroundToWhite(bytes); } catch { /* 실패 시 원본(마젠타) 그대로 저장 */ }
+        await env.LOG_BUCKET.put(imageKey, bytes, { httpMetadata: { contentType: "image/png" } });
       }
       // 참고사진(첨부)도 R2 에 — refs/<id>.png. had_reference 로 존재 여부를 안다.
       if (ev.referenceB64 && env.LOG_BUCKET) {
@@ -629,6 +813,7 @@ async function adminDashboard(request, env) {
   const fType = url.searchParams.get("type") || "";
   const fStatus = url.searchParams.get("status") || "";
   const fPlatform = url.searchParams.get("platform") || "";
+  const group = url.searchParams.get("group") === "user" ? "user" : "session";
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
   const where = ["at >= ?"];
@@ -670,6 +855,7 @@ async function adminDashboard(request, env) {
     if (fType) p.set("type", fType);
     if (fStatus) p.set("status", fStatus);
     if (fPlatform) p.set("platform", fPlatform);
+    if (group !== "session") p.set("group", group);
     for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); }
     return "/admin?" + p.toString();
   };
@@ -678,34 +864,42 @@ async function adminDashboard(request, env) {
   const typeBadge = { single: "🆕 단건", refine: "✏️ 다듬기", batch: "📦 배치", background: "🌤 배경" };
   const statusDot = { ok: "🟢", error: "🔴", blocked: "🟠" };
 
-  const cards = sessions.map((rows) => {
+  // 한 스텝(생성 1건) — 왼쪽 썸네일 · 가운데 전송 프롬프트 전체 · 오른쪽 사용자 실제 입력만.
+  const renderStep = (r) => {
+    const img = r.image_key
+      ? `<a href="/admin/img/${esc(r.id)}?token=${esc(token)}" target="_blank"><img loading="lazy" src="/admin/img/${esc(r.id)}?token=${esc(token)}"></a>`
+      : `<div class="noimg">${esc(statusDot[r.status] || "")} ${esc(r.status)}</div>`;
+    // 참고사진 썸네일 — 저장 전 기록은 404 → onerror 로 조용히 숨김.
+    const refImg = r.had_reference
+      ? `<a href="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" target="_blank"><img class="refimg" loading="lazy" src="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" title="첨부한 참고사진" onerror="this.closest('a').style.display='none'"></a>`
+      : "";
+    const err = r.status !== "ok" ? `<div class="err">${esc(statusDot[r.status])} ${esc(r.error || r.status)}</div>` : "";
+    const refFlag = r.had_reference ? ' <span class="ref">📎참고</span>' : "";
+    const lat = r.latency_ms ? `<span class="lat">${(r.latency_ms / 1000).toFixed(1)}s</span>` : "";
+    // 오른쪽: 사용자가 실제 입력한 것만. 없으면(구 기록/자동 프레임) 안내.
+    const userField = r.input_field ? `<span class="field">${esc(r.input_field)}</span>` : "";
+    const userText = r.user_input != null && r.user_input !== ""
+      ? `<div class="uitext">${esc(r.user_input)}</div>`
+      : `<div class="uitext none">${r.user_input === "" ? "(입력 없음 · 상태만 선택)" : "(원본 입력 기록 없음)"}</div>`;
+    return `<div class="step">
+      <div class="thumbs">${img}${refImg}</div>
+      <div class="full">
+        <div class="stepno">${r.refine_index === 0 ? "원본" : "수정 " + r.refine_index}${refFlag} ${lat}</div>
+        <div class="prompt">${esc(r.prompt || "")}</div>
+        ${err}
+      </div>
+      <div class="userin">
+        <div class="uihead">✍️ 사용자 입력 ${userField}</div>
+        ${userText}
+      </div>
+    </div>`;
+  };
+
+  // 한 세션(캐릭터=수정 체인) 카드.
+  const renderSession = (rows) => {
     const head = rows[0];
     const latest = Math.max(...rows.map((r) => r.at));
     const editCount = Math.max(0, rows.length - 1);
-    const steps = rows.map((r) => {
-      const img = r.image_key
-        ? `<a href="/admin/img/${esc(r.id)}?token=${esc(token)}" target="_blank"><img loading="lazy" src="/admin/img/${esc(r.id)}?token=${esc(token)}"></a>`
-        : `<div class="noimg">${esc(statusDot[r.status] || "")} ${esc(r.status)}</div>`;
-      // 첨부(참고사진) 썸네일 — had_reference 면 R2 refs/<id>.png.
-      // 참고사진 저장 코드 배포 전 기록은 객체가 없어 404 → onerror 로 깨진 아이콘 대신 조용히 숨김.
-      const refImg = r.had_reference
-        ? `<a href="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" target="_blank"><img class="refimg" loading="lazy" src="/admin/img/${esc(r.id)}?kind=ref&token=${esc(token)}" title="첨부한 참고사진" onerror="this.closest('a').style.display='none'"></a>`
-        : "";
-      // 사용자가 실제 입력한 원문 우선. 없으면 서버 합성 프롬프트로 폴백.
-      const label = r.input_field ? `<span class="field">${esc(r.input_field)}</span> ` : "";
-      const shown = r.user_input != null && r.user_input !== "" ? r.user_input : (r.user_input === "" ? "(입력 없음)" : r.prompt || "");
-      // 서버가 실제 보낸 합성 프롬프트는 hover 로만 (노이즈 줄이기).
-      const sentTitle = r.prompt ? ` title="전송 프롬프트: ${esc(r.prompt)}"` : "";
-      const err = r.status !== "ok" ? `<div class="err">${esc(statusDot[r.status])} ${esc(r.error || r.status)}</div>` : "";
-      const refFlag = r.had_reference ? ' <span class="ref">📎참고</span>' : "";
-      const lat = r.latency_ms ? `<span class="lat">${(r.latency_ms / 1000).toFixed(1)}s</span>` : "";
-      return `<div class="step">
-        <div class="stepno">${r.refine_index === 0 ? "원본" : "수정 " + r.refine_index}${refFlag} ${lat}</div>
-        <div class="imgrow">${img}${refImg}</div>
-        <div class="prompt"${sentTitle}>${label}${esc(shown)}</div>
-        ${err}
-      </div>`;
-    }).join("");
     return `<div class="card">
       <div class="chead">
         <span class="state">${esc(head.state || "—")}</span>
@@ -715,9 +909,41 @@ async function adminDashboard(request, env) {
         <span class="time">${esc(fmtTime(latest))}</span>
         ${head.sub ? `<span class="sub" title="${esc(head.sub)}">👤 ${esc(String(head.sub).slice(0, 8))}</span>` : `<span class="sub anon">익명</span>`}
       </div>
-      <div class="steps">${steps}</div>
+      <div class="steps">${rows.map(renderStep).join("")}</div>
     </div>`;
-  }).join("");
+  };
+
+  let cards;
+  if (group === "user") {
+    // 사용자(sub)별로 세션을 묶는다. 로그인 전(sub=null)은 '익명' 한 묶음.
+    const users = new Map();
+    for (const rows of sessions) {
+      const key = rows[0].sub || "__anon__";
+      if (!users.has(key)) users.set(key, []);
+      users.get(key).push(rows);
+    }
+    const userBlocks = [...users.entries()].map(([key, sess]) => {
+      sess.sort((a, b) => Math.max(...b.map((r) => r.at)) - Math.max(...a.map((r) => r.at)));
+      const evCount = sess.reduce((n, s) => n + s.length, 0);
+      const editCount = sess.reduce((n, s) => n + Math.max(0, s.length - 1), 0);
+      const latest = Math.max(...sess.flatMap((s) => s.map((r) => r.at)));
+      const who = key === "__anon__" ? "익명 (로그인 전)" : `👤 ${esc(key)}`;
+      return { latest, sess, evCount, editCount, who };
+    });
+    userBlocks.sort((a, b) => b.latest - a.latest);
+    // 사용자마다 접었다 펴는 토글(<details>). 가장 최근 사용자 하나만 기본 펼침.
+    cards = userBlocks.map((u, idx) => `<details class="userblock"${idx === 0 ? " open" : ""}>
+        <summary class="uhead">
+          <span class="caret"></span>
+          <span class="uname">${u.who}</span>
+          <span class="ucount">캐릭터 ${u.sess.length} · 생성 ${u.evCount} · 수정 ${u.editCount}</span>
+          <span class="time">${esc(fmtTime(u.latest))}</span>
+        </summary>
+        ${u.sess.map(renderSession).join("")}
+      </details>`).join("");
+  } else {
+    cards = sessions.map(renderSession).join("");
+  }
 
   const chip = (label, params, active) =>
     `<a class="chip${active ? " on" : ""}" href="${q(params)}">${esc(label)}</a>`;
@@ -749,20 +975,35 @@ async function adminDashboard(request, env) {
   .plat { font-size: 12px; opacity: .6; }
   .time { font-size: 12px; opacity: .5; margin-left: auto; }
   .sub { font-size: 11px; opacity: .6; } .sub.anon { opacity: .4; }
-  .steps { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
-  .step { flex: 0 0 180px; }
+  .steps { display: flex; flex-direction: column; gap: 10px; }
+  .step { display: flex; gap: 12px; align-items: stretch; border-top: 1px solid rgba(128,128,128,.12); padding-top: 10px; }
+  .step:first-child { border-top: 0; padding-top: 0; }
+  .thumbs { flex: 0 0 auto; display: flex; gap: 6px; align-items: flex-start; }
+  .step img { width: 120px; height: 120px; object-fit: contain; border-radius: 8px; border: 1px solid rgba(128,128,128,.18); background: #fafafa; }
+  .refimg { width: 44px !important; height: 44px !important; object-fit: cover; border: 1px solid rgba(128,128,128,.3); }
+  .noimg { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(128,128,128,.1); font-size: 12px; opacity: .7; }
+  .full { flex: 1 1 auto; min-width: 0; }
   .stepno { font-size: 11px; opacity: .6; margin-bottom: 4px; }
-  .imgrow { display: flex; gap: 6px; align-items: flex-start; }
-  .step img { width: 180px; height: 180px; object-fit: contain; border-radius: 8px; background: repeating-conic-gradient(#0000000d 0% 25%, transparent 0% 50%) 50% / 16px 16px; }
-  .imgrow:has(.refimg) img { width: 132px; height: 132px; }
-  .refimg { width: 42px !important; height: 42px !important; object-fit: cover; border: 1px solid rgba(128,128,128,.3); }
-  .noimg { width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(128,128,128,.1); font-size: 12px; opacity: .7; }
-  .prompt { font-size: 12px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
-  .field { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(0,113,227,.15); color: #0071e3; margin-right: 2px; }
-  .rev { font-size: 11px; opacity: .5; margin-top: 4px; }
+  /* 가운데: 서버가 실제 보낸 전송 프롬프트 전체 */
+  .prompt { font-size: 12px; white-space: pre-wrap; word-break: break-word; opacity: .82; }
+  /* 오른쪽: 사용자가 실제 입력한 것만 */
+  .userin { flex: 0 0 240px; background: rgba(0,113,227,.06); border-radius: 8px; padding: 8px 10px; }
+  .uihead { font-size: 11px; opacity: .7; margin-bottom: 4px; }
+  .uitext { font-size: 13px; font-weight: 600; white-space: pre-wrap; word-break: break-word; }
+  .uitext.none { font-weight: 400; opacity: .45; font-size: 12px; }
+  .field { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(0,113,227,.18); color: #0071e3; }
   .err { font-size: 11px; color: #d33; margin-top: 4px; }
   .ref { font-size: 10px; opacity: .7; } .lat { font-size: 10px; opacity: .5; }
+  .userblock { margin-bottom: 14px; }
+  summary.uhead { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 2px solid rgba(0,113,227,.3); margin-bottom: 8px; cursor: pointer; list-style: none; user-select: none; }
+  summary.uhead::-webkit-details-marker { display: none; }
+  summary.uhead:hover { background: rgba(0,113,227,.05); }
+  .caret { flex: 0 0 auto; width: 0; height: 0; border-left: 6px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; opacity: .45; transition: transform .12s; }
+  details[open] > summary.uhead .caret { transform: rotate(90deg); }
+  .uname { font-weight: 700; font-size: 15px; word-break: break-all; }
+  .ucount { font-size: 12px; opacity: .6; }
   .empty { text-align: center; opacity: .5; padding: 60px; }
+  @media (max-width: 720px) { .step { flex-wrap: wrap; } .userin { flex-basis: 100%; } }
 </style></head><body>
 <header>
   <h1>withu 생성 로그 <span style="opacity:.5;font-weight:400">· 최근 ${days}일</span></h1>
@@ -774,6 +1015,8 @@ async function adminDashboard(request, env) {
     ${chip("성공", { status: "ok" }, fStatus === "ok")}${chip("실패", { status: "error" }, fStatus === "error")}${chip("차단", { status: "blocked" }, fStatus === "blocked")}
     <span class="sep"></span>
     ${chip("iOS", { platform: "ios" }, fPlatform === "ios")}${chip("Android", { platform: "android" }, fPlatform === "android")}
+    <span class="sep"></span>
+    ${chip("세션별", { group: "" }, group === "session")}${chip("사용자별", { group: "user" }, group === "user")}
   </div>
 </header>
 <main>
