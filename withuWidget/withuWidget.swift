@@ -205,9 +205,11 @@ private struct CircularView: View {
     let entry: CharacterEntry
     var body: some View {
         // accessoryCircular 은 작은 원. 128px 면 충분 (메모리 절약).
+        let plan = renderingMode != .fullColor
+            ? CharacterImageView.accessoryPlan(for: entry.state)
+            : (preferBundled: false, outline: false)
         CharacterImageView(state: entry.state, maxPixelSize: 128,
-                           outlineOnly: renderingMode != .fullColor
-                               && CharacterImageView.hasOpaqueBackground(entry.state))
+                           outlineOnly: plan.outline, preferBundled: plan.preferBundled)
             .widgetAccentable()
     }
 }
@@ -216,10 +218,12 @@ private struct RectangularView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: CharacterEntry
     var body: some View {
+        let plan = renderingMode != .fullColor
+            ? CharacterImageView.accessoryPlan(for: entry.state)
+            : (preferBundled: false, outline: false)
         HStack(spacing: 6) {
             CharacterImageView(state: entry.state, maxPixelSize: 128,
-                               outlineOnly: renderingMode != .fullColor
-                                   && CharacterImageView.hasOpaqueBackground(entry.state))
+                               outlineOnly: plan.outline, preferBundled: plan.preferBundled)
                 .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {

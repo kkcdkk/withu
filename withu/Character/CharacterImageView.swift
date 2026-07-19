@@ -27,6 +27,10 @@ struct CharacterImageView: View {
     /// true 면 alpha 외곽선만 추출. 단색 강제 환경 (컴플리케이션 등) 용.
     var outlineOnly: Bool = false
 
+    /// true 면 사용자 이미지를 건너뛰고 번들 기본 일러스트부터 사용.
+    /// 잠금화면(vibrant)에서 배경이 불투명한 사용자 그림이 통짜 사각형으로 보일 때의 대체 경로.
+    var preferBundled: Bool = false
+
     /// 애니메이션 모드 — frame 0/1 를 0.7초 간격 swap.
     var animated: Bool = false
 
@@ -59,7 +63,7 @@ struct CharacterImageView: View {
     #if canImport(UIKit)
     @ViewBuilder
     private func singleFrameView(frameIndex: Int) -> some View {
-        if let userImage = loadFrameWithFallback(frameIndex) {
+        if !preferBundled, let userImage = loadFrameWithFallback(frameIndex) {
             if outlineOnly {
                 Image(uiImage: Self.outlineImage(from: userImage))
                     .renderingMode(.template)
@@ -187,15 +191,25 @@ struct CharacterImageView: View {
         return image
     }
 
-    /// 잠금화면(vibrant)에서 외곽선 모드가 필요한지 — '불투명 배경 번들 에셋'일 때만 true.
-    /// 사용자 이미지는 앱이 직접 크로마키/배경제거한 산출물이라, 침대·소품 때문에 모서리가
-    /// 불투명해도 vibrant 가 밝기 디테일로 잘 그린다. 외곽선을 강제하면 밝은 색 그림
-    /// (흰 이불에 누운 수면 캐릭터 등)이 거의 투명해져 "위젯이 안 바뀐 것처럼" 보이는
-    /// 버그가 있었음 — 사용자 이미지는 항상 false.
-    /// 위젯 잠금화면 outlineOnly 판단용 공용 헬퍼.
-    static func hasOpaqueBackground(_ state: CharacterState) -> Bool {
-        if CharacterImageStore.hasImage(for: state) { return false }
-        let image = UIImage(named: state.imageAssetName)
+    /// 잠금화면(vibrant) accessory 렌더 전략. vibrant 는 불투명 픽셀 전체를 밝기 패널로
+    /// 그리므로, 배경까지 꽉 찬(불투명) 그림은 통짜 사각형이 된다.
+    ///   1) 사용자 이미지가 투명 배경 → 그대로 (밝기 디테일로 눈코입까지 보임 — 최선)
+    ///   2) 사용자 이미지가 불투명 배경 → 번들 기본 일러스트로 대체 (사각형 방지)
+    ///   3) 번들 일러스트마저 불투명(기본 eating 식탁) → 외곽선 모드
+    /// 반환: (preferBundled: 사용자 이미지 건너뛸지, outline: 외곽선 모드일지)
+    static func accessoryPlan(for state: CharacterState) -> (preferBundled: Bool, outline: Bool) {
+        if CharacterImageStore.hasImage(for: state),
+           let user = CharacterImageStore.loadThumbnail(state, maxPixelSize: 16),
+           !imageHasOpaqueCorners(user) {
+            return (preferBundled: false, outline: false)   // 투명 사용자 그림 — 그대로
+        }
+        // 사용자 그림이 없거나 불투명 → 번들 기준으로 판단
+        let bundledOpaque = imageHasOpaqueCorners(UIImage(named: state.imageAssetName))
+        return (preferBundled: true, outline: bundledOpaque)
+    }
+
+    /// 네 모서리 중 불투명한 곳이 있으면 true (배경이 있는 그림으로 간주).
+    private static func imageHasOpaqueCorners(_ image: UIImage?) -> Bool {
         guard let cg = image?.cgImage else { return false }
         let w = cg.width, h = cg.height
         guard w > 0, h > 0 else { return false }
