@@ -492,9 +492,6 @@ enum SyncCoordinator {
             sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute)
         let inSleepSchedule = manualOnly ? false : health.isInBedSchedule
         let hasSleepSchedule = manualOnly ? false : health.hasSleepSchedule
-        // '수면 모드 기준'인데 취침 Focus·건강앱 수면 신호원이 없으면 시간창으로 폴백.
-        let scheduleFallback = !manualOnly
-            && focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule
 
         let state = override ?? CharacterStateResolver.resolve(
             sleep: health.sleep,
@@ -508,7 +505,6 @@ enum SyncCoordinator {
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: phoneWorkoutState(),
-            scheduleFallback: scheduleFallback,
             profile: profile
         )
 
@@ -519,7 +515,6 @@ enum SyncCoordinator {
             sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
             lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
             dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute,
-            scheduleFallback: scheduleFallback,
             overrideActive: override != nil)
 
         let msg = WatchMessage(

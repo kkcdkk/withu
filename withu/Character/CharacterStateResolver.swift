@@ -29,9 +29,6 @@ enum CharacterStateResolver {
         isLikelyInWorkout: Bool = false,
         recentStepsPerMinute: Double = 0,
         phoneWorkoutState: CharacterState? = nil,
-        // '수면 모드 기준'인데 실제 수면 신호원(취침 Focus/건강앱 수면 일정)이 하나도 없을 때 true.
-        // 이때는 하단 안내 약속대로 설정 시간 창으로 재운다 (신호 없이 절대 안 자던 문제 해결).
-        scheduleFallback: Bool = false,
         profile: CharacterProfile = CharacterProfile(),
         calendar: Calendar = .current
     ) -> CharacterState {
@@ -88,9 +85,9 @@ enum CharacterStateResolver {
            isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }
-        // 3순위 — 시간창 자체가 수면 신호. '설정 시간 기준' 이거나,
-        // '수면 모드 기준'인데 실제 수면 신호원이 없어 시간으로 폴백해야 할 때.
-        if profile.isManualSleepOnly || scheduleFallback,
+        // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
+        // '수면 모드 기준'은 실제 수면 신호(위 1·2순위)만 따르고 시간창으로는 안 잔다.
+        if profile.isManualSleepOnly,
            isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }

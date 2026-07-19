@@ -40,28 +40,10 @@ class CharacterStateResolverTest {
     }
 
     @Test
-    fun `수면 모드 기준 - 폴백 없으면 수면 창이어도 idle`() {
-        // scheduleFallback=false (실제 신호원이 있는 상태) 면 시간창만으론 안 잔다.
+    fun `수면 모드 기준 - 신호 없으면 수면 창이어도 idle`() {
+        // '수면 모드 기준'은 DND/inBed 신호가 없으면 밤이어도 안 잔다 (시간창만으론 안 잠).
         assertEquals(CharacterState.IDLE,
             CharacterStateResolver.resolve(now = at(23, 30), profile = focusProfile))
-    }
-
-    @Test
-    fun `수면 모드 기준 - 신호원 없어 폴백이면 수면 창에서 sleeping`() {
-        // 취침 Focus·건강앱 수면 일정이 없으면 caller 가 scheduleFallback=true → 시간창으로 재운다.
-        assertEquals(
-            CharacterState.SLEEPING,
-            CharacterStateResolver.resolve(
-                now = at(23, 30), scheduleFallback = true, profile = focusProfile,
-            ),
-        )
-        // 창 밖(낮)이면 폴백이어도 안 잔다.
-        assertEquals(
-            CharacterState.IDLE,
-            CharacterStateResolver.resolve(
-                now = at(15, 0), scheduleFallback = true, profile = focusProfile,
-            ),
-        )
     }
 
     @Test
