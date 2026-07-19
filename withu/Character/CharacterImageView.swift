@@ -187,13 +187,15 @@ struct CharacterImageView: View {
         return image
     }
 
-    /// 표시될 이미지(사용자 PNG 우선, 없으면 번들 에셋)의 네 모서리 중 불투명한 곳이 있으면 true.
-    /// 잠금화면·단색 워치 페이스는 이미지 밝기로 눈코입 디테일을 살려 그리므로 투명 배경 그림은
-    /// 그대로 두는 게 낫고, 배경이 불투명한 그림(예: 기본 eating 의 식탁)만 외곽선이 필요하다.
-    /// 위젯·컴플리케이션의 outlineOnly 판단용 공용 헬퍼.
+    /// 잠금화면(vibrant)에서 외곽선 모드가 필요한지 — '불투명 배경 번들 에셋'일 때만 true.
+    /// 사용자 이미지는 앱이 직접 크로마키/배경제거한 산출물이라, 침대·소품 때문에 모서리가
+    /// 불투명해도 vibrant 가 밝기 디테일로 잘 그린다. 외곽선을 강제하면 밝은 색 그림
+    /// (흰 이불에 누운 수면 캐릭터 등)이 거의 투명해져 "위젯이 안 바뀐 것처럼" 보이는
+    /// 버그가 있었음 — 사용자 이미지는 항상 false.
+    /// 위젯 잠금화면 outlineOnly 판단용 공용 헬퍼.
     static func hasOpaqueBackground(_ state: CharacterState) -> Bool {
-        let image = CharacterImageStore.loadThumbnail(state, maxPixelSize: 16)
-            ?? UIImage(named: state.imageAssetName)
+        if CharacterImageStore.hasImage(for: state) { return false }
+        let image = UIImage(named: state.imageAssetName)
         guard let cg = image?.cgImage else { return false }
         let w = cg.width, h = cg.height
         guard w > 0, h > 0 else { return false }
@@ -264,9 +266,11 @@ struct CharacterImageView: View {
                     // 중간 톤은 반투명 '잉크'로 — 어두울수록 진하게, 밝을수록 투명하게.
                     // 이진 처리(외곽선+진한 디테일만)로는 연한 눈코입/음영이 통째로 사라져
                     // 틴트 페이스에서 빈 실루엣만 보이던 문제 보완.
+                    // 하한 64(25%): 흰 이불 등 아주 밝은 그림도 최소한의 몸통 실루엣은 보이게
+                    // (하한 없인 워치 틴트에서 수면 캐릭터가 '빈 원'으로 보였음).
                     // premultipliedLast: 흰색 × alpha 프리멀티플라이 = 네 채널 동일 값.
-                    let ink = (255 - luminance) * Int(alpha) / 255
-                    let a = UInt8(max(0, min(255, ink)))
+                    let ink = max((255 - luminance) * Int(alpha) / 255, 64)
+                    let a = UInt8(min(255, ink))
                     outBuf[idx] = a; outBuf[idx+1] = a
                     outBuf[idx+2] = a; outBuf[idx+3] = a
                 }
