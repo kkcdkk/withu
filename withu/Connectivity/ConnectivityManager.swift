@@ -376,16 +376,14 @@ final class FocusModeManager {
             isFocused = false
         }
 
-        // 2) SetFocusFilterIntent 가 저장한 App Group 플래그 (신뢰성 ↑, 사용자가 한 번 연결 필요)
+        // 2) SetFocusFilterIntent 가 저장한 App Group 플래그 (신뢰성 ↑, 사용자가 한 번 연결 필요).
+        //    이 필터(perform)는 iOS 가 수면 집중모드 on/off 때 직접 호출하는 authoritative 신호다.
+        //    ⚠️ 예전엔 INFocusStatusCenter(rawFocusedValue)가 '집중 아님'이면 이 플래그를 껐는데,
+        //    INFocusStatusCenter 는 수면 집중모드를 못 잡는(비활성으로 오보) 경우가 있어 방금 받은
+        //    '수면 켜짐'까지 꺼버리는 버그였음(낮잠 등). → 필터 신호를 그대로 신뢰하고,
+        //    낡은 ON(아침 자동해제 유실 등)은 filterSleepingCorrected 의 시간 기반 만료로 처리.
         let defaults = UserDefaults(suiteName: SharedAppState.groupID)
         isFocusFilterSleeping = defaults?.bool(forKey: Self.focusFilterSleepingKey) ?? false
-        // 예약(자동) 전환 시 iOS 가 잠긴 폰에서 필터 인텐트를 생략/지연해 플래그가 낡는 케이스 보정 —
-        // Focus 상태 공유가 켜져 있고 iOS 가 '지금 집중 모드 아님' 이라고 확언하면 필터 플래그 해제.
-        // (아침에 수면 모드가 자동으로 꺼졌는데 캐릭터가 계속 자던 버그)
-        if isAuthorized, rawFocusedValue == false, isFocusFilterSleeping {
-            isFocusFilterSleeping = false
-            defaults?.set(false, forKey: Self.focusFilterSleepingKey)
-        }
         focusFilterLastPerformAt = defaults?.object(forKey: Self.focusFilterLastPerformKey) as? Date
         // perform 로그 디코드 (newest first)
         let logString = defaults?.string(forKey: Self.focusFilterPerformLogKey) ?? ""
