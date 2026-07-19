@@ -113,6 +113,10 @@ struct ContentView: View {
                              sendStateToWatch: sendStateToWatch)
             }
             .task {
+                // 시작 즉시 Focus 플래그·현재 시각 반영 — 수면 집중모드가 이미 켜진 채로
+                // 앱을 열면 3초 타이머 전까지 깨어있음으로 뜨던 문제 방지.
+                focus.refresh()
+                currentTime = Date()
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()
                 // 권한 요청은 OnboardingView 에서 단계별로 처리.
