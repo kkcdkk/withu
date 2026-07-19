@@ -315,46 +315,26 @@ enum ImageProcessing {
         return corners.contains { pixels[$0 + 3] > 24 }
     }
 
-    /// 저장돼 있는 '배경 안 지워진' 그림 일괄 보정 — 활성 슬롯 전체 + 갤러리.
-    /// 이전 버전에서 크로마키가 실패한 채 저장된 그림을 Vision 으로 투명화해,
-    /// 사용자가 만든 캐릭터가 잠금화면/워치에서도 그대로 보이게 한다.
-    /// 멱등: 이미 투명이면 건너뜀. 실패한 항목은 다음 실행 때 재시도. 앱 시작 시 백그라운드 실행.
+    /// 손상(사실상 빈) 그림 복구 전용 — 저장된 정상 그림은 절대 건드리지 않는다.
+    /// 이전 빌드(30)의 무검증 배경 재처리가 만든 빈 슬롯을 갤러리 원본으로 복원하고,
+    /// 원본조차 없으면 슬롯을 비워 번들 일러스트 fallback 으로 만든다 (빈 위젯 방지).
+    /// 빈 갤러리 그림은 GallerySyncManager 가 서버 백업본으로 복구한다.
+    /// 멱등, 앱 시작 시 백그라운드 실행.
     static func backfillTransparency() async {
         var changed = false
         for state in CharacterState.allCases {
             for frame in 0...1 {
                 guard let data = CharacterImageStore.activeImageData(for: state, frame: frame),
-                      let img = UIImage(data: data) else { continue }
-                // 사실상 빈 그림(잘못된 배경 제거 결과가 저장된 경우) → 갤러리 원본으로 복원,
-                // 원본이 없거나 그것도 비었으면 슬롯 삭제(번들 일러스트 fallback — 빈 위젯 방지).
-                if CharacterImageView.alphaCoverage(img) < 0.02 {
-                    if let id = CharacterImageStore.currentGalleryItemId(for: state),
-                       let galleryData = CharacterImageStore.galleryImageData(id: id, frame: frame),
-                       let galleryImg = UIImage(data: galleryData),
-                       CharacterImageView.alphaCoverage(galleryImg) >= 0.02 {
-                        CharacterImageStore.rewriteActiveImage(galleryData, for: state, frame: frame)
-                    } else {
-                        CharacterImageStore.removeActiveImage(for: state, frame: frame)
-                    }
-                    changed = true
-                    continue
+                      let img = UIImage(data: data),
+                      CharacterImageView.alphaCoverage(img) < 0.02 else { continue }
+                if let id = CharacterImageStore.currentGalleryItemId(for: state),
+                   let galleryData = CharacterImageStore.galleryImageData(id: id, frame: frame),
+                   let galleryImg = UIImage(data: galleryData),
+                   CharacterImageView.alphaCoverage(galleryImg) >= 0.02 {
+                    CharacterImageStore.rewriteActiveImage(galleryData, for: state, frame: frame)
+                } else {
+                    CharacterImageStore.removeActiveImage(for: state, frame: frame)
                 }
-                guard hasOpaqueCorners(img),
-                      let fixed = try? await removeBackground(from: img),
-                      CharacterImageView.alphaCoverage(fixed) >= 0.02,   // 빈 결과로 덮어쓰기 금지
-                      let out = fixed.pngData() else { continue }
-                CharacterImageStore.rewriteActiveImage(out, for: state, frame: frame)
-                changed = true
-            }
-        }
-        for item in CharacterImageStore.loadGalleryMetadata() {
-            let frames = (item.hasFrame1 ?? false) ? [0, 1] : [0]
-            for frame in frames {
-                guard let data = CharacterImageStore.galleryImageData(id: item.id, frame: frame),
-                      let img = UIImage(data: data), hasOpaqueCorners(img),
-                      let fixed = try? await removeBackground(from: img),
-                      CharacterImageView.alphaCoverage(fixed) >= 0.02 else { continue }
-                CharacterImageStore.replaceGalleryImage(item.id, with: fixed, frame: frame)
                 changed = true
             }
         }

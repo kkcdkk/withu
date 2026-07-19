@@ -205,11 +205,11 @@ private struct CircularView: View {
     let entry: CharacterEntry
     var body: some View {
         // accessoryCircular 은 작은 원. 128px 면 충분 (메모리 절약).
-        let plan = renderingMode != .fullColor
-            ? CharacterImageView.accessoryPlan(for: entry.state)
-            : (preferBundled: false, outline: false)
+        // 사용자 그림은 항상 그대로(vibrant 가 밝기 디테일로 그림), 외곽선은
+        // '사용자 그림 없음 + 불투명 번들(기본 eating 식탁)'일 때만 — 검증된 b28 동작.
         CharacterImageView(state: entry.state, maxPixelSize: 128,
-                           outlineOnly: plan.outline, preferBundled: plan.preferBundled)
+                           outlineOnly: renderingMode != .fullColor
+                               && CharacterImageView.bundledNeedsOutline(entry.state))
             .widgetAccentable()
     }
 }
@@ -218,12 +218,10 @@ private struct RectangularView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: CharacterEntry
     var body: some View {
-        let plan = renderingMode != .fullColor
-            ? CharacterImageView.accessoryPlan(for: entry.state)
-            : (preferBundled: false, outline: false)
         HStack(spacing: 6) {
             CharacterImageView(state: entry.state, maxPixelSize: 128,
-                               outlineOnly: plan.outline, preferBundled: plan.preferBundled)
+                               outlineOnly: renderingMode != .fullColor
+                                   && CharacterImageView.bundledNeedsOutline(entry.state))
                 .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {

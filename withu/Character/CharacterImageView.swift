@@ -27,10 +27,6 @@ struct CharacterImageView: View {
     /// true 면 alpha 외곽선만 추출. 단색 강제 환경 (컴플리케이션 등) 용.
     var outlineOnly: Bool = false
 
-    /// true 면 사용자 이미지를 건너뛰고 번들 기본 일러스트부터 사용.
-    /// 잠금화면(vibrant)에서 배경이 불투명한 사용자 그림이 통짜 사각형으로 보일 때의 대체 경로.
-    var preferBundled: Bool = false
-
     /// 애니메이션 모드 — frame 0/1 를 0.7초 간격 swap.
     var animated: Bool = false
 
@@ -63,7 +59,7 @@ struct CharacterImageView: View {
     #if canImport(UIKit)
     @ViewBuilder
     private func singleFrameView(frameIndex: Int) -> some View {
-        if !preferBundled, let userImage = loadFrameWithFallback(frameIndex) {
+        if let userImage = loadFrameWithFallback(frameIndex) {
             if outlineOnly {
                 Image(uiImage: Self.outlineImage(from: userImage))
                     .renderingMode(.template)
@@ -191,22 +187,12 @@ struct CharacterImageView: View {
         return image
     }
 
-    /// 잠금화면(vibrant) accessory 렌더 전략. vibrant 는 불투명 픽셀 전체를 밝기 패널로
-    /// 그리므로, 배경까지 꽉 찬(불투명) 그림은 통짜 사각형이 된다.
-    ///   1) 사용자 이미지가 투명 배경 → 그대로 (밝기 디테일로 눈코입까지 보임 — 최선)
-    ///   2) 사용자 이미지가 불투명 배경 → 번들 기본 일러스트로 대체 (사각형 방지)
-    ///   3) 번들 일러스트마저 불투명(기본 eating 식탁) → 외곽선 모드
-    /// 반환: (preferBundled: 사용자 이미지 건너뛸지, outline: 외곽선 모드일지)
-    static func accessoryPlan(for state: CharacterState) -> (preferBundled: Bool, outline: Bool) {
-        if CharacterImageStore.hasImage(for: state),
-           let user = CharacterImageStore.loadThumbnail(state, maxPixelSize: 64),
-           !imageHasOpaqueCorners(user),
-           alphaCoverage(user) >= 0.02 {   // 사실상 빈 그림이면 번들로 (위젯이 텅 비지 않게)
-            return (preferBundled: false, outline: false)   // 투명 사용자 그림 — 그대로
-        }
-        // 사용자 그림이 없거나 불투명 → 번들 기준으로 판단
-        let bundledOpaque = imageHasOpaqueCorners(UIImage(named: state.imageAssetName))
-        return (preferBundled: true, outline: bundledOpaque)
+    /// 잠금화면(vibrant)에서 외곽선 모드가 필요한지 — '사용자 그림 없음 + 불투명 번들 에셋'
+    /// (기본 eating 식탁)일 때만 true. 사용자 그림은 항상 그대로 그린다 — vibrant 가
+    /// 밝기 디테일로 표현 (검증된 동작). 그림을 대체/재처리하지 않는다.
+    static func bundledNeedsOutline(_ state: CharacterState) -> Bool {
+        if CharacterImageStore.hasImage(for: state) { return false }
+        return imageHasOpaqueCorners(UIImage(named: state.imageAssetName))
     }
 
     /// 이미지에서 보이는(알파>24) 픽셀 비율 — 64px 샘플. 사실상 빈 그림(잘못된 배경 제거
