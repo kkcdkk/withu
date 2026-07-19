@@ -4,6 +4,6 @@
   코드 생성하므로 여기서 생략 → 기본 ko fallback (파리티, 00-PLAN §3-1).
 -->
 <resources>
-    <string name="widget_name">withu character</string>
+    <string name="widget_name">Withy character</string>
     <string name="widget_description">Shows your character\'s current mood.</string>
 </resources>

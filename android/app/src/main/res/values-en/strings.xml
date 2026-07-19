@@ -47,7 +47,7 @@
     <string name="notify_channel_gen_progress">Generation progress</string>
     <string name="notify_auth_granted">Allowed</string>
     <string name="notify_auth_denied">Denied</string>
-    <string name="notify_auth_not_asked">Not asked yet</string>
+    <string name="notify_auth_not_asked">Not requested</string>
     <string name="notify_anchor_title">Your base look is ready</string>
     <string name="notify_anchor_body">Check if you like it, then continue making the rest of the looks.</string>
     <string name="notify_gen_done_title">All characters are ready</string>

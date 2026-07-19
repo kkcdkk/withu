@@ -275,7 +275,7 @@ fun SingleGenScreen(onOpenBatch: () -> Unit) {
 /** 배치 생성 진입 — 처음 시작하는 사용자가 가장 먼저 보게. */
 @Composable
 private fun BatchSection(onOpenBatch: () -> Unit) {
-    FormSection(footer = stringResource(R.string.gen_batch_footer)) {
+    FormSection {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -307,8 +307,9 @@ private fun BatchSection(onOpenBatch: () -> Unit) {
 /** 생성 옵션 — AI 생성 / 내 이미지 (라디오형, 체크마크 표시). */
 @Composable
 private fun ModeSection(vm: SingleGenViewModel) {
+    // AI 생성 모드는 footer 설명 없음 (iOS 와 동일 — 사용자 요청으로 삭제)
     val footer = if (vm.mode == GenerationMode.AI_GENERATE) {
-        stringResource(R.string.gen_mode_footer_ai)
+        null
     } else {
         stringResource(R.string.gen_mode_footer_import)
     }

@@ -7,3 +7,7 @@ local.properties
 /captures
 .externalNativeBuild
 .cxx
+
+# 업로드 서명 keystore (커밋 금지)
+*.jks
+keystores/

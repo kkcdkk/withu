@@ -2,7 +2,7 @@
 <!-- 홈 위젯 (Glance, S6 소유) — 문구는 iOS withuWidget.swift 원문 그대로 (스펙 12 A-2 / B-2). -->
 <resources>
     <!-- 위젯 픽커 노출 (configurationDisplayName / description 대응) -->
-    <string name="widget_name">withu 캐릭터</string>
+    <string name="widget_name">Withy 캐릭터</string>
     <string name="widget_description">내 캐릭터의 지금 상태를 보여줘요.</string>
 
     <!-- fitnessRows — 이모지 + 값 + 한국어 단위 -->

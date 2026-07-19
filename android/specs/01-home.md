@@ -118,7 +118,7 @@ Android 는 홈 화면 위젯 1개 카드만, 단계 문구는 Android 절차로
 | 건강 헤더 | `건강 데이터` |
 | 건강 권한 행 | `권한` · pill `허용됨` / `허용 안 됨` |
 | 버튼 | `건강 권한 다시 묻기` |
-| 버튼 | `오늘 데이터 새로고침` |
+| 버튼 | `데이터 새로고침` |
 | 새로고침 결과 | `최신화 완료` / `실패: %s` (실패 항목: `수면`, `운동`, `걸음`, `활동`, `칼로리` — `, ` join) |
 | 건강 푸터 (iOS) | `운동이나 수면을 시작하는 순간 바로 캐릭터를 바꾸고 싶다면, '단축어' 앱의 자동화에서 '운동' 또는 '수면 모드' 트리거에 'withu 앱 열기' 동작을 더해주세요.` → **Android 제외** (단축어 앱 없음; 푸터 생략) |
 | 알림 헤더 | `알림` |
@@ -284,7 +284,7 @@ App Group UserDefaults key **`withu.lastBackgroundRefreshAt`** (Date) 읽기. �
 
 - 캔디 푸터: `GenerationQuota.displayedCandy()` — 로컬 권위 잔액 (DEBUG 는 9999).
 - 건강 "다시 묻기": `health.requestAuthorization()` (Health Connect 권한 시트).
-- "오늘 데이터 새로고침" `reloadHealth()`: 5종 fetch 각각 try, 실패 항목명 수집 → `최신화 완료` 또는 `실패: 수면, 걸음` 식 메시지. 진행 중엔 버튼 disabled.
+- "데이터 새로고침" `reloadHealth()`: 5종 fetch 각각 try, 실패 항목명 수집 → `최신화 완료` 또는 `실패: 수면, 걸음` 식 메시지. 진행 중엔 버튼 disabled.
 - 알림: 권한 상태 라벨 3분기, 미허용 시 요청 버튼. `scheduleBedtimeReminder()` = 매일 22:30 반복 로컬 알림. `cancelAll()` = 등록 알림 전부 취소.
 - "처음 안내 다시 보기" 확인 → `onboarded = false` + dismiss → 홈의 온보딩 게이트가 다시 뜸. 재온보딩에서 거절한 권한 재요청 가능하다는 안내가 알럿 본문.
 - 법적 링크는 외부 브라우저.

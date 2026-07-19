@@ -76,6 +76,9 @@ iOS 대비 Android 구현의 차이를 severity 순으로 정리한 수정 목�
 ### B-10. [gallery] 상세 시트 '움직임' 토글 첫 프레임 ON 플래시 · low/behavior
 - **fix**: `GalleryGrid.kt:999` `produceState(initialValue = true, ...)` 의 IO 로드 전 기본값 true 가 먼저 그려져 깜빡임. 로드 완료 전 스위치 미노출 또는 초기값을 마지막 알던 상태로. iOS 는 동기 읽기(`CharacterGalleryView.swift:740`)라 무깜빡.
 
+### B-11. [gallery] 갤러리 클라우드 백업/복원 미구현 · missing-feature
+- 갤러리 클라우드 백업/복원 (iOS 구현됨 — 서버 `/gallery` API. Android 포트 필요: `ApiClient` + `CharacterImageStore` reconcile).
+
 ---
 
 ## C. Scope-leak (워치/잠금화면 등 iOS 전용 개념 문구) — 일괄 처리

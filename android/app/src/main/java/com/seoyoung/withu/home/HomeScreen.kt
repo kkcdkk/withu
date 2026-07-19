@@ -79,7 +79,7 @@ import com.seoyoung.withu.ui.RefreshIconButton
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuGreen
-import com.seoyoung.withu.ui.theme.withuPink
+import com.seoyoung.withu.ui.theme.withuHeroPink
 import com.seoyoung.withu.weather.WeatherCondition
 import com.seoyoung.withu.weather.WeatherManager
 import kotlinx.coroutines.delay
@@ -310,6 +310,7 @@ fun HomeScreen(
     if (showSettings) {
         SettingsSheet(
             onClose = { showSettings = false },
+            onOpenProfile = { showSettings = false; onOpenProfile() },
             onOpenDiagnostics = { showSettings = false; onOpenDiagnostics() },
             onShowHelp = { showSettings = false; onShowHelp() },
             onReonboard = { showSettings = false; onReonboard() },
@@ -509,7 +510,7 @@ private fun ActionButtons(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ActionLinkRow(
-            tint = withuPink(),
+            tint = withuHeroPink(),
             icon = Icons.Filled.AutoAwesome,
             title = stringRes(R.string.home_btn_gen_title),
             subtitle = stringRes(R.string.home_btn_gen_sub),

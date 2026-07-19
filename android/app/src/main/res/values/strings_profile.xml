@@ -33,7 +33,7 @@
     <string name="profile_align_success">최근 수면에 맞췄어요 — %1$02d:%2$02d ~ %3$02d:%4$02d</string>
     <string name="profile_sleep_footer_manual">자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요.</string>
     <!-- Android 치환: iOS 원문 "아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > withu…" → DND 취침 일정 안내 -->
-    <string name="profile_sleep_footer_no_signal">지금은 기기의 방해 금지 신호를 받아볼 수 없어서 위에서 정한 시간으로만 자요. 수면 모드에 맞춰 자게 하려면: 설정 &gt; 소리 및 진동 &gt; 방해 금지 에서 취침 시간 일정을 켜 주세요. (헬스 커넥트에 수면 기록이 있다면 자동으로 따라가요.)</string>
+    <string name="profile_sleep_footer_no_signal">수면 모드와 연결하려면: 설정 &gt; 소리 및 진동 &gt; 방해 금지 에서 취침 시간 일정을 켜 주세요. (헬스 커넥트에 수면 기록이 있다면 자동으로 따라가요.)</string>
     <!-- Android 치환: iOS 원문 "먼저 아이폰의 수면·집중 모드를 따르고…" → 방해 금지·수면 기록 -->
     <string name="profile_sleep_footer_default">먼저 기기의 방해 금지·수면 기록을 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 시간에 방해 금지 모드가 켜져 있으면 캐릭터가 잠에 들어요.</string>
 
@@ -58,7 +58,7 @@
     <!-- 움직임 섹션 -->
     <string name="profile_motion_header">움직임</string>
     <string name="profile_motion_toggle">캐릭터 움직이게 하기</string>
-    <string name="profile_motion_footer">움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요.</string>
+    <string name="profile_motion_footer">움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.</string>
 
     <!-- 고급 (캐릭터 외형 한 줄) -->
     <string name="profile_advanced_label">캐릭터 외형 한 줄 (고급)</string>

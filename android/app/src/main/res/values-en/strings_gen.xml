@@ -8,10 +8,8 @@
 
     <string name="gen_batch_title">Make every state at once</string>
     <string name="gen_batch_subtitle">Create the look for all states in one go</string>
-    <string name="gen_batch_footer">Recommended for first-timers. To make one at a time, pick below.</string>
 
     <string name="gen_mode_header">Generation option</string>
-    <string name="gen_mode_footer_ai">Draws a new character from your prompt. Each make costs candy depending on the options.</string>
     <string name="gen_mode_footer_import">Uses a photo or drawing you already have. Removes the background automatically and squares it up. No cost.</string>
 
     <string name="gen_state_header">State</string>

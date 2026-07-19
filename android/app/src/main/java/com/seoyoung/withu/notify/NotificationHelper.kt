@@ -60,6 +60,9 @@ object NotificationHelper {
     private const val MARKER_PERMISSION_REQUESTED = "withu.notification.permissionRequested"
 
     private const val BEDTIME_WORK_NAME = "withu.bedtimeReminder"
+    /** 취침 리마인더 시각 (자정 기준 분) — iOS @AppStorage 키와 바이트 동일. */
+    private const val BEDTIME_MINUTES_KEY = "withu.bedtimeReminderMinutes.v1"
+    private const val BEDTIME_MINUTES_DEFAULT = 22 * 60 + 30
 
     private val ctx: Context get() = WithuApp.context
 
@@ -113,6 +116,10 @@ object NotificationHelper {
         markerPrefs().edit().putBoolean(MARKER_PERMISSION_REQUESTED, true).apply()
     }
 
+    /** 권한을 한 번이라도 요청했는지 — 재요청이 무반응인 상태(iOS .denied 대응) 판정용. */
+    fun permissionRequested(): Boolean =
+        markerPrefs().getBoolean(MARKER_PERMISSION_REQUESTED, false)
+
     /**
      * 배치 생성 완료 알림 (스펙 11 §2.4 문구 전량).
      * anchor: done > 0 일 때만 '기준 모습' 알림 / rest: 완료·부분완료 / retry: 알림 없음.
@@ -150,12 +157,20 @@ object NotificationHelper {
         }
     }
 
-    /** 매일 22:30 취침 리마인더 — 자체 재예약 Worker (iOS UNCalendarNotificationTrigger 대응). */
-    fun scheduleBedtimeReminder() {
+    /** 저장된 취침 리마인더 시각 (자정 기준 분) — 설정 화면 피커 초기값. */
+    fun bedtimeReminderMinutes(): Int =
+        markerPrefs().getInt(BEDTIME_MINUTES_KEY, BEDTIME_MINUTES_DEFAULT)
+
+    /** 매일 선택 시각 취침 리마인더 — 자체 재예약 Worker (iOS UNCalendarNotificationTrigger 대응). */
+    fun scheduleBedtimeReminder(hour: Int = 22, minute: Int = 30) {
+        markerPrefs().edit().putInt(BEDTIME_MINUTES_KEY, hour * 60 + minute).apply()
         scheduleNextBedtime()
     }
 
-    internal fun scheduleNextBedtime(hour: Int = 22, minute: Int = 30) {
+    internal fun scheduleNextBedtime() {
+        val minutes = bedtimeReminderMinutes()
+        val hour = minutes / 60
+        val minute = minutes % 60
         val now = LocalDateTime.now()
         var next = LocalDateTime.of(LocalDate.now(), LocalTime.of(hour, minute))
         if (!next.isAfter(now)) next = next.plusDays(1)

@@ -47,7 +47,7 @@
     <string name="notify_channel_gen_progress">생성 진행</string>
     <string name="notify_auth_granted">허용됨</string>
     <string name="notify_auth_denied">거부됨</string>
-    <string name="notify_auth_not_asked">아직 요청 안 했어요</string>
+    <string name="notify_auth_not_asked">요청 안 함</string>
     <string name="notify_anchor_title">기준 모습이 준비됐어요</string>
     <string name="notify_anchor_body">마음에 드는지 확인하고 나머지 모습을 이어서 만들어 보세요.</string>
     <string name="notify_gen_done_title">캐릭터를 다 만들었어요</string>

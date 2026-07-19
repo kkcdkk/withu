@@ -2,7 +2,7 @@
 <!-- 홈/설정/진단/위젯 안내 strings (S1 소유 — 스펙 01 §2 문구 전량, iOS 원문 유지) -->
 <resources>
     <!-- 홈 (home_*) -->
-    <string name="home_title">with U</string>
+    <string name="home_title">Withy</string>
     <string name="home_weather_loading">날씨 가져오는 중…</string>
     <string name="home_weather_toggle">날씨 표시</string>
     <string name="home_metrics_title">오늘 활동</string>
@@ -38,13 +38,13 @@
     <string name="settings_title">설정</string>
     <string name="settings_more_header">더 만들기</string>
     <string name="settings_candy_charge">캔디 충전</string>
-    <string name="settings_candy_footer">캔디 %1$d개 갖고 있어요.</string>
+    <string name="settings_candy_footer">보유 캔디 %1$d개</string>
     <string name="settings_health_header">건강 데이터</string>
     <string name="settings_permission">권한</string>
     <string name="settings_health_granted">허용됨</string>
     <string name="settings_health_denied">허용 안 됨</string>
-    <string name="settings_health_reask">건강 권한 다시 묻기</string>
-    <string name="settings_health_refresh">오늘 데이터 새로고침</string>
+    <string name="settings_health_reask">권한 변경</string>
+    <string name="settings_health_refresh">데이터 새로고침</string>
     <string name="settings_health_done">최신화 완료</string>
     <string name="settings_health_failed">실패: %1$s</string>
     <string name="settings_health_item_sleep">수면</string>
@@ -69,27 +69,28 @@
     <string name="settings_notify_header">알림</string>
     <string name="settings_notify_status">권한 상태</string>
     <string name="settings_notify_request">알림 권한 요청</string>
-    <string name="settings_notify_bedtime">매일 22:30 취침 리마인더 설정</string>
+    <string name="settings_notify_open_settings">알림 권한은 설정 앱에서 변경</string>
+    <string name="settings_notify_bedtime">취침 리마인더 시간</string>
     <string name="settings_notify_cancel_all">등록된 알림 모두 취소</string>
     <string name="settings_diagnostics">캐릭터 상태 살펴보기</string>
-    <string name="settings_diagnostics_footer">집중 모드, 건강 앱 수면 기록, 운동 감지, 백그라운드 갱신 같은 자세한 정보예요. 평소엔 보지 않아도 돼요.</string>
+    <string name="settings_diagnostics_footer">집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.</string>
     <string name="settings_help_header">도움말</string>
     <string name="settings_help_guide">사용법 보기</string>
     <!-- iOS "홈 화면·시계 화면에 두기" — Android 는 시계 제외 (스펙 01 §2.3) -->
     <string name="settings_widget_guide">홈 화면에 두기</string>
     <string name="settings_reonboard">처음 안내 다시 보기</string>
-    <string name="settings_reonboard_body">권한 안내 화면을 처음부터 다시 봐요. 거절한 권한도 다시 한 번 물어볼 수 있어요.</string>
+    <string name="settings_reonboard_body">권한 안내를 처음부터 다시 보고, 거절한 권한도 다시 물어봐요.</string>
     <string name="settings_reonboard_confirm">다시 보기</string>
     <string name="settings_legal_header">법적 정보</string>
     <string name="settings_privacy">개인정보처리방침</string>
     <string name="settings_terms">이용약관</string>
 
     <!-- 위젯 안내 시트 (widget_guide_*) — 단계 문구는 Android 절차 대체안 (스펙 01 §2.4) -->
-    <string name="widget_guide_title">홈 화면에 withu 두기</string>
+    <string name="widget_guide_title">홈 화면에 Withy 두기</string>
     <string name="widget_guide_home_title">홈 화면 위젯</string>
     <string name="widget_guide_step_1">홈 화면 빈 곳을 길게 눌러주세요</string>
     <string name="widget_guide_step_2">\'위젯\'을 눌러주세요</string>
-    <string name="widget_guide_step_3">목록에서 \"withu\"를 찾아주세요</string>
+    <string name="widget_guide_step_3">목록에서 \"Withy\"를 찾아주세요</string>
     <string name="widget_guide_step_4">원하는 크기를 골라 추가해주세요</string>
     <string name="widget_guide_step_num">%1$d.</string>
 
@@ -99,15 +100,15 @@
     <string name="diag_inbed_48h">최근 48시간 잠자리 기록</string>
     <string name="diag_count_fmt">%1$d개</string>
     <string name="diag_inbed_now">지금 잠자리 시간대</string>
-    <string name="diag_pill_yes">맞아요</string>
-    <string name="diag_pill_no">아니에요</string>
+    <string name="diag_pill_yes">예</string>
+    <string name="diag_pill_no">아니요</string>
     <string name="diag_last_inbed_start">마지막 잠자리 시작</string>
     <string name="diag_sleep_7d">최근 7일 수면 기록</string>
     <string name="diag_last_sleep_start">마지막 수면 시작</string>
     <string name="diag_sleep_refetch">수면 기록 다시 가져오기</string>
     <string name="diag_motion_header">운동 감지</string>
-    <string name="diag_workout_likely">운동 중으로 보이나요</string>
-    <string name="diag_pill_likely">그런 것 같아요</string>
+    <string name="diag_workout_likely">운동 중 추정</string>
+    <string name="diag_pill_likely">예</string>
     <string name="diag_hr_90s">최근 90초 심박 기록</string>
     <string name="diag_hr_avg">평균 심박수</string>
     <string name="diag_hr_bpm">분당 %1$d회</string>
@@ -115,10 +116,10 @@
     <!-- iOS "위젯·워치 다시 맞추기" — 워치 제외 (스펙 01 §2.5) -->
     <string name="diag_debug_header">위젯 다시 맞추기</string>
     <string name="diag_last_bg">마지막 백그라운드 갱신</string>
-    <string name="diag_never">한 번도 없음</string>
+    <string name="diag_never">없음</string>
     <string name="diag_state_picker">상태 직접 고르기</string>
-    <string name="diag_state_auto">자동으로 맡기기 (추천)</string>
+    <string name="diag_state_auto">자동 (추천)</string>
     <string name="diag_widget_refresh">위젯 지금 새로고침</string>
-    <!-- iOS 푸터의 첫 두 문장만 — 워치 문장 삭제 (스펙 01 §2.5) -->
-    <string name="diag_debug_footer">백그라운드 갱신은 폰이 앱을 잠깐 깨워 화면을 새로 맞춘 시각이에요. 30분에서 몇 시간 간격으로 폰이 알아서 정해요.</string>
+    <!-- iOS 푸터의 첫 문장만 — 워치 문장 삭제 (스펙 01 §2.5) -->
+    <string name="diag_debug_footer">백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요.</string>
 </resources>

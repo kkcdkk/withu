@@ -11,11 +11,9 @@
     <!-- batchSection -->
     <string name="gen_batch_title">여러 상태 한 번에 만들기</string>
     <string name="gen_batch_subtitle">모든 상태의 모습을 한번에 만들어요</string>
-    <string name="gen_batch_footer">처음이라면 이걸 추천해요. 한 가지씩 만들고 싶으면 아래에서 골라요.</string>
 
     <!-- modeSection -->
     <string name="gen_mode_header">생성 옵션</string>
-    <string name="gen_mode_footer_ai">프롬프트대로 새 캐릭터를 그려줘요. 만들 때마다 선택한 옵션에 따라 비용이 들어요.</string>
     <string name="gen_mode_footer_import">가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.</string>
 
     <!-- stateSection -->

@@ -27,9 +27,23 @@ android {
             "\"${localProps.getProperty("WITHU_API_TOKEN", "")}\"")
     }
 
+    // 릴리스 서명 (업로드 키) — local.properties 에서 읽음(커밋 제외). keystore 없으면 미서명 빌드.
+    signingConfigs {
+        val storePath = localProps.getProperty("WITHU_UPLOAD_STORE_FILE")
+        if (storePath != null && rootProject.file(storePath).exists()) {
+            create("release") {
+                storeFile = rootProject.file(storePath)
+                storePassword = localProps.getProperty("WITHU_UPLOAD_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("WITHU_UPLOAD_KEY_ALIAS")
+                keyPassword = localProps.getProperty("WITHU_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     buildFeatures {

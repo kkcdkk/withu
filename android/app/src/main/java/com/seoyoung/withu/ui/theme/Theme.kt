@@ -8,19 +8,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // iOS OnboardingView.swift 의 브랜드 팔레트 포팅 (라이트/다크) — 스펙 06 hex
+// 2026-07: 브랜드 색 전환 — 연핑크 → 그린(withuGreen 새싹 톤 기준). 이름은 iOS 와 동일하게 유지.
 object WithuColors {
-    val pinkLight = Color(0xFFFFC7D9)        // withuPink light — 파스텔 (면적/버튼 배경용)
-    val pinkDark = Color(0xFF8C526B)         // withuPink dark — 채도 낮은 와인
-    val pinkSoftLight = Color(0xFFFFD9EB)    // withuPinkSoft — 캐릭터 원 배경, soft chip 등 더 옅은 톤
-    val pinkSoftDark = Color(0xFF73475C)
-    val pinkTextLight = Color(0xFFC75278)    // withuPinkText — 글자·링크·배지용 진한 로즈 (파스텔은 안 읽힘)
-    val pinkTextDark = Color(0xFFF29EB8)
+    val pinkLight = Color(0xFF8CCC94)        // withuPink light — 새싹 그린 (면적/버튼 배경용, greenLight 와 동일 톤)
+    val pinkDark = Color(0xFF4D7A5C)         // withuPink dark — 딥그린
+    val pinkSoftLight = Color(0xFFB8E3BD)    // withuPinkSoft — 캐릭터 원 배경, soft chip 등 더 옅은 톤
+    val pinkSoftDark = Color(0xFF42664F)
+    val pinkTextLight = Color(0xFF338047)    // withuPinkText — 글자·링크·배지용 진한 그린 (파스텔은 안 읽힘)
+    val pinkTextDark = Color(0xFF9EDBA8)
     val greenLight = Color(0xFF8CCC94)       // withuGreen light — 새싹 (배경 그라데이션 기조)
     val greenDark = Color(0xFF4D7A5C)
     val ctaGreenLight = Color(0xFF33C759)    // CTA — 아이폰 메시지 초록 톤 (흰 글자 대비)
     val ctaGreenDark = Color(0xFF299E4A)
-    val pinkBackgroundLight = Color(0xFFFFF2F7)
-    val pinkBackgroundDark = Color(0xFF1F1419)
+    val pinkBackgroundLight = Color(0xFFF2FCF5)
+    val pinkBackgroundDark = Color(0xFF141C17)
+    // 홈 '함께할 캐릭터 생성하기' 버튼 전용 — 그린 전환 후에도 원래 연핑크 유지 (사용자 지정, iOS withuHeroPink)
+    val heroPinkLight = Color(0xFFFFC7D9)
+    val heroPinkDark = Color(0xFF8C526B)
 
     // iOS 시스템 색 근사 (스펙 06 §5 — 온보딩/StatusPill/tint 칩 공용)
     val systemMint = Color(0xFF00C7BE)
@@ -54,6 +58,10 @@ fun withuCTAGreen(): Color =
 @Composable
 fun withuPinkBackground(): Color =
     if (isSystemInDarkTheme()) WithuColors.pinkBackgroundDark else WithuColors.pinkBackgroundLight
+
+@Composable
+fun withuHeroPink(): Color =
+    if (isSystemInDarkTheme()) WithuColors.heroPinkDark else WithuColors.heroPinkLight
 
 private val LightScheme = lightColorScheme(
     primary = WithuColors.ctaGreenLight,

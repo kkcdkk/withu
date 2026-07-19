@@ -2,7 +2,7 @@
 <!-- Home/Settings/Diagnostics/Widget-guide strings (S1) — English localization, 1:1 with values/strings_home.xml -->
 <resources>
     <!-- Home (home_*) -->
-    <string name="home_title">with U</string>
+    <string name="home_title">Withy</string>
     <string name="home_weather_loading">Getting the weather…</string>
     <string name="home_weather_toggle">Show weather</string>
     <string name="home_metrics_title">Today\'s activity</string>
@@ -38,12 +38,12 @@
     <string name="settings_title">Settings</string>
     <string name="settings_more_header">Make more</string>
     <string name="settings_candy_charge">Buy candy</string>
-    <string name="settings_candy_footer">You have %1$d candy.</string>
+    <string name="settings_candy_footer">Candies: %1$d</string>
     <string name="settings_health_header">Health data</string>
     <string name="settings_permission">Permission</string>
     <string name="settings_health_granted">Allowed</string>
     <string name="settings_health_denied">Not allowed</string>
-    <string name="settings_health_reask">Ask for health permission again</string>
+    <string name="settings_health_reask">Change Health permission in the Settings app</string>
     <string name="settings_health_refresh">Refresh today\'s data</string>
     <string name="settings_health_done">Up to date</string>
     <string name="settings_health_failed">Failed: %1$s</string>
@@ -55,26 +55,27 @@
     <string name="settings_notify_header">Notifications</string>
     <string name="settings_notify_status">Permission status</string>
     <string name="settings_notify_request">Request notification permission</string>
-    <string name="settings_notify_bedtime">Set a daily 22:30 bedtime reminder</string>
+    <string name="settings_notify_open_settings">Change notification permission in the Settings app</string>
+    <string name="settings_notify_bedtime">Bedtime reminder time</string>
     <string name="settings_notify_cancel_all">Cancel all scheduled notifications</string>
     <string name="settings_diagnostics">Look into character state</string>
-    <string name="settings_diagnostics_footer">Details like Focus, Health app sleep records, workout detection, and background refresh. You don\'t normally need to look here.</string>
+    <string name="settings_diagnostics_footer">Check Focus, sleep records, workout detection, and background refresh status.</string>
     <string name="settings_help_header">Help</string>
     <string name="settings_help_guide">How to use</string>
     <string name="settings_widget_guide">Add to home screen</string>
     <string name="settings_reonboard">See the intro again</string>
-    <string name="settings_reonboard_body">Walk through the permission intro from the start. Permissions you declined can be asked again.</string>
+    <string name="settings_reonboard_body">Shows the permission guide from the start and asks declined permissions again.</string>
     <string name="settings_reonboard_confirm">See again</string>
     <string name="settings_legal_header">Legal</string>
     <string name="settings_privacy">Privacy Policy</string>
     <string name="settings_terms">Terms of Service</string>
 
     <!-- Widget guide sheet (widget_guide_*) -->
-    <string name="widget_guide_title">Put withu on your home screen</string>
+    <string name="widget_guide_title">Put Withy on your home screen</string>
     <string name="widget_guide_home_title">Home screen widget</string>
     <string name="widget_guide_step_1">Touch and hold an empty spot on the home screen</string>
     <string name="widget_guide_step_2">Tap \'Widgets\'</string>
-    <string name="widget_guide_step_3">Find \"withu\" in the list</string>
+    <string name="widget_guide_step_3">Find \"Withy\" in the list</string>
     <string name="widget_guide_step_4">Pick the size you want and add it</string>
     <string name="widget_guide_step_num">%1$d.</string>
 
@@ -91,17 +92,17 @@
     <string name="diag_last_sleep_start">Last sleep start</string>
     <string name="diag_sleep_refetch">Fetch sleep records again</string>
     <string name="diag_motion_header">Workout detection</string>
-    <string name="diag_workout_likely">Looks like you\'re working out?</string>
-    <string name="diag_pill_likely">Seems so</string>
+    <string name="diag_workout_likely">Workout likely</string>
+    <string name="diag_pill_likely">Yes</string>
     <string name="diag_hr_90s">Heart-rate records in the last 90s</string>
     <string name="diag_hr_avg">Average heart rate</string>
     <string name="diag_hr_bpm">%1$d bpm</string>
     <string name="diag_hr_recheck">Recheck with heart rate</string>
     <string name="diag_debug_header">Re-align widget</string>
     <string name="diag_last_bg">Last background refresh</string>
-    <string name="diag_never">Never</string>
+    <string name="diag_never">None</string>
     <string name="diag_state_picker">Pick a state manually</string>
-    <string name="diag_state_auto">Let it decide (recommended)</string>
+    <string name="diag_state_auto">Auto (recommended)</string>
     <string name="diag_widget_refresh">Refresh widget now</string>
-    <string name="diag_debug_footer">Background refresh is when the phone briefly wakes the app to re-align the display. The phone decides the timing on its own, from every 30 minutes to a few hours.</string>
+    <string name="diag_debug_footer">Background refresh runs automatically every 30 minutes to a few hours.</string>
 </resources>

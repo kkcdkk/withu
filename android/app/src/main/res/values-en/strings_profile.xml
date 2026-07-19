@@ -27,7 +27,7 @@
     <string name="profile_align_fail">Not enough recent sleep records. After a few nights of sleep, we can match it.</string>
     <string name="profile_align_success">Matched to your recent sleep — %1$02d:%2$02d ~ %3$02d:%4$02d</string>
     <string name="profile_sleep_footer_manual">Auto-detection is off. Only the times set above will be used.</string>
-    <string name="profile_sleep_footer_no_signal">We can\'t read your device\'s Do Not Disturb right now, so your character only sleeps at the times set above. To have it follow your sleep mode: Settings &gt; Sound &amp; vibration &gt; Do Not Disturb &gt; turn on a bedtime schedule. (If you have sleep records in Health Connect, it follows those automatically.)</string>
+    <string name="profile_sleep_footer_no_signal">To connect with your sleep mode: Settings &gt; Sound &amp; vibration &gt; Do Not Disturb &gt; turn on a bedtime schedule. (If you have sleep records in Health Connect, it follows those automatically.)</string>
     <string name="profile_sleep_footer_default">Your device\'s Do Not Disturb and sleep records come first; if none is available, the time you set above is used. When Do Not Disturb is on during sleep hours, your character goes to sleep.</string>
 
     <string name="profile_meal_header">Meal times</string>
@@ -47,7 +47,7 @@
 
     <string name="profile_motion_header">Animation</string>
     <string name="profile_motion_toggle">Make your character move</string>
-    <string name="profile_motion_footer">For characters made as animated, choose whether to show them moving. Turn it off to show a single image and save battery.</string>
+    <string name="profile_motion_footer">For characters made as animated, choose whether the character moves.</string>
 
     <string name="profile_advanced_label">Character appearance in one line (advanced)</string>
     <string name="profile_advanced_placeholder">e.g. a pink bunny, a roly-poly character with big eyes</string>

@@ -28,7 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -84,6 +86,7 @@ private fun <T> StateFlow<T>.collectAsStateCompat(): State<T> = collectAsState()
 @Composable
 fun SettingsSheet(
     onClose: () -> Unit,
+    onOpenProfile: () -> Unit,
     onOpenDiagnostics: () -> Unit,
     onShowHelp: () -> Unit,
     onReonboard: () -> Unit,
@@ -94,6 +97,7 @@ fun SettingsSheet(
     ) {
         SettingsContent(
             onClose = onClose,
+            onOpenProfile = onOpenProfile,
             onOpenDiagnostics = onOpenDiagnostics,
             onShowHelp = onShowHelp,
             onReonboard = onReonboard,
@@ -105,6 +109,7 @@ fun SettingsSheet(
 @Composable
 private fun SettingsContent(
     onClose: () -> Unit,
+    onOpenProfile: () -> Unit,
     onOpenDiagnostics: () -> Unit,
     onShowHelp: () -> Unit,
     onReonboard: () -> Unit,
@@ -121,6 +126,7 @@ private fun SettingsContent(
     var showPaywall by remember { mutableStateOf(false) }
     var showWidgetGuide by remember { mutableStateOf(false) }
     var showReonboardConfirm by remember { mutableStateOf(false) }
+    var showBedtimePicker by remember { mutableStateOf(false) }
 
     // 갤럭시 워치 연동 상태 (비동기 조회)
     var watchState by remember { mutableStateOf<com.seoyoung.withu.watch.WatchStatus.State?>(null) }
@@ -143,6 +149,7 @@ private fun SettingsContent(
     val gradient = rememberBackgroundGradient(CharacterState.IDLE)
     val notifLabel = remember(notifTick) { NotificationHelper.authorizationLabel() }
     val notifGranted = remember(notifTick) { NotificationHelper.hasPermission() }
+    val notifAsked = remember(notifTick) { NotificationHelper.permissionRequested() }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -188,6 +195,8 @@ private fun SettingsContent(
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                // iOS 는 HealthKit 재요청이 무반응이라 설정 앱으로 안내 — Android(Health Connect)는
+                // 권한 변경 화면을 launcher 로 바로 띄울 수 있어 그 화면을 연다 (문구는 iOS 원문 유지).
                 SettingsButtonRow(title = stringRes(R.string.settings_health_reask)) {
                     if (HealthManager.isAvailable()) {
                         healthPermissionLauncher.launch(HealthManager.requiredPermissions())
@@ -227,17 +236,21 @@ private fun SettingsContent(
                 }
                 if (!notifGranted) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    SettingsButtonRow(title = stringRes(R.string.settings_notify_request)) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notifAsked) {
+                        SettingsButtonRow(title = stringRes(R.string.settings_notify_request)) {
                             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            openAppSettingsFromSettings(context)
+                        }
+                    } else {
+                        // 이미 거절된 뒤에는 시스템 다이얼로그가 무반응 — 설정 앱 알림 화면으로 안내 (iOS 파리티)
+                        SettingsButtonRow(title = stringRes(R.string.settings_notify_open_settings)) {
+                            openNotificationSettings(context)
                         }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                // 행 탭 → 시간 피커 다이얼로그 → 확인 시 예약 (iOS DatePicker+확인 행 대응)
                 SettingsButtonRow(title = stringRes(R.string.settings_notify_bedtime)) {
-                    NotificationHelper.scheduleBedtimeReminder()
+                    showBedtimePicker = true
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 SettingsButtonRow(
@@ -300,8 +313,10 @@ private fun SettingsContent(
                 }
             }
 
-            // 4. 진단 링크
+            // 4. 캐릭터 (프로필 진입 + 진단 링크) — iOS 와 동일하게 진단 row 위에 프로필 row
             FormSection(footer = stringRes(R.string.settings_diagnostics_footer)) {
+                SettingsButtonRow(title = stringRes(R.string.home_btn_profile_title)) { onOpenProfile() }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 SettingsButtonRow(title = stringRes(R.string.settings_diagnostics)) { onOpenDiagnostics() }
             }
 
@@ -332,6 +347,18 @@ private fun SettingsContent(
     if (showWidgetGuide) {
         WidgetGuideSheet(onClose = { showWidgetGuide = false })
     }
+    if (showBedtimePicker) {
+        val stored = NotificationHelper.bedtimeReminderMinutes()
+        BedtimePickerDialog(
+            initialHour = stored / 60,
+            initialMinute = stored % 60,
+            onConfirm = { h, m ->
+                NotificationHelper.scheduleBedtimeReminder(hour = h, minute = m)
+                showBedtimePicker = false
+            },
+            onDismiss = { showBedtimePicker = false },
+        )
+    }
     if (showReonboardConfirm) {
         AlertDialog(
             onDismissRequest = { showReonboardConfirm = false },
@@ -350,6 +377,35 @@ private fun SettingsContent(
             },
         )
     }
+}
+
+// MARK: - 취침 리마인더 시간 피커 (ProfileScreen 의 TimePickerDialog 패턴)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BedtimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onConfirm: (Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(state.hour, state.minute) }) {
+                Text(stringResource(R.string.common_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+        },
+        text = { TimePicker(state = state) },
+    )
 }
 
 // MARK: - 행 프리미티브
@@ -434,4 +490,14 @@ private fun openAppSettingsFromSettings(context: Context) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     runCatching { context.startActivity(intent) }
+}
+
+/** 앱 알림 설정 화면 — 거절된 권한은 재요청이 무반응이라 여기로 안내 (iOS '설정 앱에서 변경' 대응). */
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching { context.startActivity(intent) }
+        .onFailure { openAppSettingsFromSettings(context) }
 }

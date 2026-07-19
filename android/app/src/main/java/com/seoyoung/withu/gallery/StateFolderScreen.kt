@@ -32,11 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.seoyoung.withu.R
 import com.seoyoung.withu.character.CharacterImage
 import com.seoyoung.withu.character.CharacterState
@@ -118,7 +119,23 @@ fun StateFolderScreen(
                             .background(state.tint.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(state.symbolEmoji, fontSize = 44.sp)
+                        // 이모지 대신 번들 기본 일러스트 (iOS emptyState 동일) — 투명 PNG 라 tint 배경과 어울림
+                        val context = LocalContext.current
+                        val assetId = remember(state) {
+                            fun idOf(name: String) =
+                                context.resources.getIdentifier(name, "drawable", context.packageName)
+                            var id = idOf(state.imageAssetName)
+                            if (id == 0) id = idOf("character_placeholder")
+                            id
+                        }
+                        Image(
+                            painter = painterResource(assetId),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                        )
                     }
                     Text(
                         stringResource(R.string.gallery_state_empty_title, state.koreanShortLabel),
