@@ -158,23 +158,33 @@ struct WidgetView: View {
     }
 }
 
-// MARK: 잠금화면 (accessory*) — 시스템이 모노톤 tint 강제하지만
-// alpha PNG 의 캐릭터 실루엣은 그대로 살아남음. 시스템 색으로 채워진 캐릭터.
+// MARK: 잠금화면 (accessory*) — 시스템이 모노톤 tint 강제 (vibrant).
+// vibrant 는 이미지 밝기로 눈코입 디테일을 살려 그리므로 투명 배경 그림은 그대로 두는 게 낫다.
+// 배경이 불투명한 그림(예: 기본 eating 의 식탁)만 통짜 덩어리로 보여 외곽선 모드가 필요 —
+// 실제 표시될 이미지의 모서리 알파를 검사해 그 경우에만 외곽선으로 그린다.
+
+// 판단 헬퍼는 4타깃 공용 CharacterImageView.hasOpaqueBackground(_:) 사용 (컴플리케이션과 공유).
 
 private struct CircularView: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: CharacterEntry
     var body: some View {
         // accessoryCircular 은 작은 원. 128px 면 충분 (메모리 절약).
-        CharacterImageView(state: entry.state, maxPixelSize: 128)
+        CharacterImageView(state: entry.state, maxPixelSize: 128,
+                           outlineOnly: renderingMode != .fullColor
+                               && CharacterImageView.hasOpaqueBackground(entry.state))
             .widgetAccentable()
     }
 }
 
 private struct RectangularView: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: CharacterEntry
     var body: some View {
         HStack(spacing: 6) {
-            CharacterImageView(state: entry.state, maxPixelSize: 128)
+            CharacterImageView(state: entry.state, maxPixelSize: 128,
+                               outlineOnly: renderingMode != .fullColor
+                                   && CharacterImageView.hasOpaqueBackground(entry.state))
                 .frame(width: 28, height: 28)
                 .widgetAccentable()
             VStack(alignment: .leading, spacing: 1) {
@@ -375,7 +385,7 @@ struct withuWidget: Widget {
                 }
                 .widgetURL(URL(string: "withu://main"))   // 위젯 탭 → 앱 열림
         }
-        .configurationDisplayName("withu 캐릭터")
+        .configurationDisplayName("Withy 캐릭터")
         .description("내 캐릭터의 지금 상태를 보여줘요.")
         .supportedFamilies([
             .accessoryCircular,

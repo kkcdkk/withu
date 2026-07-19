@@ -124,7 +124,9 @@ struct CharacterComplicationView: View {
     }
 
     /// fullColor (Modular 등) → 원본 그대로
-    /// accented/vibrant (단색 강제 face) → outline + 어두운 디테일
+    /// accented/vibrant (단색 강제 face) → outline + 어두운 디테일.
+    /// ⚠️ 워치 틴트 페이스는 iOS 잠금화면(vibrant)과 달리 이미지 밝기로 디테일을
+    /// 살려주지 않아, 풀컬러를 그대로 넘기면 빈 원만 보인다 — 워치는 항상 외곽선 유지.
     private var useOutline: Bool {
         renderingMode != .fullColor
     }
@@ -177,7 +179,7 @@ struct withuComplication: Widget {
                 }
                 .widgetURL(URL(string: "withu://main"))   // 컴플리케이션 탭 → 워치 앱 열림
         }
-        .configurationDisplayName("withu 캐릭터")
+        .configurationDisplayName("Withy 캐릭터")
         .description("내 캐릭터의 지금 상태를 시계 페이스에 보여줘요.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
         .containerBackgroundRemovable(true)

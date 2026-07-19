@@ -72,9 +72,19 @@ struct CharacterImageView: View {
                     .scaledToFit()
             }
         } else if let assetName = assetNameWithFallback() {
-            Image(assetName)
-                .resizable()
-                .scaledToFit()
+            if outlineOnly, let assetImage = UIImage(named: assetName) {
+                // 단색 강제 환경 — 번들 에셋도 사용자 이미지와 동일하게 외곽선만.
+                // (풀컬러로 그리면 잠금화면/컴플리케이션에서 알파 실루엣 덩어리로 보임)
+                Image(uiImage: Self.outlineImage(from: downsampledForOutline(assetImage)))
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .widgetAccentable()
+            } else {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+            }
         } else {
             sfSymbolFallback
         }
@@ -146,12 +156,55 @@ struct CharacterImageView: View {
         return CharacterImageStore.load(state)
     }
 
+    /// outlineImage 는 픽셀 전수 순회라 원본 크기로 돌리면 위젯 메모리/CPU 초과 위험 —
+    /// maxPixelSize 지정 시 (위젯/컴플리케이션) 그 크기로 먼저 축소한 뒤 외곽선 추출.
+    private func downsampledForOutline(_ image: UIImage) -> UIImage {
+        guard let maxPixelSize else { return image }
+        let pixelWidth = image.size.width * image.scale
+        let pixelHeight = image.size.height * image.scale
+        let longest = max(pixelWidth, pixelHeight)
+        guard longest > maxPixelSize else { return image }
+        let ratio = maxPixelSize / longest
+        let newSize = CGSize(width: pixelWidth * ratio, height: pixelHeight * ratio)
+        // UIGraphicsImageRenderer 는 watchOS 미지원 — CGContext 로 직접 축소 (4개 타깃 공용).
+        guard let cg = image.cgImage,
+              let ctx = CGContext(data: nil,
+                                  width: Int(newSize.width), height: Int(newSize.height),
+                                  bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return image }
+        ctx.interpolationQuality = .medium
+        ctx.draw(cg, in: CGRect(origin: .zero, size: newSize))
+        guard let scaled = ctx.makeImage() else { return image }
+        return UIImage(cgImage: scaled)
+    }
+
     private func maybeDownsample(_ image: UIImage) -> UIImage {
         guard let maxPixelSize else { return image }
         // 단순화: frame 1 은 작은 PNG 가정. downsampling 없어도 OK.
         // 메모리 위험 시 maxPixelSize 적용은 loadThumbnail 만 가능 — 따로 안 함.
         _ = maxPixelSize
         return image
+    }
+
+    /// 표시될 이미지(사용자 PNG 우선, 없으면 번들 에셋)의 네 모서리 중 불투명한 곳이 있으면 true.
+    /// 잠금화면·단색 워치 페이스는 이미지 밝기로 눈코입 디테일을 살려 그리므로 투명 배경 그림은
+    /// 그대로 두는 게 낫고, 배경이 불투명한 그림(예: 기본 eating 의 식탁)만 외곽선이 필요하다.
+    /// 위젯·컴플리케이션의 outlineOnly 판단용 공용 헬퍼.
+    static func hasOpaqueBackground(_ state: CharacterState) -> Bool {
+        let image = CharacterImageStore.loadThumbnail(state, maxPixelSize: 16)
+            ?? UIImage(named: state.imageAssetName)
+        guard let cg = image?.cgImage else { return false }
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return false }
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h,
+                                  bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        let corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + w - 1) * 4]
+        return corners.contains { pixels[$0 + 3] > 24 }
     }
 
     /// PNG 의 alpha mask 외곽선 추출 (CoreImage 의존성 X).
@@ -208,8 +261,14 @@ struct CharacterImageView: View {
                     outBuf[idx] = 255; outBuf[idx+1] = 255
                     outBuf[idx+2] = 255; outBuf[idx+3] = 255
                 } else {
-                    outBuf[idx] = 0; outBuf[idx+1] = 0
-                    outBuf[idx+2] = 0; outBuf[idx+3] = 0
+                    // 중간 톤은 반투명 '잉크'로 — 어두울수록 진하게, 밝을수록 투명하게.
+                    // 이진 처리(외곽선+진한 디테일만)로는 연한 눈코입/음영이 통째로 사라져
+                    // 틴트 페이스에서 빈 실루엣만 보이던 문제 보완.
+                    // premultipliedLast: 흰색 × alpha 프리멀티플라이 = 네 채널 동일 값.
+                    let ink = (255 - luminance) * Int(alpha) / 255
+                    let a = UInt8(max(0, min(255, ink)))
+                    outBuf[idx] = a; outBuf[idx+1] = a
+                    outBuf[idx+2] = a; outBuf[idx+3] = a
                 }
             }
         }
