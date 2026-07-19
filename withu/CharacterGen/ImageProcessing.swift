@@ -293,7 +293,12 @@ enum ImageProcessing {
     static func transparentized(_ image: UIImage) async -> UIImage {
         let keyed = chromaKeyRemoved(image)
         guard hasOpaqueCorners(keyed) else { return keyed }
-        return (try? await removeBackground(from: keyed)) ?? keyed
+        guard let cut = try? await removeBackground(from: keyed),
+              CharacterImageView.alphaCoverage(cut) >= 0.02 else {
+            // Vision 이 전경을 못 찾아 사실상 빈 결과를 주면 원본 유지 (빈 그림 저장 방지)
+            return keyed
+        }
+        return cut
     }
 
     /// 네 모서리 중 불투명한 곳이 있으면 true — 배경 잔존 판정 (16px 축소본으로 검사).
@@ -319,8 +324,24 @@ enum ImageProcessing {
         for state in CharacterState.allCases {
             for frame in 0...1 {
                 guard let data = CharacterImageStore.activeImageData(for: state, frame: frame),
-                      let img = UIImage(data: data), hasOpaqueCorners(img),
+                      let img = UIImage(data: data) else { continue }
+                // 사실상 빈 그림(잘못된 배경 제거 결과가 저장된 경우) → 갤러리 원본으로 복원,
+                // 원본이 없거나 그것도 비었으면 슬롯 삭제(번들 일러스트 fallback — 빈 위젯 방지).
+                if CharacterImageView.alphaCoverage(img) < 0.02 {
+                    if let id = CharacterImageStore.currentGalleryItemId(for: state),
+                       let galleryData = CharacterImageStore.galleryImageData(id: id, frame: frame),
+                       let galleryImg = UIImage(data: galleryData),
+                       CharacterImageView.alphaCoverage(galleryImg) >= 0.02 {
+                        CharacterImageStore.rewriteActiveImage(galleryData, for: state, frame: frame)
+                    } else {
+                        CharacterImageStore.removeActiveImage(for: state, frame: frame)
+                    }
+                    changed = true
+                    continue
+                }
+                guard hasOpaqueCorners(img),
                       let fixed = try? await removeBackground(from: img),
+                      CharacterImageView.alphaCoverage(fixed) >= 0.02,   // 빈 결과로 덮어쓰기 금지
                       let out = fixed.pngData() else { continue }
                 CharacterImageStore.rewriteActiveImage(out, for: state, frame: frame)
                 changed = true
@@ -331,7 +352,8 @@ enum ImageProcessing {
             for frame in frames {
                 guard let data = CharacterImageStore.galleryImageData(id: item.id, frame: frame),
                       let img = UIImage(data: data), hasOpaqueCorners(img),
-                      let fixed = try? await removeBackground(from: img) else { continue }
+                      let fixed = try? await removeBackground(from: img),
+                      CharacterImageView.alphaCoverage(fixed) >= 0.02 else { continue }
                 CharacterImageStore.replaceGalleryImage(item.id, with: fixed, frame: frame)
                 changed = true
             }

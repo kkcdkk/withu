@@ -725,6 +725,13 @@ enum CharacterImageStore {
         return try? Data(contentsOf: url)
     }
 
+    /// 활성 슬롯 파일 삭제 — 손상된(사실상 빈) 그림 제거용. 이후 표시는 번들 일러스트 fallback.
+    static func removeActiveImage(for state: CharacterState, frame: Int = 0) {
+        guard let url = activeFileURL(for: state, frame: frame) else { return }
+        try? FileManager.default.removeItem(at: url)
+        NotificationCenter.default.post(name: .characterImageChanged, object: state)
+    }
+
     /// 활성 슬롯 파일 제자리 교체 — 투명화 보정(backfill)용.
     /// 파일 버전(mtime/size)이 바뀌므로 앱/위젯의 디코드 캐시는 자동 무효화된다.
     static func rewriteActiveImage(_ data: Data, for state: CharacterState, frame: Int = 0) {

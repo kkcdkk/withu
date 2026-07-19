@@ -199,13 +199,30 @@ struct CharacterImageView: View {
     /// 반환: (preferBundled: 사용자 이미지 건너뛸지, outline: 외곽선 모드일지)
     static func accessoryPlan(for state: CharacterState) -> (preferBundled: Bool, outline: Bool) {
         if CharacterImageStore.hasImage(for: state),
-           let user = CharacterImageStore.loadThumbnail(state, maxPixelSize: 16),
-           !imageHasOpaqueCorners(user) {
+           let user = CharacterImageStore.loadThumbnail(state, maxPixelSize: 64),
+           !imageHasOpaqueCorners(user),
+           alphaCoverage(user) >= 0.02 {   // 사실상 빈 그림이면 번들로 (위젯이 텅 비지 않게)
             return (preferBundled: false, outline: false)   // 투명 사용자 그림 — 그대로
         }
         // 사용자 그림이 없거나 불투명 → 번들 기준으로 판단
         let bundledOpaque = imageHasOpaqueCorners(UIImage(named: state.imageAssetName))
         return (preferBundled: true, outline: bundledOpaque)
+    }
+
+    /// 이미지에서 보이는(알파>24) 픽셀 비율 — 64px 샘플. 사실상 빈 그림(잘못된 배경 제거
+    /// 결과 등) 판정에 사용: 0.02 미만이면 표시할 내용이 없는 것으로 본다.
+    static func alphaCoverage(_ image: UIImage) -> Double {
+        guard let cg = image.cgImage else { return 0 }
+        let w = 64, h = 64
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h,
+                                  bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return 0 }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var visible = 0
+        for i in stride(from: 3, to: pixels.count, by: 4) where pixels[i] > 24 { visible += 1 }
+        return Double(visible) / Double(w * h)
     }
 
     /// 네 모서리 중 불투명한 곳이 있으면 true (배경이 있는 그림으로 간주).

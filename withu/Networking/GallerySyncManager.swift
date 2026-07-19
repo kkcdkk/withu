@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import UIKit
 
 extension Notification.Name {
     /// 서버 백업에서 갤러리 항목을 복원함 — CharacterGalleryView 재로드용.
@@ -163,6 +164,9 @@ actor GallerySyncManager {
                 if (item.hasFrame1 ?? false) && server.hasFrame1 != true {
                     await upload(item)
                 }
+                // 손상 복구 — 로컬 그림이 사실상 비어 있으면(잘못된 배경 제거 저장 등)
+                // 서버 백업본으로 되살린다. 슬롯에 적용돼 있던 그림이면 슬롯도 함께 복원.
+                await repairIfEmpty(item)
             } else {
                 guard let account else { continue }
                 switch itemOwner[item.id] {
@@ -235,6 +239,39 @@ actor GallerySyncManager {
             #if DEBUG
             print("GallerySync: 업로드 실패 (\(item.id)) — \(error)")
             #endif
+        }
+    }
+
+    /// 로컬 갤러리 그림이 사실상 비어 있으면 서버 백업본으로 복구.
+    /// (예: 이전 빌드의 자동 배경 제거가 전경을 못 찾아 빈 그림을 저장한 경우.)
+    /// 복구본은 투명화 검증을 거쳐 저장하고, 슬롯에 적용돼 있던 그림이면 슬롯도 갱신.
+    private func repairIfEmpty(_ item: GalleryItem) async {
+        let frames = (item.hasFrame1 ?? false) ? [0, 1] : [0]
+        var repaired = false
+        for frame in frames {
+            let localData = await MainActor.run { CharacterImageStore.galleryImageData(id: item.id, frame: frame) }
+            guard let localData, let localImg = UIImage(data: localData),
+                  CharacterImageView.alphaCoverage(localImg) < 0.02 else { continue }
+            guard let serverData = try? await APIClient.shared.downloadGalleryImage(id: item.id, frame: frame == 1 ? 1 : 0),
+                  let serverImg = UIImage(data: serverData) else { continue }
+            let fixed = await ImageProcessing.transparentized(serverImg)
+            guard CharacterImageView.alphaCoverage(fixed) >= 0.02 else { continue }
+            _ = await MainActor.run { CharacterImageStore.replaceGalleryImage(item.id, with: fixed, frame: frame) }
+            // 슬롯에 이 그림이 적용돼 있었으면 슬롯도 복원
+            if let png = fixed.pngData() {
+                await MainActor.run {
+                    for state in CharacterState.allCases
+                    where CharacterImageStore.currentGalleryItemId(for: state) == item.id {
+                        CharacterImageStore.rewriteActiveImage(png, for: state, frame: frame)
+                    }
+                }
+            }
+            repaired = true
+        }
+        if repaired {
+            await MainActor.run {
+                NotificationCenter.default.post(name: .gallerySyncDidImport, object: nil)
+            }
         }
     }
 
