@@ -81,6 +81,11 @@ struct CharacterProvider: TimelineProvider {
             let state: CharacterState
             if let schedule = msg.schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
                 state = schedule.scheduledState(at: date)
+            } else if let schedule = msg.schedule, !schedule.overrideActive, base.state == .sleeping,
+                      !schedule.inSleepWindow(at: date) {
+                // 수면 꺼짐 신호 유실 대비 — 기상 경계를 지난 entry 는 스케줄로 계산해 스스로 깬다
+                // (위젯과 동일 규칙. 아이폰이 새 메시지를 늦게 보내도 워치가 아침에 계속 자지 않게).
+                state = schedule.scheduledState(at: date)
             } else {
                 state = base.state
             }

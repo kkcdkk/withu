@@ -47,6 +47,14 @@ enum SharedAppState {
             return .idle
         }
 
+        /// 해당 시각이 프로필 수면 시간창(잠드는~일어나는 시간, 자정 넘김 포함) 안인지.
+        /// 위젯·컴플리케이션이 "수면 꺼짐 신호 유실" 시 기상 경계에서 스스로 깨는 판정에 사용.
+        func inSleepWindow(at date: Date, calendar: Calendar = .current) -> Bool {
+            let comps = calendar.dateComponents([.hour, .minute], from: date)
+            let nowMin = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+            return Self.inRange(nowMin, sleepStartMin, sleepEndMin)
+        }
+
         private static func inRange(_ nowMin: Int, _ start: Int, _ end: Int) -> Bool {
             let s = start % (24 * 60), e = end % (24 * 60)
             return s < e ? (nowMin >= s && nowMin < e) : (nowMin >= s || nowMin < e)

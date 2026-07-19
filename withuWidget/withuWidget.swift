@@ -122,6 +122,12 @@ struct CharacterProvider: TimelineProvider {
                 state = .sleeping
             } else if let schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
                 state = schedule.scheduledState(at: date)
+            } else if let schedule, !schedule.overrideActive, base.state == .sleeping,
+                      !schedule.inSleepWindow(at: date) {
+                // '수면 모드 기준'에서 수면 꺼짐(perform(false))이 잠긴 폰에서 유실되면
+                // 마지막 동기화가 '수면'인 채 남는다 — 기상 경계를 지난 entry 는 자게 두지 않고
+                // 시간 스케줄로 계산해 위젯이 스스로 깬다 (앱 resolver 의 시간 만료와 동일 규칙).
+                state = schedule.scheduledState(at: date)
             } else {
                 state = base.state
             }
