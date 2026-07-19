@@ -24,9 +24,9 @@ struct CharacterProfileView: View {
     @State private var showSleepBasisTip: Bool = false
 
     /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
-    private var heroState: CharacterState {
-        SharedAppState.loadMessage()?.state ?? .idle
-    }
+    // 히어로 아바타 상태 — 프로필(수면/식사 시간) 변경 시 즉시 갱신되게 @State 로.
+    // (예전: computed 라 SharedAppState 가 30초 sync 전엔 옛 상태를 읽어 아바타가 안 바뀜.)
+    @State private var heroState: CharacterState = SharedAppState.loadMessage()?.state ?? .idle
 
     var body: some View {
         ZStack {
@@ -122,6 +122,9 @@ struct CharacterProfileView: View {
         }
         .onChange(of: profile) { _, new in
             CharacterProfileStore.save(new)
+            // 저장된 프로필로 상태 재판정 + SharedAppState 갱신 → 아바타(heroState)도 최신으로.
+            SyncCoordinator.syncNow()
+            heroState = SharedAppState.loadMessage()?.state ?? .idle
             WidgetCenter.shared.reloadAllTimelines()
         }
     }

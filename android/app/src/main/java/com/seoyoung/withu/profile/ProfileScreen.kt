@@ -101,9 +101,13 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
     // 프로필 — 초기 로드는 IO 에서, 이후 변경분만 자동 저장 (drop(1) 로 초기값 저장 방지).
     var profile by remember { mutableStateOf(CharacterProfile()) }
     var profileLoaded by remember { mutableStateOf(false) }
+    // 히어로 = 지금 적용 중인 상태 — iOS heroState. 프로필 변경 후에도 최신 반영해야 함
+    // (예전 버그: produceState 가 키 없이 한 번만 읽어 시간 바꿔도 아바타가 안 바뀜).
+    var heroState by remember { mutableStateOf(CharacterState.IDLE) }
     LaunchedEffect(Unit) {
         profile = withContext(Dispatchers.IO) { CharacterProfileStore.load() }
         profileLoaded = true
+        heroState = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
         snapshotFlow { profile }
             .drop(1)   // 방금 대입한 초기값
             .collect { p ->
@@ -111,6 +115,8 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                 // syncNow 가 저장된 프로필로 상태를 다시 resolve 하고 위젯 갱신까지 담당.
                 withContext(Dispatchers.IO) { CharacterProfileStore.save(p) }
                 SyncCoordinator.syncNow()
+                // 저장·재판정 후 아바타(heroState)도 최신 상태로 갱신.
+                heroState = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
             }
     }
 
@@ -124,13 +130,6 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                 withContext(Dispatchers.IO) { CharacterImageStore.setAnimationEnabled(on) }
                 SyncCoordinator.refreshWidgets()
             }
-    }
-
-    // 히어로 = 지금 적용 중인 상태 (없으면 느긋) — iOS heroState.
-    val heroState by produceState(CharacterState.IDLE) {
-        value = withContext(Dispatchers.IO) {
-            SharedAppState.loadMessage()?.characterState ?: CharacterState.IDLE
-        }
     }
 
     // 상태별 '내 캐릭터 적용됨' 여부 — 이미지 변경 이벤트에 반응해 다시 읽는다.
