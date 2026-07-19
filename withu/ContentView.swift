@@ -93,6 +93,13 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
+                // override 선택 자체로도 sync — characterState "값"이 안 변하는 경우
+                // (예: 밤에 resolver 가 이미 sleeping 인데 수동으로 '쿨쿨'을 고름)
+                // characterState onChange 가 발화하지 않아 위젯/워치에 안 나가던 버그.
+                // (body 타입체크 부하 때문에 바깥 체인이 아닌 여기에 부착 — 동작 동일.)
+                .onChange(of: overrideState) { _, _ in
+                    sendStateToWatch(characterState)
+                }
             }
             .background(backgroundGradient.ignoresSafeArea())
             .navigationTitle("Withy")
@@ -117,6 +124,15 @@ struct ContentView: View {
                 // 앱을 열면 3초 타이머 전까지 깨어있음으로 뜨던 문제 방지.
                 focus.refresh()
                 currentTime = Date()
+                #if DEBUG
+                // 진단/시뮬레이터 검증용: --state <raw> 로 시작하면 해당 상태로 override 고정.
+                //   예) --state sleeping → 수동 '쿨쿨' 선택과 동일 경로로 sync 까지 검증.
+                let args = ProcessInfo.processInfo.arguments
+                if let idx = args.firstIndex(of: "--state"), idx + 1 < args.count,
+                   let forced = CharacterState(rawValue: args[idx + 1]) {
+                    overrideState = forced
+                }
+                #endif
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()
                 // 권한 요청은 OnboardingView 에서 단계별로 처리.
