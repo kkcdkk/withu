@@ -89,6 +89,22 @@ struct CharacterProvider: TimelineProvider {
         let now = Date()
         let base = currentEntry()
         let schedule = SharedAppState.loadSchedule()
+        // 수면 집중모드 필터 신호(App Group 플래그)를 위젯이 직접 읽는 안전망 —
+        // 앱의 sync/위젯 reload 가 유실·지연돼도('수면 모드 기준'에서 앱은 자는데 위젯은 깨어있던 문제)
+        // 타임라인 재계산 시점에 스스로 재운다. FocusModeManager.filterSleepingCorrected 와 동일 규칙:
+        // 플래그 ON + 켜진 시각 이후 첫 '일어나는 시간' 경계 전까지만 유효 (낡은 ON 자동 만료).
+        func focusFilterSleeping(at date: Date) -> Bool {
+            guard let schedule, !schedule.manualSleepOnly, !schedule.overrideActive else { return false }
+            let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+            guard defaults?.bool(forKey: "withu.focusFilter.forceSleeping") == true else { return false }
+            guard let setAt = defaults?.object(forKey: "withu.focusFilter.lastPerformAt") as? Date else { return true }
+            let cal = Calendar.current
+            var wake = cal.date(bySettingHour: schedule.sleepEndMin / 60,
+                                minute: schedule.sleepEndMin % 60,
+                                second: 0, of: setAt) ?? setAt
+            if wake <= setAt { wake = cal.date(byAdding: .day, value: 1, to: wake) ?? wake }
+            return date < wake
+        }
         // 운동 상태는 실시간 신호라 위젯이 예측 못 함 — 지금(i=0) entry 만 앱 계산값 유지.
         let baseIsLiveWorkout: Bool
         switch base.state {
@@ -102,7 +118,9 @@ struct CharacterProvider: TimelineProvider {
             // (지금 시점도 스케줄로 — 오래 안 열려 base.state 가 stale 이어도 정확.)
             // 단 지금 운동 중이면 그 값을 유지. '수면 모드 기준'/구버전(스케줄 없음)은 현재 상태 유지.
             let state: CharacterState
-            if let schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
+            if focusFilterSleeping(at: date) {
+                state = .sleeping
+            } else if let schedule, schedule.usesSchedule, !(i == 0 && baseIsLiveWorkout) {
                 state = schedule.scheduledState(at: date)
             } else {
                 state = base.state
@@ -121,6 +139,12 @@ struct CharacterProvider: TimelineProvider {
                 isPlaceholder: false
             ))
         }
+        // 진단 — 위젯이 실제로 타임라인을 계산한 시각과 첫 상태 기록.
+        // (설정 > 캐릭터 상태 살펴보기에서 "위젯이 정말 갱신됐는지" 확인용.)
+        let diag = UserDefaults(suiteName: SharedAppState.groupID)
+        diag?.set(now, forKey: "withu.widget.lastTimelineAt")
+        diag?.set(entries.first?.state.rawValue ?? "", forKey: "withu.widget.lastTimelineState")
+
         completion(Timeline(entries: entries, policy: .atEnd))
     }
 

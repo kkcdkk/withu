@@ -86,7 +86,7 @@ final class ConnectivityManager: NSObject {
                 tmpURL,
                 metadata: [Self.weatherDecorationMetadataKey: cond.rawValue]
             )
-            lastImageTransferState = "워치로 \(cond.rawValue) 표현 전송 중 (\(data.count / 1024)KB)"
+            lastImageTransferState = "워치로 날씨 표현 전송 중 (\(data.count / 1024)KB)"
             outstandingTransfers = session.outstandingFileTransfers.count
         } catch {
             lastImageTransferState = "날씨 표현 전송 준비에 실패했어요."
@@ -165,7 +165,7 @@ final class ConnectivityManager: NSObject {
                     Self.characterFrameMetadataKey: frame
                 ]
             )
-            lastImageTransferState = "워치로 \(state.rawValue) 전송 중 (\(data.count / 1024)KB)"
+            lastImageTransferState = "워치로 상태 전송 중 (\(data.count / 1024)KB)"
             outstandingTransfers = session.outstandingFileTransfers.count
 
             // 컴플리케이션이 SharedAppState 메시지로 state 를 결정하니까,
@@ -215,7 +215,7 @@ final class ConnectivityManager: NSObject {
                 tmpURL,
                 metadata: [Self.weatherBackgroundMetadataKey: cond.rawValue]
             )
-            lastImageTransferState = "워치로 \(cond.rawValue) 배경 전송 중 (\(data.count / 1024)KB)"
+            lastImageTransferState = "워치로 배경 전송 중 (\(data.count / 1024)KB)"
             outstandingTransfers = session.outstandingFileTransfers.count
         } catch {
             lastImageTransferState = "배경 전송 준비에 실패했어요. 다시 시도해 주세요."

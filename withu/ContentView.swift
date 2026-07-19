@@ -1237,6 +1237,12 @@ struct AdvancedDiagnosticsView: View {
                 Text(lastBgRefreshLabel)
                     .foregroundStyle(.secondary)
             }
+            HStack {
+                Text("위젯 마지막 계산")
+                Spacer()
+                Text(widgetTimelineLabel)
+                    .foregroundStyle(.secondary)
+            }
             Picker("상태 직접 고르기", selection: $overrideState) {
                 Text("자동 (추천)").tag(CharacterState?.none)
                 ForEach(CharacterState.allCases, id: \.self) { state in
@@ -1282,5 +1288,19 @@ struct AdvancedDiagnosticsView: View {
             return String(localized: "없음")
         }
         return date.formatted(date: .omitted, time: .standard)
+    }
+
+    /// 위젯이 마지막으로 타임라인을 계산한 시각·상태 — "위젯이 정말 갱신됐는지" 진단용.
+    private var widgetTimelineLabel: String {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt") as? Date else {
+            return String(localized: "없음")
+        }
+        let time = date.formatted(date: .omitted, time: .shortened)
+        if let raw = defaults?.string(forKey: "withu.widget.lastTimelineState"),
+           let state = CharacterState(rawValue: raw) {
+            return "\(time) · \(state.koreanShortLabel)"
+        }
+        return time
     }
 }

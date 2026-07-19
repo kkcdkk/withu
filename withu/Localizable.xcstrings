@@ -4988,6 +4988,16 @@
         }
       }
     },
+    "위젯 마지막 계산" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last widget calculation"
+          }
+        }
+      }
+    },
     "위젯 지금 새로고침" : {
       "localizations" : {
         "en" : {
