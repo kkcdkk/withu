@@ -553,6 +553,9 @@
     "🍬" : {
 
     },
+    "🍬 %lld" : {
+
+    },
     "🍬 캔디 %lld개 충전됐어요! (테스트)" : {
       "localizations" : {
         "en" : {
@@ -768,7 +771,18 @@
         }
       }
     },
+    "2번째 장면을 만들어 캐릭터가 움직이게 해요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a second frame so your character moves."
+          }
+        }
+      }
+    },
     "2번째 장면을 만들어 캐릭터가 움직이게 해요. 캔디 %lld개를 써요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2165,6 +2179,7 @@
       }
     },
     "다듬을 때마다 캔디 %lld개를 써요. 전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2632,66 +2647,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Collect the characters you've made"
-          }
-        }
-      }
-    },
-    "캐릭터" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Character"
-          }
-        }
-      }
-    },
-    "움직이게 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Make It Move"
-          }
-        }
-      }
-    },
-    "전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compare before and after, then choose whether to keep it."
-          }
-        }
-      }
-    },
-    "2번째 장면을 만들어 캐릭터가 움직이게 해요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Creates a second frame so your character moves."
-          }
-        }
-      }
-    },
-    "생성 방식" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Creation Method"
-          }
-        }
-      }
-    },
-    "원하는 상태 하나만 만들어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Make just the state you want"
           }
         }
       }
@@ -3759,6 +3714,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "생성 방식" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creation Method"
           }
         }
       }
@@ -4929,6 +4894,26 @@
         }
       }
     },
+    "움직임" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
+          }
+        }
+      }
+    },
+    "움직이게 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make It Move"
+          }
+        }
+      }
+    },
     "움직이는 캐릭터 만들기" : {
       "localizations" : {
         "en" : {
@@ -4965,16 +4950,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
-    "움직임" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
           }
         }
       }
@@ -5158,6 +5133,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Original"
+          }
+        }
+      }
+    },
+    "원하는 상태 하나만 만들어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make just the state you want"
           }
         }
       }
@@ -5947,6 +5932,16 @@
         }
       }
     },
+    "전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare before and after, then choose whether to keep it."
+          }
+        }
+      }
+    },
     "전송 실패: %@" : {
       "localizations" : {
         "en" : {
@@ -6468,6 +6463,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Calories"
+          }
+        }
+      }
+    },
+    "캔디 %lld개 소모" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses %lld candies"
+          }
+        }
+      }
+    },
+    "다른 자리에 적용하기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apply to Another State"
+          }
+        }
+      }
+    },
+    "%@ 자리에 적용했어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applied to the %@ slot"
+          }
+        }
+      }
+    },
+    "캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Character"
           }
         }
       }

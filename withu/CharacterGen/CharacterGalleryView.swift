@@ -674,13 +674,11 @@ struct GalleryGrid<Header: View>: View {
 
     // MARK: Detail sheet
 
-    /// 캔디 비용 배지 — 유료 기능 버튼 옆 작은 표시 (비용 안내 문구 통일).
+    /// 캔디 비용 표시 — "캔디 1개 소모". (배지/아이콘은 보유량으로 오해될 수 있어 문구로.)
     private func candyBadge(_ count: Int) -> some View {
-        Text("🍬 \(count)")
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.withuPink.opacity(0.18)))
+        Text("캔디 \(count)개 소모")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -751,6 +749,26 @@ struct GalleryGrid<Header: View>: View {
                             .padding(.horizontal)
                         }
 
+                        // 다른 자리 적용 — 화면을 벗어나지 않는 메뉴로 즉시 선택 (연한 보조 버튼)
+                        Menu {
+                            ForEach(CharacterState.userFacing, id: \.self) { state in
+                                Button("\(state.koreanShortLabel) 자리에") {
+                                    apply(item, to: state)
+                                    withAnimation { toastText = String(localized: "\(state.koreanShortLabel) 자리에 적용했어요") }
+                                    hideToastAfter(1.6)
+                                }
+                            }
+                        } label: {
+                            Text("다른 자리에 적용하기")
+                                .font(.callout.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.withuCTAGreen.opacity(0.14),
+                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .foregroundStyle(Color.withuCTAGreen)
+                        }
+                        .padding(.horizontal)
+
                         // [편집 도구] — 배경 빼기 · (연속) 프레임 · 다듬기 · 움직이게 만들기 한 카드
                         VStack(alignment: .leading, spacing: 12) {
                             Toggle("배경 빼기", isOn: Binding(
@@ -814,9 +832,10 @@ struct GalleryGrid<Header: View>: View {
                                 Spacer()
                                 candyBadge(GenerationQuota.cost(forQuality: "low"))
                             }
+                            // 입력칸은 상자 대신 다른 프롬프트처럼 아래 선으로 구분
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
                                 .font(.callout)
+                            Divider()
                             Button {
                                 showRefineConfirm = true
                             } label: {
@@ -867,13 +886,15 @@ struct GalleryGrid<Header: View>: View {
                             Text("이번 만들기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
                         }
 
-                        // [더보기] — 부가 기능은 텍스트 링크로 낮춤
-                        HStack(spacing: 24) {
-                            Button("저장") { Task { await saveOneToPhotos(img) } }
-                            Button("다른 자리에") { showApplySheet = true }
+                        // [더보기] — 사진 앱 저장 (테두리 버튼)
+                        Button {
+                            Task { await saveOneToPhotos(img) }
+                        } label: {
+                            Text("저장").frame(maxWidth: .infinity)
                         }
-                        .font(.callout)
+                        .buttonStyle(.bordered)
                         .tint(.secondary)
+                        .padding(.horizontal)
 
                         // 만든 기록 — 이 이미지를 만들 때 보낸 프롬프트 (옛 항목엔 없음)
                         if let prompt = item.prompt, !prompt.isEmpty {
