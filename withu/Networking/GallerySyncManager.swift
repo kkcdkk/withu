@@ -58,6 +58,20 @@ actor GallerySyncManager {
         Task { await self.reconcile() }
     }
 
+    /// 특정 항목 강제 재업로드 — 픽셀만 바뀐 교체(다듬기 채택, 배경 빼기 저장 등)는
+    /// reconcile 의 diff(존재/hasFrame1)로는 감지되지 않아 서버 백업이 옛 그림으로 남는다.
+    /// 교체 직후 호출하면 서버 사본이 최신으로 덮어써진다. fire-and-forget.
+    nonisolated func forceUpload(_ id: String) {
+        Task { await self.uploadById(id) }
+    }
+
+    private func uploadById(_ id: String) async {
+        guard KeychainStore.sessionToken() != nil else { return }
+        let items = await MainActor.run { CharacterImageStore.loadGalleryMetadata() }
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        await upload(item)
+    }
+
     // MARK: - pendingDeletes (App Group UserDefaults)
 
     private var pendingDeletes: [String] {

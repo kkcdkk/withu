@@ -469,6 +469,19 @@ struct GalleryGrid<Header: View>: View {
     @State private var isRefining: Bool = false
     @State private var showRefineConfirm: Bool = false
 
+    /// 다듬기 성공 결과 임시 보관 — 전/후 비교에서 선택하기 전까지 원본을 덮어쓰지 않음.
+    struct RefineCompareContext: Identifiable {
+        let id = UUID()
+        let itemId: String
+        let before: UIImage
+        let after: UIImage
+    }
+    @State private var refineCompare: RefineCompareContext?
+
+    // 움직이는 캐릭터 만들기 — frame 1 없는 항목에 2번째 장면을 생성해 부착.
+    @State private var isMakingMotion: Bool = false
+    @State private var showMotionConfirm: Bool = false
+
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 12)]
 
     var body: some View {
@@ -834,6 +847,39 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
+                        // 움직이는 캐릭터 만들기 — 사진으로 만든(또는 움직임 없는) 항목에
+                        // 2번째 장면(frame 1)을 생성해 부착. 캔디 차감(무료 미적용).
+                        // 움직임 힌트가 정의된 상태만 (CharacterGenView 와 동일 정책).
+                        if !(item.hasFrame1 ?? false),
+                           CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Button {
+                                    showMotionConfirm = true
+                                } label: {
+                                    if isMakingMotion {
+                                        HStack { ProgressView(); Text("움직임 만드는 중…") }
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        Label("움직이는 캐릭터 만들기", systemImage: "figure.run")
+                                            .frame(maxWidth: .infinity)
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.withuPinkText)
+                                .disabled(isMakingMotion || isRefining)
+                                Text("2번째 장면을 만들어 캐릭터가 움직이게 해요. 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요.")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal)
+                            .alert("캔디를 사용해요", isPresented: $showMotionConfirm) {
+                                Button("만들기") { Task { await makeMotionFrame(item) } }
+                                Button("취소", role: .cancel) {}
+                            } message: {
+                                Text("이번 만들기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
+                            }
+                        }
+
                         // 다듬기 — 이 캐릭터를 참고로 한 번 더 생성. 캔디 차감(무료 미적용).
                         VStack(alignment: .leading, spacing: 8) {
                             Label("다듬기", systemImage: "sparkles")
@@ -854,8 +900,8 @@ struct GalleryGrid<Header: View>: View {
                             }
                             .buttonStyle(.bordered)
                             .tint(.withuPinkText)
-                            .disabled(isRefining || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            Text("다듬을 때마다 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 결과는 갤러리에 새로 저장돼요.")
+                            .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            Text("다듬을 때마다 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 전과 후를 비교해 보고 바꿀지 고를 수 있어요.")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -887,6 +933,10 @@ struct GalleryGrid<Header: View>: View {
                 Button("취소", role: .cancel) {}
             } message: {
                 Text("이번 다듬기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
+            }
+            // 다듬기 전/후 비교 — 선택 전까지 원본 유지. 스와이프로 닫으면 '이전 그대로'.
+            .sheet(item: $refineCompare) { ctx in
+                refineCompareSheet(ctx)
             }
             .onAppear {
                 // 시트가 열릴 때마다(항목별) 미리보기·다듬기 입력 초기화
@@ -974,6 +1024,8 @@ struct GalleryGrid<Header: View>: View {
         let newF1 = f1.map { detailDisplay($0, cutout: bgCutoutF1) }
 
         CharacterImageStore.replaceGalleryImage(item.id, with: newImg)
+        // 픽셀만 바뀐 교체는 reconcile diff 로 감지 안 됨 — 서버 백업 강제 갱신.
+        GallerySyncManager.shared.forceUpload(item.id)
         if let newF1 {
             CharacterImageStore.replaceGalleryImage(item.id, with: newF1, frame: 1)
         }
@@ -998,7 +1050,8 @@ struct GalleryGrid<Header: View>: View {
         hideToastAfter(1.6)
     }
 
-    /// 이미 만든 캐릭터 다듬기 — 갤러리 이미지를 참고로 한 번 더 생성해 갤러리에 새로 저장.
+    /// 이미 만든 캐릭터 다듬기 — 갤러리 이미지를 참고로 한 번 더 생성.
+    /// 성공하면 바로 반영하지 않고 전/후 비교 시트(refineCompare)로 — 선택 시에만 원본 교체.
     /// kind=refine → 서버가 '계정 무료 1회' 를 소진하지 않음 (무료는 처음 만드는 화면 전용).
     private func refineItem(_ item: GalleryItem) async {
         let cost = GenerationQuota.cost(forQuality: "low")
@@ -1032,16 +1085,166 @@ struct GalleryGrid<Header: View>: View {
             // gpt-image-2 마젠타 배경 → 크로마키 투명화
             let img = await ImageProcessing.transparentized(raw)
             let small = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
-            if let state = CharacterState(rawValue: item.sourceState) {
-                CharacterImageStore.save(small, for: state, frame: 0, applyToActiveSlot: false,
-                                         batchId: item.batchId, prompt: prompt)
-            }
             if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
             GenerationQuota.record(cost)
             refineText = ""
-            selectedItem = nil   // 시트 닫기 — 그리드에 새 항목이 보이게
+            if selectedItem == nil {
+                // 다듬는 중에 상세 시트를 닫아버린 경우 — 비교 시트를 띄울 곳이 없음.
+                // 캔디 쓴 결과 유실 방지: 예전처럼 갤러리에 새 항목으로 저장.
+                if let state = CharacterState(rawValue: item.sourceState) {
+                    CharacterImageStore.save(small, for: state, frame: 0, applyToActiveSlot: false,
+                                             batchId: item.batchId, prompt: prompt)
+                    onChange()
+                    withAnimation { toastText = String(localized: "다듬은 캐릭터를 갤러리에 저장했어요") }
+                    hideToastAfter(2.0)
+                }
+            } else {
+                // 바로 반영하지 않고 전/후 비교 시트로 — 선택 전까지 원본을 덮어쓰지 않음.
+                refineCompare = RefineCompareContext(itemId: item.id, before: base, after: small)
+            }
+        } catch {
+            withAnimation { toastText = error.koreanizedDescription }
+            hideToastAfter(2.5)
+        }
+    }
+
+    // MARK: 다듬기 전/후 비교
+
+    /// 전/후 비교 시트 — "이전" / "다듬은 결과" 나란히 보여주고 선택.
+    private func refineCompareSheet(_ ctx: RefineCompareContext) -> some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    HStack(alignment: .top, spacing: 12) {
+                        compareColumn(image: ctx.before, label: String(localized: "이전"))
+                        compareColumn(image: ctx.after, label: String(localized: "다듬은 결과"))
+                    }
+                    VStack(spacing: 10) {
+                        Button {
+                            adoptRefined(ctx)
+                        } label: {
+                            Label("다듬은 걸로 바꾸기", systemImage: "checkmark")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(WithuCTAButtonStyle())
+                        Button {
+                            refineCompare = nil   // 원본 그대로 — 아무것도 안 바뀜
+                        } label: {
+                            Text("이전 그대로")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.secondary)
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("다듬기 결과")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func compareColumn(image: UIImage, label: String) -> some View {
+        VStack(spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.regularMaterial)
+                Image(uiImage: image).resizable().scaledToFit().padding(8)
+            }
+            .aspectRatio(1, contentMode: .fit)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    /// '다듬은 걸로 바꾸기' — 이때 처음으로 갤러리 원본을 교체.
+    /// 적용 중인 자리(활성 슬롯)가 있으면 그 자리와 워치·위젯에도 반영.
+    private func adoptRefined(_ ctx: RefineCompareContext) {
+        guard CharacterImageStore.replaceGalleryImage(ctx.itemId, with: ctx.after) else {
+            refineCompare = nil
+            withAnimation { toastText = String(localized: "적용하지 못했어요") }
+            hideToastAfter(1.6)
+            return
+        }
+        // 픽셀만 바뀐 교체는 reconcile diff 로 감지 안 됨 — 서버 백업 강제 갱신.
+        GallerySyncManager.shared.forceUpload(ctx.itemId)
+        let activeStates = CharacterImageStore.statesUsingGalleryItem(ctx.itemId)
+        for state in activeStates {
+            CharacterImageStore.applyGalleryItem(ctx.itemId, to: state)
+            ConnectivityManager.shared.sendCharacterImage(ctx.after, for: state, frame: 0)
+            if let f1 = CharacterImageStore.loadGalleryFrame1(id: ctx.itemId) {
+                ConnectivityManager.shared.sendCharacterImage(f1, for: state, frame: 1)
+            }
+        }
+        if !activeStates.isEmpty {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        refineCompare = nil
+        selectedItem = nil   // 상세 시트도 닫기 — 그리드에서 바뀐 썸네일이 보이게
+        frameSwapTick += 1
+        onChange()
+        withAnimation { toastText = String(localized: "다듬은 캐릭터로 바꿨어요") }
+        hideToastAfter(1.6)
+    }
+
+    // MARK: 움직이는 캐릭터 만들기
+
+    /// 움직임 프레임(frame 1) 만들기 — 이 항목 이미지를 참고로 2번째 장면을 생성해 부착.
+    /// kind=refine → 계정 무료 1회 미소진. 적용 중인 자리면 활성 슬롯 frame 1 도 갱신.
+    private func makeMotionFrame(_ item: GalleryItem) async {
+        let cost = GenerationQuota.cost(forQuality: "low")
+        guard GenerationQuota.canGenerate(cost) else {
+            withAnimation { toastText = String(localized: "캔디가 부족해요. 설정에서 충전할 수 있어요.") }
+            hideToastAfter(2.0)
+            return
+        }
+        guard let base = CharacterImageStore.loadGalleryImage(id: item.id),
+              let refB64 = base.pngData()?.base64EncodedString() else { return }
+        isMakingMotion = true
+        defer { isMakingMotion = false }
+
+        // 상태별 frame 2 변화 힌트 — 옛(legacy) 상태면 idle 의 미세 변화 힌트로 fallback.
+        let hintState = CharacterState(rawValue: item.sourceState) ?? .idle
+        let prompt = "Use the reference image as the SAME character. Keep identical: face, outfit, colors, art/pixel style, line thickness, body proportions, size, scale, centered position, and framing. This is the SECOND frame of a 2-frame animation loop, so the POSE MUST visibly CHANGE from the reference. Change the pose to: \(hintState.animationFrame2Hint). Change ONLY the pose — keep every design detail and the placement identical to the reference. Transparent background — only the character, no shadows."
+        let req = GenerateImageRequest(prompt: prompt, referenceImageBase64: refB64,
+                                       steps: 30, width: 1024, height: 1024,
+                                       quality: "low", artStyle: nil, style: "auto",
+                                       kind: "refine", model: "gpt-image-2",
+                                       userInput: nil, inputField: "움직임 프레임")
+        do {
+            let resp = try await APIClient.shared.generateImage(req, sessionId: nil, state: item.sourceState)
+            guard let data = Data(base64Encoded: resp.imageBase64),
+                  let raw = UIImage(data: data) else {
+                withAnimation { toastText = String(localized: "이미지를 받지 못했어요") }
+                hideToastAfter(1.6)
+                return
+            }
+            // 크로마키 투명화 → 1번째 프레임과 크기·위치 정규화 → 다운샘플 → 색 맞춤
+            let img = await ImageProcessing.transparentized(raw)
+            let matched = await ImageProcessing.matchedToReference(img, reference: base)
+            var small = matched.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? matched
+            if let refSmall = base.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
+                small = ImageProcessing.colorMatched(small, reference: refSmall)
+            }
+            guard CharacterImageStore.attachGalleryFrame1(item.id, image: small) else {
+                withAnimation { toastText = String(localized: "적용하지 못했어요") }
+                hideToastAfter(1.6)
+                return
+            }
+            // 적용 중이던 자리면 활성 슬롯 frame 1 + 워치 + 위젯도 갱신
+            let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
+            for state in activeStates {
+                CharacterImageStore.applyGalleryItem(item.id, to: state)
+                ConnectivityManager.shared.sendCharacterImage(small, for: state, frame: 1)
+            }
+            if !activeStates.isEmpty {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+            if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
+            GenerationQuota.record(cost)
+            selectedItem = nil   // 시트 닫기 — 그리드에 '연속' 배지가 보이게
             onChange()
-            withAnimation { toastText = String(localized: "다듬은 캐릭터를 갤러리에 저장했어요") }
+            withAnimation { toastText = String(localized: "이제 움직이는 캐릭터예요") }
             hideToastAfter(2.0)
         } catch {
             withAnimation { toastText = error.koreanizedDescription }

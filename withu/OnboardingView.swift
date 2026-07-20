@@ -167,7 +167,10 @@ struct OnboardingView: View {
         healthResult = .requesting
         do {
             try await HealthKitManager.shared.requestAuthorization()
-            healthResult = .granted
+            // 요청 절차 성공 ≠ 허용 (거부해도 에러 없음). 걸음 probe 는 새 기기/거부 구분이
+            // 안 되므로(0 걸음), 시트에서 결정을 마쳤으면(.notRequested 아님) 연결로 표시 —
+            // 허용했는데 '허용 안 됨'이 뜨는 오판(항목 7) 방지. 진짜 거부는 이후 화면들이 보정.
+            healthResult = HealthKitManager.shared.authStatus == .notRequested ? .denied : .granted
         } catch {
             healthResult = .denied
         }

@@ -75,6 +75,9 @@ struct SquareCropView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(.white, lineWidth: 2)
             )
+            // clipShape 는 그리기만 자르고 히트 영역은 안 잘라서, 확대/이동으로 넘친
+            // 이미지가 상단 버튼 탭을 가로챘음 → 히트 영역을 크롭 프레임 안으로 제한.
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .gesture(
                 DragGesture()
                     .updating($gestureOffset) { v, state, _ in state = v.translation }

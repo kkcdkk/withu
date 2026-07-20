@@ -95,6 +95,40 @@ SCOPE.md 는 Wear OS·잠금화면 위젯을 제외. 아래는 문구/아이콘�
 
 ---
 
+## D. iOS 선반영 신규 개선 (2026-07 배치) — Android 후속 포트 필요
+
+iOS 에 먼저 들어간 7개 개선. Android 는 미구현 — 포트 시 대응 iOS 파일 확인.
+
+### D-1. [gallery] 사진 캐릭터 '움직이는 캐릭터 만들기' · missing-feature
+- 갤러리 상세 시트에서 frame1 없는 항목에 움직임 프레임(frame 1) 생성·부착. kind=refine + 항목 이미지 reference, 캔디 1개(확인 알럿), 성공 시 `attachGalleryFrame1`(파일 + hasFrame1 메타) — 적용 중이던 자리는 활성 슬롯 frame1 도 갱신.
+- iOS: `CharacterGalleryView.swift` `makeMotionFrame` + `CharacterImageStore.swift` `attachGalleryFrame1`
+
+### D-2. [gallery] 다듬기 전/후 비교 후 선택 · behavior
+- 갤러리 '다듬기' 성공 시 바로 반영하지 않고 전/후 비교 시트("이전"/"다듬은 결과") → '다듬은 걸로 바꾸기'(원본 교체 + 활성 슬롯 반영) / '이전 그대로'(폐기). 선택 전까지 원본 미변경. 기존 '새 항목 자동 저장' 동작은 제거됨.
+- iOS: `CharacterGalleryView.swift` `refineItem` → `refineCompareSheet` / `adoptRefined`
+
+### D-3. [single-gen] 단건 결과 갤러리 자동저장 · behavior
+- 단건 생성(CharacterGenView) 결과가 적용 여부와 무관하게 갤러리에 자동 저장되도록 변경.
+- iOS: `CharacterGenView.swift`
+
+### D-4. [single-gen] 움직임 프레임(frame1) 로딩 표시 · behavior
+- frame1 생성 중임을 사용자에게 표시 (frame0 완료 후 조용히 이어지던 구간).
+- iOS: `CharacterGenView.swift`
+
+### D-5. [crop] 자르기 제스처 버그 수정 · bug ⚠️iOS 전용 여부 확인
+- iOS 크롭 화면 제스처 버그 수정. Android 는 자체 크롭 구현 — 동일 증상 있는지 확인 후 없으면 무시.
+- iOS: `CharacterGen/` 크롭 뷰
+
+### D-6. [single-gen] 참고사진만으로 생성 허용 · behavior
+- 설명 입력 없이 참고사진만으로도 생성 가능하게 완화.
+- iOS: `CharacterGenView.swift`
+
+### D-7. [health] 건강 권한 표시 로직 개선 · behavior
+- 건강(HealthKit) 권한 상태 표시/안내 로직 변경. Android 는 Health Connect 대응 지점 확인.
+- iOS: 건강 권한 안내 관련 뷰
+
+---
+
 ## 병합 메모
 - **A-2** 는 원 리뷰 batch 4개 항목(footer/warning/완료알럿/진행카운터)을 한 원인(resultsFrame1 포함 · requiredCount 오용)으로 묶음 — 한 PR 에서 함께 처리 권장.
 - **C 섹션** 5건은 모두 `strings_onboarding.xml` + 온보딩/도움말 화면 아이콘 교체라 일괄 커밋 가능.

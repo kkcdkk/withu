@@ -583,7 +583,9 @@ struct ContentView: View {
     /// 거절돼있어서 해당 기능이 막힌 권한 목록.
     private var deniedPermissions: [String] {
         var list: [String] = []
-        if !health.isAuthorized { list.append(String(localized: "건강")) }
+        // 건강은 '요청 안 함'일 때만 경고 — read 권한은 iOS 가 허용 여부를 안 알려줘,
+        // 허용했지만 데이터가 없는 기기(.determinedNoData)에 경고를 띄우면 오탐(항목 7).
+        if health.authStatus == .notRequested { list.append(String(localized: "건강")) }
         if weather.authorizationStatus == .denied || weather.authorizationStatus == .restricted {
             list.append(String(localized: "위치"))
         }
@@ -876,14 +878,32 @@ struct SettingsView: View {
             HStack {
                 Text("권한")
                 Spacer()
-                StatusPill(kind: health.isAuthorized ? .ok : .off,
-                           label: health.isAuthorized ? "허용됨" : "허용 안 됨")
+                // read 권한은 iOS 가 허용/거부를 안 알려줌 — 요청 여부 + 실제 데이터
+                // 조회 성공으로 추론한 3단 표시 (HealthAuthStatus 주석 참고).
+                switch health.authStatus {
+                case .authorized:
+                    StatusPill(kind: .ok, label: "허용됨")
+                case .determinedNoData:
+                    StatusPill(kind: .off, label: "허용 안 됨")
+                case .notRequested:
+                    StatusPill(kind: .off, label: "요청 안 함")
+                }
             }
-            // iOS HealthKit 권한 시트는 1회성 — 이미 결정된 뒤에는 requestAuthorization 이
-            // 아무 UI 도 띄우지 않아서, 변경은 설정 앱으로 안내한다.
-            Button("권한 변경") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
+            if health.authStatus == .notRequested {
+                // 아직 요청한 적 없으면 (온보딩에서 건너뜀) 시트가 실제로 뜬다.
+                Button("권한 요청") {
+                    Task {
+                        try? await health.requestAuthorization()
+                        await reloadHealth()
+                    }
+                }
+            } else {
+                // iOS HealthKit 권한 시트는 1회성 — 이미 결정된 뒤에는 requestAuthorization 이
+                // 아무 UI 도 띄우지 않아서, 변경은 설정 앱으로 안내한다.
+                Button("권한 변경") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
                 }
             }
             RefreshRowButton(title: "데이터 새로고침") {

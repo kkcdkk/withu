@@ -24,6 +24,18 @@ enum HealthError: LocalizedError {
     }
 }
 
+/// 표시용 HealthKit 권한 상태 3단.
+/// iOS 는 read 권한의 실제 허용/거부를 앱에 알려주지 않는다 —
+/// `HKHealthStore.authorizationStatus(for:)` 는 share(write) 전용이라
+/// read 만 쓰는 이 앱에선 항상 거부처럼 보인다. 대신 두 신호로 추론:
+/// (1) getRequestStatusForAuthorization — .unnecessary 면 사용자가 이미 결정함
+/// (2) 실제 데이터 조회 성공 — 값이 읽히면 사실상 허용
+enum HealthAuthStatus {
+    case notRequested       // 권한 시트를 띄운 적 없음
+    case determinedNoData   // 사용자가 결정했지만 읽히는 데이터 없음 (거부 가능성 높음)
+    case authorized         // 데이터가 실제로 읽힘 = 사실상 허용
+}
+
 // 화면에 보여주기 위한 가벼운 요약 모델
 struct SleepSummary {
     let totalAsleep: TimeInterval   // 초
@@ -50,10 +62,11 @@ final class HealthKitManager {
     @ObservationIgnored private var sleepObserverQuery: HKObserverQuery?
     @ObservationIgnored private var heartRateObserverQuery: HKObserverQuery?
 
-    /// 권한 요청을 한 번이라도 했거나 마지막 fetch 가 성공했는지.
-    /// (Apple HealthKit 은 어떤 항목이 허용됐는지 앱에 알리지 않으므로
-    ///  정확한 "허용 여부" 는 fetch 가 에러 없이 통과하면 추론.)
-    private(set) var isAuthorized: Bool = false
+    /// 표시용 권한 상태 — `HealthAuthStatus` 주석 참고.
+    /// 앱 시작 시 `startObservingChanges()` 가, 요청 직후엔 `requestAuthorization()` 이 갱신.
+    private(set) var authStatus: HealthAuthStatus = .notRequested
+    /// 데이터가 실제로 읽혔는지 (= .authorized). 기존 호출부 호환용.
+    var isAuthorized: Bool { authStatus == .authorized }
     private(set) var sleep: SleepSummary?
     private(set) var recentWorkouts: [WorkoutSummary] = []
     private(set) var todaySteps: Double?
@@ -114,10 +127,9 @@ final class HealthKitManager {
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthError.notAvailable
         }
-        // async 버전은 성공 여부를 안 돌려줘서 completion 버전으로 Bool 을 받는다.
-        // 한계: HealthKit 은 read 권한의 실제 허용/거부를 조회하는 API 가 없어서
-        // 이 success 는 "요청 절차가 정상 처리됨"까지만 뜻한다 (사용자가 거부해도 true 일 수 있음).
-        let success: Bool = try await withCheckedThrowingContinuation { continuation in
+        // 한계: 이 completion 의 ok 는 "요청 절차가 정상 처리됨"까지만 뜻한다
+        // (사용자가 거부해도 true) — 허용 여부 판정에 쓰지 않는다.
+        let _: Bool = try await withCheckedThrowingContinuation { continuation in
             store.requestAuthorization(toShare: [], read: readTypes) { ok, error in
                 if let error {
                     continuation.resume(throwing: HealthError.query(error))
@@ -126,7 +138,48 @@ final class HealthKitManager {
                 }
             }
         }
-        isAuthorized = success
+        // 시트가 닫힌 직후 request status + 데이터 probe 로 표시 상태 확정.
+        await refreshAuthorizationStatus()
+    }
+
+    /// 표시용 권한 상태 갱신 — 앱 시작·권한 요청 직후 호출.
+    /// 1) getRequestStatusForAuthorization: .shouldRequest = 아직 요청 안 함,
+    ///    .unnecessary = 사용자가 이미 결정함 (허용/거부는 알 수 없음).
+    /// 2) 최근 7일 걸음 probe: 값이 읽히면 사실상 허용으로 확정.
+    ///    (개별 fetch 성공 시에도 authorized 로 올라가므로 여기선 보조 신호.)
+    func refreshAuthorizationStatus() async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let request: HKAuthorizationRequestStatus = await withCheckedContinuation { cont in
+            store.getRequestStatusForAuthorization(toShare: [], read: readTypes) { status, _ in
+                cont.resume(returning: status)
+            }
+        }
+        if request == .shouldRequest {
+            // 아직 권한 시트를 띄운 적 없음. (이미 데이터가 읽혔다면 유지)
+            if authStatus != .authorized { authStatus = .notRequested }
+            return
+        }
+        if request == .unnecessary, authStatus == .notRequested {
+            authStatus = .determinedNoData
+        }
+        guard authStatus != .authorized,
+              let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else { return }
+        // 데이터 probe — 오늘 걸음은 자정 직후 0 일 수 있어 7일 합으로 본다.
+        let end = Date()
+        let start = Calendar.current.date(byAdding: .day, value: -7, to: end) ?? end
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+        let total: Double = await withCheckedContinuation { cont in
+            let q = HKStatisticsQuery(
+                quantityType: stepType,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, stats, _ in
+                // 거부/무데이터면 stats 가 nil (errorNoData) → 0 취급
+                cont.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+            }
+            store.execute(q)
+        }
+        if total > 0 { authStatus = .authorized }
     }
 
     // MARK: - 수면 (지난 N일)
@@ -167,7 +220,8 @@ final class HealthKitManager {
             lastNight: asleep.first?.startDate
         )
         sleep = summary
-        isAuthorized = true   // fetch 가 에러 없이 통과 → 권한 있음으로 간주
+        // 값이 실제로 읽혔을 때만 허용 확정 — 거부돼도 read 쿼리는 빈 결과로 "성공"한다.
+        if summary.sampleCount > 0 { authStatus = .authorized }
         return summary
     }
 
@@ -200,6 +254,8 @@ final class HealthKitManager {
     ///
     /// 7. **권한 필요**: 해당 type 의 read 권한 있어야 callback 옴.
     func startObservingChanges() {
+        // 표시용 권한 상태 자동 갱신 — 앱 시작 경로에서 매번 불리므로 여기서 한 번.
+        Task { await refreshAuthorizationStatus() }
         // 1) Workout 변화 (운동 종료 시점 감지)
         if workoutObserverQuery == nil {
             let workoutType = HKObjectType.workoutType()
@@ -366,6 +422,9 @@ final class HealthKitManager {
             store.execute(q)
         }
 
+        // 수면 샘플이 읽혔다는 것 자체가 read 통과 증거.
+        if !samples.isEmpty { authStatus = .authorized }
+
         let inBedValue = HKCategoryValueSleepAnalysis.inBed.rawValue
         let inBedSamples = samples.filter { $0.value == inBedValue }
         // 어떤 시점이든 inBed sample 있음 = 사용자가 수면 일정 설정함.
@@ -475,7 +534,7 @@ final class HealthKitManager {
             )
         }
         recentWorkouts = summaries
-        isAuthorized = true   // fetch 통과 → 권한 있음으로 간주
+        if !summaries.isEmpty { authStatus = .authorized }   // 값이 읽힘 → 허용 확정
         return summaries
     }
 
@@ -511,7 +570,7 @@ final class HealthKitManager {
             store.execute(q)
         }
         todaySteps = total
-        isAuthorized = true   // fetch 통과 → 권한 있음으로 간주
+        if total > 0 { authStatus = .authorized }   // 값이 읽힘 → 허용 확정
         return total
     }
 
@@ -521,7 +580,7 @@ final class HealthKitManager {
     func fetchTodayActiveMinutes() async throws -> Double {
         let total = try await fetchTodayCumulative(.appleExerciseTime, unit: .minute())
         todayActiveMinutes = total
-        isAuthorized = true
+        if total > 0 { authStatus = .authorized }
         return total
     }
 
@@ -529,7 +588,7 @@ final class HealthKitManager {
     func fetchTodayActiveKcal() async throws -> Double {
         let total = try await fetchTodayCumulative(.activeEnergyBurned, unit: .kilocalorie())
         todayActiveKcal = total
-        isAuthorized = true
+        if total > 0 { authStatus = .authorized }
         return total
     }
 

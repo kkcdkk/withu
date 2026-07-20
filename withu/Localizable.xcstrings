@@ -798,6 +798,16 @@
         }
       }
     },
+    "2번째 장면을 만들어 캐릭터가 움직이게 해요. 캔디 %lld개를 써요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a second frame so your character moves. Uses %lld candy."
+          }
+        }
+      }
+    },
     "3. 홈·잠금화면 위젯 추가" : {
       "localizations" : {
         "en" : {
@@ -1115,6 +1125,16 @@
         }
       }
     },
+    "갤러리에 저장됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to gallery"
+          }
+        }
+      }
+    },
     "갤러리에 저장했어요" : {
       "localizations" : {
         "en" : {
@@ -1151,6 +1171,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Change Health permission in the Settings app"
+          }
+        }
+      }
+    },
+    "권한 요청" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request Health permission"
           }
         }
       }
@@ -2053,6 +2083,16 @@
         }
       }
     },
+    "다듬기 결과" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine result"
+          }
+        }
+      }
+    },
     "다듬기 이력" : {
       "localizations" : {
         "en" : {
@@ -2073,6 +2113,36 @@
         }
       }
     },
+    "다듬었어요 — 다듬기 이력에서 이전 버전과 비교해 보세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refined — compare with previous versions in the history"
+          }
+        }
+      }
+    },
+    "다듬은 걸로 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch to the refined one"
+          }
+        }
+      }
+    },
+    "다듬은 결과" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refined"
+          }
+        }
+      }
+    },
     "다듬은 버전 %lld 을 보고 있어요" : {
       "localizations" : {
         "en" : {
@@ -2083,12 +2153,32 @@
         }
       }
     },
+    "다듬은 캐릭터로 바꿨어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switched to the refined character"
+          }
+        }
+      }
+    },
     "다듬은 캐릭터를 갤러리에 저장했어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Refined character saved to your gallery"
+          }
+        }
+      }
+    },
+    "다듬을 때마다 캔디 %lld개를 써요. 전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each refine uses %lld candy. You can compare before and after, then choose."
           }
         }
       }
@@ -4767,6 +4857,16 @@
         }
       }
     },
+    "움직이는 캐릭터 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make it a moving character"
+          }
+        }
+      }
+    },
     "움직이는 캐릭터로 만들기" : {
       "localizations" : {
         "en" : {
@@ -4807,12 +4907,52 @@
         }
       }
     },
+    "움직임 다시 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redo motion frame"
+          }
+        }
+      }
+    },
+    "움직임 만드는 중…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating motion…"
+          }
+        }
+      }
+    },
     "움직임 프레임" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Motion frame"
+          }
+        }
+      }
+    },
+    "움직임 프레임 만드는 중…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating motion frame…"
+          }
+        }
+      }
+    },
+    "움직임 프레임을 만드는 중이에요 — 잠시만 기다려 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating the motion frame — please wait a moment"
           }
         }
       }
@@ -5401,12 +5541,42 @@
         }
       }
     },
+    "이전" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before"
+          }
+        }
+      }
+    },
+    "이전 그대로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep the previous one"
+          }
+        }
+      }
+    },
     "이제 내 캐릭터를 만들어 봐요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Now let's create your character"
+          }
+        }
+      }
+    },
+    "이제 움직이는 캐릭터예요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your character moves now"
           }
         }
       }

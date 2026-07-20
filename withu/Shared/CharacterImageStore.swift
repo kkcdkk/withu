@@ -538,8 +538,10 @@ enum CharacterImageStore {
         if frame == 0 {
             let item = addToGalleryInternal(data: data, sourceState: state,
                                             batchId: batchId, prompt: prompt)
-            if let id = item?.id {
-                // 새로 만든 갤러리 항목이 이 state 의 현재 활성 source.
+            if let id = item?.id, applyToActiveSlot {
+                // 활성 슬롯에 실제로 적용했을 때만 활성 source 갱신 —
+                // 갤러리 전용 저장(생성 결과 자동 보관 등)이 map 을 오염시키면
+                // '적용된 그림' 추적(슬롯 복구·frame1 갱신)이 엉뚱한 항목을 가리킨다.
                 setActiveSource(state: state, galleryId: id)
             }
             return item
@@ -785,6 +787,26 @@ enum CharacterImageStore {
         } catch {
             return false
         }
+        return true
+    }
+
+    /// frame 1 을 지정 갤러리 항목에 부착 — '움직이는 캐릭터 만들기'용.
+    /// 파일 저장 + hasFrame1 메타 갱신. 항목이 메타에 없으면 실패.
+    /// .galleryChanged 알림 → 백업 동기화가 frame 1 을 서버에 올린다.
+    @discardableResult
+    static func attachGalleryFrame1(_ id: String, image: UIImage) -> Bool {
+        var all = loadGalleryMetadata()
+        guard let idx = all.firstIndex(where: { $0.id == id }),
+              let data = image.pngData(),
+              let url = galleryFrame1URL(id: id) else { return false }
+        do {
+            try data.write(to: url, options: [.atomic, .noFileProtection])
+        } catch {
+            return false
+        }
+        all[idx].hasFrame1 = true
+        saveGalleryMetadata(all)
+        NotificationCenter.default.post(name: .galleryChanged, object: nil)
         return true
     }
 

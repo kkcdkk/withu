@@ -49,6 +49,8 @@ struct CharacterGenView: View {
     @State private var importPickerItem: PhotosPickerItem?
     @State private var importedRawImage: UIImage?
     @State private var importedProcessedImage: UIImage?
+    /// 가져온 이미지를 reference 로 만든 움직임 프레임 (frame 1)
+    @State private var importedFrame1: UIImage?
     @State private var isProcessing: Bool = false
     /// 배경 빼기 스위치 (ON: 배경 제거본, OFF: 원본 그대로)
     @State private var removeBackground: Bool = true
@@ -67,6 +69,8 @@ struct CharacterGenView: View {
     @State private var transparentResultFrame2: UIImage?
     @State private var displayTransparent: Bool = true   // 기본 투명 (모델이 투명으로 줌)
     @State private var singleDetailFrame: Int = 0   // 결과에서 보고 있는 프레임(0=기본, 1=움직임)
+    /// 움직임 프레임(frame 1) 을 만드는 중 — 결과 우하단 슬롯에 로딩 표시 (완성 착각 방지).
+    @State private var isGeneratingMotionFrame: Bool = false
     @State private var isProcessingTransparent: Bool = false
     @State private var revisedPrompt: String?
     /// 마지막 성공 생성에 실제로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
@@ -84,7 +88,14 @@ struct CharacterGenView: View {
     private enum PendingAction: Identifiable {
         case newGeneration
         case refine(frame: Int)
-        var id: String { if case .refine(let f) = self { return "refine\(f)" } else { return "new" } }
+        case importMotion   // 가져온 이미지를 reference 로 움직임 프레임 생성
+        var id: String {
+            switch self {
+            case .newGeneration: return "new"
+            case .refine(let f): return "refine\(f)"
+            case .importMotion: return "importMotion"
+            }
+        }
     }
     @State private var pendingAction: PendingAction?
 
@@ -96,6 +107,8 @@ struct CharacterGenView: View {
         let frame2: UIImage?        // 움직임 프레임 (있으면)
         let fullRes: UIImage?       // frame1 앵커용 원본(1024)
         let isRefined: Bool
+        /// 자동 저장된 갤러리 항목 id — '적용' 시 이 항목을 재사용해 중복 저장을 막음.
+        let galleryId: String?
     }
     @State private var versions: [ResultVersion] = []
     @State private var selectedVersion: Int = 0
@@ -164,6 +177,7 @@ struct CharacterGenView: View {
                 switch pendingAction {
                 case .newGeneration: generateTask = Task { await generate() }
                 case .refine(let f): Task { await refine(frame: f) }
+                case .importMotion: Task { await generateImportMotionFrame() }
                 case nil: break
                 }
                 pendingAction = nil
@@ -202,6 +216,7 @@ struct CharacterGenView: View {
             lastError = nil
             importedRawImage = nil
             importedProcessedImage = nil
+            importedFrame1 = nil
         }
     }
 
@@ -336,9 +351,10 @@ struct CharacterGenView: View {
         if hasFreeCreation {
             return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (한 장 1개).")
         }
-        return isNew
-            ? String(localized: "이번 만들기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
-            : String(localized: "이번 다듬기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
+        let isRefine: Bool = { if case .refine = pendingAction { return true }; return false }()
+        return isRefine
+            ? String(localized: "이번 다듬기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
+            : String(localized: "이번 만들기에 캔디 \(cost)개를 써요. 성공했을 때만 차감돼요.")
     }
 
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.
@@ -514,9 +530,20 @@ struct CharacterGenView: View {
             Section("결과") {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
-                    Label("다듬은 버전 \(selectedVersion) 을 보고 있어요", systemImage: "sparkles")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.withuPinkText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("다듬은 버전 \(selectedVersion) 을 보고 있어요", systemImage: "sparkles")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.withuPinkText)
+                        Text("다듬었어요 — 다듬기 이력에서 이전 버전과 비교해 보세요")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                // 결과 유실 방지 — 만들어진 결과는 갤러리에 자동 저장됨을 알림.
+                if versions.indices.contains(selectedVersion), versions[selectedVersion].galleryId != nil {
+                    Label("갤러리에 저장됨", systemImage: "checkmark.circle")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 // 표시할 frame 0, frame 1 — 현재 모드 (raw / transparent) 에 따라
                 let f0 = currentDisplay(frame: 0)
@@ -536,10 +563,21 @@ struct CharacterGenView: View {
                         .font(.caption2).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                 } else if let f0 {
-                    Image(uiImage: f0)
-                        .resizable()
-                        .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(uiImage: f0)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        // 움직임 프레임(frame 1) 생성 중 — 우하단 슬롯 자리에 로딩 (완성 착각 방지).
+                        if isGeneratingMotionFrame {
+                            motionFrameLoadingSlot
+                        }
+                    }
+                    if isGeneratingMotionFrame {
+                        Text("움직임 프레임을 만드는 중이에요 — 잠시만 기다려 주세요")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 // 흰 배경 / 배경 빼기 토글
@@ -603,10 +641,20 @@ struct CharacterGenView: View {
     @MainActor
     private func ensureTransparentResults() async {}
 
+    /// 움직임 프레임(frame 1) 생성 중 우하단 미니 슬롯 자리 로딩 — 배치 결과 카드의 40×40 미니와 동일 규격.
+    private var motionFrameLoadingSlot: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(Color(.systemBackground).opacity(0.85))
+            .frame(width: 40, height: 40)
+            .overlay(ProgressView().controlSize(.small))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white, lineWidth: 2))
+            .padding(6)
+    }
+
     /// 현재 선택된 모드의 이미지로 적용.
     private func applyCurrentSelection() {
         guard let img = currentDisplay(frame: 0) else { return }
-        apply(img, to: targetState)
+        apply(img, frame2: currentDisplay(frame: 1), to: targetState)
     }
 
     @ViewBuilder
@@ -735,6 +783,20 @@ struct CharacterGenView: View {
                         .scaledToFit()
                 }
                 .frame(maxHeight: 300)
+                // 움직임 프레임 — 만들어졌으면 우하단 미니, 만드는 중이면 로딩 슬롯.
+                .overlay(alignment: .bottomTrailing) {
+                    if isGeneratingMotionFrame {
+                        motionFrameLoadingSlot
+                    } else if let f1 = importedFrame1 {
+                        Image(uiImage: f1)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white, lineWidth: 2))
+                            .padding(6)
+                    }
+                }
 
                 if isProcessing {
                     HStack { ProgressView(); Text("배경 빼는 중…") }
@@ -742,8 +804,29 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // 가져온 이미지도 움직이게 — 이 이미지를 reference 로 움직임 프레임(frame 1) 생성.
+                // 생성되는 프레임은 항상 투명 배경이라, '배경 빼기' OFF(원본 배경 유지)와
+                // 섞으면 두 프레임 배경이 어긋나 애니메이션이 깨진다 → 배경 제거 상태에서만 노출.
+                if targetState.usesGeneratedMotion, removeBackground {
+                    Button {
+                        pendingAction = .importMotion   // 캔디 안내 팝업 → 확인 시 생성
+                    } label: {
+                        if isGenerating {
+                            HStack { ProgressView(); Text("움직임 프레임 만드는 중…") }
+                        } else {
+                            Label(importedFrame1 == nil
+                                  ? String(localized: "움직이는 캐릭터로 만들기")
+                                  : String(localized: "움직임 다시 만들기"),
+                                  systemImage: "figure.walk.motion")
+                        }
+                    }
+                    .disabled(isGenerating || isProcessing)
+                }
+
                 Button {
-                    apply(display, to: targetState)
+                    // '배경 빼기' OFF 로 적용하면 frame0(원본 배경)과 투명 frame1 이
+                    // 어긋나므로, 움직임 프레임은 배경 제거 상태에서만 함께 적용.
+                    apply(display, frame2: removeBackground ? importedFrame1 : nil, to: targetState)
                 } label: {
                     Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
                         .font(.callout.weight(.semibold))
@@ -852,6 +935,7 @@ struct CharacterGenView: View {
         defer {
             isGenerating = false
             generationStartedAt = nil
+            isGeneratingMotionFrame = false
             generateTask = nil
             remainingGenerations = GenerationQuota.remainingToday()
             if bgTask != .invalid {
@@ -880,16 +964,21 @@ struct CharacterGenView: View {
         if generateAnimated, targetState.usesGeneratedMotion, frame0Succeeded,
            let f0Full = lastFrame0FullRes ?? resultImage,
            let f0Ref = f0Full.pngData()?.base64EncodedString() {
+            isGeneratingMotionFrame = true   // 결과 우하단 슬롯에 로딩 표시 — 완성 착각 방지
             let animPrompt = "\(composedPrompt).\(animationFrame2Instruction(targetState))"
             await send(prompt: animPrompt, reference: f0Ref, frame: 1, matchReference: f0Full,
                        inputField: "움직임 프레임")
+            isGeneratingMotionFrame = false
             if resultFrame2 != nil, !freeSession { GenerationQuota.record(cost) }
         }
         if frame0Succeeded {
             // 새 결과 = 이력 리셋. [0] = 원본.
             if let img = resultImage {
+                // 결과 유실 방지 — 갤러리에 자동 저장 (활성 슬롯은 '적용' 눌러야 반영).
+                let savedId = autoSaveToGallery()
                 versions = [ResultVersion(small: img, frame2: resultFrame2,
-                                          fullRes: lastFrame0FullRes, isRefined: false)]
+                                          fullRes: lastFrame0FullRes, isRefined: false,
+                                          galleryId: savedId)]
                 selectedVersion = 0
             }
         }
@@ -937,8 +1026,11 @@ struct CharacterGenView: View {
             }
             // 다듬은 버전을 이력에 추가하고 선택 — 이전 버전으로 언제든 돌아갈 수 있음.
             if let img = resultImage {
+                // 결과 유실 방지 — 다듬은 버전도 갤러리에 자동 저장 (활성 슬롯은 미적용).
+                let savedId = autoSaveToGallery()
                 versions.append(ResultVersion(small: img, frame2: resultFrame2,
-                                              fullRes: lastFrame0FullRes, isRefined: true))
+                                              fullRes: lastFrame0FullRes, isRefined: true,
+                                              galleryId: savedId))
                 if versions.count > 8 { versions.remove(at: 1) }   // 원본([0])은 보존, 오래된 다듬기부터 정리
                 selectedVersion = versions.count - 1
             }
@@ -1046,6 +1138,7 @@ struct CharacterGenView: View {
         guard let item else {
             importedRawImage = nil
             importedProcessedImage = nil
+            importedFrame1 = nil
             return
         }
         do {
@@ -1069,6 +1162,7 @@ struct CharacterGenView: View {
         lastError = nil
         defer { isProcessing = false }
         importedRawImage = image
+        importedFrame1 = nil   // 이전 이미지 기준 움직임 프레임은 무효
         do {
             let processed = try await ImageProcessing.prepareForCharacter(image)
             importedProcessedImage = processed
@@ -1078,15 +1172,86 @@ struct CharacterGenView: View {
         }
     }
 
+    /// 가져온 이미지를 reference 로 움직임 프레임(frame 1) 생성 — refine(frame: 1) 과 같은 서버 호출.
+    /// 성공 시 frame 0 = 가져온 이미지, frame 1 = 생성 결과로 적용/저장 가능.
+    private func generateImportMotionFrame() async {
+        guard let base = displayedImport else { return }
+        let cost = GenerationQuota.cost(forQuality: quality)
+        guard hasFreeCreation || GenerationQuota.canGenerate(cost) else {
+            lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
+            return
+        }
+        isGenerating = true
+        generationStartedAt = .now
+        isGeneratingMotionFrame = true
+        lastError = nil
+        defer {
+            isGenerating = false
+            generationStartedAt = nil
+            isGeneratingMotionFrame = false
+            remainingGenerations = GenerationQuota.remainingToday()
+        }
+        do {
+            try await APIClient.shared.preflightPing()
+        } catch {
+            lastError = String(localized: "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요.")
+            return
+        }
+        guard let refB64 = base.pngData()?.base64EncodedString() else {
+            lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")
+            return
+        }
+        // send(frame: 1) 은 resultFrame2 슬롯을 쓴다 — AI 모드 잔재 보존 후 결과만 옮겨 담음.
+        let savedSlot = resultFrame2
+        resultFrame2 = nil
+        await send(prompt: animationFrame2Instruction(targetState), reference: refB64, frame: 1,
+                   matchReference: base, inputField: "움직임 프레임(내 이미지)")
+        if let f2 = resultFrame2 {
+            importedFrame1 = f2
+            if !lastFreeConsumed { GenerationQuota.record(cost) }   // 성공했을 때만 차감
+        }
+        resultFrame2 = savedSlot
+    }
+
     // MARK: - Common actions
 
-    private func apply(_ image: UIImage, to state: CharacterState) {
-        if CharacterImageStore.save(image, for: state, frame: 0, prompt: lastSentPrompt) != nil {
+    /// 생성 결과(원본이든 다듬기든)를 갤러리에만 저장 — 활성 슬롯은 안 건드림 (배치 생성과 같은 패턴).
+    /// 반환: 갤러리 항목 id ('적용' 시 재사용해 중복 저장 방지).
+    private func autoSaveToGallery() -> String? {
+        guard let img = resultImage else { return nil }
+        let item = CharacterImageStore.save(img, for: targetState, frame: 0,
+                                            applyToActiveSlot: false, prompt: lastSentPrompt)
+        if let id = item?.id, let f2 = resultFrame2 {
+            CharacterImageStore.attachGalleryFrame1(id, image: f2)
+        }
+        return item?.id
+    }
+
+    private func apply(_ image: UIImage, frame2: UIImage?, to state: CharacterState) {
+        // 이미 자동 저장된 결과면 그 갤러리 항목을 재사용 — '적용'이 같은 결과를 또 저장하지 않게.
+        let autoSavedId: String? = (mode == .aiGenerate && versions.indices.contains(selectedVersion))
+            ? versions[selectedVersion].galleryId : nil
+        let ok: Bool
+        if let autoSavedId, CharacterImageStore.applyGalleryItem(autoSavedId, to: state) {
+            // 갤러리 원본은 투명 raw — '흰 배경' 표시 중이면 활성 슬롯만 합성본으로 덮어씀 (갤러리는 raw 유지).
+            if !displayTransparent {
+                CharacterImageStore.saveActiveSlotOnly(image, for: state, frame: 0)
+                if let frame2 {
+                    CharacterImageStore.saveActiveSlotOnly(frame2, for: state, frame: 1)
+                }
+            }
+            ok = true
+        } else {
+            ok = CharacterImageStore.save(image, for: state, frame: 0, prompt: lastSentPrompt) != nil
+            if ok, let frame2 {
+                CharacterImageStore.save(frame2, for: state, frame: 1)
+            }
+        }
+        if ok {
             ConnectivityManager.shared.sendCharacterImage(image, for: state, frame: 0)
             // frame 1 — 현재 displayTransparent 모드 존중 (transparent cache 있으면 그걸 우선)
-            if let f2 = currentDisplay(frame: 1) {
-                CharacterImageStore.save(f2, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(f2, for: state, frame: 1)
+            if let frame2 {
+                ConnectivityManager.shared.sendCharacterImage(frame2, for: state, frame: 1)
             }
             WidgetCenter.shared.reloadAllTimelines()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
