@@ -46,16 +46,6 @@
         }
       }
     },
-    "권한 없음" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No permission"
-          }
-        }
-      }
-    },
     "·" : {
 
     },
@@ -550,32 +540,12 @@
         }
       }
     },
-    "켜짐" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On"
-          }
-        }
-      }
-    },
     "❌ alpha 없음 (RGB only)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "❌ no alpha (RGB only)"
-          }
-        }
-      }
-    },
-    "공유 꺼짐" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sharing off"
           }
         }
       }
@@ -1165,26 +1135,6 @@
         }
       }
     },
-    "권한 변경" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change Health permission in the Settings app"
-          }
-        }
-      }
-    },
-    "권한 요청" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Request Health permission"
-          }
-        }
-      }
-    },
     "건강 데이터" : {
       "localizations" : {
         "en" : {
@@ -1419,6 +1369,16 @@
         }
       }
     },
+    "공유 꺼짐" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing off"
+          }
+        }
+      }
+    },
     "구름 낀 하루 ☁️" : {
       "localizations" : {
         "en" : {
@@ -1435,6 +1395,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Permissions"
+          }
+        }
+      }
+    },
+    "권한 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Health permission in the Settings app"
           }
         }
       }
@@ -1459,6 +1429,26 @@
         }
       }
     },
+    "권한 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No permission"
+          }
+        }
+      }
+    },
+    "권한 요청" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request Health permission"
+          }
+        }
+      }
+    },
     "그대로 두기" : {
       "localizations" : {
         "en" : {
@@ -1475,16 +1465,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "What to keep"
-          }
-        }
-      }
-    },
-    "알림 권한은 설정 앱에서 변경" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change notification permission in the Settings app"
           }
         }
       }
@@ -2173,22 +2153,23 @@
         }
       }
     },
+    "다듬을 때마다 캔디 %lld개를 써요. 결과는 갤러리에 새로 저장돼요." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each refine uses %lld candy. The result is saved to your gallery as a new item."
+          }
+        }
+      }
+    },
     "다듬을 때마다 캔디 %lld개를 써요. 전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Each refine uses %lld candy. You can compare before and after, then choose."
-          }
-        }
-      }
-    },
-    "다듬을 때마다 캔디 %lld개를 써요. 결과는 갤러리에 새로 저장돼요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Each refine uses %lld candy. The result is saved to your gallery as a new item."
           }
         }
       }
@@ -2303,6 +2284,16 @@
         }
       }
     },
+    "대상" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject"
+          }
+        }
+      }
+    },
     "더 만들고 싶다면 캔디를 충전해요." : {
       "localizations" : {
         "en" : {
@@ -2339,6 +2330,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Make More (top up)"
+          }
+        }
+      }
+    },
+    "데이터 새로고침" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh today's data"
           }
         }
       }
@@ -2635,6 +2636,26 @@
         }
       }
     },
+    "생성 방식" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creation Method"
+          }
+        }
+      }
+    },
+    "원하는 상태 하나만 만들어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make just the state you want"
+          }
+        }
+      }
+    },
     "만들고 싶은 상태 (%lld개)" : {
       "localizations" : {
         "en" : {
@@ -2711,26 +2732,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enjoying a tasty meal 🍽️"
-          }
-        }
-      }
-    },
-    "예" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yes"
-          }
-        }
-      }
-    },
-    "취침 리마인더 시간" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bedtime reminder time"
           }
         }
       }
@@ -2917,16 +2918,6 @@
         }
       }
     },
-    "요청 안 함" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not requested"
-          }
-        }
-      }
-    },
     "바꾸고 싶은 점 (예: 모자를 씌워줘)" : {
       "localizations" : {
         "en" : {
@@ -3108,6 +3099,7 @@
       }
     },
     "배경 있기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3209,6 +3201,16 @@
         }
       }
     },
+    "보유 캔디 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Candies: %lld"
+          }
+        }
+      }
+    },
     "보유 캔디 %lld개 · 이번 만들기 %lld캔디" : {
       "localizations" : {
         "en" : {
@@ -3225,6 +3227,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You have %lld candies · About %lld candies this time"
+          }
+        }
+      }
+    },
+    "보유하고 있는 캔디는 %lld개예요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have %lld candies"
           }
         }
       }
@@ -3611,6 +3623,16 @@
         }
       }
     },
+    "상태 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose State"
+          }
+        }
+      }
+    },
     "상태 직접 고르기" : {
       "localizations" : {
         "en" : {
@@ -3687,36 +3709,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colors"
-          }
-        }
-      }
-    },
-    "상태 선택" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose State"
-          }
-        }
-      }
-    },
-    "만들 방식" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How to Create"
-          }
-        }
-      }
-    },
-    "한 가지씩 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One at a Time"
           }
         }
       }
@@ -4043,6 +4035,16 @@
         }
       }
     },
+    "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To connect with Sleep Focus: iPhone Settings > Focus > Sleep > Add Filter > turn on Withy. (If you use a sleep schedule in the Health app, it follows that automatically.)"
+          }
+        }
+      }
+    },
     "수면 시간" : {
       "localizations" : {
         "en" : {
@@ -4227,6 +4229,16 @@
         }
       }
     },
+    "신호 기록 (최근 %lld회)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signal history (last %lld)"
+          }
+        }
+      }
+    },
     "실제로 사용한 설명 보기" : {
       "localizations" : {
         "en" : {
@@ -4307,16 +4319,6 @@
         }
       }
     },
-    "취침 리마인더를 %@에 맞췄어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bedtime reminder set for %@"
-          }
-        }
-      }
-    },
     "안 됨" : {
       "localizations" : {
         "en" : {
@@ -4353,6 +4355,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Request notification permission"
+          }
+        }
+      }
+    },
+    "알림 권한은 설정 앱에서 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change notification permission in the Settings app"
+          }
+        }
+      }
+    },
+    "알림을 모두 취소했어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All notifications canceled"
           }
         }
       }
@@ -4517,7 +4539,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4527,7 +4549,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4573,6 +4595,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sequence images"
+          }
+        }
+      }
+    },
+    "예" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
           }
         }
       }
@@ -4647,16 +4679,6 @@
         }
       }
     },
-    "데이터 새로고침" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refresh today's data"
-          }
-        }
-      }
-    },
     "오늘 알찬 하루였네요! 평소보다 많이 움직였어요" : {
       "localizations" : {
         "en" : {
@@ -4713,6 +4735,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yoga 🧘"
+          }
+        }
+      }
+    },
+    "요청 안 함" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not requested"
           }
         }
       }
@@ -4817,6 +4849,16 @@
         }
       }
     },
+    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요. 앱이 열리지 않고 조용히 반영돼요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To reflect workouts or sleep instantly, add 'Withy Refresh Character' to the Workout/Sleep mode triggers in Shortcuts automation. It runs quietly without opening the app."
+          }
+        }
+      }
+    },
     "운동·수면·걸음에 맞춰 캐릭터 상태가 바뀌어요" : {
       "localizations" : {
         "en" : {
@@ -4847,32 +4889,12 @@
         }
       }
     },
-    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요. 앱이 열리지 않고 조용히 반영돼요." : {
+    "움직이는 캐릭터 만들기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To reflect workouts or sleep instantly, add 'Withy Refresh Character' to the Workout/Sleep mode triggers in Shortcuts automation. It runs quietly without opening the app."
-          }
-        }
-      }
-    },
-    "캐릭터 새로고침" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refresh Character"
-          }
-        }
-      }
-    },
-    "지금 상태(운동·수면·날씨)에 맞춰 캐릭터와 위젯을 조용히 새로 맞춰요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quietly re-aligns your character and widgets to your current state (workout, sleep, weather)."
+            "value" : "Make it a moving character"
           }
         }
       }
@@ -4883,16 +4905,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "For characters made as animated, choose whether the character moves."
-          }
-        }
-      }
-    },
-    "움직이는 캐릭터 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Make it a moving character"
           }
         }
       }
@@ -5048,6 +5060,7 @@
       }
     },
     "워치로 %@ 배경 전송 중 (%lldKB)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5058,6 +5071,7 @@
       }
     },
     "워치로 %@ 전송 중 (%lldKB)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5068,6 +5082,7 @@
       }
     },
     "워치로 %@ 표현 전송 중 (%lldKB)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5631,6 +5646,16 @@
         }
       }
     },
+    "입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a code and you both get 5 candies. Invite rewards apply for up to 10 friends."
+          }
+        }
+      }
+    },
     "자는 시간이에요" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5942,16 +5967,6 @@
         }
       }
     },
-    "대상" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subject"
-          }
-        }
-      }
-    },
     "준비가 끝났어요" : {
       "localizations" : {
         "en" : {
@@ -6002,6 +6017,16 @@
         }
       }
     },
+    "지금 상태(운동·수면·날씨)에 맞춰 캐릭터와 위젯을 조용히 새로 맞춰요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quietly re-aligns your character and widgets to your current state (workout, sleep, weather)."
+          }
+        }
+      }
+    },
     "지금 잠자리 시간대" : {
       "localizations" : {
         "en" : {
@@ -6029,16 +6054,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Right now"
-          }
-        }
-      }
-    },
-    "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To connect with Sleep Focus: iPhone Settings > Focus > Sleep > Add Filter > turn on Withy. (If you use a sleep schedule in the Health app, it follows that automatically.)"
           }
         }
       }
@@ -6094,16 +6109,6 @@
         }
       }
     },
-    "신호 기록 (최근 %lld회)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signal history (last %lld)"
-          }
-        }
-      }
-    },
     "집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요." : {
       "localizations" : {
         "en" : {
@@ -6153,6 +6158,9 @@
           }
         }
       }
+    },
+    "참고 사진 (Optional)" : {
+
     },
     "참고 사진 (선택)" : {
       "localizations" : {
@@ -6344,6 +6352,26 @@
         }
       }
     },
+    "취침 리마인더 시간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedtime reminder time"
+          }
+        }
+      }
+    },
+    "취침 리마인더를 %@에 맞췄어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedtime reminder set for %@"
+          }
+        }
+      }
+    },
     "친구 초대" : {
       "localizations" : {
         "en" : {
@@ -6450,6 +6478,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Explore character states"
+          }
+        }
+      }
+    },
+    "캐릭터 새로고침" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh Character"
           }
         }
       }
@@ -6677,36 +6715,6 @@
         }
       }
     },
-    "보유하고 있는 캔디는 %lld개예요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You have %lld candies"
-          }
-        }
-      }
-    },
-    "입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a code and you both get 5 candies. Invite rewards apply for up to 10 friends."
-          }
-        }
-      }
-    },
-    "보유 캔디 %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Candies: %lld"
-          }
-        }
-      }
-    },
     "캔디 %lld개로는 %lld개 상태(약 %lld캔디)를 한 번에 만들 수 없어요. 만들 상태를 줄이거나 캔디를 충전해 주세요." : {
       "localizations" : {
         "en" : {
@@ -6763,6 +6771,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Permissions you skipped can be turned on later in settings on the main screen."
+          }
+        }
+      }
+    },
+    "켜짐" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
           }
         }
       }
@@ -6991,12 +7009,12 @@
         }
       }
     },
-    "알림을 모두 취소했어요" : {
+    "하나씩 만들기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All notifications canceled"
+            "value" : "One at a Time"
           }
         }
       }
