@@ -148,7 +148,8 @@ struct CharacterGalleryView: View {
     private var characterFolders: some View {
         if characters.isEmpty {
             VStack(spacing: 10) {
-                Text("🎨").font(.system(size: 44))
+                Image(CharacterState.idle.imageAssetName)
+                    .resizable().scaledToFit().frame(width: 64, height: 64)
                 Text("'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요.")
                     .font(.callout).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -336,7 +337,8 @@ struct CharacterGalleryView: View {
                 Circle()
                     .fill(Color.withuPink.opacity(0.18))
                     .frame(width: 120, height: 120)
-                Text("🎨").font(.system(size: 52))
+                Image(CharacterState.idle.imageAssetName)
+                    .resizable().scaledToFit().frame(width: 84, height: 84)
             }
             VStack(spacing: 6) {
                 Text("아직 만든 캐릭터가 없어요")
@@ -730,12 +732,12 @@ struct GalleryGrid<Header: View>: View {
                                 Button {
                                     UIPasteboard.general.string = prompt
                                 } label: {
-                                    Label("프롬프트 복사", systemImage: "doc.on.doc")
+                                    Text("프롬프트 복사")
                                         .font(.caption)
                                 }
                                 .padding(.top, 4)
                             } label: {
-                                Label("만든 기록", systemImage: "text.quote")
+                                Text("만든 기록")
                                     .font(.callout.weight(.medium))
                             }
                             .padding(.horizontal)
@@ -754,7 +756,7 @@ struct GalleryGrid<Header: View>: View {
                                         onChange()
                                     }
                                 } label: {
-                                    Label("프레임 바꾸기", systemImage: "arrow.left.arrow.right")
+                                    Text("프레임 바꾸기")
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
@@ -778,8 +780,7 @@ struct GalleryGrid<Header: View>: View {
                             apply(item, to: backgroundState)
                             selectedItem = nil
                         } label: {
-                            Label("'\(backgroundState.koreanShortLabel)' 자리에 적용하기",
-                                  systemImage: "square.and.arrow.down")
+                            Text("'\(backgroundState.koreanShortLabel)' 자리에 적용하기")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(WithuCTAButtonStyle())
@@ -789,7 +790,7 @@ struct GalleryGrid<Header: View>: View {
                             Button {
                                 Task { await saveOneToPhotos(img) }
                             } label: {
-                                Label("저장", systemImage: "square.and.arrow.down")
+                                Text("저장")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
@@ -798,7 +799,7 @@ struct GalleryGrid<Header: View>: View {
                             Button {
                                 showApplySheet = true
                             } label: {
-                                Label("다른 자리에", systemImage: "arrow.right.circle")
+                                Text("다른 자리에")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
@@ -806,45 +807,37 @@ struct GalleryGrid<Header: View>: View {
                         }
                         .padding(.horizontal)
 
-                        // 배경 보기 — 빼기/있기 미리보기 토글. 바꾸면 '이대로 저장' 이 나타남.
+                        // 배경 빼기 — 스위치. 켜면 투명 미리보기(Vision), 끄면 원본.
+                        // 바꾸면 '이대로 저장' 이 나타남.
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 12) {
-                                Button {
-                                    Task { await showTransparentPreview(item, base: img) }
-                                } label: {
-                                    Label("배경 빼기", systemImage: "wand.and.sparkles")
-                                        .frame(maxWidth: .infinity)
+                            Toggle("배경 빼기", isOn: Binding(
+                                get: { bgPreview == .transparent },
+                                set: { on in
+                                    if on {
+                                        Task { await showTransparentPreview(item, base: img) }
+                                    } else {
+                                        withAnimation { bgPreview = .white }
+                                    }
                                 }
-                                .buttonStyle(.bordered)
-                                .tint(bgPreview == .transparent ? .withuPinkText : .secondary)
-                                .disabled(isRemovingBackground)
-
-                                Button {
-                                    withAnimation { bgPreview = .white }
-                                } label: {
-                                    Label("배경 있기", systemImage: "square.fill")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(bgPreview == .white ? .withuPinkText : .secondary)
-                                .disabled(isRemovingBackground)
-                            }
+                            ))
+                            .disabled(isRemovingBackground)
                             if isRemovingBackground {
                                 HStack { ProgressView(); Text("배경 빼는 중…") }
-                                    .font(.callout)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             if bgPreview != nil {
                                 Button {
                                     Task { await saveBackgroundChoice(item) }
                                 } label: {
-                                    Label("이대로 저장", systemImage: "square.and.arrow.down")
+                                    Text("이대로 저장")
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(WithuCTAButtonStyle())
                                 .disabled(isRemovingBackground)
                             }
                         }
+                        .frostedCard()
                         .padding(.horizontal)
 
                         // 움직이는 캐릭터 만들기 — 사진으로 만든(또는 움직임 없는) 항목에
@@ -860,7 +853,7 @@ struct GalleryGrid<Header: View>: View {
                                         HStack { ProgressView(); Text("움직임 만드는 중…") }
                                             .frame(maxWidth: .infinity)
                                     } else {
-                                        Label("움직이는 캐릭터 만들기", systemImage: "figure.run")
+                                        Text("움직이는 캐릭터 만들기")
                                             .frame(maxWidth: .infinity)
                                     }
                                 }
@@ -871,6 +864,7 @@ struct GalleryGrid<Header: View>: View {
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
+                            .frostedCard()
                             .padding(.horizontal)
                             .alert("캔디를 사용해요", isPresented: $showMotionConfirm) {
                                 Button("만들기") { Task { await makeMotionFrame(item) } }
@@ -882,7 +876,7 @@ struct GalleryGrid<Header: View>: View {
 
                         // 다듬기 — 이 캐릭터를 참고로 한 번 더 생성. 캔디 차감(무료 미적용).
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("다듬기", systemImage: "sparkles")
+                            Text("다듬기")
                                 .font(.callout.weight(.medium))
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
@@ -894,7 +888,7 @@ struct GalleryGrid<Header: View>: View {
                                     HStack { ProgressView(); Text("다듬는 중…") }
                                         .frame(maxWidth: .infinity)
                                 } else {
-                                    Label("이대로 다듬기", systemImage: "wand.and.stars")
+                                    Text("이대로 다듬기")
                                         .frame(maxWidth: .infinity)
                                 }
                             }
@@ -905,6 +899,7 @@ struct GalleryGrid<Header: View>: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+                        .frostedCard()
                         .padding(.horizontal)
                     } else {
                         Image(systemName: "photo")
