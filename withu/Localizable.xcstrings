@@ -2636,6 +2636,46 @@
         }
       }
     },
+    "캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Character"
+          }
+        }
+      }
+    },
+    "움직이게 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make It Move"
+          }
+        }
+      }
+    },
+    "전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare before and after, then choose whether to keep it."
+          }
+        }
+      }
+    },
+    "2번째 장면을 만들어 캐릭터가 움직이게 해요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a second frame so your character moves."
+          }
+        }
+      }
+    },
     "생성 방식" : {
       "localizations" : {
         "en" : {
@@ -4849,7 +4889,7 @@
         }
       }
     },
-    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요. 앱이 열리지 않고 조용히 반영돼요." : {
+    "운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {

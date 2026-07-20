@@ -698,8 +698,6 @@ struct SettingsView: View {
                         } label: {
                             Label("내 캐릭터 설정하기", systemImage: "person.crop.circle.fill")
                         }
-                    }
-                    Section {
                         NavigationLink {
                             AdvancedDiagnosticsView(
                                 health: $health,
@@ -712,6 +710,8 @@ struct SettingsView: View {
                         } label: {
                             Label("캐릭터 상태 살펴보기", systemImage: "gauge.with.dots.needle.50percent")
                         }
+                    } header: {
+                        Text("캐릭터")
                     } footer: {
                         Text("집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.")
                             .font(.caption2)
@@ -915,7 +915,7 @@ struct SettingsView: View {
         } header: {
             Text("건강 데이터")
         } footer: {
-            Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요. 앱이 열리지 않고 조용히 반영돼요.")
+            Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요.")
                 .font(.caption2)
         }
     }

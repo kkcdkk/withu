@@ -674,6 +674,15 @@ struct GalleryGrid<Header: View>: View {
 
     // MARK: Detail sheet
 
+    /// 캔디 비용 배지 — 유료 기능 버튼 옆 작은 표시 (비용 안내 문구 통일).
+    private func candyBadge(_ count: Int) -> some View {
+        Text("🍬 \(count)")
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.withuPink.opacity(0.18)))
+    }
+
     @ViewBuilder
     private func galleryDetailSheet(item: GalleryItem) -> some View {
         NavigationStack {
@@ -681,6 +690,9 @@ struct GalleryGrid<Header: View>: View {
                 VStack(spacing: 16) {
                     if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
                         let _ = frameSwapTick   // 스왑 시 이 블록 재평가 → 디스크에서 재로드
+                        let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
+
+                        // [미리보기] — 이미지만 크게, 글자 겹침 없음
                         if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
                             HStack(alignment: .top, spacing: 12) {
                                 VStack(spacing: 4) {
@@ -699,27 +711,169 @@ struct GalleryGrid<Header: View>: View {
                             Image(uiImage: detailDisplay(img, cutout: bgCutout))
                                 .resizable()
                                 .scaledToFit()
-                                .frame(maxHeight: 320)
+                                .frame(maxHeight: 300)
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
 
-                        let activeStates = CharacterImageStore.statesUsingGalleryItem(item.id)
-                        HStack {
-                            if !activeStates.isEmpty {
+                        // 캡션 — 제목·시간은 이미지 밖 한 줄로 (겹침 제거)
+                        HStack(spacing: 6) {
+                            Text("\(stateKoreanLabel(item.sourceState)) 캐릭터")
+                                .font(.callout.weight(.semibold))
+                            Text("·").foregroundStyle(.tertiary)
+                            Text(item.createdAt, format: .relative(presentation: .named))
+                                .font(.caption).foregroundStyle(.secondary)
+                            if item.hasFrame1 ?? false {
+                                Text("·").foregroundStyle(.tertiary)
+                                Text("연속 이미지").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // [상태/주 액션] — 적용 중이면 상태 카드, 아니면 초록 적용 버튼 하나만
+                        if !activeStates.isEmpty {
+                            HStack {
                                 StatusPill(
                                     kind: .ok,
                                     label: "\(activeStates.map(\.koreanShortLabel).joined(separator: ", ")) 자리에 적용 중"
                                 )
-                            } else if item.hasFrame1 ?? false {
-                                Text("연속 이미지")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                Spacer()
                             }
-                            Spacer()
-                            Text(item.createdAt, format: .relative(presentation: .named))
-                                .font(.caption2).foregroundStyle(.secondary)
+                            .frostedCard()
+                            .padding(.horizontal)
+                        } else {
+                            Button {
+                                apply(item, to: backgroundState)
+                                selectedItem = nil
+                            } label: {
+                                Text("'\(backgroundState.koreanShortLabel)' 자리에 적용하기")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(WithuCTAButtonStyle())
+                            .padding(.horizontal)
                         }
+
+                        // [편집 도구] — 배경 빼기 · (연속) 프레임 · 다듬기 · 움직이게 만들기 한 카드
+                        VStack(alignment: .leading, spacing: 12) {
+                            Toggle("배경 빼기", isOn: Binding(
+                                get: { bgPreview == .transparent },
+                                set: { on in
+                                    if on {
+                                        Task { await showTransparentPreview(item, base: img) }
+                                    } else {
+                                        withAnimation { bgPreview = .white }
+                                    }
+                                }
+                            ))
+                            .disabled(isRemovingBackground)
+                            if isRemovingBackground {
+                                HStack { ProgressView(); Text("배경 빼는 중…") }
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            if bgPreview != nil {
+                                Button {
+                                    Task { await saveBackgroundChoice(item) }
+                                } label: {
+                                    Text("이대로 저장").frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(WithuCTAButtonStyle())
+                                .disabled(isRemovingBackground)
+                            }
+
+                            if item.hasFrame1 ?? false {
+                                Divider()
+                                HStack(spacing: 12) {
+                                    Button {
+                                        if CharacterImageStore.swapGalleryFrames(item.id) {
+                                            for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
+                                                apply(item, to: state)
+                                            }
+                                            frameSwapTick += 1
+                                            onChange()
+                                        }
+                                    } label: {
+                                        Text("프레임 바꾸기")
+                                    }
+                                    .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
+                                    Spacer()
+                                    if let st = activeStates.first {
+                                        Toggle("움직임", isOn: Binding(
+                                            get: { !CharacterImageStore.isAnimationDisabled(for: st) },
+                                            set: { on in
+                                                for s in activeStates { CharacterImageStore.setAnimationDisabled(!on, for: s) }
+                                                WidgetCenter.shared.reloadAllTimelines()
+                                            }
+                                        ))
+                                        .fixedSize()
+                                    }
+                                }
+                            }
+
+                            Divider()
+
+                            HStack {
+                                Text("다듬기").font(.callout.weight(.medium))
+                                Spacer()
+                                candyBadge(GenerationQuota.cost(forQuality: "low"))
+                            }
+                            TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.callout)
+                            Button {
+                                showRefineConfirm = true
+                            } label: {
+                                if isRefining {
+                                    HStack { ProgressView(); Text("다듬는 중…") }
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    Text("이대로 다듬기").frame(maxWidth: .infinity)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.withuPinkText)
+                            .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            Text("전과 후를 비교해 보고 바꿀지 고를 수 있어요.")
+                                .font(.caption2).foregroundStyle(.secondary)
+
+                            if !(item.hasFrame1 ?? false),
+                               CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
+                                Divider()
+                                HStack {
+                                    Text("움직이게 만들기").font(.callout.weight(.medium))
+                                    Spacer()
+                                    candyBadge(GenerationQuota.cost(forQuality: "low"))
+                                }
+                                Button {
+                                    showMotionConfirm = true
+                                } label: {
+                                    if isMakingMotion {
+                                        HStack { ProgressView(); Text("움직임 만드는 중…") }
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        Text("움직이는 캐릭터 만들기").frame(maxWidth: .infinity)
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.withuPinkText)
+                                .disabled(isMakingMotion || isRefining)
+                                Text("2번째 장면을 만들어 캐릭터가 움직이게 해요.")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                        .frostedCard()
                         .padding(.horizontal)
+                        .alert("캔디를 사용해요", isPresented: $showMotionConfirm) {
+                            Button("만들기") { Task { await makeMotionFrame(item) } }
+                            Button("취소", role: .cancel) {}
+                        } message: {
+                            Text("이번 만들기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
+                        }
+
+                        // [더보기] — 부가 기능은 텍스트 링크로 낮춤
+                        HStack(spacing: 24) {
+                            Button("저장") { Task { await saveOneToPhotos(img) } }
+                            Button("다른 자리에") { showApplySheet = true }
+                        }
+                        .font(.callout)
+                        .tint(.secondary)
 
                         // 만든 기록 — 이 이미지를 만들 때 보낸 프롬프트 (옛 항목엔 없음)
                         if let prompt = item.prompt, !prompt.isEmpty {
@@ -742,165 +896,6 @@ struct GalleryGrid<Header: View>: View {
                             }
                             .padding(.horizontal)
                         }
-
-                        // 연속 이미지(2장) — 프레임 순서 바꾸기 + (적용 중이면) 움직임 켜기/끄기
-                        if item.hasFrame1 ?? false {
-                            HStack(spacing: 12) {
-                                Button {
-                                    if CharacterImageStore.swapGalleryFrames(item.id) {
-                                        // 이 항목이 쓰이는 자리에 바뀐 순서로 다시 적용 + 워치 반영
-                                        for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
-                                            apply(item, to: state)
-                                        }
-                                        frameSwapTick += 1   // 상세 시트 이미지 강제 재로드
-                                        onChange()
-                                    }
-                                } label: {
-                                    Text("프레임 바꾸기")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
-
-                                let applied = CharacterImageStore.statesUsingGalleryItem(item.id)
-                                if let st = applied.first {
-                                    Toggle("움직임", isOn: Binding(
-                                        get: { !CharacterImageStore.isAnimationDisabled(for: st) },
-                                        set: { on in
-                                            for s in applied { CharacterImageStore.setAnimationDisabled(!on, for: s) }
-                                            WidgetCenter.shared.reloadAllTimelines()
-                                        }
-                                    ))
-                                    .labelsHidden()
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-
-                        Button {
-                            apply(item, to: backgroundState)
-                            selectedItem = nil
-                        } label: {
-                            Text("'\(backgroundState.koreanShortLabel)' 자리에 적용하기")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(WithuCTAButtonStyle())
-                        .padding(.horizontal)
-
-                        HStack(spacing: 12) {
-                            Button {
-                                Task { await saveOneToPhotos(img) }
-                            } label: {
-                                Text("저장")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.secondary)
-
-                            Button {
-                                showApplySheet = true
-                            } label: {
-                                Text("다른 자리에")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.secondary)
-                        }
-                        .padding(.horizontal)
-
-                        // 배경 빼기 — 스위치. 켜면 투명 미리보기(Vision), 끄면 원본.
-                        // 바꾸면 '이대로 저장' 이 나타남.
-                        VStack(alignment: .leading, spacing: 8) {
-                            Toggle("배경 빼기", isOn: Binding(
-                                get: { bgPreview == .transparent },
-                                set: { on in
-                                    if on {
-                                        Task { await showTransparentPreview(item, base: img) }
-                                    } else {
-                                        withAnimation { bgPreview = .white }
-                                    }
-                                }
-                            ))
-                            .disabled(isRemovingBackground)
-                            if isRemovingBackground {
-                                HStack { ProgressView(); Text("배경 빼는 중…") }
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if bgPreview != nil {
-                                Button {
-                                    Task { await saveBackgroundChoice(item) }
-                                } label: {
-                                    Text("이대로 저장")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(WithuCTAButtonStyle())
-                                .disabled(isRemovingBackground)
-                            }
-                        }
-                        .frostedCard()
-                        .padding(.horizontal)
-
-                        // 움직이는 캐릭터 만들기 — 사진으로 만든(또는 움직임 없는) 항목에
-                        // 2번째 장면(frame 1)을 생성해 부착. 캔디 차감(무료 미적용).
-                        // 움직임 힌트가 정의된 상태만 (CharacterGenView 와 동일 정책).
-                        if !(item.hasFrame1 ?? false),
-                           CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Button {
-                                    showMotionConfirm = true
-                                } label: {
-                                    if isMakingMotion {
-                                        HStack { ProgressView(); Text("움직임 만드는 중…") }
-                                            .frame(maxWidth: .infinity)
-                                    } else {
-                                        Text("움직이는 캐릭터 만들기")
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.withuPinkText)
-                                .disabled(isMakingMotion || isRefining)
-                                Text("2번째 장면을 만들어 캐릭터가 움직이게 해요. 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요.")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frostedCard()
-                            .padding(.horizontal)
-                            .alert("캔디를 사용해요", isPresented: $showMotionConfirm) {
-                                Button("만들기") { Task { await makeMotionFrame(item) } }
-                                Button("취소", role: .cancel) {}
-                            } message: {
-                                Text("이번 만들기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
-                            }
-                        }
-
-                        // 다듬기 — 이 캐릭터를 참고로 한 번 더 생성. 캔디 차감(무료 미적용).
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("다듬기")
-                                .font(.callout.weight(.medium))
-                            TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.callout)
-                            Button {
-                                showRefineConfirm = true
-                            } label: {
-                                if isRefining {
-                                    HStack { ProgressView(); Text("다듬는 중…") }
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Text("이대로 다듬기")
-                                        .frame(maxWidth: .infinity)
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.withuPinkText)
-                            .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            Text("다듬을 때마다 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 전과 후를 비교해 보고 바꿀지 고를 수 있어요.")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frostedCard()
-                        .padding(.horizontal)
                     } else {
                         Image(systemName: "photo")
                             .font(.largeTitle).foregroundStyle(.secondary)
@@ -909,7 +904,7 @@ struct GalleryGrid<Header: View>: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("\(stateKoreanLabel(item.sourceState)) 캐릭터")
+            // 제목 없음 — 상태·시간은 이미지 아래 캡션이 담당 (이미지와 글자 겹침 제거)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
