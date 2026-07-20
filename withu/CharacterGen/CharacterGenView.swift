@@ -20,12 +20,10 @@ enum GenerationMode: String, CaseIterable, Hashable {
 }
 
 struct CharacterGenView: View {
-    @State private var mode: GenerationMode = .aiGenerate
+    /// true 면 '하나씩 만들기' 폼만 표시 — 생성 방식 화면에서 push 로 진입하는 하위 화면.
+    var singleFormOnly: Bool = false
 
-    /// AI 생성의 생성 방식 — batch 선택 시 배치 화면으로 push, 돌아오면 하나씩으로 복귀.
-    private enum CreationScope { case batch, single }
-    @State private var creationScope: CreationScope = .single
-    @State private var showBatchScreen: Bool = false
+    @State private var mode: GenerationMode = .aiGenerate
 
     @State private var targetState: CharacterState = .idle
     /// 내 캐릭터 "설명"(정체성). 포즈는 선택한 상태(generationHint)에서 자동으로 붙음.
@@ -132,32 +130,29 @@ struct CharacterGenView: View {
             backgroundGradient(for: targetState).ignoresSafeArea()
                 .animation(.snappy, value: targetState)
             Form {
-                modeSection             // 생성 옵션 먼저 (AI / 내 이미지)
-                if mode == .aiGenerate {
-                    scopeSection        // 만들 방식: 여러 상태 한 번에 / 한 가지씩
-                    if creationScope == .single {
-                        stateSection
-                        promptSection       // 1. 캐릭터 설명
-                        referenceSection    // 2. 참고 사진
-                        optionsSection      // 3. 스타일
-                        generateButtonSection   // 만들기
-                        resultSection
-                        refinementSection
-                    }
-                } else {
+                if singleFormOnly {
+                    // '하나씩 만들기' 하위 화면 — 단건 생성 폼 전체
                     stateSection
-                    importSection
-                    importResultSection
+                    promptSection       // 1. 캐릭터 설명
+                    referenceSection    // 2. 참고 사진
+                    optionsSection      // 3. 스타일
+                    generateButtonSection   // 만들기
+                    resultSection
+                    refinementSection
+                } else {
+                    modeSection             // 생성 옵션 먼저 (AI / 내 이미지)
+                    if mode == .aiGenerate {
+                        scopeSection        // 생성 방식: 여러 상태 한 번에 / 하나씩 (각각 push)
+                    } else {
+                        stateSection
+                        importSection
+                        importResultSection
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
         }
-        .navigationTitle("캐릭터 만들기")
-        .navigationDestination(isPresented: $showBatchScreen) { BatchCharacterGenView() }
-        // 배치 화면에서 돌아오면 '하나씩'으로 복귀 — 체크만 남고 아래가 빈 상태 방지.
-        .onChange(of: showBatchScreen) { _, shown in
-            if !shown { creationScope = .single }
-        }
+        .navigationTitle(singleFormOnly ? "하나씩 만들기" : "캐릭터 만들기")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { candyBadge }
         }
@@ -235,46 +230,35 @@ struct CharacterGenView: View {
 
     // MARK: - Common sections
 
-    /// AI 생성의 생성 방식 — 여러 상태 일괄(배치 화면으로 이동) vs 하나씩(이 화면에서).
-    /// 두 행 모두 생성 옵션과 같은 토글(체크) 스타일. 배치 선택 시 화면 이동.
+    /// AI 생성의 생성 방식 — 두 행 모두 같은 형식의 이동 행(제목+부제+chevron).
+    /// '여러 상태 한 번에' → 배치 화면, '하나씩' → 단건 생성 폼 화면.
     private var scopeSection: some View {
         Section {
-            scopeRow(title: "여러 상태 한 번에 만들기",
-                     subtitle: "모든 상태의 모습을 한번에 만들어요",
-                     selected: creationScope == .batch) {
-                creationScope = .batch
-                showBatchScreen = true
+            NavigationLink {
+                BatchCharacterGenView()
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("여러 상태 한 번에 만들기")
+                        .font(.callout.weight(.semibold))
+                    Text("모든 상태의 모습을 한번에 만들어요")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
-            scopeRow(title: "하나씩 만들기",
-                     subtitle: "원하는 상태 하나만 만들어요",
-                     selected: creationScope == .single) {
-                creationScope = .single
+            NavigationLink {
+                CharacterGenView(singleFormOnly: true)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("하나씩 만들기")
+                        .font(.callout.weight(.semibold))
+                    Text("원하는 상태 하나만 만들어요")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         } header: {
             Text("생성 방식")
         }
-    }
-
-    private func scopeRow(title: LocalizedStringKey, subtitle: LocalizedStringKey,
-                          selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if selected {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(.tint)
-                }
-            }
-        }
-        .disabled(isGenerating || isProcessing)
     }
 
     private var modeSection: some View {
