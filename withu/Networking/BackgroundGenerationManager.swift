@@ -291,13 +291,20 @@ final class BackgroundGenerationManager: NSObject {
         if let error {
             failure = error.koreanizedDescription
         } else if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            // 서버가 준 사유(detail) — 있으면 그대로 전달해서 '서버 오류' 대신 구체적 안내.
+            var serverDetail: String? = nil
+            if let data, let decoded = try? decoder.decode(APIErrorDetail.self, from: data) {
+                let trimmed = decoded.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+                serverDetail = trimmed.isEmpty ? nil : trimmed
+            }
             if http.statusCode == 402 {
                 failure = "무료 횟수를 다 썼어요"
                 jobs[idx].paymentRequired = true
             } else if http.statusCode == 422 {
-                failure = "프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요."
+                // 422 = 콘텐츠 정책(가드레일). 서버 오류가 아니라 입력 문제 — 사유를 그대로.
+                failure = serverDetail ?? "안전 정책에 맞지 않는 요청이에요. 다른 묘사나 사진으로 바꿔서 시도해 주세요."
             } else {
-                failure = "서버 오류 (\(http.statusCode)). 잠시 후 다시 시도해 주세요."
+                failure = serverDetail ?? "서버 오류 (\(http.statusCode)). 잠시 후 다시 시도해 주세요."
             }
         }
 

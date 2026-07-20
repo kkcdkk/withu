@@ -21,6 +21,8 @@ struct withuApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // 다크모드에서 캐릭터/카드 대비가 어긋나 항상 밝은 화면으로 고정.
+                .preferredColorScheme(.light)
         }
         // 포그라운드 복귀 시 Apple 로그인 권한 철회/계정 삭제 감지
         .onChange(of: scenePhase) { _, phase in

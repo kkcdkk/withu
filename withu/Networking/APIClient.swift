@@ -37,10 +37,14 @@ extension Error {
             switch api {
             case .invalidResponse:
                 return String(localized: "서버 응답이 이상해요. 잠시 후 다시 시도해 주세요.")
-            case .server(let status, _):
+            case .server(let status, let detail):
                 if status == 429 { return String(localized: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.") }
                 if status >= 500 { return String(localized: "서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.") }
-                if status == 422 { return String(localized: "프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요.") }
+                if status == 422 {
+                    // 422 = 콘텐츠 정책(가드레일). 서버가 준 구체 사유를 그대로 — 없으면 기본 안내.
+                    let d = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return d.isEmpty ? String(localized: "프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요.") : d
+                }
                 return String(localized: "서버 오류 (\(status)). 잠시 후 다시 시도해 주세요.")
             case .decoding:
                 return String(localized: "결과를 읽을 수 없어요. 다시 시도해 주세요.")

@@ -62,6 +62,12 @@ struct BatchCharacterGenView: View {
     /// 현재 진행 중인 state 들 (병렬이라 여러 개 동시 가능)
     @State private var inProgressStates: Set<CharacterState> = []
     @State private var stateStartedAt: [CharacterState: Date] = [:]
+    /// 기본(frame0)이 아직 안 나온 채 생성 중인 상태 — 결과 그리드에 로딩 placeholder 로 표시.
+    @State private var loadingFrame0: Set<CharacterState> = []
+    /// 움직임(frame1) 생성 중인 상태 — 카드 우하단 미니에 로딩 표시.
+    @State private var pendingFrame1: Set<CharacterState> = []
+    /// 움직임(frame1)만 실패한 상태 — 기본은 있으니 미니 슬롯에 재시도 표시(기본 카드는 정상).
+    @State private var failedFrame1: [CharacterState: String] = [:]
 
     @State private var results: [CharacterState: UIImage] = [:]
     /// 연속 이미지 ON 일 때 state 의 frame 1 결과. 카드에 우하단 미니 썸네일로 표시.
@@ -130,7 +136,7 @@ struct BatchCharacterGenView: View {
                     referenceSection
                     optionsSection
                     startSection
-                    if !results.isEmpty || !errors.isEmpty {
+                    if !results.isEmpty || !errors.isEmpty || !loadingFrame0.isEmpty {
                         resultsSection
                     }
                 }
@@ -686,7 +692,9 @@ struct BatchCharacterGenView: View {
     private var resultsSection: some View {
         Section("만들어진 모습") {
             // LazyVGrid 는 Form 섹션 안에서 높이 계산이 어긋나 아래가 잘림 → 수동 2열 그리드.
-            let shown = CharacterState.allCases.filter { displayedImage(for: $0) != nil || errors[$0] != nil }
+            let shown = CharacterState.allCases.filter {
+                displayedImage(for: $0) != nil || errors[$0] != nil || loadingFrame0.contains($0)
+            }
             VStack(spacing: 12) {
                 ForEach(Array(stride(from: 0, to: shown.count, by: 2)), id: \.self) { i in
                     HStack(alignment: .top, spacing: 12) {
@@ -700,7 +708,15 @@ struct BatchCharacterGenView: View {
                 }
             }
 
-            if !results.isEmpty {
+            if isGenerating {
+                // 아직 만드는 중 — '모두 적용하기'를 켜두면 다 된 것 같은 착각을 줘서, 완료 전엔 상태 표시만.
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("아직 만드는 중이에요 — 다 되면 적용할 수 있어요")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else if !results.isEmpty {
                 // 모두 적용 — 완성된 모습 전부 홈/위젯/워치에 반영.
                 Button {
                     applyAll()
@@ -758,8 +774,35 @@ struct BatchCharacterGenView: View {
     private func resultCell(_ state: CharacterState) -> some View {
         if let img = displayedImage(for: state) {
             resultCard(state: state, image: img)
+        } else if loadingFrame0.contains(state) {
+            loadingCard(state: state)
         } else if let err = errors[state] {
             errorCard(state: state, error: err)
+        }
+    }
+
+    /// 기본(frame0) 생성 중인 상태의 placeholder — 다 됐는지 헷갈리지 않게 로딩을 명시.
+    private func loadingCard(state: CharacterState) -> some View {
+        VStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.10))
+                .frame(height: 120)
+                .overlay(
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        if let started = stateStartedAt[state] {
+                            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                                Text("\(Int(ctx.date.timeIntervalSince(started)))초")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                )
+            HStack {
+                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Spacer()
+            }
+            Text("만드는 중…").font(.caption2).foregroundStyle(.secondary)
         }
     }
 
@@ -864,6 +907,26 @@ struct BatchCharacterGenView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white, lineWidth: 2))
                         .padding(6)
+                } else if pendingFrame1.contains(state) {
+                    // 움직임 프레임 생성 중 — 다 됐다고 오해하지 않게 로딩 표시.
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                        .overlay(ProgressView().scaleEffect(0.6))
+                        .padding(6)
+                } else if failedFrame1[state] != nil {
+                    // 움직임 프레임만 실패 — 눌러서 다시 시도.
+                    Button {
+                        Task { await retryFrame1(state) }
+                    } label: {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.orange.opacity(0.18))
+                            .frame(width: 40, height: 40)
+                            .overlay(Image(systemName: "arrow.clockwise")
+                                .foregroundStyle(.orange).font(.caption))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(6)
                 }
             }
             .contentShape(Rectangle())
@@ -973,6 +1036,9 @@ struct BatchCharacterGenView: View {
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
+        loadingFrame0.removeAll()
+        pendingFrame1.removeAll()
+        failedFrame1.removeAll()
         idleAnchor = nil
         idleFullRes = nil
         awaitingIdleApproval = false
@@ -1056,12 +1122,17 @@ struct BatchCharacterGenView: View {
     private func syncFromManager() {
         var progress: Set<CharacterState> = []
         var started: [CharacterState: Date] = [:]
+        var loadingF0: Set<CharacterState> = []
+        var pendingF1: Set<CharacterState> = []
+        var failedF1: [CharacterState: String] = [:]
         for job in genManager.jobs {
             guard let state = CharacterState(rawValue: job.stateRaw) else { continue }
             switch job.status {
             case .queued, .running:
                 progress.insert(state)
                 started[state] = job.startedAt ?? stateStartedAt[state] ?? Date()
+                if job.frame == 1 { pendingF1.insert(state) }
+                else { loadingF0.insert(state) }
             case .done:
                 let img = genManager.images["\(job.stateRaw)#\(job.frame)"]
                     ?? CharacterImageStore.loadFrame(state, frame: job.frame)
@@ -1074,13 +1145,23 @@ struct BatchCharacterGenView: View {
                     if state == .idle, idleFullRes == nil {
                         idleFullRes = genManager.loadFrame0FullRes(.idle)
                     }
+                } else {
+                    failedF1.removeValue(forKey: state)
                 }
             case .failed:
-                errors[state] = job.errorMessage ?? "만들지 못했어요"
+                // 움직임(frame1)만 실패한 건 별도로 — 기본 카드는 정상 표시하고 미니 슬롯에서 재시도.
+                if job.frame == 1 {
+                    failedF1[state] = job.errorMessage ?? "만들지 못했어요"
+                } else {
+                    errors[state] = job.errorMessage ?? "만들지 못했어요"
+                }
             }
         }
         inProgressStates = progress
         stateStartedAt = started
+        loadingFrame0 = loadingF0
+        pendingFrame1 = pendingF1
+        failedFrame1 = failedF1
         // 앵커(idle)는 rest 단계 작업 목록에 없음 — 화면 재진입 시 활성 슬롯에서 복원.
         if !genManager.jobs.isEmpty, genManager.phase != .anchor, results[.idle] == nil {
             results[.idle] = CharacterImageStore.loadFrame(.idle, frame: 0)
@@ -1172,6 +1253,23 @@ struct BatchCharacterGenView: View {
                                 keepNote: keep, changeNote: change, frame: 0),
             referenceB64: refB64, frame0Reference: nil,
             wantsFrame1: false, frame1Prompt: nil, matchIdleColor: alignIdle)
+        genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
+        syncFromManager()
+    }
+
+    /// 움직임(frame1)만 실패했을 때 재시도 — 이미 있는 기본(frame0)을 reference 로 다시 만든다.
+    /// frame0 실패와 달리 기본 카드는 정상이므로, 미니 슬롯의 재시도 버튼에서만 호출된다.
+    @MainActor
+    private func retryFrame1(_ state: CharacterState) async {
+        guard let f0 = genManager.loadFrame0FullRes(state) ?? results[state] else { return }
+        failedFrame1.removeValue(forKey: state)
+        let refB64 = f0.pngData()?.base64EncodedString()
+        let spec = BackgroundGenJobSpec(
+            state: state, frame: 1,
+            prompt: buildPrompt(for: state, consistencyPrefix: true, frame: 1),
+            referenceB64: refB64, frame0Reference: f0,
+            wantsFrame1: false, frame1Prompt: nil,
+            matchIdleColor: state != .idle)
         genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
         syncFromManager()
     }
@@ -1280,12 +1378,12 @@ struct BatchCharacterGenView: View {
                         .padding(.horizontal)
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 어떻게 바꿀까요") : String(localized: "어떻게 바꿀까요"))
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 수정할까요?") : String(localized: "더 수정할까요?"))
                             .font(.caption).foregroundStyle(.secondary)
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
                             .lineLimit(2...4)
-                            .textFieldStyle(.roundedBorder)
+                        Divider()
                         HStack(spacing: 10) {
                             if let ref = revisionRefImage {
                                 Image(uiImage: ref).resizable().scaledToFill()
@@ -1312,6 +1410,8 @@ struct BatchCharacterGenView: View {
                             Spacer()
                         }
                     }
+                    .padding(14)
+                    .frostedCard()
                     .padding(.horizontal)
                     .onChange(of: revisionRefItem) { _, item in
                         Task { await loadRevisionRef(item) }

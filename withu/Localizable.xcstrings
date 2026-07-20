@@ -2349,6 +2349,16 @@
         }
       }
     },
+    "더 수정할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit it further?"
+          }
+        }
+      }
+    },
     "데이터 새로고침" : {
       "localizations" : {
         "en" : {
@@ -4304,6 +4314,16 @@
         }
       }
     },
+    "아직 만드는 중이에요 — 다 되면 적용할 수 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still making them — you can apply once they're done"
+          }
+        }
+      }
+    },
     "아직 만든 캐릭터가 없어요" : {
       "localizations" : {
         "en" : {
@@ -4450,16 +4470,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "About %lld candies (%lld candies per image)"
-          }
-        }
-      }
-    },
-    "어떻게 바꿀까요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How should we change it?"
           }
         }
       }
@@ -5369,12 +5379,12 @@
         }
       }
     },
-    "이 움직임 프레임을 어떻게 바꿀까요" : {
+    "이 움직임 프레임을 더 수정할까요?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How should we change this animation frame?"
+            "value" : "Edit this animation frame further?"
           }
         }
       }
