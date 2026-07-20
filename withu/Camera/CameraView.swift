@@ -28,6 +28,15 @@ struct CameraView: View {
     /// 앨범에서 고른 배경 사진 (있으면 라이브 카메라 대신 이 사진 위에 캐릭터 합성)
     @State private var backgroundImage: UIImage?
     @State private var backgroundPickerItem: PhotosPickerItem?
+    /// 앨범 사진의 변환 — 인스타 스토리처럼 핀치=크기, 드래그=이동 (원본 비율 유지 fit 기준).
+    @State private var bgScale: CGFloat = 1
+    @State private var bgOffset: CGSize = .zero
+    @State private var bgDragStart: CGSize?
+    @State private var bgPinchStart: CGFloat?
+    /// 사진의 위/아래 평균색 — fit 으로 남는 공간을 채우는 그라데이션.
+    @State private var bgGradient: [Color] = [Color(.systemBackground), Color(.systemBackground)]
+    /// 합성 출력용 — 프리뷰 캔버스 실제 크기 (합성 결과 = 화면과 동일, WYSIWYG).
+    @State private var canvasSize: CGSize = .zero
 
     init() {}
 
@@ -110,11 +119,24 @@ struct CameraView: View {
     @ViewBuilder
     private var cameraLayer: some View {
         if let bg = backgroundImage {
-            // 앨범 배경 모드 — 라이브 카메라 대신 고른 사진
-            Image(uiImage: bg)
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
+            // 앨범 배경 모드 — 인스타 스토리처럼: 원본 비율 유지(fit), 남는 공간은
+            // 사진 위/아래 평균색 그라데이션, 핀치=크기·드래그=이동.
+            GeometryReader { geo in
+                ZStack {
+                    LinearGradient(colors: bgGradient, startPoint: .top, endPoint: .bottom)
+                    Image(uiImage: bg)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .scaleEffect(bgScale)
+                        .offset(bgOffset)
+                }
+                .contentShape(Rectangle())
+                .gesture(bgTransformGesture)
+                .onAppear { canvasSize = geo.size }
+                .onChange(of: geo.size) { _, s in canvasSize = s }
+            }
+            .ignoresSafeArea()
         } else {
             #if targetEnvironment(simulator)
             Color.black
@@ -366,9 +388,9 @@ struct CameraView: View {
     private func shoot() async {
         isCapturing = true
         defer { isCapturing = false }
-        // 앨범 배경 모드 — 카메라 캡처 없이 그 사진 위에 캐릭터 합성
+        // 앨범 배경 모드 — 화면에 보이는 캔버스(그라데이션+변환 사진+캐릭터) 그대로 합성
         if let bg = backgroundImage {
-            previewCaptured = PhotoCompositor.compose(photo: bg, placed: placed)
+            previewCaptured = composeAlbumCanvas(bg)
             return
         }
         do {
@@ -385,6 +407,84 @@ struct CameraView: View {
         if let data = try? await item.loadTransferable(type: Data.self),
            let img = UIImage(data: data) {
             backgroundImage = img
+            bgScale = 1
+            bgOffset = .zero
+            bgGradient = Self.edgeGradientColors(of: img)
+        }
+    }
+
+    /// 앨범 사진 변환 제스처 — 드래그 이동 + 핀치 크기 (캐릭터 스티커와 같은 조작감).
+    private var bgTransformGesture: some Gesture {
+        SimultaneousGesture(
+            DragGesture()
+                .onChanged { value in
+                    let start = bgDragStart ?? bgOffset
+                    if bgDragStart == nil { bgDragStart = start }
+                    bgOffset = CGSize(width: start.width + value.translation.width,
+                                      height: start.height + value.translation.height)
+                }
+                .onEnded { _ in bgDragStart = nil },
+            MagnificationGesture()
+                .onChanged { value in
+                    let start = bgPinchStart ?? bgScale
+                    if bgPinchStart == nil { bgPinchStart = start }
+                    bgScale = max(0.3, min(4, start * value))
+                }
+                .onEnded { _ in bgPinchStart = nil }
+        )
+    }
+
+    /// 사진 위/아래 평균색 (1×2 다운샘플) — fit 여백 그라데이션용.
+    private static func edgeGradientColors(of image: UIImage) -> [Color] {
+        let fallback = [Color(.systemBackground), Color(.systemBackground)]
+        guard let cg = image.cgImage else { return fallback }
+        var px = [UInt8](repeating: 0, count: 8)
+        guard let ctx = CGContext(data: &px, width: 1, height: 2,
+                                  bitsPerComponent: 8, bytesPerRow: 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return fallback }
+        ctx.interpolationQuality = .low
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 1, height: 2))
+        func color(at offset: Int) -> Color {
+            Color(red: Double(px[offset]) / 255,
+                  green: Double(px[offset + 1]) / 255,
+                  blue: Double(px[offset + 2]) / 255)
+        }
+        // bitmap row 0 = 이미지 위쪽
+        return [color(at: 0), color(at: 4)]
+    }
+
+    /// 앨범 모드 합성 — 프리뷰(그라데이션 + 변환된 사진 + 캐릭터)와 동일한 캔버스를 그대로 렌더.
+    private func composeAlbumCanvas(_ bg: UIImage) -> UIImage {
+        let size = canvasSize == .zero ? UIScreen.main.bounds.size : canvasSize
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 3
+        return UIGraphicsImageRenderer(size: size, format: format).image { rctx in
+            // 1) 여백 그라데이션
+            let colors = bgGradient.map { UIColor($0).cgColor } as CFArray
+            if let grad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                     colors: colors, locations: [0, 1]) {
+                rctx.cgContext.drawLinearGradient(grad, start: .zero,
+                                                  end: CGPoint(x: 0, y: size.height), options: [])
+            }
+            // 2) 사진 — fit 후 프리뷰의 scaleEffect(중앙 기준)/offset 과 동일 수식
+            let imgRatio = bg.size.width / max(bg.size.height, 1)
+            let canvasRatio = size.width / max(size.height, 1)
+            let fit: CGRect
+            if imgRatio > canvasRatio {
+                let h = size.width / imgRatio
+                fit = CGRect(x: 0, y: (size.height - h) / 2, width: size.width, height: h)
+            } else {
+                let w = size.height * imgRatio
+                fit = CGRect(x: (size.width - w) / 2, y: 0, width: w, height: size.height)
+            }
+            let drawn = CGRect(x: fit.midX - fit.width * bgScale / 2 + bgOffset.width,
+                               y: fit.midY - fit.height * bgScale / 2 + bgOffset.height,
+                               width: fit.width * bgScale,
+                               height: fit.height * bgScale)
+            bg.draw(in: drawn)
+            // 3) 캐릭터 — 프리뷰 오버레이와 같은 정규화 rect (WYSIWYG)
+            PhotoCompositor.drawPlaced(placed, in: size, context: rctx)
         }
     }
 
