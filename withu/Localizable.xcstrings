@@ -3681,12 +3681,42 @@
         }
       }
     },
-    "색감 (선택)" : {
+    "색감" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Colors (optional)"
+            "value" : "Colors"
+          }
+        }
+      }
+    },
+    "상태 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose State"
+          }
+        }
+      }
+    },
+    "만들 방식" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to Create"
+          }
+        }
+      }
+    },
+    "한 가지씩 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One at a Time"
           }
         }
       }
@@ -5912,12 +5942,12 @@
         }
       }
     },
-    "주제" : {
+    "대상" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Theme"
+            "value" : "Subject"
           }
         }
       }
@@ -6124,12 +6154,12 @@
         }
       }
     },
-    "참고 사진 (Optional)" : {
+    "참고 사진 (선택)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reference photo (Optional)"
+            "value" : "Reference photo (optional)"
           }
         }
       }

@@ -22,6 +22,10 @@ enum GenerationMode: String, CaseIterable, Hashable {
 struct CharacterGenView: View {
     @State private var mode: GenerationMode = .aiGenerate
 
+    /// AI 생성의 만들 방식 — batch 는 별도 화면으로 push 되므로 화면 상태로는 single 만 유지.
+    private enum CreationScope { case batch, single }
+    @State private var creationScope: CreationScope = .single
+
     @State private var targetState: CharacterState = .idle
     /// 내 캐릭터 "설명"(정체성). 포즈는 선택한 상태(generationHint)에서 자동으로 붙음.
     /// 저장된 묘사(CharacterProfile.aiPrompt)로 시작 — 비어 있으면 빈 칸(placeholder 안내).
@@ -127,17 +131,20 @@ struct CharacterGenView: View {
             backgroundGradient(for: targetState).ignoresSafeArea()
                 .animation(.snappy, value: targetState)
             Form {
-                batchSection
-                modeSection
-                stateSection
+                modeSection             // 생성 옵션 먼저 (AI / 내 이미지)
                 if mode == .aiGenerate {
-                    promptSection       // 1. 캐릭터 설명
-                    referenceSection    // 2. 참고 사진
-                    optionsSection      // 3. 스타일
-                    generateButtonSection   // 만들기
-                    resultSection
-                    refinementSection
+                    scopeSection        // 만들 방식: 여러 상태 한 번에 / 한 가지씩
+                    if creationScope == .single {
+                        stateSection
+                        promptSection       // 1. 캐릭터 설명
+                        referenceSection    // 2. 참고 사진
+                        optionsSection      // 3. 스타일
+                        generateButtonSection   // 만들기
+                        resultSection
+                        refinementSection
+                    }
                 } else {
+                    stateSection
                     importSection
                     importResultSection
                 }
@@ -222,8 +229,8 @@ struct CharacterGenView: View {
 
     // MARK: - Common sections
 
-    /// 처음 시작하는 사용자가 가장 먼저 보게 — 9개 state 일괄 생성.
-    private var batchSection: some View {
+    /// AI 생성의 만들 방식 — 여러 상태 일괄(배치 화면으로 이동) vs 한 가지씩(이 화면에서).
+    private var scopeSection: some View {
         Section {
             NavigationLink {
                 BatchCharacterGenView()
@@ -236,6 +243,22 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Button {
+                creationScope = .single
+            } label: {
+                HStack {
+                    Text("한 가지씩 만들기")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if creationScope == .single {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                    }
+                }
+            }
+            .disabled(isGenerating || isProcessing)
+        } header: {
+            Text("만들 방식")
         }
     }
 
@@ -277,7 +300,7 @@ struct CharacterGenView: View {
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
         } header: {
-            Text("상태")
+            Text("상태 선택")
         }
     }
 
@@ -302,9 +325,9 @@ struct CharacterGenView: View {
                     }
                 }
             DisclosureGroup("항목별 입력") {
-                helperField("주제", text: $subjectField, placeholder: "마시멜로 캐릭터")
+                helperField("대상", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
-                helperField("색감 (선택)", text: $colorField, placeholder: "연두 파스텔톤")
+                helperField("색감", text: $colorField, placeholder: "연두 파스텔톤")
                 Text("채우면 위 설명칸에 자동으로 합쳐져요.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -502,7 +525,7 @@ struct CharacterGenView: View {
                 }
             }
         } header: {
-            Text("참고 사진 (Optional)")
+            Text("참고 사진 (선택)")
         } footer: {
             Text(referenceImage == nil
                  ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요."
