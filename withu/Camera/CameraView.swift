@@ -170,13 +170,11 @@ struct CameraView: View {
     private func characterTile(_ character: Binding<PlacedCharacter>,
                                 container: CGSize) -> some View {
         let rect = character.wrappedValue.rect(in: container)
-        let isSelected = selectedID == character.wrappedValue.id
+        _ = selectedID   // 선택 상태는 유지 (제스처 로직에서 세팅) — 표시만 안 함
+        // 선택 흰 테두리는 어색하다는 피드백으로 제거 — 인스타 스티커처럼 표시 없이 조작.
+        // (제스처는 타일별로 붙어 있어 선택 표시 없이도 동작 동일.)
         return CharacterImageView(state: character.wrappedValue.state)
             .frame(width: rect.width, height: rect.height)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(.white, lineWidth: isSelected ? 3 : 0)
-            )
             .rotationEffect(.radians(character.wrappedValue.rotation))
             .position(x: rect.midX, y: rect.midY)
             .onTapGesture {
