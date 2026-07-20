@@ -553,9 +553,6 @@
     "🍬" : {
 
     },
-    "🍬 %lld" : {
-
-    },
     "🍬 캔디 %lld개 충전됐어요! (테스트)" : {
       "localizations" : {
         "en" : {
@@ -2210,6 +2207,7 @@
       }
     },
     "다른 자리에" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2225,6 +2223,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apply to another slot"
+          }
+        }
+      }
+    },
+    "다른 자리에 적용하기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apply to Another State"
           }
         }
       }
@@ -2843,7 +2851,7 @@
         }
       }
     },
-    "모든 모습에 함께 반영할 변화 (예: 모자 씌워줘, 색 연하게)" : {
+    "모든 모습에 함께 반영할 변화" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2923,7 +2931,8 @@
         }
       }
     },
-    "바꾸고 싶은 점 (예: 모자를 씌워줘)" : {
+    "예: 모자를 씌워줘" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4314,16 +4323,6 @@
         }
       }
     },
-    "아직 만드는 중이에요 — 다 되면 적용할 수 있어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Still making them — you can apply once they're done"
-          }
-        }
-      }
-    },
     "아직 만든 캐릭터가 없어요" : {
       "localizations" : {
         "en" : {
@@ -4643,6 +4642,9 @@
           }
         }
       }
+    },
+    "예: 모자를 씌워줘" : {
+
     },
     "예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터" : {
       "localizations" : {
@@ -6477,36 +6479,6 @@
         }
       }
     },
-    "캔디 %lld개 소모" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uses %lld candies"
-          }
-        }
-      }
-    },
-    "다른 자리에 적용하기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apply to Another State"
-          }
-        }
-      }
-    },
-    "%@ 자리에 적용했어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applied to the %@ slot"
-          }
-        }
-      }
-    },
     "캐릭터" : {
       "localizations" : {
         "en" : {
@@ -6796,6 +6768,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld candies · they never expire"
+          }
+        }
+      }
+    },
+    "캔디 %lld개 소모" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses %lld candies"
           }
         }
       }

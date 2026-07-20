@@ -473,12 +473,12 @@ struct BatchCharacterGenView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
                         .font(.caption).foregroundStyle(.secondary)
-                    TextField("모든 모습에 함께 반영할 변화 (예: 모자 씌워줘, 색 연하게)",
+                    TextField("모든 모습에 함께 반영할 변화",
                               text: $referenceChange, axis: .vertical)
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("각 상태의 포즈는 자동으로 적용되고, 여기 적은 변화가 모든 모습에 더해져요.")
+                    Text("여기 적은 사항이 모든 모습에 적용돼요.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -708,16 +708,9 @@ struct BatchCharacterGenView: View {
                 }
             }
 
-            if isGenerating {
-                // 아직 만드는 중 — '모두 적용하기'를 켜두면 다 된 것 같은 착각을 줘서, 완료 전엔 상태 표시만.
-                HStack(spacing: 8) {
-                    ProgressView()
-                    Text("아직 만드는 중이에요 — 다 되면 적용할 수 있어요")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else if !results.isEmpty {
+            if !results.isEmpty {
                 // 모두 적용 — 완성된 모습 전부 홈/위젯/워치에 반영.
+                // 아직 만드는 중이면 다 된 것 같은 착각을 줘서 버튼은 두되 비활성화만.
                 Button {
                     applyAll()
                 } label: {
@@ -726,6 +719,7 @@ struct BatchCharacterGenView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WithuCTAButtonStyle())
+                .disabled(isGenerating)
 
                 // 투명 처리 bulk 토글 — gallery 원본은 raw 유지, active slot 만 갱신.
                 HStack(spacing: 12) {
