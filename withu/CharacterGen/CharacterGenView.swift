@@ -157,7 +157,10 @@ struct CharacterGenView: View {
             ToolbarItem(placement: .topBarTrailing) { candyBadge }
         }
         .scrollDismissesKeyboard(.interactively)
-        .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
+        .onAppear {
+            remainingGenerations = GenerationQuota.remainingToday()
+            restoreVersionChain()
+        }
         // 서버 무료/잔액 스냅샷 최신화 — '첫 만들기 무료' 배지가 옛 캐시로 잘못 뜨는 것 방지.
         .task { await AuthManager.shared.refreshEntitlement() }
         .sheet(isPresented: $showPaywall) {
@@ -770,6 +773,31 @@ struct CharacterGenView: View {
         if displayTransparent {
             Task { await ensureTransparentResults() }
         }
+        saveVersionChain()
+    }
+
+    /// 다듬기 이력(버전 체인)을 App Group 에 저장 — 화면을 나갔다 와도 복원되게.
+    private func saveVersionChain() {
+        guard mode == .aiGenerate, !versions.isEmpty else { return }
+        RefineHistoryStore.save(stateRaw: targetState.rawValue, selected: selectedVersion,
+                                versions: versions.map { ($0.galleryId, $0.isRefined, $0.frame2 != nil) })
+    }
+
+    /// 저장된 다듬기 이력 복원 — 진입 시 결과가 없을 때만. 이미지는 갤러리에서 다시 읽는다.
+    private func restoreVersionChain() {
+        guard mode == .aiGenerate, versions.isEmpty, resultImage == nil,
+              let r = RefineHistoryStore.load() else { return }
+        if let st = CharacterState(rawValue: r.stateRaw) { targetState = st }
+        versions = r.versions.map {
+            ResultVersion(small: $0.small, frame2: $0.frame2, fullRes: $0.small,
+                          isRefined: $0.isRefined, galleryId: $0.galleryId)
+        }
+        selectedVersion = r.selected
+        let v = versions[r.selected]
+        resultImage = v.small
+        resultFrame2 = v.frame2
+        lastFrame0FullRes = v.small
+        if v.frame2 == nil { singleDetailFrame = 0 }
     }
 
     // MARK: - Import sections
@@ -1014,6 +1042,7 @@ struct CharacterGenView: View {
                                           fullRes: lastFrame0FullRes, isRefined: false,
                                           galleryId: savedId)]
                 selectedVersion = 0
+                saveVersionChain()   // 새 캐릭터 = 이력 갈아끼움(저장본 덮어씀)
             }
         }
         // '배경 빼기' 보기 중이면 새 결과를 즉시 재처리(stale 방지).
@@ -1067,6 +1096,7 @@ struct CharacterGenView: View {
                                               galleryId: savedId))
                 if versions.count > 8 { versions.remove(at: 1) }   // 원본([0])은 보존, 오래된 다듬기부터 정리
                 selectedVersion = versions.count - 1
+                saveVersionChain()
             }
         }
         refinementPrompt = ""
@@ -1514,4 +1544,53 @@ struct WeatherBackgroundGenView: View {
 
 #Preview("WeatherBg") {
     NavigationStack { WeatherBackgroundGenView() }
+}
+
+/// 하나씩 만들기 '다듬기 이력' 을 App Group 에 저장 — 화면을 나갔다 와도 이력·선택이 복원된다.
+/// 이미지는 각 버전이 이미 갤러리에 자동 저장돼 있으므로, 여기선 galleryId 체인만 보관한다.
+/// (새 캐릭터를 만들면 generate() 가 이력을 갈아끼우며 이 저장본도 덮어쓴다.)
+fileprivate enum RefineHistoryStore {
+    private struct SavedVersion: Codable { let galleryId: String; let isRefined: Bool; let hasFrame2: Bool }
+    private struct SavedChain: Codable { let stateRaw: String; let selected: Int; let versions: [SavedVersion] }
+
+    private static var fileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedAppState.groupID)?
+            .appendingPathComponent("single_refine_history.json")
+    }
+
+    /// versions: (galleryId, 다듬음 여부, 움직임 프레임 여부). galleryId 가 하나라도 없으면
+    /// 인덱스가 어긋나 복원이 깨지므로 저장을 건너뛴다.
+    static func save(stateRaw: String, selected: Int,
+                     versions: [(galleryId: String?, isRefined: Bool, hasFrame2: Bool)]) {
+        guard let fileURL else { return }
+        let saved = versions.compactMap { v -> SavedVersion? in
+            v.galleryId.map { SavedVersion(galleryId: $0, isRefined: v.isRefined, hasFrame2: v.hasFrame2) }
+        }
+        guard !saved.isEmpty, saved.count == versions.count else {
+            try? FileManager.default.removeItem(at: fileURL)
+            return
+        }
+        let sel = min(max(0, selected), saved.count - 1)
+        if let data = try? JSONEncoder().encode(SavedChain(stateRaw: stateRaw, selected: sel, versions: saved)) {
+            try? data.write(to: fileURL, options: [.atomic, .noFileProtection])
+        }
+    }
+
+    struct RestoredVersion { let small: UIImage; let frame2: UIImage?; let galleryId: String; let isRefined: Bool }
+    struct Restored { let stateRaw: String; let selected: Int; let versions: [RestoredVersion] }
+
+    /// 저장된 체인 복원 — 갤러리에서 이미지를 다시 읽는다. 하나라도 사라졌으면 복원 취소(nil).
+    static func load() -> Restored? {
+        guard let fileURL, let data = try? Data(contentsOf: fileURL),
+              let chain = try? JSONDecoder().decode(SavedChain.self, from: data) else { return nil }
+        var out: [RestoredVersion] = []
+        for v in chain.versions {
+            guard let small = CharacterImageStore.loadGalleryImage(id: v.galleryId) else { return nil }
+            let f2 = v.hasFrame2 ? CharacterImageStore.loadGalleryFrame1(id: v.galleryId) : nil
+            out.append(RestoredVersion(small: small, frame2: f2, galleryId: v.galleryId, isRefined: v.isRefined))
+        }
+        guard !out.isEmpty else { return nil }
+        return Restored(stateRaw: chain.stateRaw, selected: min(max(0, chain.selected), out.count - 1), versions: out)
+    }
 }
