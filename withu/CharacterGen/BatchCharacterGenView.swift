@@ -117,6 +117,15 @@ struct BatchCharacterGenView: View {
     /// 상세 시트에서 '바꾸기'로 재생성 중인 프레임(state→frame). 시트를 닫아도
     /// 결과 그리드가 처음 만들 때처럼 로딩을 보여주도록(고치는 프레임에만) 추적.
     @State private var revisingFrame: [CharacterState: Int] = [:]
+    /// '바꾸기' 완료 후 적용 전 보관 — 상세 시트에서 before/after 비교, 카드엔 '수정 완료' 배지.
+    struct BatchRevision {
+        let frame: Int
+        let before: UIImage
+        let after: UIImage        // 128 썸네일 (표시·저장용)
+        let afterFull: UIImage    // frame0 원본(1024) — 적용 시 frame0FullRes 갱신
+        let prompt: String        // 갤러리 '만든 기록' 저장용
+    }
+    @State private var revisedDone: [CharacterState: BatchRevision] = [:]
 
     /// 캔디 소모 전 확인 팝업 대상 (배치 — 단건 생성과 동일한 안내를 배치에도).
     private enum PendingBatchAction {
@@ -990,19 +999,6 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// '바꾸기' 재생성 중 카드에 올리는 로딩 표시 — 처음 만들 때(loadingCard)와 같은 톤.
-    private func revisingOverlay(_ state: CharacterState) -> some View {
-        VStack(spacing: 8) {
-            ProgressView().tint(.white)
-            if let started = stateStartedAt[state] {
-                TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
-                    Text("\(Int(ctx.date.timeIntervalSince(started)))초")
-                        .font(.caption2).foregroundStyle(.white.opacity(0.9))
-                }
-            }
-        }
-    }
-
     /// per-state 현재 표시 이미지 — toggle 따라.
     private func displayedImage(for state: CharacterState) -> UIImage? {
         displayedImage(for: state, frame: 0)
@@ -1085,19 +1081,37 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// 카드 오른쪽 상단 '바꾸기' 배지 — 진행 중이면 로딩, 완료 후 적용 전이면 '수정 완료'.
+    @ViewBuilder
+    private func revisionBadge(_ state: CharacterState) -> some View {
+        if revisingFrame[state] != nil {
+            HStack(spacing: 4) {
+                ProgressView().scaleEffect(0.55).tint(.white)
+                Text("수정 중").font(.caption2)
+            }
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .background(Capsule().fill(.black.opacity(0.55)))
+            .foregroundStyle(.white)
+            .padding(6)
+        } else if revisedDone[state] != nil {
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle.fill")
+                Text("수정 완료").font(.caption2.weight(.semibold))
+            }
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .background(Capsule().fill(Color.withuCTAGreen))
+            .foregroundStyle(.white)
+            .padding(6)
+        }
+    }
+
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
         VStack(spacing: 6) {
             ZStack(alignment: .bottomTrailing) {
                 Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    // 기본(frame0)을 '바꾸기' 로 다시 만드는 중 — 시트를 닫아도 처음 만들 때처럼 로딩.
-                    .overlay {
-                        if revisingFrame[state] == 0 {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.black.opacity(0.38))
-                                .overlay(revisingOverlay(state))
-                        }
-                    }
+                    // '바꾸기' 진행/완료 상태 — 오른쪽 상단 배지.
+                    .overlay(alignment: .topTrailing) { revisionBadge(state) }
                 // 연속 이미지 ON 일 때 frame 1 우하단 미니. 메인 화면이 0.7s 간격으로 swap.
                 if revisingFrame[state] == 1 {
                     // 움직임 프레임을 '바꾸기' 로 다시 만드는 중 — 미니에 로딩.
@@ -1248,6 +1262,7 @@ struct BatchCharacterGenView: View {
         failedFrame1.removeAll()
         idleApproved = false
         idleRevisionsUsed = 0
+        revisedDone.removeAll()
         idleAnchor = nil
         idleFullRes = nil
         awaitingIdleApproval = false
@@ -1546,6 +1561,9 @@ struct BatchCharacterGenView: View {
     private func resultDetailSheet(state: CharacterState) -> some View {
         let hasF1 = resultsFrame1[state] != nil
         NavigationStack {
+            if let rev = revisedDone[state] {
+                revisionCompareView(state, rev)
+            } else {
             ScrollView {
                 VStack(spacing: 16) {
                     // 프레임 페이지 — 기본 ↔ 움직임 좌우 스와이프 (움직이는 캐릭터면 위에 점 표시)
@@ -1737,6 +1755,52 @@ struct BatchCharacterGenView: View {
             } message: {
                 Text("이번 수정에 캔디 \(GenerationQuota.cost(forQuality: quality))개를 써요. 성공했을 때만 차감돼요.")
             }
+            }
+        }
+    }
+
+    /// '바꾸기' 결과 비교 — 수정된 모습(먼저) ↔ 수정 전 좌우 스와이프 + 적용/취소.
+    @ViewBuilder
+    private func revisionCompareView(_ state: CharacterState, _ rev: BatchRevision) -> some View {
+        VStack(spacing: 16) {
+            TabView {
+                compareSlide(rev.after, label: String(localized: "수정된 모습")).tag(0)
+                compareSlide(rev.before, label: String(localized: "수정 전")).tag(1)
+            }
+            .tabViewStyle(.page)
+            .frame(height: 360)
+
+            VStack(spacing: 10) {
+                Button { acceptRevision(state) } label: {
+                    Label("수정된 걸로 적용", systemImage: "checkmark")
+                        .frame(maxWidth: .infinity).padding(.vertical, 4)
+                }
+                .buttonStyle(WithuCTAButtonStyle())
+                Button { rejectRevision(state) } label: {
+                    Text("수정 전 그대로").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered).tint(.secondary)
+            }
+            .padding(.horizontal)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical)
+        .navigationTitle("수정 결과")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // 결정 안 하고 닫으면 카드에 '수정 완료'로 남아 다시 열 수 있음.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("닫기") { selectedResult = nil }
+            }
+        }
+    }
+
+    private func compareSlide(_ image: UIImage, label: String) -> some View {
+        VStack(spacing: 8) {
+            Image(uiImage: image).resizable().scaledToFit()
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal)
+            Text(label).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
         }
     }
 
@@ -1826,24 +1890,16 @@ struct BatchCharacterGenView: View {
                 if let ref0, let ref0Small = ref0.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
                     small = ImageProcessing.colorMatched(small, reference: ref0Small)
                 }
-                if frame == 1 {
-                    resultsFrame1[state] = small
-                    transparentResultsFrame1[state] = nil   // 배경 캐시 무효화
-                } else {
-                    results[state] = small
-                    frame0FullRes[state] = flat
-                    if state == .idle { idleFullRes = flat }
-                    transparentResults[state] = nil
-                }
-                displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
-                // 갤러리에만 저장 — 반영은 '적용' 버튼으로 (바꾼 결과가 아직 적용 전이므로 표시 리셋).
-                CharacterImageStore.save(small, for: state, frame: frame, applyToActiveSlot: false,
-                                         batchId: batchSessionId, prompt: modifiedPrompt)
-                appliedStates.remove(state)
+                // 즉시 덮어쓰지 않고 before/after 로 보관 — 상세 시트 비교 후 '적용'해야 반영.
+                let before = (frame == 1 ? resultsFrame1[state] : results[state]) ?? small
+                revisedDone[state] = BatchRevision(frame: frame, before: before,
+                                                   after: small, afterFull: flat, prompt: modifiedPrompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
                 revisionText = ""
+                revisionRefImage = nil
+                revisionRefItem = nil
             } else {
                 revisionError = String(localized: "이미지를 받지 못했어요. 다시 시도해 주세요.")
             }
@@ -1852,6 +1908,34 @@ struct BatchCharacterGenView: View {
         } catch {
             revisionError = error.koreanizedDescription
         }
+    }
+
+    /// 비교 후 '수정된 걸로 적용' — 이때 처음으로 결과를 교체하고 갤러리에 저장.
+    @MainActor
+    private func acceptRevision(_ state: CharacterState) {
+        guard let rev = revisedDone[state] else { return }
+        if rev.frame == 1 {
+            resultsFrame1[state] = rev.after
+            transparentResultsFrame1[state] = nil
+        } else {
+            results[state] = rev.after
+            frame0FullRes[state] = rev.afterFull
+            if state == .idle { idleFullRes = rev.afterFull }
+            transparentResults[state] = nil
+        }
+        displayTransparentByState[state] = false
+        CharacterImageStore.save(rev.after, for: state, frame: rev.frame, applyToActiveSlot: false,
+                                 batchId: batchSessionId, prompt: rev.prompt)
+        appliedStates.remove(state)   // 새 결과 → '적용' 다시 눌러 홈/워치에 반영
+        revisedDone.removeValue(forKey: state)
+        selectedResult = nil          // 그리드로 — 바뀐 게 보이게
+    }
+
+    /// 비교 후 '수정 전 그대로' — 수정본 버리고 원래 결과 유지.
+    @MainActor
+    private func rejectRevision(_ state: CharacterState) {
+        revisedDone.removeValue(forKey: state)
+        selectedResult = nil
     }
 
     /// 수정 sheet 의 참고 이미지 로드

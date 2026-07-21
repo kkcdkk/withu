@@ -4262,6 +4262,76 @@
         }
       }
     },
+    "수정 결과" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit result"
+          }
+        }
+      }
+    },
+    "수정 완료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edited"
+          }
+        }
+      }
+    },
+    "수정 전" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before"
+          }
+        }
+      }
+    },
+    "수정 전 그대로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep the original"
+          }
+        }
+      }
+    },
+    "수정 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editing"
+          }
+        }
+      }
+    },
+    "수정된 걸로 적용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apply the edit"
+          }
+        }
+      }
+    },
+    "수정된 모습" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edited look"
+          }
+        }
+      }
+    },
     "스타일" : {
       "localizations" : {
         "en" : {
