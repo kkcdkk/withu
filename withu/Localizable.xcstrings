@@ -470,16 +470,6 @@
         }
       }
     },
-    "%lld개의 상태를 만들어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Creates %lld states"
-          }
-        }
-      }
-    },
     "%lld분" : {
       "localizations" : {
         "en" : {
@@ -2705,6 +2695,16 @@
         }
       }
     },
+    "만들 캐릭터를 설명해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe the character to create"
+          }
+        }
+      }
+    },
     "만들어진 모습" : {
       "localizations" : {
         "en" : {
@@ -2796,12 +2796,12 @@
         }
       }
     },
-    "모두 움직이는 캐릭터로 (한 모습당 2장)" : {
+    "모두 움직이는 캐릭터로" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Make all animated (2 images per look)"
+            "value" : "Make all animated"
           }
         }
       }
@@ -4452,16 +4452,6 @@
         }
       }
     },
-    "앨범" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Album"
-          }
-        }
-      }
-    },
     "앨범에서 선택" : {
       "localizations" : {
         "en" : {
@@ -4998,22 +4988,32 @@
         }
       }
     },
+    "움직이는 캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated character"
+          }
+        }
+      }
+    },
+    "2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makes a 2-frame character that moves on the main screen."
+          }
+        }
+      }
+    },
     "움직임" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Animation"
-          }
-        }
-      }
-    },
-    "움직임 (2장 · 메인에서 움직여요)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation (2 images · moves on the main screen)"
           }
         }
       }

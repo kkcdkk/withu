@@ -46,6 +46,15 @@ struct BatchCharacterGenView: View {
     /// state 별 개별 참고 이미지. 있으면 전체 reference 보다 우선.
     @State private var stateReferenceImages: [CharacterState: UIImage] = [:]
     @State private var stateReferencePickerItems: [CharacterState: PhotosPickerItem] = [:]
+    /// 상태 사진 자리를 눌러 '앨범' 선택 시 뜨는 시스템 사진 피커 — 어느 상태용인지.
+    @State private var albumPickerForState: CharacterState?
+    @State private var albumPickerItem: PhotosPickerItem?
+    /// 움직임 설명 '?' 팝오버.
+    @State private var showMotionInfo: Bool = false
+    /// "항목별 입력" 도우미 — 채우면 캐릭터 프롬프트(baseIdentity)에 자동 합쳐짐. (하나씩 만들기와 동일)
+    @State private var subjectField: String = ""
+    @State private var looksField: String = ""
+    @State private var colorField: String = ""
     /// idle 앵커링 — idle 을 먼저 만들어 승인받고, 나머지 상태 생성의 reference 로 사용(일관성).
     @State private var idleAnchor: UIImage?
     /// 앵커 reference 용 원본(1024). results 는 128 썸네일이라 그대로 쓰면 일관성 reference 품질이 떨어짐.
@@ -269,6 +278,21 @@ struct BatchCharacterGenView: View {
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
         }
+        .onChange(of: subjectField) { _, _ in composeFromHelper() }
+        .onChange(of: looksField) { _, _ in composeFromHelper() }
+        .onChange(of: colorField) { _, _ in composeFromHelper() }
+        // 상태 사진 자리 → '앨범' 선택 시 뜨는 시스템 사진 피커.
+        .photosPicker(isPresented: Binding(
+            get: { albumPickerForState != nil },
+            set: { if !$0 { albumPickerForState = nil } }
+        ), selection: $albumPickerItem, matching: .images)
+        .onChange(of: albumPickerItem) { _, item in
+            guard let state = albumPickerForState, let item else { return }
+            stateReferencePickerItems[state] = item
+            Task { await loadStateReference(state, item: item) }
+            albumPickerItem = nil
+            albumPickerForState = nil
+        }
         .sheet(item: Binding(
             get: { selectedResult.map { ResultSelection(state: $0.state, image: $0.image) } },
             set: { _ in selectedResult = nil }
@@ -305,11 +329,47 @@ struct BatchCharacterGenView: View {
                 .frame(minHeight: 80)
                 .font(.callout)
                 .disabled(isGenerating)
+                .overlay(alignment: .topLeading) {
+                    if baseIdentity.isEmpty {
+                        Text("만들 캐릭터를 설명해 주세요")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 8)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
+            DisclosureGroup("항목별 입력") {
+                helperField("대상", text: $subjectField, placeholder: "마시멜로 캐릭터")
+                helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
+                helperField("색감", text: $colorField, placeholder: "연두 파스텔톤")
+            }
+            .font(.callout)
+            .disabled(isGenerating)
         } header: {
             Text("캐릭터 프롬프트")
-        } footer: {
-            Text("모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"")
+        }
+    }
+
+    /// "항목별 입력" 한 줄 — 라벨 + 입력칸. (하나씩 만들기와 동일)
+    private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(label)
+                .font(.caption)
                 .foregroundStyle(.secondary)
+                .frame(width: 64, alignment: .leading)
+            TextField(placeholder, text: text, axis: .vertical)
+                .font(.callout)
+        }
+    }
+
+    /// 항목별 입력(대상·생김새·색감)을 합쳐 캐릭터 프롬프트(baseIdentity)에 반영.
+    private func composeFromHelper() {
+        let parts = [subjectField, looksField, colorField]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !parts.isEmpty {
+            baseIdentity = parts.joined(separator: ", ")
         }
     }
 
@@ -331,41 +391,32 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
         } footer: {
-            let count = selectedStates.count
             let unit = GenerationQuota.cost(forQuality: quality)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(count)개의 상태를 만들어요")
-                Text("\(requiredCount * unit)캔디 소모")
-            }
-            .foregroundStyle(.secondary)
+            Text("\(requiredCount * unit)캔디 소모")
+                .foregroundStyle(.secondary)
+        }
+        .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
         }
     }
 
     @ViewBuilder
     private func stateRow(_ state: CharacterState) -> some View {
         DisclosureGroup {
-            TextEditor(text: Binding(
-                get: { stateHints[state] ?? state.generationHint },
-                set: { stateHints[state] = $0 }
-            ))
-            .frame(minHeight: 60)
-            .font(.footnote)
-            .disabled(isGenerating)
-
-            // state 별 참고 이미지 (있으면 전체 reference 보다 우선)
-            stateReferencePicker(state)
-
-            // 2프레임 생성이 의미 있는 상태만 토글 노출 — 미세 모션 상태는 자동(절차적) 애니메이션.
-            if state.usesGeneratedMotion {
-                Toggle("움직임 (2장 · 메인에서 움직여요)", isOn: Binding(
-                    get: { animatedStates.contains(state) },
-                    set: { on in
-                        if on { animatedStates.insert(state) } else { animatedStates.remove(state) }
-                    }
+            // 사진이 먼저, 이어서 프롬프트 — 한 행으로 묶어 사이에 구분선이 안 생기게.
+            VStack(alignment: .leading, spacing: 12) {
+                statePhoto(state)
+                TextEditor(text: Binding(
+                    get: { stateHints[state] ?? state.generationHint },
+                    set: { stateHints[state] = $0 }
                 ))
+                .frame(minHeight: 60)
                 .font(.footnote)
                 .disabled(isGenerating)
             }
+            .padding(.vertical, 4)
 
             Button("기본값으로 되돌리기") {
                 stateHints[state] = state.generationHint
@@ -373,7 +424,7 @@ struct BatchCharacterGenView: View {
             .font(.footnote)
             .disabled(isGenerating)
         } label: {
-            HStack {
+            HStack(spacing: 8) {
                 Toggle("", isOn: Binding(
                     get: { selectedStates.contains(state) },
                     set: { on in
@@ -385,69 +436,75 @@ struct BatchCharacterGenView: View {
 
                 Text(state.koreanShortLabel)
                     .strikethrough(!selectedStates.contains(state))
+
+                // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시 + 설명 '?'.
+                if state.usesGeneratedMotion {
+                    motionPill(state)
+                    Button { showMotionInfo = true } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isGenerating)
+                }
                 Spacer()
                 resultBadge(state)
             }
         }
     }
 
-    /// state 별 참고 이미지 선택기. 작은 thumbnail + Picker / 제거 버튼.
+    /// 움직임 지원 상태의 연한 초록 토글 pill — 켜짐=연두, 꺼짐=회색.
+    private func motionPill(_ state: CharacterState) -> some View {
+        let on = animatedStates.contains(state)
+        return Button {
+            if on { animatedStates.remove(state) } else { animatedStates.insert(state) }
+        } label: {
+            Text("움직임")
+                .font(.caption2.weight(.medium))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(on ? Color.withuCTAGreen.opacity(0.18)
+                                                : Color.secondary.opacity(0.12)))
+                .foregroundStyle(on ? Color.withuCTAGreen : Color.secondary)
+        }
+        .buttonStyle(.borderless)
+        .disabled(isGenerating)
+    }
+
+    /// 상태 사진 자리 — 누르면 앨범/내 캐릭터 선택. 넣은 사진이 있으면 썸네일 + 빼기.
     @ViewBuilder
-    private func stateReferencePicker(_ state: CharacterState) -> some View {
+    private func statePhoto(_ state: CharacterState) -> some View {
         HStack(spacing: 10) {
-            if let ref = stateReferenceImages[state] {
-                Image(uiImage: ref).resizable().scaledToFill()
-                    .frame(width: 36, height: 36)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            } else {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.secondary.opacity(0.15))
-                    .frame(width: 36, height: 36)
-                    .overlay(Image(systemName: "photo")
-                        .foregroundStyle(.secondary).font(.caption))
+            Menu {
+                Button { albumPickerForState = state } label: {
+                    Label("앨범에서 선택", systemImage: "photo.on.rectangle")
+                }
+                Button { galleryRefTarget = .state(state) } label: {
+                    Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
+                }
+            } label: {
+                if let ref = stateReferenceImages[state] {
+                    Image(uiImage: ref).resizable().scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.secondary.opacity(0.15))
+                        .frame(width: 56, height: 56)
+                        .overlay(Image(systemName: "photo.badge.plus")
+                            .foregroundStyle(.secondary))
+                }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    PhotosPicker(
-                        selection: Binding(
-                            get: { stateReferencePickerItems[state] },
-                            set: { item in
-                                if let item {
-                                    stateReferencePickerItems[state] = item
-                                    Task { await loadStateReference(state, item: item) }
-                                } else {
-                                    stateReferencePickerItems.removeValue(forKey: state)
-                                    stateReferenceImages.removeValue(forKey: state)
-                                }
-                            }
-                        ),
-                        matching: .images
-                    ) {
-                        Label("앨범", systemImage: "photo.on.rectangle")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(isGenerating)
+            .disabled(isGenerating)
 
-                    Button {
-                        galleryRefTarget = .state(state)
-                    } label: {
-                        Label("내 캐릭터", systemImage: "square.grid.2x2")
-                    }
-                    .buttonStyle(.bordered)   // 보조 액션 — pink 는 만들기 CTA 전용
-                    .controlSize(.small)
-                    .disabled(isGenerating)
+            if stateReferenceImages[state] != nil {
+                Button("사진 빼기", role: .destructive) {
+                    stateReferenceImages.removeValue(forKey: state)
+                    stateReferencePickerItems.removeValue(forKey: state)
                 }
-                .font(.footnote)
-
-                if stateReferenceImages[state] != nil {
-                    Button("이 상태 사진 빼기", role: .destructive) {
-                        stateReferenceImages.removeValue(forKey: state)
-                        stateReferencePickerItems.removeValue(forKey: state)
-                    }
-                    .font(.caption2)
-                    .disabled(isGenerating)
-                }
+                .font(.caption2)
+                .buttonStyle(.borderless)
+                .disabled(isGenerating)
             }
             Spacer(minLength: 0)
         }
@@ -536,10 +593,7 @@ struct BatchCharacterGenView: View {
                 }
             }
         } header: {
-            Text("참고 사진 (Optional)")
-        } footer: {
-            Text("사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요.")
-                .foregroundStyle(.secondary)
+            Text("참고 사진 (선택)")
         }
     }
 
@@ -552,9 +606,10 @@ struct BatchCharacterGenView: View {
             .pickerStyle(.segmented).disabled(isGenerating)
 
             // '모두 움직임'은 2프레임 생성이 의미 있는 상태(usesGeneratedMotion)에만 적용.
+            // 상태별 켜기는 각 상태 행의 '움직임' pill 에서 — 여긴 한 번에 켜는 편의 토글만.
             let animatable = selectedStates.filter { $0.usesGeneratedMotion }
             if !animatable.isEmpty {
-                Toggle("모두 움직이는 캐릭터로 (한 모습당 2장)", isOn: Binding(
+                Toggle("모두 움직이는 캐릭터로", isOn: Binding(
                     get: { animatable.isSubset(of: animatedStates) },
                     set: { on in
                         if on { animatedStates.formUnion(animatable) }
@@ -563,58 +618,8 @@ struct BatchCharacterGenView: View {
                 ))
                 .disabled(isGenerating)
             }
-
-            // 상태별 움직임 선택 — '모두' 대신 원하는 상태만 골라서.
-            animatedStateChips
         } header: {
             Text("스타일")
-        } footer: {
-            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요.")
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    /// 상태별 움직임 토글 칩 — 선택된 상태만 노출. 상태 행 안의 '움직임' 토글과 같은 값을 공유.
-    @ViewBuilder
-    private var animatedStateChips: some View {
-        // 미세 모션 상태(idle·수면 등)는 2프레임을 안 만드므로 칩에서 제외 — 그 상태는
-        // 절차적 모션으로 자동 애니메이션됨.
-        let states = CharacterState.userFacing.filter { selectedStates.contains($0) && $0.usesGeneratedMotion }
-        if !states.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(states, id: \.self) { state in
-                        let on = animatedStates.contains(state)
-                        Button {
-                            if on { animatedStates.remove(state) }
-                            else { animatedStates.insert(state) }
-                        } label: {
-                            HStack(spacing: 4) {
-                                // 이모지 대신 번들 기본 일러스트 썸네일
-                                Image(state.imageAssetName)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 18, height: 18)
-                                Text(state.koreanShortLabel)
-                                    .font(.footnote.weight(on ? .semibold : .regular))
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule().fill(on ? Color.withuPink.opacity(0.18)
-                                                  : Color.secondary.opacity(0.08))
-                            )
-                            .overlay(
-                                Capsule().stroke(on ? Color.withuPink : .clear, lineWidth: 1.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(on ? Color.withuPink : .secondary)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-            .disabled(isGenerating)
         }
     }
 
