@@ -64,6 +64,8 @@ struct BatchCharacterGenView: View {
     @State private var idleApproved: Bool = false
     /// 승인 화면 — '수정해서 다시' 입력.
     @State private var idleRevisionText: String = ""
+    /// 기준 모습 확인 화면에서 이미 쓴 수정 횟수 — 1번은 무료, 2번째부터 캔디 차감.
+    @State private var idleRevisionsUsed: Int = 0
     /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
     /// 참고사진에서 그대로 둘 것 / 바꿀 것 (단건 생성과 동일). 참고사진 쓸 때만 프롬프트에 반영.
     @State private var referenceKeep: String = ""
@@ -715,10 +717,17 @@ struct BatchCharacterGenView: View {
             let rest = max(1, requiredCount - 1)
             return String(localized: "나머지 모습에 캔디 약 \(rest * unit)개를 써요. 성공했을 때만 차감돼요.")
         case .reviseIdle:
-            return String(localized: "이번 수정에 캔디 \(unit)개를 써요. 성공했을 때만 차감돼요.")
+            return idleRevisionCost == 0
+                ? String(localized: "이번 수정은 무료예요.")
+                : String(localized: "이번 수정에 캔디 \(idleRevisionCost)개를 써요. 성공했을 때만 차감돼요.")
         case nil:
             return ""
         }
+    }
+
+    /// 기준 모습 수정 비용 — 1번째는 무료(0), 2번째부터 캔디 차감.
+    private var idleRevisionCost: Int {
+        idleRevisionsUsed == 0 ? 0 : GenerationQuota.cost(forQuality: quality)
     }
 
     /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
@@ -734,13 +743,10 @@ struct BatchCharacterGenView: View {
                 Button {
                     pendingAction = .approveRest        // 캔디 안내 팝업 → 확인 시 실행
                 } label: {
-                    Label("이 모습으로 나머지 만들기", systemImage: "arrow.right.circle.fill")
-                        .font(.callout.weight(.semibold))
+                    Text("이 모습으로 나머지 만들기")
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.withuPinkText)
+                .buttonStyle(WithuCTAButtonStyle())
                 .disabled(isGenerating)
 
                 // 마음에 안 들면 — ① 수정해서 생성하기(아래 수정사항 반영)  ② 완전히 새로
@@ -750,7 +756,13 @@ struct BatchCharacterGenView: View {
                     if isGenerating {
                         HStack { ProgressView(); Text("만드는 중…") }
                     } else {
-                        Label("수정해서 생성하기", systemImage: "wand.and.stars")
+                        HStack {
+                            Label("수정해서 생성하기", systemImage: "wand.and.stars")
+                            Spacer()
+                            Text(idleRevisionCost == 0 ? String(localized: "무료")
+                                                       : String(localized: "캔디 \(idleRevisionCost)개"))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .tint(.secondary)
@@ -771,14 +783,14 @@ struct BatchCharacterGenView: View {
                     idleRevisionText = ""
                     errors.removeAll()
                 } label: {
-                    Label("프롬프트 수정해서 다시", systemImage: "pencil")
+                    Label("처음부터 다시 만들기", systemImage: "arrow.counterclockwise")
                 }
                 .tint(.secondary)
                 .disabled(isGenerating)
             } header: {
                 Text("기준 모습 확인")
             } footer: {
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'")
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -1227,6 +1239,7 @@ struct BatchCharacterGenView: View {
         pendingFrame1.removeAll()
         failedFrame1.removeAll()
         idleApproved = false
+        idleRevisionsUsed = 0
         idleAnchor = nil
         idleFullRes = nil
         awaitingIdleApproval = false
@@ -1410,7 +1423,11 @@ struct BatchCharacterGenView: View {
                                          batchId: batchSessionId, prompt: prompt)
                 ConnectivityManager.shared.sendCharacterImage(small, for: .idle, frame: 0)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
-                GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
+                // 1번째 수정은 무료, 2번째부터 차감.
+                if idleRevisionsUsed > 0 {
+                    GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
+                }
+                idleRevisionsUsed += 1
                 idleRevisionText = ""
                 WidgetCenter.shared.reloadAllTimelines()
             } else {

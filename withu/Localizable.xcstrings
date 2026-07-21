@@ -2805,23 +2805,12 @@
         }
       }
     },
-    "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'" : {
+    "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This is your 'default' look, made first. The rest will match it.\n· Happy with it? Continue above · Small tweaks: 'Revise & generate' · Different direction: edit the prompt"
-          }
-        }
-      }
-    },
-    "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\\n· 마음에 들면 위에서 진행 · 살짝 고치려면 '수정해서 생성하기'(수정사항 입력) · 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This is the 'base' look created first. The rest are made consistently from this look.\\n· Happy with it? Continue above · Want small tweaks? Use 'Edit & generate' (enter your changes) · Want to change the prompt itself? Use 'Edit prompt & retry'"
+            "value" : "This is your 'default' look, made first. The rest will match it."
           }
         }
       }
@@ -2954,6 +2943,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You've used up your free creations. Please top up candies or subscribe."
+          }
+        }
+      }
+    },
+    "무료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free"
           }
         }
       }
@@ -5685,6 +5684,16 @@
     "이번 수정에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
 
     },
+    "이번 수정은 무료예요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This edit is free."
+          }
+        }
+      }
+    },
     "이어서 다듬기" : {
       "localizations" : {
         "en" : {
@@ -6912,6 +6921,16 @@
         }
       }
     },
+    "캔디 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld candies"
+          }
+        }
+      }
+    },
     "캔디 %lld개 · 만료 없이 사용할 수 있어요" : {
       "localizations" : {
         "en" : {
@@ -7196,12 +7215,12 @@
         }
       }
     },
-    "프롬프트 수정해서 다시" : {
+    "처음부터 다시 만들기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit prompt and retry"
+            "value" : "Start over"
           }
         }
       }
