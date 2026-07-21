@@ -93,6 +93,8 @@ struct BatchCharacterGenView: View {
     @State private var isRevising: Bool = false
     @State private var revisionRefItem: PhotosPickerItem?
     @State private var revisionRefImage: UIImage?
+    /// 입력한 수정 문구/사진이 있는데 상세 시트를 닫으려 할 때 확인.
+    @State private var showReviseDiscardConfirm: Bool = false
     /// '바꾸기' 실패 사유 — 상세 시트에 표시(예전엔 조용히 실패해 '반영 안 됨'으로 보였음).
     @State private var revisionError: String?
     /// 상세 시트에서 '바꾸기'로 재생성 중인 프레임(state→frame). 시트를 닫아도
@@ -1378,6 +1380,12 @@ struct BatchCharacterGenView: View {
         return prompt
     }
 
+    /// 상세 시트에 저장(생성) 안 한 수정 입력이 있는지 — 문구 또는 첨부 사진.
+    private var reviseHasChanges: Bool {
+        !revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || revisionRefImage != nil
+    }
+
     /// 결과 카드 탭 시 열리는 sheet — 프레임 페이지(좌우 스와이프) + 저장 / 수정
     @ViewBuilder
     private func resultDetailSheet(state: CharacterState) -> some View {
@@ -1530,8 +1538,19 @@ struct BatchCharacterGenView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { selectedResult = nil }
+                    Button("닫기") {
+                        if reviseHasChanges { showReviseDiscardConfirm = true } else { selectedResult = nil }
+                    }
                 }
+            }
+            // 입력한 수정 문구/사진이 있으면 스와이프로도 못 닫게 + 닫기 시 경고.
+            .interactiveDismissDisabled(reviseHasChanges)
+            .confirmationDialog("입력한 수정 내용이 있어요",
+                                isPresented: $showReviseDiscardConfirm, titleVisibility: .visible) {
+                Button("닫기", role: .destructive) { selectedResult = nil }
+                Button("계속 편집", role: .cancel) {}
+            } message: {
+                Text("닫으면 방금 입력한 수정 문구·사진이 지워져요.")
             }
             // 캔디 소모 확인 — 시트 위에 떠야 해서 시트 로컬 alert.
             .alert("캔디를 사용해요", isPresented: $pendingReviseConfirm) {

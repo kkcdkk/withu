@@ -10,10 +10,16 @@ import SwiftUI
 import WidgetKit
 
 struct CharacterProfileView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var profile: CharacterProfile = CharacterProfileStore.load()
     @State private var health = HealthKitManager.shared
     @State private var focus = FocusModeManager.shared
     @State private var animationEnabled: Bool = CharacterImageStore.animationEnabled
+    /// 마지막으로 '저장'한 스냅샷 — 이것과 다르면 저장 안 된 변경(hasChanges)으로 본다.
+    @State private var savedProfile: CharacterProfile = CharacterProfileStore.load()
+    @State private var savedAnimationEnabled: Bool = CharacterImageStore.animationEnabled
+    /// 저장 안 한 채 나가려 할 때 확인 팝업.
+    @State private var showDiscardConfirm: Bool = false
     /// heroCard 탭 → 이름 편집 (성격 섹션 제거 후 유일한 이름 편집 진입점)
     @State private var showNameEdit: Bool = false
     @State private var nameDraft: String = ""
@@ -122,17 +128,52 @@ struct CharacterProfileView: View {
         }
         .navigationTitle("내 캐릭터 설정")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: animationEnabled) { _, new in
-            CharacterImageStore.setAnimationEnabled(new)
-            WidgetCenter.shared.reloadAllTimelines()
+        // 자동 저장 대신 명시적 '저장' — 편집은 초안(profile)에만, 반영은 save() 에서.
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    if hasChanges { showDiscardConfirm = true } else { dismiss() }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "chevron.left")
+                        Text("설정")
+                    }
+                }
+            }
+            // 수정이 생기면 상단에 '저장' 버튼 등장.
+            ToolbarItem(placement: .topBarTrailing) {
+                if hasChanges {
+                    Button("저장") { save() }
+                        .fontWeight(.semibold)
+                }
+            }
         }
-        .onChange(of: profile) { _, new in
-            CharacterProfileStore.save(new)
-            // 저장된 프로필로 상태 재판정 + SharedAppState 갱신 → 아바타(heroState)도 최신으로.
-            SyncCoordinator.syncNow()
-            heroState = SharedAppState.loadMessage()?.state ?? .idle
-            WidgetCenter.shared.reloadAllTimelines()
+        .confirmationDialog("저장하지 않은 변경사항이 있어요",
+                            isPresented: $showDiscardConfirm, titleVisibility: .visible) {
+            Button("저장하고 나가기") { save(); dismiss() }
+            Button("저장 안 하고 나가기", role: .destructive) { dismiss() }
+            Button("계속 편집", role: .cancel) {}
+        } message: {
+            Text("나가면 방금 바꾼 내용이 지워져요.")
         }
+    }
+
+    /// 저장 안 된 변경이 있는지 — 초안이 마지막 저장 스냅샷과 다르면 true.
+    private var hasChanges: Bool {
+        profile != savedProfile || animationEnabled != savedAnimationEnabled
+    }
+
+    /// 초안(profile·animationEnabled)을 실제로 반영 — 저장 + 상태 재판정 + 위젯/워치 갱신.
+    private func save() {
+        CharacterProfileStore.save(profile)
+        CharacterImageStore.setAnimationEnabled(animationEnabled)
+        // 저장된 프로필로 상태 재판정 + SharedAppState 갱신 → 아바타(heroState)도 최신으로.
+        SyncCoordinator.syncNow()
+        heroState = SharedAppState.loadMessage()?.state ?? .idle
+        WidgetCenter.shared.reloadAllTimelines()
+        savedProfile = profile
+        savedAnimationEnabled = animationEnabled
     }
 
     private var heroCard: some View {

@@ -520,6 +520,9 @@
         }
       }
     },
+    "%lld캔디 소모" : {
+
+    },
     "%lld회 충전" : {
       "localizations" : {
         "en" : {
@@ -1087,6 +1090,7 @@
       }
     },
     "각 상태의 포즈는 자동으로 적용되고, 여기 적은 변화가 모든 모습에 더해져요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1682,6 +1686,9 @@
         }
       }
     },
+    "나머지 모습에 캔디 약 %lld개를 써요. 성공했을 때만 차감돼요." : {
+
+    },
     "나중에" : {
       "localizations" : {
         "en" : {
@@ -2207,7 +2214,6 @@
       }
     },
     "다른 자리에" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2931,16 +2937,11 @@
         }
       }
     },
-    "예: 모자를 씌워줘" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What to change (e.g. add a hat)"
-          }
-        }
-      }
+    "미리보기를 바꿨어요. 홈·워치엔 '모두 적용하기'로 반영돼요." : {
+
+    },
+    "바꾸고 싶은 점 (예: 모자를 씌워줘)" : {
+
     },
     "바꾸기" : {
       "localizations" : {
@@ -3225,6 +3226,16 @@
         }
       }
     },
+    "보유 캔디 %lld개 · %lld캔디 소모" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "보유 캔디 %1$lld개 · %2$lld캔디 소모"
+          }
+        }
+      }
+    },
     "보유 캔디 %lld개 · 이번 만들기 %lld캔디" : {
       "localizations" : {
         "en" : {
@@ -3236,6 +3247,7 @@
       }
     },
     "보유 캔디 %lld개 · 이번 약 %lld캔디" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4464,6 +4476,7 @@
       }
     },
     "약 %lld캔디 (한 장당 %lld캔디)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4502,6 +4515,9 @@
           }
         }
       }
+    },
+    "여기 적은 사항이 모든 모습에 적용돼요." : {
+
     },
     "여러 모습 만들기" : {
       "localizations" : {
@@ -4553,7 +4569,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4563,7 +4579,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4644,7 +4660,15 @@
       }
     },
     "예: 모자를 씌워줘" : {
-
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What to change (e.g. add a hat)"
+          }
+        }
+      }
     },
     "예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터" : {
       "localizations" : {
@@ -4906,17 +4930,8 @@
         }
       }
     },
-    "움직임" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
-          }
-        }
-      }
-    },
     "움직이게 만들기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4962,6 +4977,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
+          }
+        }
+      }
+    },
+    "움직임" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
           }
         }
       }
@@ -5452,6 +5477,9 @@
         }
       }
     },
+    "이대로 움직이게" : {
+
+    },
     "이대로 저장" : {
       "localizations" : {
         "en" : {
@@ -5592,6 +5620,9 @@
           }
         }
       }
+    },
+    "이번 수정에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
+
     },
     "이어서 다듬기" : {
       "localizations" : {
@@ -5850,6 +5881,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Save"
+          }
+        }
+      }
+    },
+    "계속 편집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Editing"
+          }
+        }
+      }
+    },
+    "나가면 방금 바꾼 내용이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you leave, your recent changes will be discarded."
+          }
+        }
+      }
+    },
+    "닫으면 방금 바꾼 배경·다듬기 내용이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you close, your recent background and touch-up changes will be discarded."
+          }
+        }
+      }
+    },
+    "닫으면 방금 입력한 수정 문구·사진이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you close, the edit note and photo you just entered will be discarded."
+          }
+        }
+      }
+    },
+    "입력한 수정 내용이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved edits"
+          }
+        }
+      }
+    },
+    "저장 안 하고 나가기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave Without Saving"
+          }
+        }
+      }
+    },
+    "저장하고 나가기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save and Leave"
+          }
+        }
+      }
+    },
+    "저장하지 않은 변경사항이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved changes"
+          }
+        }
+      }
+    },
+    "저장하지 않은 변경이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved changes"
           }
         }
       }
@@ -6240,6 +6361,7 @@
       }
     },
     "처음 그림으로" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7455,6 +7577,9 @@
           }
         }
       }
+    },
+    "흰 배경으로" : {
+
     }
   },
   "version" : "1.0"

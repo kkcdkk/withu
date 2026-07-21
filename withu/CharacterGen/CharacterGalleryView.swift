@@ -451,6 +451,8 @@ struct GalleryGrid<Header: View>: View {
     @State private var frameSwapTick: Int = 0
     @State private var showApplySheet: Bool = false
     @State private var showDeleteConfirm: Bool = false
+    /// 상세 시트에서 저장 안 한 편집(배경/다듬기)이 있는데 닫으려 할 때 확인.
+    @State private var showDetailDiscardConfirm: Bool = false
     @State private var toastText: String?
     @State private var saveResultMessage: String?
     @State private var showSaveAlert: Bool = false
@@ -679,6 +681,13 @@ struct GalleryGrid<Header: View>: View {
         Text("캔디 \(count)개 소모")
             .font(.caption2)
             .foregroundStyle(.secondary)
+    }
+
+    /// 상세 시트에 저장 안 된 편집이 있는지 — 배경 미리보기 / 다듬기 결과 / 입력한 다듬기 문구.
+    private var detailHasChanges: Bool {
+        bgPreview != nil
+            || refineCompare != nil
+            || !refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     @ViewBuilder
@@ -955,8 +964,19 @@ struct GalleryGrid<Header: View>: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { selectedItem = nil }
+                    Button("닫기") {
+                        if detailHasChanges { showDetailDiscardConfirm = true } else { selectedItem = nil }
+                    }
                 }
+            }
+            // 저장 안 한 배경/다듬기 편집이 있으면 스와이프로도 못 닫게 + 닫기 시 경고.
+            .interactiveDismissDisabled(detailHasChanges)
+            .confirmationDialog("저장하지 않은 변경이 있어요",
+                                isPresented: $showDetailDiscardConfirm, titleVisibility: .visible) {
+                Button("닫기", role: .destructive) { selectedItem = nil }
+                Button("계속 편집", role: .cancel) {}
+            } message: {
+                Text("닫으면 방금 바꾼 배경·다듬기 내용이 지워져요.")
             }
             .alert("캔디를 사용해요", isPresented: $showRefineConfirm) {
                 Button("다듬기") { Task { await refineItem(item) } }
