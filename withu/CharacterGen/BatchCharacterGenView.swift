@@ -392,15 +392,17 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
         } footer: {
-            let unit = GenerationQuota.cost(forQuality: quality)
-            Text("\(requiredCount * unit)캔디 소모")
-                .foregroundStyle(.secondary)
+            // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시.
+            if animatableSelected.isEmpty {
+                Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .foregroundStyle(.secondary)
+            }
         }
-        .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
-        }
+    }
+
+    /// 선택된 상태 중 2프레임 움직임이 가능한 것들 — 움직임 섹션 노출 여부·캔디 소모 위치 판단.
+    private var animatableSelected: [CharacterState] {
+        selectedStates.filter { $0.usesGeneratedMotion }
     }
 
     @ViewBuilder
@@ -438,15 +440,9 @@ struct BatchCharacterGenView: View {
                 Text(state.koreanShortLabel)
                     .strikethrough(!selectedStates.contains(state))
 
-                // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시 + 설명 '?'.
+                // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시. (설명 '?'는 섹션 헤더에)
                 if state.usesGeneratedMotion {
                     motionPill(state)
-                    Button { showMotionInfo = true } label: {
-                        Image(systemName: "questionmark.circle")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(isGenerating)
                 }
                 Spacer()
                 resultBadge(state)
@@ -610,23 +606,39 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 움직임 선택 — '모두 움직이는' 토글 + 상태별 칩. '만들고 싶은 상태' 바로 아래.
+    /// 움직임 선택 — 상태별 칩(위) + '모두 움직이는' 토글(아래). '만들고 싶은 상태' 바로 아래.
     @ViewBuilder
     private var motionSection: some View {
-        let animatable = selectedStates.filter { $0.usesGeneratedMotion }
+        let animatable = animatableSelected
         if !animatable.isEmpty {
             Section {
+                animatedStateChips
                 Toggle("모두 움직이는 캐릭터로", isOn: Binding(
-                    get: { animatable.isSubset(of: animatedStates) },
+                    get: { Set(animatable).isSubset(of: animatedStates) },
                     set: { on in
                         if on { animatedStates.formUnion(animatable) }
                         else { animatedStates.subtract(animatable) }
                     }
                 ))
                 .disabled(isGenerating)
-                animatedStateChips
             } header: {
-                Text("움직이는 캐릭터")
+                HStack(spacing: 6) {
+                    Text("움직이는 캐릭터")
+                    Button { showMotionInfo = true } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                }
+            } footer: {
+                Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .foregroundStyle(.secondary)
+            }
+            .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
             }
         }
     }
