@@ -2937,8 +2937,15 @@
         }
       }
     },
-    "미리보기를 바꿨어요. 홈·워치엔 '모두 적용하기'로 반영돼요." : {
-
+    "미리보기를 바꿨어요. 적용하려면 적용 버튼을 눌러주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview changed. Tap Apply to apply it."
+          }
+        }
+      }
     },
     "바꾸고 싶은 점 (예: 모자를 씌워줘)" : {
 
@@ -3069,6 +3076,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clear all backgrounds"
+          }
+        }
+      }
+    },
+    "배경 복원" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore background"
           }
         }
       }
@@ -6327,6 +6344,16 @@
         }
       }
     },
+    "차례 기다리는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting its turn"
+          }
+        }
+      }
+    },
     "참고 사진 (Optional)" : {
 
     },
@@ -7577,9 +7604,6 @@
           }
         }
       }
-    },
-    "흰 배경으로" : {
-
     }
   },
   "version" : "1.0"

@@ -35,8 +35,9 @@ struct BatchCharacterGenView: View {
     @State private var transparentResultsFrame1: [CharacterState: UIImage] = [:]
     /// 표시 모드 (per-state). true 면 transparent (있을 때), false 면 raw.
     @State private var displayTransparentByState: [CharacterState: Bool] = [:]
-    /// '배경 모두 지우기/흰 배경으로'는 미리보기만 바꾼다 — 홈/워치엔 아직 반영 안 됐다는 안내용.
-    @State private var bgPreviewChanged: Bool = false
+    /// '배경 모두 지우기/배경 복원'은 미리보기만 바꾼다 — 눌렀을 때 잠깐 떴다 사라지는 토스트로 안내.
+    @State private var bgToastVisible: Bool = false
+    @State private var bgToastToken: Int = 0
 
     /// 전체 참고 이미지 (state 별 reference 가 없을 때의 fallback)
     @State private var photoPickerItem: PhotosPickerItem?
@@ -50,6 +51,8 @@ struct BatchCharacterGenView: View {
     /// 앵커 reference 용 원본(1024). results 는 128 썸네일이라 그대로 쓰면 일관성 reference 품질이 떨어짐.
     @State private var idleFullRes: UIImage?
     @State private var awaitingIdleApproval: Bool = false
+    /// 기준(기본) 모습을 이미 승인해 나머지 생성을 시작했는지 — 재확인 트리거가 승인 후 되돌아오는 것 방지.
+    @State private var idleApproved: Bool = false
     /// 승인 화면 — '수정해서 다시' 입력.
     @State private var idleRevisionText: String = ""
     /// 참고사진에서 무엇을 참고할지 (사용자 입력) — 참고사진 쓸 때만 프롬프트에 반영.
@@ -152,7 +155,7 @@ struct BatchCharacterGenView: View {
                     referenceSection
                     optionsSection
                     startSection
-                    if !results.isEmpty || !errors.isEmpty || !loadingFrame0.isEmpty {
+                    if isGenerating || !results.isEmpty || !errors.isEmpty || !loadingFrame0.isEmpty {
                         resultsSection
                     }
                 }
@@ -164,6 +167,20 @@ struct BatchCharacterGenView: View {
             ToolbarItem(placement: .topBarTrailing) { candyBadge }
         }
         .scrollDismissesKeyboard(.interactively)
+        // 배경 미리보기 변경 토스트 — 떴다 자기 혼자 사라짐.
+        .overlay(alignment: .bottom) {
+            if bgToastVisible {
+                Text("미리보기를 바꿨어요. 적용하려면 적용 버튼을 눌러주세요.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 44)
+                    .transition(.opacity)
+            }
+        }
         .onAppear {
             remainingGenerations = GenerationQuota.remainingToday()
             // 진행 중이거나 승인 대기 중인 백그라운드 배치가 있으면 이어서 표시
@@ -747,8 +764,10 @@ struct BatchCharacterGenView: View {
     private var resultsSection: some View {
         Section("만들어진 모습") {
             // LazyVGrid 는 Form 섹션 안에서 높이 계산이 어긋나 아래가 잘림 → 수동 2열 그리드.
+            // 생성 중이면 사용자가 고른 모든 상태를 미리 placeholder 로 — '기본만 만들어진다'는 착각 방지.
             let shown = CharacterState.allCases.filter {
                 displayedImage(for: $0) != nil || errors[$0] != nil || loadingFrame0.contains($0)
+                    || (isGenerating && selectedStates.contains($0))
             }
             VStack(spacing: 12) {
                 ForEach(Array(stride(from: 0, to: shown.count, by: 2)), id: \.self) { i in
@@ -791,20 +810,12 @@ struct BatchCharacterGenView: View {
                     Button {
                         previewWhiteAll()
                     } label: {
-                        Label("흰 배경으로", systemImage: "square.fill")
+                        Label("배경 복원", systemImage: "arrow.uturn.backward")
                     }
                     .buttonStyle(.borderless)
                     .tint(.secondary)
                 }
                 .font(.callout)
-
-                // 미리보기만 바꿨음을 알려 눌린 걸 확인시키고, 반영 방법을 안내.
-                if bgPreviewChanged {
-                    Label("미리보기를 바꿨어요. 홈·워치엔 '모두 적용하기'로 반영돼요.",
-                          systemImage: "eye")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
 
                 Button {
                     Task { await saveAllToPhotos() }
@@ -834,6 +845,28 @@ struct BatchCharacterGenView: View {
             loadingCard(state: state)
         } else if let err = errors[state] {
             errorCard(state: state, error: err)
+        } else if isGenerating && selectedStates.contains(state) {
+            // 아직 차례가 안 온 선택 상태 — '기본만 만들어진다'는 착각 방지용 대기 placeholder.
+            waitingCard(state: state)
+        }
+    }
+
+    /// 아직 생성이 시작 안 된(차례 대기) 선택 상태 placeholder.
+    private func waitingCard(state: CharacterState) -> some View {
+        VStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.07))
+                .frame(height: 120)
+                .overlay(
+                    Image(systemName: "hourglass")
+                        .foregroundStyle(.tertiary)
+                        .font(.title3)
+                )
+            HStack {
+                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Spacer()
+            }
+            Text("차례 기다리는 중").font(.caption2).foregroundStyle(.secondary)
         }
     }
 
@@ -909,7 +942,6 @@ struct BatchCharacterGenView: View {
         for state in CharacterState.allCases where results[state] != nil {
             applyOne(state)
         }
-        bgPreviewChanged = false   // 이제 미리보기가 홈/워치에 실제로 반영됨
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
@@ -922,7 +954,7 @@ struct BatchCharacterGenView: View {
             appliedStates.remove(state)   // 미리보기가 적용본과 달라짐 → 카드에 '적용' 다시 뜨게
         }
         UISelectionFeedbackGenerator().selectionChanged()
-        bgPreviewChanged = true
+        flashBgToast()
     }
 
     /// 한 모습만 배경 미리보기 토글 — on=투명, off=흰 배경. 홈/워치엔 아직 반영 안 함
@@ -932,7 +964,7 @@ struct BatchCharacterGenView: View {
         guard results[state] != nil else { return }
         displayTransparentByState[state] = on
         appliedStates.remove(state)
-        bgPreviewChanged = true
+        flashBgToast()
     }
 
     /// bulk — 모든 모습을 '흰 배경' 미리보기로만. 홈/위젯/워치엔 아직 반영 안 함.
@@ -943,7 +975,19 @@ struct BatchCharacterGenView: View {
             appliedStates.remove(state)
         }
         UISelectionFeedbackGenerator().selectionChanged()
-        bgPreviewChanged = true
+        flashBgToast()
+    }
+
+    /// 배경 미리보기 변경 토스트 — 잠깐 떴다 자기 혼자 사라짐. 마지막 탭 기준으로만 닫는다.
+    @MainActor
+    private func flashBgToast() {
+        bgToastToken += 1
+        let token = bgToastToken
+        withAnimation { bgToastVisible = true }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if bgToastToken == token { withAnimation { bgToastVisible = false } }
+        }
     }
 
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
@@ -1101,13 +1145,13 @@ struct BatchCharacterGenView: View {
         transparentResults.removeAll()          // 이전 배치의 배경제거 캐시 잔존 방지
         transparentResultsFrame1.removeAll()
         displayTransparentByState.removeAll()
-        bgPreviewChanged = false
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
         loadingFrame0.removeAll()
         pendingFrame1.removeAll()
         failedFrame1.removeAll()
+        idleApproved = false
         idleAnchor = nil
         idleFullRes = nil
         awaitingIdleApproval = false
@@ -1143,6 +1187,7 @@ struct BatchCharacterGenView: View {
         guard awaitingIdleApproval,
               let idle = idleFullRes ?? genManager.loadFrame0FullRes(.idle) ?? results[.idle] else { return }
         awaitingIdleApproval = false
+        idleApproved = true         // 재확인 트리거가 승인 후 되돌아오지 않게.
         idleAnchor = idle           // 원본(1024) 우선 — 일관성 reference 품질
         isGenerating = true
         let anchorB64 = idle.pngData()?.base64EncodedString()
@@ -1243,6 +1288,16 @@ struct BatchCharacterGenView: View {
         }
         isGenerating = genManager.isActive
         remainingGenerations = GenerationQuota.remainingToday()
+
+        // 앵커(기본) 승인 대기 재확인 — 기본을 '다시 만들기'로 재시도하면 phase 가 .retry 로 바뀌어
+        // 기존 트리거(phase==.anchor)를 놓쳐 '나머지 만들기' 버튼이 안 뜨던 버그 방지.
+        // 아직 승인 전이고(나머지 생성 미시작), 작업이 idle 뿐이며, 기본이 나왔고, 생성 안 중이면 승인 대기.
+        let onlyIdleJobs = !genManager.jobs.isEmpty
+            && genManager.jobs.allSatisfy { $0.stateRaw == CharacterState.idle.rawValue }
+        if !idleApproved, !awaitingIdleApproval, !genManager.isActive,
+           onlyIdleJobs, results[.idle] != nil, errors[.idle] == nil {
+            awaitingIdleApproval = true
+        }
     }
 
     /// idle 다시 만들기 (승인 대기 유지).
