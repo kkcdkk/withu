@@ -214,6 +214,7 @@ struct BatchCharacterGenView: View {
                     awaitingIdleApproval = true
                 }
             }
+            restorePendingRevisions()
         }
         .onChange(of: genManager.tick) { _, _ in
             syncFromManager()
@@ -1298,6 +1299,7 @@ struct BatchCharacterGenView: View {
         idleApproved = false
         idleRevisionsUsed = 0
         revisedDone.removeAll()
+        PendingRevisionStore.clearAll()
         idleAnchor = nil
         idleFullRes = nil
         awaitingIdleApproval = false
@@ -1479,6 +1481,8 @@ struct BatchCharacterGenView: View {
                 let before = results[.idle] ?? small
                 revisedDone[.idle] = BatchRevision(frame: 0, before: before,
                                                    after: small, afterFull: flat, prompt: prompt)
+                PendingRevisionStore.save(state: .idle, frame: 0, after: small,
+                                          afterFull: flat, prompt: prompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 // 1번째 수정은 무료, 2번째부터 차감.
                 if idleRevisionsUsed > 0 {
@@ -1925,6 +1929,9 @@ struct BatchCharacterGenView: View {
                 let before = (frame == 1 ? resultsFrame1[state] : results[state]) ?? small
                 revisedDone[state] = BatchRevision(frame: frame, before: before,
                                                    after: small, afterFull: flat, prompt: modifiedPrompt)
+                // 완전히 나갔다 와도 복원되게 App Group 에 저장.
+                PendingRevisionStore.save(state: state, frame: frame, after: small,
+                                          afterFull: flat, prompt: modifiedPrompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
@@ -1959,6 +1966,7 @@ struct BatchCharacterGenView: View {
                                  batchId: batchSessionId, prompt: rev.prompt)
         appliedStates.remove(state)   // 새 결과 → '적용' 다시 눌러 홈/워치에 반영
         revisedDone.removeValue(forKey: state)
+        PendingRevisionStore.remove(state: state)
         selectedResult = nil          // 그리드로 — 바뀐 게 보이게
     }
 
@@ -1966,7 +1974,18 @@ struct BatchCharacterGenView: View {
     @MainActor
     private func rejectRevision(_ state: CharacterState) {
         revisedDone.removeValue(forKey: state)
+        PendingRevisionStore.remove(state: state)
         selectedResult = nil
+    }
+
+    /// 완전히 나갔다 온 뒤 저장된 수정본 복원 — 카드 '수정 완료'/기준 모습 비교가 다시 뜨게.
+    @MainActor
+    private func restorePendingRevisions() {
+        for r in PendingRevisionStore.loadAll() where revisedDone[r.state] == nil {
+            let before = (r.frame == 1 ? resultsFrame1[r.state] : results[r.state]) ?? r.after
+            revisedDone[r.state] = BatchRevision(frame: r.frame, before: before,
+                                                 after: r.after, afterFull: r.afterFull, prompt: r.prompt)
+        }
     }
 
     /// 수정 sheet 의 참고 이미지 로드
@@ -2058,4 +2077,63 @@ struct BatchCharacterGenView: View {
 
 #Preview {
     NavigationStack { BatchCharacterGenView() }
+}
+
+/// '바꾸기'/'수정해서 생성하기' 결과를 적용/취소 전에 App Group 에 보관 —
+/// 배치 화면을 완전히 나갔다 들어와도 결정 안 한 수정본을 복원한다. (캔디 쓴 결과 유실 방지)
+fileprivate enum PendingRevisionStore {
+    private struct Meta: Codable { let frame: Int; let prompt: String }
+
+    private static var folder: URL? {
+        guard let c = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedAppState.groupID) else { return nil }
+        let f = c.appendingPathComponent("pending_revisions", isDirectory: true)
+        try? FileManager.default.createDirectory(at: f, withIntermediateDirectories: true)
+        return f
+    }
+
+    static func save(state: CharacterState, frame: Int, after: UIImage, afterFull: UIImage, prompt: String) {
+        guard let folder else { return }
+        let key = state.rawValue
+        try? after.pngData()?.write(to: folder.appendingPathComponent("\(key).after.png"),
+                                    options: [.atomic, .noFileProtection])
+        try? afterFull.pngData()?.write(to: folder.appendingPathComponent("\(key).full.png"),
+                                        options: [.atomic, .noFileProtection])
+        if let data = try? JSONEncoder().encode(Meta(frame: frame, prompt: prompt)) {
+            try? data.write(to: folder.appendingPathComponent("\(key).json"),
+                            options: [.atomic, .noFileProtection])
+        }
+    }
+
+    static func remove(state: CharacterState) {
+        guard let folder else { return }
+        let key = state.rawValue
+        for suffix in [".after.png", ".full.png", ".json"] {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent("\(key)\(suffix)"))
+        }
+    }
+
+    static func clearAll() {
+        guard let folder else { return }
+        try? FileManager.default.removeItem(at: folder)
+    }
+
+    /// 저장된 수정본 복원 — (state, frame, after 썸네일, afterFull 원본, prompt).
+    static func loadAll() -> [(state: CharacterState, frame: Int, after: UIImage, afterFull: UIImage, prompt: String)] {
+        guard let folder,
+              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        else { return [] }
+        var out: [(CharacterState, Int, UIImage, UIImage, String)] = []
+        for url in files where url.pathExtension == "json" {
+            let key = url.deletingPathExtension().lastPathComponent
+            guard let state = CharacterState(rawValue: key),
+                  let data = try? Data(contentsOf: url),
+                  let meta = try? JSONDecoder().decode(Meta.self, from: data),
+                  let after = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).after.png").path),
+                  let full = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).full.png").path)
+            else { continue }
+            out.append((state, meta.frame, after, full, meta.prompt))
+        }
+        return out
+    }
 }
