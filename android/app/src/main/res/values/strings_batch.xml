@@ -68,7 +68,9 @@
     <string name="batch_apply_all">모두 적용하기 (%1$d개)</string>
     <string name="batch_bg_remove_all">배경 모두 지우기</string>
     <string name="batch_bg_removing">다듬는 중…</string>
-    <string name="batch_bg_restore_all">처음 그림으로</string>
+    <!-- iOS 라벨과 일치 — '처음 그림으로' → '흰 배경으로' (배경 모두 지우기의 반대짝). -->
+    <string name="batch_bg_restore_all">흰 배경으로</string>
+    <string name="batch_bg_preview_notice">미리보기를 바꿨어요. 홈·워치엔 \'모두 적용하기\'로 반영돼요.</string>
     <string name="batch_save_all">사진 앱에 모두 저장 (%1$d장)</string>
     <string name="batch_saving">저장하는 중…</string>
 
@@ -89,6 +91,14 @@
     <string name="batch_ref_change">변경</string>
     <string name="batch_ref_remove_small">제거</string>
     <string name="batch_revise_cta">바꾸기</string>
+
+    <!-- 캔디 소모 확인 팝업 — 만들기/나머지/수정 모두 공용 (단건 생성과 동일한 안내를 배치에도). -->
+    <string name="batch_candy_title">캔디를 사용해요</string>
+    <string name="batch_candy_confirm_make">만들기</string>
+    <string name="batch_candy_confirm_revise">바꾸기</string>
+    <string name="batch_candy_body_start">이번 만들기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="batch_candy_body_rest">나머지 모습에 캔디 약 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="batch_candy_body_revise">이번 수정에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
 
     <!-- 알럿/에러 -->
     <string name="batch_done_title">다 만들었어요</string>

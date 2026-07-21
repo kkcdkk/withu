@@ -72,7 +72,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -181,6 +183,15 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
         }
     }
 
+    // 성공 햅틱 (iOS UINotificationFeedbackGenerator .success) — SingleGenScreen 과 동일 패턴.
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(vm.hapticSignal) {
+        if (vm.hapticSignal == HapticSignal.SUCCESS) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+        if (vm.hapticSignal != null) vm.consumeHaptic()
+    }
+
     // 진행 중 경과초 갱신용 0.5s 틱 (iOS TimelineView(0.5) 대응).
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(vm.isGenerating) {
@@ -233,7 +244,7 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
                         onPickGallery = { galleryTarget = PhotoTarget.Global },
                     )
                     OptionsSection(vm)
-                    StartSection(vm = vm, onStart = launchStart)
+                    StartSection(vm = vm, onStart = { vm.requestStart() })
 
                     // (G) 결과 — 입력 화면에서도 결과가 남아있으면 표시.
                     if (vm.results.isNotEmpty() || vm.errors.isNotEmpty()) {
@@ -318,6 +329,49 @@ fun BatchGenScreen(onClose: () -> Unit, vm: BatchGenViewModel = viewModel()) {
             confirmButton = {
                 TextButton(onClick = { vm.dismissSaveResult() }) {
                     Text(stringResource(R.string.common_confirm))
+                }
+            },
+        )
+    }
+
+    // 캔디 소모 확인 — 만들기 시작 / 이 모습으로 나머지 만들기 / 수정해서 생성하기 (iOS 공통 alert).
+    vm.pendingAction?.let { action ->
+        AlertDialog(
+            onDismissRequest = { vm.dismissPendingAction() },
+            title = { Text(stringResource(R.string.batch_candy_title)) },
+            text = { Text(vm.pendingActionMessage(action)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.dismissPendingAction()
+                    when (action) {
+                        PendingBatchAction.Start -> launchStart()
+                        PendingBatchAction.ApproveRest -> vm.approveIdleAndContinue()
+                        PendingBatchAction.ReviseIdle -> vm.reviseIdle()
+                    }
+                }) { Text(stringResource(vm.pendingActionConfirmLabel(action))) }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.dismissPendingAction() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    // 캔디 소모 확인 — 상세 시트 '바꾸기' (시트 위에 떠야 해서 별도 플래그).
+    if (vm.pendingReviseConfirm) {
+        AlertDialog(
+            onDismissRequest = { vm.dismissReviseConfirm() },
+            title = { Text(stringResource(R.string.batch_candy_title)) },
+            text = { Text(stringResource(R.string.batch_candy_body_revise, GenerationQuota.cost(vm.quality))) },
+            confirmButton = {
+                TextButton(onClick = { vm.confirmReviseOne() }) {
+                    Text(stringResource(R.string.batch_revise_cta))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.dismissReviseConfirm() }) {
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )
@@ -716,7 +770,7 @@ private fun IdleApprovalSection(vm: BatchGenViewModel) {
         // CTA — 이 모습으로 나머지 만들기 (초록, 주요 진행 액션)
         WithuCTAButton(
             text = stringResource(R.string.batch_approve),
-            onClick = { vm.approveIdleAndContinue() },
+            onClick = { vm.requestApproveRest() },
             modifier = Modifier.fillMaxWidth(),
         )
         // B-8: iOS 순서(버튼→필드) — 수정해서 생성하기 버튼/스피너가 입력 필드 위에 온다.
@@ -732,7 +786,7 @@ private fun IdleApprovalSection(vm: BatchGenViewModel) {
             }
         } else {
             TextButton(
-                onClick = { vm.reviseIdle() },
+                onClick = { vm.requestReviseIdle() },
                 enabled = vm.idleRevisionText.isNotBlank(),
             ) { Text(stringResource(R.string.batch_revise)) }
         }
@@ -790,22 +844,14 @@ private fun ResultsSection(vm: BatchGenViewModel, onSaveAll: () -> Unit) {
                     onClick = { vm.applyAll() },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                // 배경 미리보기 토글 — 홈/위젯엔 아직 반영 안 하고 그리드 표시만 바꾼다.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
-                        onClick = { vm.applyTransparentToAll() },
-                        enabled = !vm.isProcessingTransparentBulk,
+                        onClick = { vm.previewTransparentAll() },
                         modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (vm.isProcessingTransparentBulk) R.string.batch_bg_removing
-                                else R.string.batch_bg_remove_all,
-                            ),
-                        )
-                    }
+                    ) { Text(stringResource(R.string.batch_bg_remove_all)) }
                     TextButton(
-                        onClick = { vm.restoreOriginalToAll() },
-                        enabled = !vm.isProcessingTransparentBulk,
+                        onClick = { vm.previewWhiteAll() },
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(
@@ -813,6 +859,14 @@ private fun ResultsSection(vm: BatchGenViewModel, onSaveAll: () -> Unit) {
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
+                }
+                // 미리보기만 바꿨음을 알려 눌린 걸 확인시키고, 반영 방법을 안내.
+                if (vm.bgPreviewChanged) {
+                    Text(
+                        stringResource(R.string.batch_bg_preview_notice),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 val photoCount = CharacterState.entries.sumOf { s ->
                     (if (vm.results[s] != null) 1 else 0) + (if (vm.resultsFrame1[s] != null) 1 else 0)
@@ -838,6 +892,8 @@ private fun ResultsSection(vm: BatchGenViewModel, onSaveAll: () -> Unit) {
 @Composable
 private fun ResultCard(vm: BatchGenViewModel, state: CharacterState) {
     val applied = state in vm.appliedStates
+    // 상세 시트 '바꾸기'로 재생성 중인 프레임 — 시트를 닫아도 고치는 프레임에 로딩 표시 (iOS revisingFrame).
+    val revising = vm.revisingFrame[state]
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box {
             vm.displayedImage(state, 0)?.let { bmp ->
@@ -851,18 +907,45 @@ private fun ResultCard(vm: BatchGenViewModel, state: CharacterState) {
                         .clickable { vm.openDetail(state) },
                 )
             }
-            // frame1 미니 썸네일 (우하단)
-            vm.displayedImage(state, 1)?.let { f1 ->
-                Image(
-                    bitmap = f1.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
+            // 기본(frame0)을 '바꾸기'로 다시 만드는 중 — 처음 만들 때처럼 로딩.
+            if (revising == 0) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.38f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
+                }
+            }
+            // frame1 미니 썸네일 (우하단) — 움직임 프레임을 '바꾸기'로 재생성 중이면 미니에 로딩.
+            if (revising == 1) {
+                Box(
+                    Modifier
                         .align(Alignment.BottomEnd)
                         .padding(4.dp)
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .border(2.dp, Color.White, RoundedCornerShape(8.dp)),
-                )
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
+            } else {
+                vm.displayedImage(state, 1)?.let { f1 ->
+                    Image(
+                        bitmap = f1.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(2.dp, Color.White, RoundedCornerShape(8.dp)),
+                    )
+                }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1008,7 +1091,7 @@ private fun ResultDetailSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // 3) 배경 세그먼트 — 선택 즉시 적용까지 일어남 (표시만 X).
+            // 3) 배경 세그먼트 — 미리보기만 바꾼다(홈/워치 반영은 '적용'/'모두 적용하기'에서만).
             val transparent = vm.displayTransparent(state)
             Text(
                 stringResource(R.string.batch_bg_picker),
@@ -1018,12 +1101,12 @@ private fun ResultDetailSheet(
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 SegmentedButton(
                     selected = !transparent,
-                    onClick = { vm.applyTransparentOne(state, false) },
+                    onClick = { vm.previewTransparentOne(state, false) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                 ) { Text(stringResource(R.string.batch_bg_white)) }
                 SegmentedButton(
                     selected = transparent,
-                    onClick = { vm.applyTransparentOne(state, true) },
+                    onClick = { vm.previewTransparentOne(state, true) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                 ) { Text(stringResource(R.string.batch_bg_transparent)) }
             }
@@ -1090,7 +1173,7 @@ private fun ResultDetailSheet(
                 ) { Text(stringResource(R.string.common_save)) }
                 WithuCTAButton(
                     text = stringResource(R.string.batch_revise_cta),
-                    onClick = { vm.reviseOne(state, vm.detailFrame, vm.revisionText) },
+                    onClick = { vm.requestReviseOne() },   // 캔디 안내 팝업 → 확인 시 실행
                     enabled = vm.revisionText.isNotBlank(),
                     loading = vm.isRevising,
                     modifier = Modifier.weight(1f),

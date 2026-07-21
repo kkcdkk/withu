@@ -40,6 +40,20 @@ import java.util.UUID
  *  - 캔디 차감: 큐 경유 생성은 큐(process 성공 시점)가, 직접 API 호출(reviseIdle/reviseOne)은
  *    여기서 성공 시점에 record (이중 차감 금지 — 00-PLAN §5-5).
  */
+
+/**
+ * 캔디 소모 전 확인 팝업 대상 — 단건 생성과 동일한 안내를 배치에도 (iOS PendingBatchAction).
+ * 상세 시트 '바꾸기'는 시트 위에 확인이 떠야 해서 별도 플래그(pendingReviseConfirm)로 다룬다.
+ */
+sealed class PendingBatchAction {
+    /** 만들기 시작 (전체) */
+    data object Start : PendingBatchAction()
+    /** 이 모습으로 나머지 만들기 */
+    data object ApproveRest : PendingBatchAction()
+    /** 수정해서 생성하기(기준 모습) */
+    data object ReviseIdle : PendingBatchAction()
+}
+
 class BatchGenViewModel : ViewModel() {
 
     // MARK: - 입력 상태
@@ -105,7 +119,11 @@ class BatchGenViewModel : ViewModel() {
     /** 표시/적용 모드 — 기본 true(투명). false = 흰 배경 합성 (getOrDefault true 규칙). */
     private val displayTransparentByState = mutableStateMapOf<CharacterState, Boolean>()
 
-    var isProcessingTransparentBulk by mutableStateOf(false)
+    /**
+     * '배경 모두 지우기/흰 배경으로'·상세 개별 토글은 이제 그리드 미리보기만 바꾼다 —
+     * 홈/위젯엔 아직 반영 안 됐다는 안내용 (iOS bgPreviewChanged).
+     */
+    var bgPreviewChanged by mutableStateOf(false)
         private set
     var isSavingPhotos by mutableStateOf(false)
         private set
@@ -113,6 +131,18 @@ class BatchGenViewModel : ViewModel() {
     var showFinishedAlert by mutableStateOf(false)
     var saveResultMessage by mutableStateOf<String?>(null)
     var showPaywall by mutableStateOf(false)
+
+    /** 성공 햅틱 원샷 이벤트 — SingleGenViewModel 과 같은 HapticSignal 재사용 (화면이 consumeHaptic 으로 비움). */
+    var hapticSignal by mutableStateOf<HapticSignal?>(null)
+        private set
+    fun consumeHaptic() { hapticSignal = null }
+
+    /** 캔디 소모 확인 팝업 대상 (배치) — 확인해야 실제 액션 실행 (iOS pendingAction). */
+    var pendingAction by mutableStateOf<PendingBatchAction?>(null)
+        private set
+    /** 상세 시트 '바꾸기' 전용 확인 플래그 — 확인 시 selectedResult/detailFrame/revisionText 그대로 사용. */
+    var pendingReviseConfirm by mutableStateOf(false)
+        private set
 
     var remainingGenerations by mutableStateOf(GenerationQuota.remainingToday())
         private set
@@ -140,6 +170,12 @@ class BatchGenViewModel : ViewModel() {
     var revisionError by mutableStateOf<String?>(null)
         private set
 
+    /**
+     * 상세 시트에서 '바꾸기'로 재생성 중인 프레임(state→frame). 시트를 닫아도 결과 그리드가
+     * 처음 만들 때처럼 로딩을 보여주도록(고치는 프레임에만) 추적 (iOS revisingFrame).
+     */
+    val revisingFrame = mutableStateMapOf<CharacterState, Int>()
+
     // 흰배경 합성 캐시 — 같은 raw 비트맵의 합성을 매 프레임 반복하지 않기 위함 (메모리 전용).
     private val whiteCache = HashMap<Bitmap, Bitmap>()
 
@@ -156,6 +192,35 @@ class BatchGenViewModel : ViewModel() {
         }
 
     val needCandy: Int get() = requiredCount * GenerationQuota.cost(quality)
+
+    // MARK: - 캔디 소모 확인 팝업 (iOS pendingAction/pendingActionMessage/pendingActionConfirmLabel)
+
+    fun requestStart() { pendingAction = PendingBatchAction.Start }
+    fun requestApproveRest() { pendingAction = PendingBatchAction.ApproveRest }
+    fun requestReviseIdle() { pendingAction = PendingBatchAction.ReviseIdle }
+    fun dismissPendingAction() { pendingAction = null }
+
+    fun requestReviseOne() { pendingReviseConfirm = true }
+    fun dismissReviseConfirm() { pendingReviseConfirm = false }
+
+    /** 확인 버튼 라벨 — '바꾸기'(수정)만 다르고 나머지는 '만들기' (iOS pendingActionConfirmLabel). */
+    fun pendingActionConfirmLabel(action: PendingBatchAction): Int =
+        if (action is PendingBatchAction.ReviseIdle) R.string.batch_candy_confirm_revise
+        else R.string.batch_candy_confirm_make
+
+    /** 확인 팝업 본문 — iOS pendingActionMessage 그대로. */
+    fun pendingActionMessage(action: PendingBatchAction): String {
+        val unit = GenerationQuota.cost(quality)
+        return when (action) {
+            PendingBatchAction.Start -> str(R.string.batch_candy_body_start, requiredCount * unit)
+            PendingBatchAction.ApproveRest -> {
+                // idle(기준)은 이미 만들었으니 나머지 모습분만.
+                val rest = maxOf(1, requiredCount - 1)
+                str(R.string.batch_candy_body_rest, rest * unit)
+            }
+            PendingBatchAction.ReviseIdle -> str(R.string.batch_candy_body_revise, unit)
+        }
+    }
 
     // MARK: - 큐 관찰 (iOS onChange(tick)/onChange(isActive) 대응)
 
@@ -188,13 +253,17 @@ class BatchGenViewModel : ViewModel() {
         val progress = mutableSetOf<CharacterState>()
         val started = mutableMapOf<CharacterState, Long>()
         // 디스크 폴백 로드는 IO 에서 — images 맵은 메모리 전용이라 재시작 후 비어 있음 (00-PLAN §5-10).
+        // done job 이미지는 '이 배치'의 실제 출력만 쓴다 — in-memory(s.images) 우선, 앱 재시작으로
+        // 비었으면 큐가 디스크에 남긴 이 배치의 frame0 원본(BackgroundGenQueue.loadFrame0FullRes).
+        // 활성 슬롯(CharacterImageStore.loadFrame)은 예전에 '적용'한 다른(전전) 배치일 수 있어
+        // 폴백에서 제외 — 안 그러면 재진입 시 전전 결과가 이번 결과인 척 그리드에 뜬다.
         val doneImages = withContext(Dispatchers.IO) {
             val map = mutableMapOf<Pair<CharacterState, Int>, Bitmap>()
             for (job in s.jobs) {
                 if (job.status != BgGenStatus.DONE.raw) continue
                 val st = CharacterState.fromRaw(job.stateRaw) ?: continue
                 val img = s.images["${job.stateRaw}#${job.frame}"]
-                    ?: CharacterImageStore.loadFrame(st, job.frame)
+                    ?: (if (job.frame == 0) BackgroundGenQueue.loadFrame0FullRes(st) else null)
                 if (img != null) map[st to job.frame] = img
             }
             map
@@ -226,10 +295,13 @@ class BatchGenViewModel : ViewModel() {
         inProgressStates = progress
         stateStartedAt.clear()
         stateStartedAt.putAll(started)
-        // rest 단계엔 앵커(idle) job 이 목록에 없음 — 비면 활성 슬롯에서 복원 (iOS 동일).
+        // rest 단계엔 앵커(idle) job 이 목록에 없음 — 이 배치의 큐 디스크 원본에서 복원.
+        // (활성 슬롯은 전전 배치일 수 있어 마지막 수단으로만 — iOS 동일 주석.)
         if (s.jobs.isNotEmpty() && s.phase != BgGenPhase.ANCHOR && results[CharacterState.IDLE] == null) {
-            withContext(Dispatchers.IO) { CharacterImageStore.loadFrame(CharacterState.IDLE, 0) }
-                ?.let { results[CharacterState.IDLE] = it }
+            withContext(Dispatchers.IO) {
+                BackgroundGenQueue.loadFrame0FullRes(CharacterState.IDLE)
+                    ?: CharacterImageStore.loadFrame(CharacterState.IDLE, 0)
+            }?.let { results[CharacterState.IDLE] = it }
         }
         isGenerating = s.isActive
         refreshQuota()
@@ -310,9 +382,11 @@ class BatchGenViewModel : ViewModel() {
             appliedStates = emptySet()
             frame0FullRes.clear()
             displayTransparentByState.clear()
+            bgPreviewChanged = false
             synchronized(whiteCache) { whiteCache.clear() }
             inProgressStates = emptySet()
             stateStartedAt.clear()
+            revisingFrame.clear()
             idleAnchor = null
             idleFullRes = null
             awaitingIdleApproval = false
@@ -554,73 +628,56 @@ class BatchGenViewModel : ViewModel() {
         appliedStates = appliedStates + state
     }
 
+    /** 완성된 모든 상태 적용 — 이제 미리보기가 홈/위젯에 실제로 반영됨 (iOS applyAll). */
     fun applyAll() {
         viewModelScope.launch {
             for (state in CharacterState.entries) {
                 if (results[state] != null) applyOneInternal(state)
             }
+            bgPreviewChanged = false
             SyncCoordinator.refreshWidgets()
-        }
-    }
-
-    /** 배경 모두 지우기 — raw(모델 출력=투명 원본)를 그대로 활성 슬롯 적용, 표시모드 true. */
-    fun applyTransparentToAll() {
-        if (isProcessingTransparentBulk) return
-        viewModelScope.launch {
-            isProcessingTransparentBulk = true
-            withContext(Dispatchers.IO) {
-                for (state in CharacterState.entries) {
-                    val raw = results[state] ?: continue
-                    CharacterImageStore.saveActiveSlotOnly(raw, state, 0)
-                    resultsFrame1[state]?.let { CharacterImageStore.saveActiveSlotOnly(it, state, 1) }
-                }
-            }
-            for (state in CharacterState.entries) {
-                if (results[state] != null) displayTransparentByState[state] = true
-            }
-            SyncCoordinator.refreshWidgets()
-            isProcessingTransparentBulk = false
-        }
-    }
-
-    /** 처음 그림으로 — 흰색 합성본을 활성 슬롯 적용, 표시모드 false. */
-    fun restoreOriginalToAll() {
-        if (isProcessingTransparentBulk) return
-        viewModelScope.launch {
-            isProcessingTransparentBulk = true
-            withContext(Dispatchers.IO) {
-                for (state in CharacterState.entries) {
-                    val raw = results[state] ?: continue
-                    CharacterImageStore.saveActiveSlotOnly(whiteOf(raw), state, 0)
-                    resultsFrame1[state]?.let {
-                        CharacterImageStore.saveActiveSlotOnly(whiteOf(it), state, 1)
-                    }
-                }
-            }
-            for (state in CharacterState.entries) {
-                if (results[state] != null) displayTransparentByState[state] = false
-            }
-            SyncCoordinator.refreshWidgets()
-            isProcessingTransparentBulk = false
+            hapticSignal = HapticSignal.SUCCESS
         }
     }
 
     /**
-     * 개별 배경 토글 (상세 시트 세그먼트) — 표시만 바꾸는 게 아니라
-     * 활성 슬롯 적용까지 즉시 일어남 (스펙 03 주의점).
+     * bulk — 모든 모습을 '배경 빼기(투명)' 미리보기로만. 홈/위젯엔 아직 반영 안 함
+     * (실제 반영은 '모두 적용하기' 또는 카드별 '적용'). 눌린 걸 알 수 있게 피드백(햅틱).
+     * (iOS previewTransparentAll — 예전엔 즉시 활성 슬롯에 썼으나 미리보기 전용으로 변경.)
      */
-    fun applyTransparentOne(state: CharacterState, on: Boolean) {
-        val raw = results[state] ?: return
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                CharacterImageStore.saveActiveSlotOnly(if (on) raw else whiteOf(raw), state, 0)
-                resultsFrame1[state]?.let { f1 ->
-                    CharacterImageStore.saveActiveSlotOnly(if (on) f1 else whiteOf(f1), state, 1)
-                }
+    fun previewTransparentAll() {
+        for (state in CharacterState.entries) {
+            if (results[state] != null) {
+                displayTransparentByState[state] = true
+                appliedStates = appliedStates - state   // 미리보기가 적용본과 달라짐 → '적용' 다시 뜨게
             }
-            displayTransparentByState[state] = on
-            SyncCoordinator.refreshWidgets()
         }
+        bgPreviewChanged = true
+        hapticSignal = HapticSignal.SUCCESS
+    }
+
+    /** bulk — 모든 모습을 '흰 배경' 미리보기로만. 홈/위젯엔 아직 반영 안 함 (iOS previewWhiteAll). */
+    fun previewWhiteAll() {
+        for (state in CharacterState.entries) {
+            if (results[state] != null) {
+                displayTransparentByState[state] = false
+                appliedStates = appliedStates - state
+            }
+        }
+        bgPreviewChanged = true
+        hapticSignal = HapticSignal.SUCCESS
+    }
+
+    /**
+     * 한 모습만 배경 미리보기 토글(상세 시트 세그먼트) — on=투명, off=흰 배경. 홈/위젯엔 아직
+     * 반영 안 함(카드 '적용' 또는 '모두 적용하기'로 반영). 벌크 토글과 동작을 일치시킴
+     * (iOS previewTransparentOne — 예전엔 즉시 활성 슬롯에 썼으나 미리보기 전용으로 변경).
+     */
+    fun previewTransparentOne(state: CharacterState, on: Boolean) {
+        if (results[state] == null) return
+        displayTransparentByState[state] = on
+        appliedStates = appliedStates - state
+        bgPreviewChanged = true
     }
 
     // MARK: - 상세 시트
@@ -671,6 +728,8 @@ class BatchGenViewModel : ViewModel() {
             isRevising = true
             inProgressStates = inProgressStates + state
             stateStartedAt[state] = System.currentTimeMillis()
+            // 시트를 닫아도 결과 카드의 '고치는 프레임'에 로딩을 표시 (iOS revisingFrame).
+            revisingFrame[state] = frame
             try {
                 // frame1 은 frame0 을 앵커로 두면 캐릭터/크기 일관성이 유지됨 (iOS 동일)
                 val anchor = if (frame == 1) (results[state] ?: resultsFrame1[state]) else results[state]
@@ -741,8 +800,16 @@ class BatchGenViewModel : ViewModel() {
                 isRevising = false
                 inProgressStates = inProgressStates - state
                 stateStartedAt.remove(state)
+                revisingFrame.remove(state)
             }
         }
+    }
+
+    /** 상세 시트 '바꾸기' 캔디 확인 → 실행 (iOS 시트 로컬 alert 의 확인 버튼 동작). */
+    fun confirmReviseOne() {
+        val state = selectedResult ?: return
+        pendingReviseConfirm = false
+        reviseOne(state, detailFrame, revisionText)
     }
 
     // MARK: - 사진 앱 저장 (권한 게이트는 화면이 담당 — PhotoSaver 계약)

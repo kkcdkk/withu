@@ -804,7 +804,8 @@ private fun GalleryDetailContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 32.dp),
     ) {
-        // 툴바 — 좌 trash(destructive), 중앙 타이틀, 우 닫기
+        // 툴바 — 좌 trash(destructive), 중앙 타이틀, 우 저장(다운로드 아이콘)+닫기.
+        // 사진 앱 저장은 맨 아래 전체폭 버튼에서 여기(닫기 옆)로 이동 (iOS 파리티).
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -821,6 +822,9 @@ private fun GalleryDetailContent(
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
+            IconButton(onClick = onSaveToPhotos) {
+                Icon(Icons.Filled.SaveAlt, contentDescription = stringResource(R.string.common_save))
+            }
             TextButton(onClick = onClose) { Text(stringResource(R.string.common_close)) }
         }
 
@@ -895,7 +899,8 @@ private fun GalleryDetailContent(
                 )
             }
 
-            // 2. 상태 행 — 적용 중 필 / 연속 캡션 + 상대 시각
+            // 2. 상태 행 — 적용 중이면 필 + 오른쪽에 컴팩트 '다른 자리에' 메뉴 버튼(iOS 동일 배치).
+            // 아직 적용 안 했으면 연속 캡션 + 상대 시각만 (적용 CTA 는 아래 4-b 블록에서).
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (activeStates.isNotEmpty()) {
                     StatusPill(
@@ -905,19 +910,25 @@ private fun GalleryDetailContent(
                             activeStates.joinToString(", ") { it.koreanShortLabel },
                         ),
                     )
-                } else if (hasFrame1) {
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onOpenApplySheet) {
+                        Text(stringResource(R.string.gallery_other_slot))
+                    }
+                } else {
+                    if (hasFrame1) {
+                        Text(
+                            stringResource(R.string.gallery_sequence_caption),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
                     Text(
-                        stringResource(R.string.gallery_sequence_caption),
+                        text = relativeTime(item.createdAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = relativeTime(item.createdAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             // 3. 만든 기록 — 프롬프트 전문 + 복사 (iOS DisclosureGroup)
@@ -1013,28 +1024,23 @@ private fun GalleryDetailContent(
                 }
             }
 
-            // 5. CTA — 이 폴더 자리에 적용
-            WithuCTAButton(
-                text = stringResource(R.string.gallery_apply_cta, backgroundState.koreanShortLabel),
-                onClick = onApplyHere,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // 6. 가로 2버튼 — 저장 / 다른 자리에
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onSaveToPhotos, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.SaveAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.size(6.dp))
-                    Text(stringResource(R.string.common_save))
-                }
-                OutlinedButton(onClick = onOpenApplySheet, modifier = Modifier.weight(1f)) {
+            // 5. 아직 어디에도 적용 안 함 — 큰 적용 CTA + 아래 전체폭 '다른 자리에 적용하기'.
+            // 적용 중이면 위 2번 상태 행의 컴팩트 '다른 자리에' 버튼이 그 역할을 하므로 생략
+            // (iOS: activeStates 비었을 때만 CTA+풀사이즈 메뉴, 아니면 상태 행에 컴팩트 메뉴).
+            if (activeStates.isEmpty()) {
+                WithuCTAButton(
+                    text = stringResource(R.string.gallery_apply_cta, backgroundState.koreanShortLabel),
+                    onClick = onApplyHere,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedButton(onClick = onOpenApplySheet, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.ArrowCircleRight, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))
-                    Text(stringResource(R.string.gallery_other_slot))
+                    Text(stringResource(R.string.gallery_other_slot_apply))
                 }
             }
 
-            // 7. 배경 보기 블록 — 빼기/있기 미리보기 → 이대로 저장
+            // 6. 배경 보기 블록 — 빼기/있기 미리보기 → 이대로 저장
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(

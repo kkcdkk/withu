@@ -59,6 +59,7 @@
     <string name="gallery_motion_toggle">움직임</string>
     <string name="gallery_apply_cta">\'%1$s\' 자리에 적용하기</string>
     <string name="gallery_other_slot">다른 자리에</string>
+    <string name="gallery_other_slot_apply">다른 자리에 적용하기</string>
     <string name="gallery_bg_remove">배경 빼기</string>
     <string name="gallery_bg_keep">배경 있기</string>
     <string name="gallery_bg_removing">배경 빼는 중…</string>
