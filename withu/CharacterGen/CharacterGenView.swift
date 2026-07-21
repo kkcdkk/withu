@@ -505,10 +505,6 @@ struct CharacterGenView: View {
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
@@ -517,19 +513,15 @@ struct CharacterGenView: View {
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("- 포즈: [원하는 포즈]\n- 행동: [행동]\n- 각도: [정면/측면/3/4]\n- 표정: [필요하면]\n- 소품: [필요하면]")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         } header: {
             Text("참고 사진 (선택)")
         } footer: {
-            Text(referenceImage == nil
-                 ? "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요."
-                 : "사진의 캐릭터는 그대로 두고 '바꿀 것'에 기입해 준 요소만 바뀌어요. 비우면 위에서 고른 상태의 포즈로 만들어요.")
-                .foregroundStyle(.secondary)
+            if referenceImage == nil {
+                Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요.")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -541,8 +533,23 @@ struct CharacterGenView: View {
             }
             .pickerStyle(.segmented)
             .disabled(isGenerating)
-
+            styleExampleImage
         }
+    }
+
+    /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
+    private var styleExampleImage: some View {
+        HStack {
+            Spacer()
+            Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
+                .resizable()
+                .interpolation(artStyle == "pixel" ? .none : .high)
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            Spacer()
+        }
+        .padding(.vertical, 4)
     }
 
 
@@ -563,7 +570,7 @@ struct CharacterGenView: View {
                 }
                 // 결과 유실 방지 — 만들어진 결과는 갤러리에 자동 저장됨을 알림.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].galleryId != nil {
-                    Label("갤러리에 저장됨", systemImage: "checkmark.circle")
+                    Label("캐릭터 갤러리에 저장됨", systemImage: "checkmark.circle")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

@@ -782,6 +782,16 @@
         }
       }
     },
+    "2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makes a 2-frame character that moves on the main screen."
+          }
+        }
+      }
+    },
     "3. 홈·잠금화면 위젯 추가" : {
       "localizations" : {
         "en" : {
@@ -1100,12 +1110,12 @@
         }
       }
     },
-    "갤러리에 저장됨" : {
+    "캐릭터 갤러리에 저장됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saved to gallery"
+            "value" : "Saved to character gallery"
           }
         }
       }
@@ -1289,6 +1299,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't complete the purchase. Please try again."
+          }
+        }
+      }
+    },
+    "계속 편집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Editing"
           }
         }
       }
@@ -1672,6 +1692,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose the Lock Screen to customize, then tap the widget area"
+          }
+        }
+      }
+    },
+    "나가면 방금 바꾼 내용이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you leave, your recent changes will be discarded."
           }
         }
       }
@@ -2263,6 +2293,26 @@
         }
       }
     },
+    "닫으면 방금 바꾼 배경·다듬기 내용이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you close, your recent background and touch-up changes will be discarded."
+          }
+        }
+      }
+    },
+    "닫으면 방금 입력한 수정 문구·사진이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you close, the edit note and photo you just entered will be discarded."
+          }
+        }
+      }
+    },
     "달리기" : {
       "localizations" : {
         "en" : {
@@ -2665,6 +2715,16 @@
         }
       }
     },
+    "만들 캐릭터를 설명해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe the character to create"
+          }
+        }
+      }
+    },
     "만들고 싶은 상태 (%lld개)" : {
       "localizations" : {
         "en" : {
@@ -2691,16 +2751,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Start creating"
-          }
-        }
-      }
-    },
-    "만들 캐릭터를 설명해 주세요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Describe the character to create"
           }
         }
       }
@@ -2837,6 +2887,7 @@
       }
     },
     "모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3577,6 +3628,7 @@
       }
     },
     "사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4576,7 +4628,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4586,7 +4638,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4948,6 +5000,16 @@
         }
       }
     },
+    "움직이는 캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animated character"
+          }
+        }
+      }
+    },
     "움직이는 캐릭터 만들기" : {
       "localizations" : {
         "en" : {
@@ -4979,31 +5041,12 @@
       }
     },
     "움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
-    "움직이는 캐릭터" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animated character"
-          }
-        }
-      }
-    },
-    "2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Makes a 2-frame character that moves on the main screen."
           }
         }
       }
@@ -5404,6 +5447,7 @@
       }
     },
     "이 상태 사진 빼기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5741,6 +5785,16 @@
         }
       }
     },
+    "입력한 수정 내용이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved edits"
+          }
+        }
+      }
+    },
     "자는 시간이에요" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5902,52 +5956,12 @@
         }
       }
     },
-    "계속 편집" : {
+    "저장 실패: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep Editing"
-          }
-        }
-      }
-    },
-    "나가면 방금 바꾼 내용이 지워져요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you leave, your recent changes will be discarded."
-          }
-        }
-      }
-    },
-    "닫으면 방금 바꾼 배경·다듬기 내용이 지워져요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you close, your recent background and touch-up changes will be discarded."
-          }
-        }
-      }
-    },
-    "닫으면 방금 입력한 수정 문구·사진이 지워져요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you close, the edit note and photo you just entered will be discarded."
-          }
-        }
-      }
-    },
-    "입력한 수정 내용이 있어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You have unsaved edits"
+            "value" : "Save failed: %@"
           }
         }
       }
@@ -5972,36 +5986,6 @@
         }
       }
     },
-    "저장하지 않은 변경사항이 있어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You have unsaved changes"
-          }
-        }
-      }
-    },
-    "저장하지 않은 변경이 있어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You have unsaved changes"
-          }
-        }
-      }
-    },
-    "저장 실패: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save failed: %@"
-          }
-        }
-      }
-    },
     "저장하는 중…" : {
       "localizations" : {
         "en" : {
@@ -6018,6 +6002,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't save. Please try again."
+          }
+        }
+      }
+    },
+    "저장하지 않은 변경사항이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved changes"
+          }
+        }
+      }
+    },
+    "저장하지 않은 변경이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved changes"
           }
         }
       }
@@ -6353,9 +6357,6 @@
           }
         }
       }
-    },
-    "참고 사진 (Optional)" : {
-
     },
     "참고 사진 (선택)" : {
       "localizations" : {

@@ -570,10 +570,6 @@ struct BatchCharacterGenView: View {
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
@@ -583,10 +579,6 @@ struct BatchCharacterGenView: View {
                         .lineLimit(1...4)
                         .font(.callout)
                         .disabled(isGenerating)
-                    Text("여기 적은 사항이 모든 모습에 적용돼요.")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         } header: {
@@ -601,9 +593,25 @@ struct BatchCharacterGenView: View {
                 Text("Pixel").tag("pixel")
             }
             .pickerStyle(.segmented).disabled(isGenerating)
+            styleExampleImage
         } header: {
             Text("스타일")
         }
+    }
+
+    /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
+    private var styleExampleImage: some View {
+        HStack {
+            Spacer()
+            Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
+                .resizable()
+                .interpolation(artStyle == "pixel" ? .none : .high)
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            Spacer()
+        }
+        .padding(.vertical, 4)
     }
 
     /// 움직임 선택 — 상태별 칩(위) + '모두 움직이는' 토글(아래). '만들고 싶은 상태' 바로 아래.
