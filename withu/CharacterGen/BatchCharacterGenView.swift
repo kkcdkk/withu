@@ -107,6 +107,9 @@ struct BatchCharacterGenView: View {
     @State private var isRevising: Bool = false
     @State private var revisionRefItem: PhotosPickerItem?
     @State private var revisionRefImage: UIImage?
+    /// 상세 시트 수정 참고사진 — 사진 자리를 눌러 앨범/내 캐릭터 선택.
+    @State private var showRevisionAlbumPicker: Bool = false
+    @State private var showRevisionGallery: Bool = false
     /// 입력한 수정 문구/사진이 있는데 상세 시트를 닫으려 할 때 확인.
     @State private var showReviseDiscardConfirm: Bool = false
     /// '바꾸기' 실패 사유 — 상세 시트에 표시(예전엔 조용히 실패해 '반영 안 됨'으로 보였음).
@@ -702,6 +705,11 @@ struct BatchCharacterGenView: View {
         return base + anim
     }
 
+    /// 완료 장수 — 기본(frame0) + 움직임(frame1) 완료/실패를 모두 셈. requiredCount(움직임 포함)과 짝.
+    private var progressDone: Int {
+        results.count + resultsFrame1.count + errors.count + failedFrame1.count
+    }
+
     private var pendingActionConfirmLabel: String {
         if case .reviseIdle = pendingAction { return String(localized: "바꾸기") }
         return String(localized: "만들기")
@@ -805,7 +813,7 @@ struct BatchCharacterGenView: View {
                 if isGenerating {
                     HStack {
                         ProgressView()
-                        Text("만드는 중… \(results.count + errors.count)/\(requiredCount)")
+                        Text("만드는 중… \(progressDone)/\(requiredCount)")
                     }
                 } else {
                     Label("만들기 시작", systemImage: "wand.and.stars")
@@ -818,7 +826,7 @@ struct BatchCharacterGenView: View {
                       || remainingGenerations < need)
 
             if isGenerating {
-                Text("앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요. (\(results.count + errors.count)/\(requiredCount) 완료)")
+                Text("앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요. (\(progressDone)/\(requiredCount) 완료)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Button(role: .destructive) {
@@ -1094,9 +1102,9 @@ struct BatchCharacterGenView: View {
                 if revisingFrame[state] == 1 {
                     // 움직임 프레임을 '바꾸기' 로 다시 만드는 중 — 미니에 로딩.
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.secondary.opacity(0.15))
+                        .fill(Color.withuCTAGreen.opacity(0.15))
                         .frame(width: 40, height: 40)
-                        .overlay(ProgressView().scaleEffect(0.6))
+                        .overlay(ProgressView().scaleEffect(0.7).tint(Color.withuCTAGreen))
                         .padding(6)
                 } else if let f1 = resultsFrame1[state] {
                     Image(uiImage: f1)
@@ -1109,9 +1117,9 @@ struct BatchCharacterGenView: View {
                 } else if pendingFrame1.contains(state) {
                     // 움직임 프레임 생성 중 — 다 됐다고 오해하지 않게 로딩 표시.
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.secondary.opacity(0.15))
+                        .fill(Color.withuCTAGreen.opacity(0.15))
                         .frame(width: 40, height: 40)
-                        .overlay(ProgressView().scaleEffect(0.6))
+                        .overlay(ProgressView().scaleEffect(0.7).tint(Color.withuCTAGreen))
                         .padding(6)
                 } else if failedFrame1[state] != nil {
                     // 움직임 프레임만 실패 — 눌러서 다시 시도.
@@ -1555,9 +1563,19 @@ struct BatchCharacterGenView: View {
                                 .tag(1)
                         }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: hasF1 ? .always : .never))
-                    .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+                    .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(height: 320)
+
+                    // 페이지 점 — 이미지 위 대신 아래에 별도로.
+                    if hasF1 {
+                        HStack(spacing: 8) {
+                            ForEach(0..<2, id: \.self) { i in
+                                Circle()
+                                    .fill(detailFrame == i ? Color.primary : Color.secondary.opacity(0.3))
+                                    .frame(width: 7, height: 7)
+                            }
+                        }
+                    }
 
                     Text(hasF1
                          ? "\(state.koreanShortLabel) · \(detailFrame == 1 ? String(localized: "움직임 프레임") : String(localized: "기본"))"
@@ -1604,41 +1622,52 @@ struct BatchCharacterGenView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 수정할까요?") : String(localized: "더 수정할까요?"))
                             .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                        TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
-                            .font(.footnote)
-                            .lineLimit(2...4)
-                        Divider()
+                        // 사진 자리 먼저 — 누르면 앨범/내 캐릭터 선택. 이어서 수정사항 입력.
                         HStack(spacing: 10) {
-                            if let ref = revisionRefImage {
-                                Image(uiImage: ref).resizable().scaledToFill()
-                                    .frame(width: 36, height: 36)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                            } else {
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(.secondary.opacity(0.15))
-                                    .frame(width: 36, height: 36)
-                                    .overlay(Image(systemName: "photo")
-                                        .foregroundStyle(.secondary).font(.caption))
+                            Menu {
+                                Button { showRevisionAlbumPicker = true } label: {
+                                    Label("앨범에서 선택", systemImage: "photo.on.rectangle")
+                                }
+                                Button { showRevisionGallery = true } label: {
+                                    Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
+                                }
+                            } label: {
+                                if let ref = revisionRefImage {
+                                    Image(uiImage: ref).resizable().scaledToFill()
+                                        .frame(width: 56, height: 56)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(.secondary.opacity(0.15))
+                                        .frame(width: 56, height: 56)
+                                        .overlay(Image(systemName: "photo.badge.plus")
+                                            .foregroundStyle(.secondary))
+                                }
                             }
-                            PhotosPicker(revisionRefImage == nil ? String(localized: "사진 넣기") : String(localized: "변경"),
-                                         selection: $revisionRefItem,
-                                         matching: .images)
-                                .font(.footnote)
                             if revisionRefImage != nil {
-                                Button("제거", role: .destructive) {
+                                Button("사진 빼기", role: .destructive) {
                                     revisionRefImage = nil
                                     revisionRefItem = nil
                                 }
                                 .font(.caption2)
+                                .buttonStyle(.borderless)
                             }
                             Spacer()
                         }
+                        TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
+                            .font(.footnote)
+                            .lineLimit(2...4)
                     }
                     .padding(14)
                     .frostedCard()
                     .padding(.horizontal)
                     .onChange(of: revisionRefItem) { _, item in
                         Task { await loadRevisionRef(item) }
+                    }
+                    .photosPicker(isPresented: $showRevisionAlbumPicker,
+                                  selection: $revisionRefItem, matching: .images)
+                    .sheet(isPresented: $showRevisionGallery) {
+                        GalleryReferencePicker { img in revisionRefImage = img }
                     }
 
                     HStack(spacing: 12) {

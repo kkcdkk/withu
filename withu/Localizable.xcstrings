@@ -4697,12 +4697,12 @@
         }
       }
     },
-    "예: 더 귀엽게, 표정 밝게, 모자 씌워줘" : {
+    "수정사항을 입력해 주세요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "e.g. cuter, brighter expression, add a hat"
+            "value" : "Enter your changes"
           }
         }
       }
