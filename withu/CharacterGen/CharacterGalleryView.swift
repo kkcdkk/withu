@@ -726,18 +726,36 @@ struct GalleryGrid<Header: View>: View {
                             }
                         }
 
-                        // [상태/주 액션] — 적용 중이면 상태 카드, 아니면 초록 적용 버튼 하나만
+                        // [상태/주 액션]
                         if !activeStates.isEmpty {
-                            HStack {
+                            // 적용 중이면 상태 카드 + 그 오른쪽에 '다른 자리에' 메뉴 버튼을 한 줄에.
+                            HStack(spacing: 10) {
                                 StatusPill(
                                     kind: .ok,
                                     label: "\(activeStates.map(\.koreanShortLabel).joined(separator: ", ")) 자리에 적용 중"
                                 )
                                 Spacer()
+                                Menu {
+                                    ForEach(CharacterState.userFacing, id: \.self) { state in
+                                        Button("\(state.koreanShortLabel) 자리에") {
+                                            apply(item, to: state)
+                                            withAnimation { toastText = String(localized: "\(state.koreanShortLabel) 자리에 적용했어요") }
+                                            hideToastAfter(1.6)
+                                        }
+                                    }
+                                } label: {
+                                    Text("다른 자리에")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.withuCTAGreen.opacity(0.14), in: Capsule())
+                                        .foregroundStyle(Color.withuCTAGreen)
+                                }
                             }
                             .frostedCard()
                             .padding(.horizontal)
                         } else {
+                            // 아직 어디에도 적용 안 함 — 큰 적용 CTA + 아래 전체폭 '다른 자리에' 메뉴.
                             Button {
                                 apply(item, to: backgroundState)
                                 selectedItem = nil
@@ -747,27 +765,26 @@ struct GalleryGrid<Header: View>: View {
                             }
                             .buttonStyle(WithuCTAButtonStyle())
                             .padding(.horizontal)
-                        }
 
-                        // 다른 자리 적용 — 화면을 벗어나지 않는 메뉴로 즉시 선택 (연한 보조 버튼)
-                        Menu {
-                            ForEach(CharacterState.userFacing, id: \.self) { state in
-                                Button("\(state.koreanShortLabel) 자리에") {
-                                    apply(item, to: state)
-                                    withAnimation { toastText = String(localized: "\(state.koreanShortLabel) 자리에 적용했어요") }
-                                    hideToastAfter(1.6)
+                            Menu {
+                                ForEach(CharacterState.userFacing, id: \.self) { state in
+                                    Button("\(state.koreanShortLabel) 자리에") {
+                                        apply(item, to: state)
+                                        withAnimation { toastText = String(localized: "\(state.koreanShortLabel) 자리에 적용했어요") }
+                                        hideToastAfter(1.6)
+                                    }
                                 }
+                            } label: {
+                                Text("다른 자리에 적용하기")
+                                    .font(.callout.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.withuCTAGreen.opacity(0.14),
+                                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .foregroundStyle(Color.withuCTAGreen)
                             }
-                        } label: {
-                            Text("다른 자리에 적용하기")
-                                .font(.callout.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.withuCTAGreen.opacity(0.14),
-                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .foregroundStyle(Color.withuCTAGreen)
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
 
                         // [편집 도구] — 배경 빼기 · (연속) 프레임 · 다듬기 · 움직이게 만들기 한 카드
                         VStack(alignment: .leading, spacing: 12) {
@@ -832,10 +849,10 @@ struct GalleryGrid<Header: View>: View {
                                 Spacer()
                                 candyBadge(GenerationQuota.cost(forQuality: "low"))
                             }
-                            // 입력칸은 상자 대신 다른 프롬프트처럼 아래 선으로 구분
+                            // 헤더·입력칸·'이대로 다듬기'를 한 묶음으로 — 버튼이 다듬기에 속해 보이게
+                            // 선은 버튼 아래(다음 섹션 Divider 또는 카드 끝)로 둔다.
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
                                 .font(.callout)
-                            Divider()
                             Button {
                                 showRefineConfirm = true
                             } label: {
@@ -856,7 +873,7 @@ struct GalleryGrid<Header: View>: View {
                                CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
                                 Divider()
                                 HStack {
-                                    Text("움직이게 만들기").font(.callout.weight(.medium))
+                                    Text("움직이는 캐릭터 만들기").font(.callout.weight(.medium))
                                     Spacer()
                                     candyBadge(GenerationQuota.cost(forQuality: "low"))
                                 }
@@ -867,7 +884,7 @@ struct GalleryGrid<Header: View>: View {
                                         HStack { ProgressView(); Text("움직임 만드는 중…") }
                                             .frame(maxWidth: .infinity)
                                     } else {
-                                        Text("움직이는 캐릭터 만들기").frame(maxWidth: .infinity)
+                                        Text("이대로 움직이게").frame(maxWidth: .infinity)
                                     }
                                 }
                                 .buttonStyle(.bordered)
@@ -886,15 +903,7 @@ struct GalleryGrid<Header: View>: View {
                             Text("이번 만들기에 캔디 \(GenerationQuota.cost(forQuality: "low"))개를 써요. 성공했을 때만 차감돼요.")
                         }
 
-                        // [더보기] — 사진 앱 저장 (테두리 버튼)
-                        Button {
-                            Task { await saveOneToPhotos(img) }
-                        } label: {
-                            Text("저장").frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
-                        .padding(.horizontal)
+                        // 사진 앱 저장은 상단 툴바(닫기 옆) 아이콘으로 이동 — 맨 아래 버튼 제거.
 
                         // 만든 기록 — 이 이미지를 만들 때 보낸 프롬프트 (옛 항목엔 없음)
                         if let prompt = item.prompt, !prompt.isEmpty {
@@ -933,6 +942,16 @@ struct GalleryGrid<Header: View>: View {
                         showDeleteConfirm = true
                     } label: {
                         Image(systemName: "trash")
+                    }
+                }
+                // 사진 앱 저장 — 맨 아래 버튼에서 여기로 올림 (닫기 옆).
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if let image = CharacterImageStore.loadGalleryImage(id: item.id) {
+                            Task { await saveOneToPhotos(image) }
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {

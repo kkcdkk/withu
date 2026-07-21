@@ -35,7 +35,8 @@ struct BatchCharacterGenView: View {
     @State private var transparentResultsFrame1: [CharacterState: UIImage] = [:]
     /// 표시 모드 (per-state). true 면 transparent (있을 때), false 면 raw.
     @State private var displayTransparentByState: [CharacterState: Bool] = [:]
-    @State private var isProcessingTransparentBulk: Bool = false
+    /// '배경 모두 지우기/흰 배경으로'는 미리보기만 바꾼다 — 홈/워치엔 아직 반영 안 됐다는 안내용.
+    @State private var bgPreviewChanged: Bool = false
 
     /// 전체 참고 이미지 (state 별 reference 가 없을 때의 fallback)
     @State private var photoPickerItem: PhotosPickerItem?
@@ -94,6 +95,19 @@ struct BatchCharacterGenView: View {
     @State private var revisionRefImage: UIImage?
     /// '바꾸기' 실패 사유 — 상세 시트에 표시(예전엔 조용히 실패해 '반영 안 됨'으로 보였음).
     @State private var revisionError: String?
+    /// 상세 시트에서 '바꾸기'로 재생성 중인 프레임(state→frame). 시트를 닫아도
+    /// 결과 그리드가 처음 만들 때처럼 로딩을 보여주도록(고치는 프레임에만) 추적.
+    @State private var revisingFrame: [CharacterState: Int] = [:]
+
+    /// 캔디 소모 전 확인 팝업 대상 (배치 — 단건 생성과 동일한 안내를 배치에도).
+    private enum PendingBatchAction {
+        case start          // 만들기 시작 (전체)
+        case approveRest    // 이 모습으로 나머지 만들기
+        case reviseIdle     // 수정해서 생성하기(기준 모습)
+    }
+    @State private var pendingAction: PendingBatchAction?
+    /// 상세 시트의 '바꾸기'는 시트 위에 확인이 떠야 해서 별도 플래그.
+    @State private var pendingReviseConfirm = false
 
     // 사진 앱 저장 상태
     @State private var isSavingPhotos: Bool = false
@@ -215,6 +229,24 @@ struct BatchCharacterGenView: View {
         } message: {
             Text(saveResultMessage ?? "")
         }
+        // 캔디 소모 확인 — 단건 생성과 동일하게 배치의 만들기/나머지/수정에도.
+        .alert("캔디를 사용해요", isPresented: Binding(
+            get: { pendingAction != nil },
+            set: { if !$0 { pendingAction = nil } }
+        )) {
+            Button(pendingActionConfirmLabel) {
+                switch pendingAction {
+                case .start: batchTask = Task { await startBatch() }
+                case .approveRest: batchTask = Task { await approveIdleAndContinue() }
+                case .reviseIdle: batchTask = Task { await reviseIdle() }
+                case nil: break
+                }
+                pendingAction = nil
+            }
+            Button("취소", role: .cancel) { pendingAction = nil }
+        } message: {
+            Text(pendingActionMessage)
+        }
         .onChange(of: photoPickerItem) { _, item in
             Task { await loadReference(item) }
         }
@@ -284,7 +316,7 @@ struct BatchCharacterGenView: View {
             let unit = GenerationQuota.cost(forQuality: quality)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(count)개의 상태를 만들어요")
-                Text("약 \(requiredCount * unit)캔디 (한 장당 \(unit)캔디)")
+                Text("\(requiredCount * unit)캔디 소모")
             }
             .foregroundStyle(.secondary)
         }
@@ -518,7 +550,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("스타일")
         } footer: {
-            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 아래에서 움직일 상태만 골라서 켤 수도 있어요.")
+            Text("움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요.")
                 .foregroundStyle(.secondary)
         }
     }
@@ -574,6 +606,27 @@ struct BatchCharacterGenView: View {
         return base + anim
     }
 
+    private var pendingActionConfirmLabel: String {
+        if case .reviseIdle = pendingAction { return String(localized: "바꾸기") }
+        return String(localized: "만들기")
+    }
+
+    private var pendingActionMessage: String {
+        let unit = GenerationQuota.cost(forQuality: quality)
+        switch pendingAction {
+        case .start:
+            return String(localized: "이번 만들기에 캔디 \(requiredCount * unit)개를 써요. 성공했을 때만 차감돼요.")
+        case .approveRest:
+            // idle(기준)은 이미 만들었으니 나머지 모습분만.
+            let rest = max(1, requiredCount - 1)
+            return String(localized: "나머지 모습에 캔디 약 \(rest * unit)개를 써요. 성공했을 때만 차감돼요.")
+        case .reviseIdle:
+            return String(localized: "이번 수정에 캔디 \(unit)개를 써요. 성공했을 때만 차감돼요.")
+        case nil:
+            return ""
+        }
+    }
+
     /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
     @ViewBuilder
     private var idleApprovalSection: some View {
@@ -585,7 +638,7 @@ struct BatchCharacterGenView: View {
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 Button {
-                    batchTask = Task { await approveIdleAndContinue() }
+                    pendingAction = .approveRest        // 캔디 안내 팝업 → 확인 시 실행
                 } label: {
                     Label("이 모습으로 나머지 만들기", systemImage: "arrow.right.circle.fill")
                         .font(.callout.weight(.semibold))
@@ -598,7 +651,7 @@ struct BatchCharacterGenView: View {
 
                 // 마음에 안 들면 — ① 수정해서 생성하기(아래 수정사항 반영)  ② 완전히 새로
                 Button {
-                    batchTask = Task { await reviseIdle() }
+                    pendingAction = .reviseIdle        // 캔디 안내 팝업 → 확인 시 실행
                 } label: {
                     if isGenerating {
                         HStack { ProgressView(); Text("만드는 중…") }
@@ -641,7 +694,7 @@ struct BatchCharacterGenView: View {
         let need = requiredCount * GenerationQuota.cost(forQuality: quality)
         return Section {
             Button {
-                batchTask = Task { await startBatch() }
+                pendingAction = .start        // 캔디 안내 팝업 → 확인 시 실행
             } label: {
                 if isGenerating {
                     HStack {
@@ -682,7 +735,7 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.withuPink)
             } else {
-                Text("보유 캔디 \(remainingGenerations)개 · 이번 약 \(need)캔디")
+                Text("보유 캔디 \(remainingGenerations)개 · \(need)캔디 소모")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -721,28 +774,35 @@ struct BatchCharacterGenView: View {
                 .buttonStyle(WithuCTAButtonStyle())
                 .disabled(isGenerating)
 
-                // 투명 처리 bulk 토글 — gallery 원본은 raw 유지, active slot 만 갱신.
+                // 배경 미리보기 토글 — 홈/워치엔 아직 반영 안 하고 그리드 표시만 바꾼다.
+                // Form 한 행에 버튼이 둘이면 행 아무 데나 눌러도 둘 다 실행됨 —
+                // .borderless 로 각 버튼이 자기 탭만 받게 함.
                 HStack(spacing: 12) {
                     Button {
-                        Task { await applyTransparentToAll() }
+                        previewTransparentAll()
                     } label: {
-                        if isProcessingTransparentBulk {
-                            HStack { ProgressView(); Text("다듬는 중…") }
-                        } else {
-                            Label("배경 모두 지우기", systemImage: "wand.and.sparkles")
-                        }
+                        Label("배경 모두 지우기", systemImage: "wand.and.sparkles")
                     }
+                    .buttonStyle(.borderless)
                     .tint(.secondary)
-                    .disabled(isProcessingTransparentBulk)
-                    Button(role: .destructive) {
-                        Task { await restoreOriginalToAll() }
+                    Spacer()
+                    Button {
+                        previewWhiteAll()
                     } label: {
-                        Label("처음 그림으로", systemImage: "arrow.uturn.backward")
+                        Label("흰 배경으로", systemImage: "square.fill")
                     }
+                    .buttonStyle(.borderless)
                     .tint(.secondary)
-                    .disabled(isProcessingTransparentBulk)
                 }
                 .font(.callout)
+
+                // 미리보기만 바꿨음을 알려 눌린 걸 확인시키고, 반영 방법을 안내.
+                if bgPreviewChanged {
+                    Label("미리보기를 바꿨어요. 홈·워치엔 '모두 적용하기'로 반영돼요.",
+                          systemImage: "eye")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Button {
                     Task { await saveAllToPhotos() }
@@ -800,6 +860,19 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// '바꾸기' 재생성 중 카드에 올리는 로딩 표시 — 처음 만들 때(loadingCard)와 같은 톤.
+    private func revisingOverlay(_ state: CharacterState) -> some View {
+        VStack(spacing: 8) {
+            ProgressView().tint(.white)
+            if let started = stateStartedAt[state] {
+                TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                    Text("\(Int(ctx.date.timeIntervalSince(started)))초")
+                        .font(.caption2).foregroundStyle(.white.opacity(0.9))
+                }
+            }
+        }
+    }
+
     /// per-state 현재 표시 이미지 — toggle 따라.
     private func displayedImage(for state: CharacterState) -> UIImage? {
         displayedImage(for: state, frame: 0)
@@ -834,57 +907,41 @@ struct BatchCharacterGenView: View {
         for state in CharacterState.allCases where results[state] != nil {
             applyOne(state)
         }
+        bgPreviewChanged = false   // 이제 미리보기가 홈/워치에 실제로 반영됨
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
-    /// bulk — 모든 모습을 '배경 빼기(투명 원본)' 로 active slot 적용 + 워치 push. (Vision 불필요)
+    /// bulk — 모든 모습을 '배경 빼기(투명)' 미리보기로만. 홈/위젯/워치엔 아직 반영 안 함
+    /// (실제 반영은 '모두 적용하기' 또는 카드별 '적용'). 눌린 걸 알 수 있게 햅틱 + 힌트.
     @MainActor
-    private func applyTransparentToAll() async {
-        for state in CharacterState.allCases {
-            guard let raw = results[state] else { continue }
-            CharacterImageStore.saveActiveSlotOnly(raw, for: state, frame: 0)
-            ConnectivityManager.shared.sendCharacterImage(raw, for: state, frame: 0)
-            if let rawF1 = resultsFrame1[state] {
-                CharacterImageStore.saveActiveSlotOnly(rawF1, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(rawF1, for: state, frame: 1)
-            }
+    private func previewTransparentAll() {
+        for state in CharacterState.allCases where results[state] != nil {
             displayTransparentByState[state] = true
+            appliedStates.remove(state)   // 미리보기가 적용본과 달라짐 → 카드에 '적용' 다시 뜨게
         }
-        WidgetCenter.shared.reloadAllTimelines()
+        UISelectionFeedbackGenerator().selectionChanged()
+        bgPreviewChanged = true
     }
 
-    /// 한 모습만 배경 토글 — on=투명 원본, off=흰색 합성. active slot 적용 + 워치 push.
+    /// 한 모습만 배경 미리보기 토글 — on=투명, off=흰 배경. 홈/워치엔 아직 반영 안 함
+    /// (카드 '적용' 또는 '모두 적용하기'로 반영). 벌크 토글과 동작을 일치시킴.
     @MainActor
-    private func applyTransparentOne(_ state: CharacterState, on: Bool) async {
-        guard let raw = results[state] else { return }
-        let img0 = on ? raw : ImageProcessing.flattenedOnWhite(raw)
-        CharacterImageStore.saveActiveSlotOnly(img0, for: state, frame: 0)
-        ConnectivityManager.shared.sendCharacterImage(img0, for: state, frame: 0)
-        if let rawF1 = resultsFrame1[state] {
-            let img1 = on ? rawF1 : ImageProcessing.flattenedOnWhite(rawF1)
-            CharacterImageStore.saveActiveSlotOnly(img1, for: state, frame: 1)
-            ConnectivityManager.shared.sendCharacterImage(img1, for: state, frame: 1)
-        }
+    private func previewTransparentOne(_ state: CharacterState, on: Bool) {
+        guard results[state] != nil else { return }
         displayTransparentByState[state] = on
-        WidgetCenter.shared.reloadAllTimelines()
+        appliedStates.remove(state)
+        bgPreviewChanged = true
     }
 
-    /// bulk — 모든 모습을 '흰 배경(합성)' 으로 active slot 적용.
+    /// bulk — 모든 모습을 '흰 배경' 미리보기로만. 홈/위젯/워치엔 아직 반영 안 함.
     @MainActor
-    private func restoreOriginalToAll() async {
-        for state in CharacterState.allCases {
-            guard let raw = results[state] else { continue }
-            let white0 = ImageProcessing.flattenedOnWhite(raw)
-            CharacterImageStore.saveActiveSlotOnly(white0, for: state, frame: 0)
-            ConnectivityManager.shared.sendCharacterImage(white0, for: state, frame: 0)
-            if let rawF1 = resultsFrame1[state] {
-                let white1 = ImageProcessing.flattenedOnWhite(rawF1)
-                CharacterImageStore.saveActiveSlotOnly(white1, for: state, frame: 1)
-                ConnectivityManager.shared.sendCharacterImage(white1, for: state, frame: 1)
-            }
+    private func previewWhiteAll() {
+        for state in CharacterState.allCases where results[state] != nil {
             displayTransparentByState[state] = false
+            appliedStates.remove(state)
         }
-        WidgetCenter.shared.reloadAllTimelines()
+        UISelectionFeedbackGenerator().selectionChanged()
+        bgPreviewChanged = true
     }
 
     private func resultCard(state: CharacterState, image: UIImage) -> some View {
@@ -892,8 +949,23 @@ struct BatchCharacterGenView: View {
             ZStack(alignment: .bottomTrailing) {
                 Image(uiImage: image).resizable().scaledToFit().frame(height: 120)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    // 기본(frame0)을 '바꾸기' 로 다시 만드는 중 — 시트를 닫아도 처음 만들 때처럼 로딩.
+                    .overlay {
+                        if revisingFrame[state] == 0 {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.black.opacity(0.38))
+                                .overlay(revisingOverlay(state))
+                        }
+                    }
                 // 연속 이미지 ON 일 때 frame 1 우하단 미니. 메인 화면이 0.7s 간격으로 swap.
-                if let f1 = resultsFrame1[state] {
+                if revisingFrame[state] == 1 {
+                    // 움직임 프레임을 '바꾸기' 로 다시 만드는 중 — 미니에 로딩.
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                        .overlay(ProgressView().scaleEffect(0.6))
+                        .padding(6)
+                } else if let f1 = resultsFrame1[state] {
                     Image(uiImage: f1)
                         .resizable()
                         .scaledToFit()
@@ -1027,6 +1099,7 @@ struct BatchCharacterGenView: View {
         transparentResults.removeAll()          // 이전 배치의 배경제거 캐시 잔존 방지
         transparentResultsFrame1.removeAll()
         displayTransparentByState.removeAll()
+        bgPreviewChanged = false
         errors.removeAll()
         inProgressStates.removeAll()
         stateStartedAt.removeAll()
@@ -1128,8 +1201,12 @@ struct BatchCharacterGenView: View {
                 if job.frame == 1 { pendingF1.insert(state) }
                 else { loadingF0.insert(state) }
             case .done:
+                // done job 이미지는 '이 배치'의 실제 출력만 쓴다 — in-memory(images) 우선,
+                // 앱 재시작으로 비었으면 bggen 에 저장된 이 배치의 frame0 원본.
+                // 활성 슬롯(loadFrame)은 예전에 '적용'한 다른(전전) 배치일 수 있어 폴백에서 제외
+                // — 안 그러면 재진입 시 전전 결과가 이번 결과인 척 그리드에 뜬다.
                 let img = genManager.images["\(job.stateRaw)#\(job.frame)"]
-                    ?? CharacterImageStore.loadFrame(state, frame: job.frame)
+                    ?? (job.frame == 0 ? genManager.loadFrame0FullRes(state) : nil)
                 if let img {
                     if job.frame == 0 { results[state] = img }
                     else { resultsFrame1[state] = img }
@@ -1156,9 +1233,11 @@ struct BatchCharacterGenView: View {
         loadingFrame0 = loadingF0
         pendingFrame1 = pendingF1
         failedFrame1 = failedF1
-        // 앵커(idle)는 rest 단계 작업 목록에 없음 — 화면 재진입 시 활성 슬롯에서 복원.
+        // 앵커(idle)는 rest 단계 작업 목록에 없음 — 이 배치의 bggen frame0 원본에서 복원.
+        // (활성 슬롯은 전전 배치일 수 있어 마지막 수단으로만.)
         if !genManager.jobs.isEmpty, genManager.phase != .anchor, results[.idle] == nil {
-            results[.idle] = CharacterImageStore.loadFrame(.idle, frame: 0)
+            results[.idle] = genManager.loadFrame0FullRes(.idle)
+                ?? CharacterImageStore.loadFrame(.idle, frame: 0)
         }
         isGenerating = genManager.isActive
         remainingGenerations = GenerationQuota.remainingToday()
@@ -1333,18 +1412,13 @@ struct BatchCharacterGenView: View {
                     // 이 모습만 배경 토글 (개별)
                     Picker("배경", selection: Binding(
                         get: { displayTransparentByState[state] ?? true },
-                        set: { on in Task { await applyTransparentOne(state, on: on) } }
+                        set: { on in previewTransparentOne(state, on: on) }
                     )) {
                         Text("흰 배경").tag(false)
                         Text("배경 빼기").tag(true)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
-                    .disabled(isProcessingTransparentBulk)
-                    if isProcessingTransparentBulk {
-                        HStack { ProgressView(); Text("배경 빼는 중…") }
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
 
                     // 연속 이미지(2장)일 때만 — 프레임 순서 바꾸기 + 움직임 켜기/끄기
                     if hasF1 {
@@ -1374,8 +1448,9 @@ struct BatchCharacterGenView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 수정할까요?") : String(localized: "더 수정할까요?"))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         TextField("예: 더 귀엽게, 표정 밝게, 모자 씌워줘", text: $revisionText, axis: .vertical)
+                            .font(.footnote)
                             .lineLimit(2...4)
                         Divider()
                         HStack(spacing: 10) {
@@ -1419,12 +1494,14 @@ struct BatchCharacterGenView: View {
                         } label: {
                             Label("저장", systemImage: "square.and.arrow.down")
                                 .frame(maxWidth: .infinity)
+                                .padding(.vertical, 4)
                         }
                         .buttonStyle(.bordered)
+                        .buttonBorderShape(.roundedRectangle(radius: 12))
                         .tint(.secondary)
 
                         Button {
-                            Task { await reviseOne(state, frame: hasF1 ? detailFrame : 0, text: revisionText) }
+                            pendingReviseConfirm = true        // 캔디 안내 팝업 → 확인 시 실행
                         } label: {
                             if isRevising {
                                 ProgressView()
@@ -1455,6 +1532,15 @@ struct BatchCharacterGenView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기") { selectedResult = nil }
                 }
+            }
+            // 캔디 소모 확인 — 시트 위에 떠야 해서 시트 로컬 alert.
+            .alert("캔디를 사용해요", isPresented: $pendingReviseConfirm) {
+                Button("바꾸기") {
+                    Task { await reviseOne(state, frame: hasF1 ? detailFrame : 0, text: revisionText) }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("이번 수정에 캔디 \(GenerationQuota.cost(forQuality: quality))개를 써요. 성공했을 때만 차감돼요.")
             }
         }
     }
@@ -1507,9 +1593,11 @@ struct BatchCharacterGenView: View {
 
         inProgressStates.insert(state)
         stateStartedAt[state] = .now
+        revisingFrame[state] = frame          // 시트를 닫아도 이 프레임 카드에 로딩 표시
         defer {
             inProgressStates.remove(state)
             stateStartedAt.removeValue(forKey: state)
+            revisingFrame.removeValue(forKey: state)
         }
         do {
             let req = GenerateImageRequest(

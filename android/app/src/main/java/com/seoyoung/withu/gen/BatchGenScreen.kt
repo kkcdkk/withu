@@ -339,7 +339,7 @@ private fun StateListSection(
     FormSection(
         header = stringResource(R.string.batch_states_header, vm.selectedStates.size),
         footer = stringResource(R.string.batch_footer_count, vm.selectedStates.size) + "\n" +
-            stringResource(R.string.batch_footer_cost, vm.needCandy, cost),
+            stringResource(R.string.batch_footer_cost, vm.needCandy),
     ) {
         CharacterState.userFacing.forEach { state ->
             StateRow(

@@ -459,7 +459,7 @@ private fun HelperFieldRow(
     }
 }
 
-/** 참고 사진 (Optional) — 앨범/내 캐릭터 선택 + keep/change 입력. */
+/** 참고사진(선택) — 앨범/내 캐릭터 선택 + keep/change 입력. */
 @Composable
 private fun ReferenceSection(vm: SingleGenViewModel, onPickAlbum: () -> Unit) {
     val hasRef = vm.referenceImage != null

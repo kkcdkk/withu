@@ -9,7 +9,7 @@
     <string name="batch_all_on">모두 켜기</string>
     <string name="batch_all_off">모두 끄기</string>
     <string name="batch_footer_count">%1$d개의 상태를 만들어요</string>
-    <string name="batch_footer_cost">약 %1$d캔디 (한 장당 %2$d캔디)</string>
+    <string name="batch_footer_cost">%1$d캔디 소모</string>
     <string name="batch_motion_toggle">움직임 (2장 · 메인에서 움직여요)</string>
     <string name="batch_reset_hint">기본값으로 되돌리기</string>
     <string name="batch_ref_album_small">앨범</string>
@@ -40,7 +40,7 @@
     <string name="batch_style_soft">Soft</string>
     <string name="batch_style_pixel">Pixel</string>
     <string name="batch_all_motion">모두 움직이는 캐릭터로 (한 모습당 2장)</string>
-    <string name="batch_style_footer">움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 아래에서 움직일 상태만 골라서 켤 수도 있어요.</string>
+    <string name="batch_style_footer">움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요.</string>
 
     <!-- 시작 섹션 -->
     <string name="batch_start">만들기 시작</string>
@@ -49,7 +49,7 @@
     <string name="batch_stop">그만두기</string>
     <string name="batch_not_enough">캔디 %1$d개로는 %2$d개 상태(약 %3$d캔디)를 한 번에 만들 수 없어요. 만들 상태를 줄이거나 캔디를 충전해 주세요.</string>
     <string name="batch_paywall_cta">더 만들기 (구독·충전)</string>
-    <string name="batch_balance">보유 캔디 %1$d개 · 이번 약 %2$d캔디</string>
+    <string name="batch_balance">보유 캔디 %1$d개 · %2$d캔디 소모</string>
 
     <!-- 기준 모습 승인 -->
     <string name="batch_approval_header">기준 모습 확인</string>
