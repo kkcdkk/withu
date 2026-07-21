@@ -160,6 +160,7 @@ struct BatchCharacterGenView: View {
                     idleApprovalSection
                 } else {
                     stateListSection
+                    motionSection
                     identitySection
                     referenceSection
                     optionsSection
@@ -604,11 +605,17 @@ struct BatchCharacterGenView: View {
                 Text("Pixel").tag("pixel")
             }
             .pickerStyle(.segmented).disabled(isGenerating)
+        } header: {
+            Text("스타일")
+        }
+    }
 
-            // '모두 움직임'은 2프레임 생성이 의미 있는 상태(usesGeneratedMotion)에만 적용.
-            // 상태별 켜기는 각 상태 행의 '움직임' pill 에서 — 여긴 한 번에 켜는 편의 토글만.
-            let animatable = selectedStates.filter { $0.usesGeneratedMotion }
-            if !animatable.isEmpty {
+    /// 움직임 선택 — '모두 움직이는' 토글 + 상태별 칩. '만들고 싶은 상태' 바로 아래.
+    @ViewBuilder
+    private var motionSection: some View {
+        let animatable = selectedStates.filter { $0.usesGeneratedMotion }
+        if !animatable.isEmpty {
+            Section {
                 Toggle("모두 움직이는 캐릭터로", isOn: Binding(
                     get: { animatable.isSubset(of: animatedStates) },
                     set: { on in
@@ -617,9 +624,52 @@ struct BatchCharacterGenView: View {
                     }
                 ))
                 .disabled(isGenerating)
+                animatedStateChips
+            } header: {
+                Text("움직이는 캐릭터")
             }
-        } header: {
-            Text("스타일")
+        }
+    }
+
+    /// 상태별 움직임 토글 칩 — 선택된 상태만 노출. 상태 행의 '움직임' pill 과 같은 값(animatedStates) 공유.
+    @ViewBuilder
+    private var animatedStateChips: some View {
+        // 미세 모션 상태(idle·수면 등)는 2프레임을 안 만드므로 칩에서 제외 — 절차적 모션으로 자동 애니메이션.
+        let states = CharacterState.userFacing.filter { selectedStates.contains($0) && $0.usesGeneratedMotion }
+        if !states.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(states, id: \.self) { state in
+                        let on = animatedStates.contains(state)
+                        Button {
+                            if on { animatedStates.remove(state) }
+                            else { animatedStates.insert(state) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(state.imageAssetName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
+                                Text(state.koreanShortLabel)
+                                    .font(.footnote.weight(on ? .semibold : .regular))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule().fill(on ? Color.withuCTAGreen.opacity(0.18)
+                                                  : Color.secondary.opacity(0.08))
+                            )
+                            .overlay(
+                                Capsule().stroke(on ? Color.withuCTAGreen : .clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(on ? Color.withuCTAGreen : .secondary)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .disabled(isGenerating)
         }
     }
 
