@@ -1169,23 +1169,16 @@ struct GalleryGrid<Header: View>: View {
                         compareColumn(image: ctx.before, label: String(localized: "이전"))
                         compareColumn(image: ctx.after, label: String(localized: "다듬은 결과"))
                     }
-                    VStack(spacing: 10) {
-                        Button {
-                            adoptRefined(ctx)
-                        } label: {
-                            Label("다듬은 걸로 바꾸기", systemImage: "checkmark")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(WithuCTAButtonStyle())
-                        Button {
-                            refineCompare = nil   // 원본 그대로 — 아무것도 안 바뀜
-                        } label: {
-                            Text("이전 그대로")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
+                    HStack {
+                        Button("적용") { adoptRefined(ctx) }
+                            .font(.callout.weight(.semibold))
+                            .tint(Color.withuCTAGreen)
+                        Spacer()
+                        Button("취소") { refineCompare = nil }   // 원본 그대로 — 아무것도 안 바뀜
+                            .font(.callout)
+                            .tint(.secondary)
                     }
+                    .padding(.horizontal)
                 }
                 .padding(20)
             }
@@ -1193,6 +1186,8 @@ struct GalleryGrid<Header: View>: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
+        // 취소를 누른 게 아니면 스와이프로 닫혀 결과가 사라지지 않게 — 적용/취소로만 닫힘.
+        .interactiveDismissDisabled(true)
     }
 
     private func compareColumn(image: UIImage, label: String) -> some View {

@@ -833,15 +833,16 @@ struct BatchCharacterGenView: View {
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
 
-            Button { acceptRevision(.idle) } label: {
-                Text("수정된 걸로 적용")
-                    .frame(maxWidth: .infinity).padding(.vertical, 4)
+            HStack {
+                Button("적용") { acceptRevision(.idle) }
+                    .font(.callout.weight(.semibold))
+                    .tint(Color.withuCTAGreen)
+                Spacer()
+                Button("취소") { rejectRevision(.idle) }
+                    .font(.callout)
+                    .tint(.secondary)
             }
-            .buttonStyle(WithuCTAButtonStyle())
-            Button { rejectRevision(.idle) } label: {
-                Text("수정 전 그대로").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered).tint(.secondary)
+            .buttonStyle(.borderless)
         } header: {
             Text("수정 결과")
         }
@@ -1802,16 +1803,14 @@ struct BatchCharacterGenView: View {
             .tabViewStyle(.page)
             .frame(height: 360)
 
-            VStack(spacing: 10) {
-                Button { acceptRevision(state) } label: {
-                    Label("수정된 걸로 적용", systemImage: "checkmark")
-                        .frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(WithuCTAButtonStyle())
-                Button { rejectRevision(state) } label: {
-                    Text("수정 전 그대로").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered).tint(.secondary)
+            HStack {
+                Button("적용") { acceptRevision(state) }
+                    .font(.callout.weight(.semibold))
+                    .tint(Color.withuCTAGreen)
+                Spacer()
+                Button("취소") { rejectRevision(state) }
+                    .font(.callout)
+                    .tint(.secondary)
             }
             .padding(.horizontal)
             Spacer(minLength: 0)
@@ -1820,7 +1819,7 @@ struct BatchCharacterGenView: View {
         .navigationTitle("수정 결과")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // 결정 안 하고 닫으면 카드에 '수정 완료'로 남아 다시 열 수 있음.
+            // 취소를 누른 게 아니면 닫아도 카드에 '수정 완료'로 남아 다시 열 수 있음.
             ToolbarItem(placement: .topBarTrailing) {
                 Button("닫기") { selectedResult = nil }
             }
