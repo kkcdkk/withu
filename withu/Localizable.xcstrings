@@ -5,6 +5,7 @@
 
     },
     "- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26,6 +27,7 @@
       }
     },
     "- 포즈: [원하는 포즈]\n- 행동: [행동]\n- 각도: [정면/측면/3/4]\n- 표정: [필요하면]\n- 소품: [필요하면]" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1106,16 +1108,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Privacy Policy"
-          }
-        }
-      }
-    },
-    "캐릭터 갤러리에 저장됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved to character gallery"
           }
         }
       }
@@ -2917,6 +2909,16 @@
         }
       }
     },
+    "무료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free"
+          }
+        }
+      }
+    },
     "무료 횟수를 다 썼어요" : {
       "localizations" : {
         "en" : {
@@ -2943,16 +2945,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You've used up your free creations. Please top up candies or subscribe."
-          }
-        }
-      }
-    },
-    "무료" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Free"
           }
         }
       }
@@ -3264,6 +3256,7 @@
       }
     },
     "변경" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3497,6 +3490,7 @@
       }
     },
     "사진 넣기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3648,6 +3642,7 @@
       }
     },
     "사진의 캐릭터는 그대로 두고 '바꿀 것'에 기입해 준 요소만 바뀌어요. 비우면 위에서 고른 상태의 포즈로 만들어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4242,26 +4237,6 @@
         }
       }
     },
-    "수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Write your changes (e.g. rounder, softer colors)"
-          }
-        }
-      }
-    },
-    "수정해서 생성하기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit & generate"
-          }
-        }
-      }
-    },
     "수정 결과" : {
       "localizations" : {
         "en" : {
@@ -4328,6 +4303,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Edited look"
+          }
+        }
+      }
+    },
+    "수정사항을 입력해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your changes"
+          }
+        }
+      }
+    },
+    "수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write your changes (e.g. rounder, softer colors)"
+          }
+        }
+      }
+    },
+    "수정해서 생성하기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit & generate"
           }
         }
       }
@@ -4644,9 +4649,6 @@
         }
       }
     },
-    "여기 적은 사항이 모든 모습에 적용돼요." : {
-
-    },
     "여러 모습 만들기" : {
       "localizations" : {
         "en" : {
@@ -4697,7 +4699,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4707,7 +4709,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4767,16 +4769,6 @@
         }
       }
     },
-    "수정사항을 입력해 주세요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter your changes"
-          }
-        }
-      }
-    },
     "예: 둥근 초록 새싹 캐릭터, 큰 눈, 작은 몸" : {
       "localizations" : {
         "en" : {
@@ -4814,6 +4806,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "e.g. Sprouty"
+          }
+        }
+      }
+    },
+    "예시 사진" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Example"
           }
         }
       }
@@ -5058,6 +5060,27 @@
         }
       }
     },
+    "움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
+          }
+        }
+      }
+    },
+    "움직임" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
+          }
+        }
+      }
+    },
     "움직이게 만들기" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5105,27 +5128,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Make it an animated character"
-          }
-        }
-      }
-    },
-    "움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
-    "움직임" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
           }
         }
       }
@@ -6206,6 +6208,7 @@
       }
     },
     "제거" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6488,6 +6491,16 @@
         }
       }
     },
+    "처음부터 다시 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start over"
+          }
+        }
+      }
+    },
     "첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요." : {
       "localizations" : {
         "en" : {
@@ -6734,6 +6747,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Character Gallery"
+          }
+        }
+      }
+    },
+    "캐릭터 갤러리에 저장됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to character gallery"
           }
         }
       }
@@ -7281,16 +7304,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copy prompt"
-          }
-        }
-      }
-    },
-    "처음부터 다시 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start over"
           }
         }
       }

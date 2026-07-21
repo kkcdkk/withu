@@ -615,15 +615,20 @@ struct BatchCharacterGenView: View {
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
     private var styleExampleImage: some View {
-        HStack {
-            Spacer()
-            Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
-                .resizable()
-                .interpolation(artStyle == "pixel" ? .none : .high)
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            Spacer()
+        ZStack(alignment: .topLeading) {
+            HStack {
+                Spacer()
+                Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
+                    .resizable()
+                    .interpolation(artStyle == "pixel" ? .none : .high)
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                Spacer()
+            }
+            Text("예시 사진")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
@@ -750,7 +755,10 @@ struct BatchCharacterGenView: View {
     /// 1단계 결과(idle) 승인 게이트 — 이 모습을 기준으로 나머지를 만들지 확인.
     @ViewBuilder
     private var idleApprovalSection: some View {
-        if awaitingIdleApproval, let idle = results[.idle] {
+        if awaitingIdleApproval, let rev = revisedDone[.idle] {
+            // 기준 모습 수정 결과 — 다른 수정과 똑같이 전후 비교 후 적용 선택.
+            idleRevisionCompareSection(rev)
+        } else if awaitingIdleApproval, let idle = results[.idle] {
             Section {
                 Image(uiImage: idle)
                     .resizable().scaledToFit()
@@ -810,6 +818,32 @@ struct BatchCharacterGenView: View {
                 Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    /// 기준 모습 '수정해서 생성하기' 결과 — 다른 수정과 동일한 전후 비교 + 적용/취소.
+    private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
+        Section {
+            TabView {
+                compareSlide(rev.after, label: String(localized: "수정된 모습")).tag(0)
+                compareSlide(rev.before, label: String(localized: "수정 전")).tag(1)
+            }
+            .tabViewStyle(.page)
+            .frame(height: 320)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+
+            Button { acceptRevision(.idle) } label: {
+                Text("수정된 걸로 적용")
+                    .frame(maxWidth: .infinity).padding(.vertical, 4)
+            }
+            .buttonStyle(WithuCTAButtonStyle())
+            Button { rejectRevision(.idle) } label: {
+                Text("수정 전 그대로").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered).tint(.secondary)
+        } header: {
+            Text("수정 결과")
         }
     }
 
@@ -1440,11 +1474,10 @@ struct BatchCharacterGenView: View {
                 // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
                 let flat = await ImageProcessing.transparentized(img)
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
-                results[.idle] = small
-                idleFullRes = flat
-                CharacterImageStore.save(small, for: .idle, frame: 0,
-                                         batchId: batchSessionId, prompt: prompt)
-                ConnectivityManager.shared.sendCharacterImage(small, for: .idle, frame: 0)
+                // 즉시 덮어쓰지 않고 before/after 로 보관 — 비교 후 '적용'해야 기준 모습이 바뀜.
+                let before = results[.idle] ?? small
+                revisedDone[.idle] = BatchRevision(frame: 0, before: before,
+                                                   after: small, afterFull: flat, prompt: prompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 // 1번째 수정은 무료, 2번째부터 차감.
                 if idleRevisionsUsed > 0 {
@@ -1452,7 +1485,6 @@ struct BatchCharacterGenView: View {
                 }
                 idleRevisionsUsed += 1
                 idleRevisionText = ""
-                WidgetCenter.shared.reloadAllTimelines()
             } else {
                 errors[.idle] = "이미지를 받지 못했어요"
             }

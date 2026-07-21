@@ -539,15 +539,20 @@ struct CharacterGenView: View {
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
     private var styleExampleImage: some View {
-        HStack {
-            Spacer()
-            Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
-                .resizable()
-                .interpolation(artStyle == "pixel" ? .none : .high)
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            Spacer()
+        ZStack(alignment: .topLeading) {
+            HStack {
+                Spacer()
+                Image(artStyle == "pixel" ? "style_example_pixel" : CharacterState.idle.imageAssetName)
+                    .resizable()
+                    .interpolation(artStyle == "pixel" ? .none : .high)
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                Spacer()
+            }
+            Text("예시 사진")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
