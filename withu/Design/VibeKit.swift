@@ -104,8 +104,7 @@ struct WithuCTAButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .font(.galmuri(16, relativeTo: .callout))
-                // 먹빛 글자 — 연한 초록 위 흰 글자보다 대비가 확실(레트로 톤에도 맞음).
-                .foregroundStyle(Color.withuCTABorder)
+                .foregroundStyle(Color.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .background(
@@ -219,19 +218,23 @@ struct FrostedCard: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(14)
-            // 동물의 숲/레트로 — 따뜻한 크림 표면 + 먹빛 픽셀 계단 테두리.
-            .background(Color.withuCardFill, in: PixelBorderShape())
-            .overlay(
-                PixelBorderShape().strokeBorder(Color.withuCTABorder, lineWidth: 2)
-            )
-            .clipShape(PixelBorderShape())
+            .pixelCardSurface()
     }
 }
 
 extension View {
-    /// 홈 카드 표면 적용. cornerRadius 18(hero/요약) / 16(일반) / 12(작은 칩).
+    /// 홈 카드 표면 적용 (내부 padding 14 포함).
     func frostedCard(cornerRadius: CGFloat = 16) -> some View {
         modifier(FrostedCard(cornerRadius: cornerRadius))
+    }
+
+    /// 카드 표면만 — 동물의 숲/레트로: 따뜻한 크림 + 먹빛 픽셀 계단 테두리.
+    /// padding 은 호출부가 관리 (이미 padding 을 가진 카드에 적용할 때).
+    func pixelCardSurface(lineWidth: CGFloat = 2) -> some View {
+        self
+            .background(Color.withuCardFill, in: PixelBorderShape())
+            .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: lineWidth))
+            .clipShape(PixelBorderShape())
     }
 }
 

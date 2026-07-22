@@ -374,7 +374,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             HStack {
                 Text("오늘 활동")
-                    .font(.caption.weight(.semibold))
+                    .font(.galmuri(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
                 Spacer()
                 RefreshIconButton { await loadAll() }
@@ -409,13 +409,13 @@ struct ContentView: View {
         }
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .pixelCardSurface()
     }
 
     private func metricItem(emoji: String, value: String, label: LocalizedStringKey) -> some View {
         VStack(spacing: 4) {
             Text(emoji).font(.subheadline)
-            Text(value).font(.callout.weight(.semibold))
+            Text(value).font(.galmuri(16, relativeTo: .callout))
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -506,7 +506,7 @@ struct ContentView: View {
                         .foregroundStyle(tint)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.callout.weight(.semibold))
+                    Text(title).font(.galmuri(15, relativeTo: .callout))
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -515,7 +515,7 @@ struct ContentView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .pixelCardSurface()
         }
         .buttonStyle(.plain)
     }
@@ -526,7 +526,7 @@ struct ContentView: View {
                 Image(systemName: "applewatch")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text("Apple Watch").font(.subheadline.weight(.semibold))
+                Text("Apple Watch").font(.galmuri(14, relativeTo: .subheadline))
                 Spacer()
                 if let last = connectivity.lastSentAt {
                     Text(last.formatted(date: .omitted, time: .shortened))
@@ -544,7 +544,7 @@ struct ContentView: View {
             }
         }
         .padding(14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .pixelCardSurface()
     }
 
     private func statusItem(label: String, ok: Bool) -> some View {

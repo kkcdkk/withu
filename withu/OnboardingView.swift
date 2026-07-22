@@ -538,9 +538,15 @@ extension Color {
             : UIColor(red: 0.34, green: 0.80, blue: 0.46, alpha: 1.0)
     })
 
-    /// 픽셀 테두리 — 따뜻한 먹빛(까망에 갈색기). 동물의 숲/레트로 카툰 윤곽.
-    /// CTA 버튼·카드 테두리에 공통 사용.
+    /// CTA 버튼 테두리 — 채운 초록보다 진한 딥그린(사용자 선호: 이 버전 유지).
     static let withuCTABorder = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.12, green: 0.42, blue: 0.22, alpha: 1.0)
+            : UIColor(red: 0.16, green: 0.52, blue: 0.28, alpha: 1.0)
+    })
+
+    /// 카드/홈 항목 픽셀 테두리 — 따뜻한 먹빛(까망에 갈색기). 동물의 숲/레트로 카툰 윤곽.
+    static let withuPixelOutline = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor(red: 0.10, green: 0.09, blue: 0.08, alpha: 1.0)
             : UIColor(red: 0.20, green: 0.16, blue: 0.12, alpha: 1.0)
