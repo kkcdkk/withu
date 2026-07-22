@@ -61,11 +61,16 @@ struct WithuCTAButtonStyle: ButtonStyle {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.withuCTAGreen)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.black.opacity(configuration.isPressed ? 0.22 : 0))
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.black.opacity(configuration.isPressed ? 0.18 : 0))
+                        )
+                        .overlay(
+                            // 스티커 같은 딥그린 테두리 — 귀여운 윤곽.
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.withuCTABorder, lineWidth: 2)
                         )
                 )
                 .opacity(isEnabled ? 1 : 0.45)

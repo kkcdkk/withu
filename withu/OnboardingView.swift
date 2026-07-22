@@ -536,11 +536,18 @@ extension Color {
             : UIColor(red: 0.20, green: 0.50, blue: 0.28, alpha: 1.0)
     })
 
-    /// CTA 버튼용 진한 그린 — 아이폰 메시지 말풍선 초록 톤. 흰 글자와 대비 확보.
+    /// CTA 버튼용 그린 — 새싹 톤의 연한 초록(귀여운 파스텔). 테두리(withuCTABorder)와 짝.
     static let withuCTAGreen = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.16, green: 0.62, blue: 0.29, alpha: 1.0)
-            : UIColor(red: 0.20, green: 0.78, blue: 0.35, alpha: 1.0)
+            ? UIColor(red: 0.22, green: 0.66, blue: 0.34, alpha: 1.0)
+            : UIColor(red: 0.34, green: 0.80, blue: 0.46, alpha: 1.0)
+    })
+
+    /// CTA 버튼 테두리 — 채운 초록보다 진한 딥그린. 스티커 같은 또렷한 윤곽(귀여움).
+    static let withuCTABorder = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.12, green: 0.42, blue: 0.22, alpha: 1.0)
+            : UIColor(red: 0.16, green: 0.52, blue: 0.28, alpha: 1.0)
     })
 
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.
