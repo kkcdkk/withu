@@ -538,11 +538,26 @@ extension Color {
             : UIColor(red: 0.34, green: 0.80, blue: 0.46, alpha: 1.0)
     })
 
-    /// CTA 버튼 테두리 — 채운 초록보다 진한 딥그린. 스티커 같은 또렷한 윤곽(귀여움).
+    /// 픽셀 테두리 — 따뜻한 먹빛(까망에 갈색기). 동물의 숲/레트로 카툰 윤곽.
+    /// CTA 버튼·카드 테두리에 공통 사용.
     static let withuCTABorder = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.12, green: 0.42, blue: 0.22, alpha: 1.0)
-            : UIColor(red: 0.16, green: 0.52, blue: 0.28, alpha: 1.0)
+            ? UIColor(red: 0.10, green: 0.09, blue: 0.08, alpha: 1.0)
+            : UIColor(red: 0.20, green: 0.16, blue: 0.12, alpha: 1.0)
+    })
+
+    /// 카드 표면 — 따뜻한 크림. 먹빛 테두리와 짝. 어두운 글자(.primary)와 대비 충분.
+    static let withuCardFill = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.17, green: 0.15, blue: 0.13, alpha: 1.0)
+            : UIColor(red: 0.99, green: 0.97, blue: 0.91, alpha: 1.0)
+    })
+
+    /// 화면 배경 — 카드보다 살짝 진한 따뜻한 베이지(동물의 숲 톤).
+    static let withuWarmBackground = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.11, green: 0.10, blue: 0.09, alpha: 1.0)
+            : UIColor(red: 0.96, green: 0.91, blue: 0.80, alpha: 1.0)
     })
 
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.

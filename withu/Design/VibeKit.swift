@@ -30,9 +30,9 @@ extension Font {
 func backgroundGradient(for state: CharacterState) -> LinearGradient {
     LinearGradient(
         colors: [
-            Color.withuGreen.opacity(0.14),
-            state.tint.opacity(0.04),
-            Color(.systemBackground),
+            Color.withuWarmBackground,
+            state.tint.opacity(0.05),
+            Color.withuCardFill,
         ],
         startPoint: .top,
         endPoint: .bottom
@@ -104,7 +104,8 @@ struct WithuCTAButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .font(.galmuri(16, relativeTo: .callout))
-                .foregroundStyle(Color.white)
+                // 먹빛 글자 — 연한 초록 위 흰 글자보다 대비가 확실(레트로 톤에도 맞음).
+                .foregroundStyle(Color.withuCTABorder)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .background(
@@ -214,14 +215,16 @@ struct RefreshRowButton: View {
 
 /// 모든 카드 표면의 단일 recipe. 솔리드 색·border·그림자 금지.
 struct FrostedCard: ViewModifier {
-    var cornerRadius: CGFloat = 16
+    var cornerRadius: CGFloat = 16   // 호환용 — 픽셀 테두리에선 계단 모서리가 대신함
     func body(content: Content) -> some View {
         content
             .padding(14)
-            .background(
-                .regularMaterial,
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // 동물의 숲/레트로 — 따뜻한 크림 표면 + 먹빛 픽셀 계단 테두리.
+            .background(Color.withuCardFill, in: PixelBorderShape())
+            .overlay(
+                PixelBorderShape().strokeBorder(Color.withuCTABorder, lineWidth: 2)
             )
+            .clipShape(PixelBorderShape())
     }
 }
 
