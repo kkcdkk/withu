@@ -298,7 +298,7 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .pixelCardSurface()
             .padding(.horizontal, 24)
             Spacer()
             Text("켜지 않은 권한은 메인 화면 설정에서 다시 켤 수 있어요.")

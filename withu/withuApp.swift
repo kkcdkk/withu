@@ -18,6 +18,23 @@ struct withuApp: App {
     /// BGTaskScheduler identifier — Info.plist BGTaskSchedulerPermittedIdentifiers 와 일치해야 함.
     static let backgroundRefreshTaskID = "com.seoyoung.withu.refresh"
 
+    init() {
+        // 전 페이지 네비게이션 타이틀을 Galmuri 픽셀 폰트로 — 앱 전체 헤더 톤 통일.
+        // 배경은 투명(각 화면의 따뜻한 그라데이션이 그대로 비치게).
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        if let title = UIFont(name: "Galmuri11-Regular", size: 17) {
+            appearance.titleTextAttributes = [.font: title, .foregroundColor: UIColor.label]
+        }
+        if let large = UIFont(name: "Galmuri11-Regular", size: 26) {
+            appearance.largeTitleTextAttributes = [.font: large, .foregroundColor: UIColor.label]
+        }
+        let bar = UINavigationBar.appearance()
+        bar.standardAppearance = appearance
+        bar.scrollEdgeAppearance = appearance
+        bar.compactAppearance = appearance
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

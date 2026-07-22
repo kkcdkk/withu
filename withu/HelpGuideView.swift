@@ -69,7 +69,7 @@ struct HelpGuideView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .pixelCardSurface()
                         }
                     }
 
