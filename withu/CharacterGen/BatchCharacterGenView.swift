@@ -781,15 +781,18 @@ struct BatchCharacterGenView: View {
                 .buttonStyle(WithuCTAButtonStyle())
                 .disabled(isGenerating)
 
-                // 마음에 안 들면 — ① 수정해서 생성하기(아래 수정사항 반영)  ② 완전히 새로
+                // 다듬기 — 입력 위, 버튼 아래 (다른 다듬기와 형식 통일).
+                TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
+                    .font(.callout)
+                    .disabled(isGenerating)
                 Button {
                     pendingAction = .reviseIdle        // 캔디 안내 팝업 → 확인 시 실행
                 } label: {
                     if isGenerating {
-                        HStack { ProgressView(); Text("만드는 중…") }
+                        HStack { ProgressView(); Text("다듬는 중…") }
                     } else {
                         HStack {
-                            Label("다듬어서 다시 만들기", systemImage: "wand.and.stars")
+                            Label("다듬기", systemImage: "wand.and.stars")
                             Spacer()
                             Text(idleRevisionCost == 0 ? String(localized: "무료")
                                                        : String(localized: "캔디 \(idleRevisionCost)개"))
@@ -799,10 +802,6 @@ struct BatchCharacterGenView: View {
                 }
                 .tint(.secondary)
                 .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
-                          text: $idleRevisionText, axis: .vertical)
-                    .font(.callout)
-                    .disabled(isGenerating)
                 Button {
                     // 즉시 재생성하지 않고 프롬프트 화면으로 돌아감 — 프롬프트/사진을 고친 뒤
                     // '만들기 시작'을 누를 때 캔디가 차감된다.
@@ -1703,9 +1702,12 @@ struct BatchCharacterGenView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 다듬을까요?") : String(localized: "더 다듬을까요?"))
+                        Text("다듬기")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                        // 사진 자리 먼저 — 누르면 앨범/내 캐릭터 선택. 이어서 수정사항 입력.
+                        // 프롬프트 입력 위, 사진 아래 (다른 다듬기와 형식 통일).
+                        TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
+                            .font(.footnote)
+                            .lineLimit(2...4)
                         HStack(spacing: 10) {
                             Menu {
                                 Button { showRevisionAlbumPicker = true } label: {
@@ -1737,9 +1739,6 @@ struct BatchCharacterGenView: View {
                             }
                             Spacer()
                         }
-                        TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
-                            .font(.footnote)
-                            .lineLimit(2...4)
                     }
                     .padding(14)
                     .frostedCard()
@@ -1774,8 +1773,13 @@ struct BatchCharacterGenView: View {
                                 ProgressView()
                                     .frame(maxWidth: .infinity)
                             } else {
-                                Label("다듬기", systemImage: "wand.and.stars")
-                                    .frame(maxWidth: .infinity)
+                                HStack(spacing: 5) {
+                                    Image(systemName: "wand.and.stars")
+                                    Text("다듬기")
+                                    Text("· 캔디 \(GenerationQuota.cost(forQuality: quality))개")
+                                        .font(.caption)
+                                }
+                                .frame(maxWidth: .infinity)
                             }
                         }
                         .buttonStyle(WithuCTAButtonStyle())
@@ -1882,28 +1886,34 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 원본/다듬음 N 버전 스트립 — 탭해서 고른 버전이 적용 대상.
+    /// 원본/다듬음 N 버전 스트립 — 탭해서 고른 버전이 적용·이어서 다듬기 기준.
     private func revisionStrip(_ state: CharacterState, _ rev: BatchRevision) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(Array(rev.versions.enumerated()), id: \.offset) { idx, img in
-                    VStack(spacing: 4) {
-                        Image(uiImage: img).resizable().scaledToFit()
-                            .frame(width: 68, height: 68)
-                            .background(Color(.systemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(idx == rev.selected ? Color.withuCTAGreen : .clear, lineWidth: 2.5)
-                            }
-                        Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
-                            .font(.caption2.weight(idx == rev.selected ? .semibold : .regular))
-                            .foregroundStyle(idx == rev.selected ? Color.withuCTAGreen : .secondary)
+        VStack(spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Array(rev.versions.enumerated()), id: \.offset) { idx, img in
+                        VStack(spacing: 4) {
+                            Image(uiImage: img).resizable().scaledToFit()
+                                .frame(width: 68, height: 68)
+                                .background(Color(.systemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(idx == rev.selected ? Color.withuCTAGreen : .clear, lineWidth: 2.5)
+                                }
+                            Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
+                                .font(.caption2.weight(idx == rev.selected ? .semibold : .regular))
+                                .foregroundStyle(idx == rev.selected ? Color.withuCTAGreen : .secondary)
+                        }
+                        .onTapGesture { selectRevisionVersion(state, idx) }
                     }
-                    .onTapGesture { selectRevisionVersion(state, idx) }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            if rev.versions.count > 1 {
+                Text("선택한 버전을 기준으로 다듬어요.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
         }
     }
 

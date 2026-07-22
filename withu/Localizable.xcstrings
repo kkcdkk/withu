@@ -3030,6 +3030,16 @@
         }
       }
     },
+    "· 캔디 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· %lld candies"
+          }
+        }
+      }
+    },
     "무료" : {
       "localizations" : {
         "en" : {
@@ -4364,6 +4374,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Swimming 🏊"
+          }
+        }
+      }
+    },
+    "선택한 버전을 기준으로 다듬어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refines from the selected version."
           }
         }
       }
