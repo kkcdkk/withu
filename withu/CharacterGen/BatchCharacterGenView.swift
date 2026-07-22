@@ -763,98 +763,67 @@ struct BatchCharacterGenView: View {
             // 기준 모습 수정 결과 — 다른 수정과 똑같이 전후 비교 후 적용 선택.
             idleRevisionCompareSection(rev)
         } else if awaitingIdleApproval, let idle = results[.idle] {
+            // 내용을 한 행(VStack)으로 묶어 행마다 들쭉날쭉한 구분선 없이 한 섹션처럼.
             Section {
-                Image(uiImage: idle)
-                    .resizable().scaledToFit()
-                    .frame(maxHeight: 280)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                // 설명을 버튼 위로 — 무슨 모습인지 먼저 읽고 진행하게.
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button {
-                    pendingAction = .approveRest        // 캔디 안내 팝업 → 확인 시 실행
-                } label: {
-                    Text("이 모습으로 나머지 만들기")
+                VStack(spacing: 14) {
+                    Image(uiImage: idle)
+                        .resizable().scaledToFit()
+                        .frame(maxHeight: 280)
                         .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(WithuCTAButtonStyle())
-                .disabled(isGenerating)
-
-                // 다듬기 — 입력 위, 버튼 아래 (다른 다듬기와 형식 통일).
-                TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
-                    .font(.callout)
-                    .disabled(isGenerating)
-                Button {
-                    pendingAction = .reviseIdle        // 캔디 안내 팝업 → 확인 시 실행
-                } label: {
-                    if isGenerating {
-                        HStack { ProgressView(); Text("다듬는 중…") }
-                    } else {
-                        HStack {
-                            Label("다듬기", systemImage: "wand.and.stars")
-                            Spacer()
-                            Text(idleRevisionCost == 0 ? String(localized: "무료")
-                                                       : String(localized: "캔디 \(idleRevisionCost)개"))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        pendingAction = .approveRest
+                    } label: {
+                        Text("이 모습으로 나머지 만들기").frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(WithuCTAButtonStyle())
+                    .disabled(isGenerating)
+
+                    idleRefineGroup(label: "다듬기")
+
+                    Button {
+                        awaitingIdleApproval = false
+                        results.removeAll()
+                        resultsFrame1.removeAll()
+                        frame0FullRes.removeAll()
+                        idleFullRes = nil
+                        idleAnchor = nil
+                        idleRevisionText = ""
+                        errors.removeAll()
+                    } label: {
+                        Label("처음부터 다시 만들기", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderless).tint(.secondary)
+                    .disabled(isGenerating)
                 }
-                .tint(.secondary)
-                .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Button {
-                    // 즉시 재생성하지 않고 프롬프트 화면으로 돌아감 — 프롬프트/사진을 고친 뒤
-                    // '만들기 시작'을 누를 때 캔디가 차감된다.
-                    awaitingIdleApproval = false
-                    results.removeAll()
-                    resultsFrame1.removeAll()
-                    frame0FullRes.removeAll()
-                    idleFullRes = nil
-                    idleAnchor = nil
-                    idleRevisionText = ""
-                    errors.removeAll()
-                } label: {
-                    Label("처음부터 다시 만들기", systemImage: "arrow.counterclockwise")
-                }
-                .tint(.secondary)
-                .disabled(isGenerating)
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
             } header: {
                 Text("기준 모습 확인")
             }
         }
     }
 
-    /// 기준 모습 다듬기 결과 — 다른 다듬기와 동일한 원본/다듬음 N 이력 스트립 + 적용/취소.
-    private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
-        Section {
-            // 미리보기 — 가운데 정렬 + 아래 여백.
-            HStack {
-                Spacer()
-                Image(uiImage: rev.current).resizable().scaledToFit()
-                    .frame(maxHeight: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                Spacer()
-            }
-            .padding(.bottom, 12)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-
-            revisionStrip(.idle, rev)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-
-            // 이어서 다듬기 (기준 모습) — 입력 위, 버튼 아래. 무료 1회 로직 유지.
-            TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
-                      text: $idleRevisionText, axis: .vertical)
+    /// 기준 모습 '다듬기' 입력+버튼을 한 카드로 묶은 그룹 (승인/이력 양쪽에서 재사용).
+    /// label: 첫 다듬기 = "다듬기", 이력에서 이어갈 땐 = "이어서 다듬기".
+    private func idleRefineGroup(label: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
                 .font(.callout).disabled(isGenerating)
+            Divider()
             Button {
                 pendingAction = .reviseIdle
             } label: {
                 if isGenerating {
-                    HStack { ProgressView(); Text("다듬는 중…") }
+                    HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
                 } else {
                     HStack {
-                        Label("이어서 다듬기", systemImage: "wand.and.stars")
+                        Label(label, systemImage: "wand.and.stars")
                         Spacer()
                         Text(idleRevisionCost == 0 ? String(localized: "무료")
                                                    : String(localized: "캔디 \(idleRevisionCost)개"))
@@ -862,19 +831,37 @@ struct BatchCharacterGenView: View {
                     }
                 }
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.borderless).tint(Color.withuCTAGreen)
             .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(12)
+        .frostedCard(cornerRadius: 12)
+    }
 
-            HStack {
-                Button("적용") { acceptRevision(.idle) }
-                    .font(.callout.weight(.semibold))
-                    .tint(Color.withuCTAGreen)
-                Spacer()
-                Button("취소") { rejectRevision(.idle) }
-                    .font(.callout)
-                    .tint(.secondary)
+    /// 기준 모습 다듬기 결과 — 한 행으로 묶어(구분선 없이) 원본/다듬음 N 스트립 + 이어서 다듬기 + 적용/취소.
+    private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
+        Section {
+            VStack(spacing: 14) {
+                Image(uiImage: rev.current).resizable().scaledToFit()
+                    .frame(maxHeight: 280).frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                revisionStrip(.idle, rev)
+
+                idleRefineGroup(label: "이어서 다듬기")
+
+                HStack {
+                    Button("적용") { acceptRevision(.idle) }
+                        .font(.callout.weight(.semibold)).tint(Color.withuCTAGreen)
+                    Spacer()
+                    Button("취소") { rejectRevision(.idle) }
+                        .font(.callout).tint(.secondary)
+                }
+                .buttonStyle(.borderless)
             }
-            .buttonStyle(.borderless)
+            .padding(.vertical, 4)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
         } header: {
             Text("다듬기 이력")
         }
