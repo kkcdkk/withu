@@ -477,10 +477,13 @@ struct GalleryGrid<Header: View>: View {
     struct RefineCompareContext: Identifiable {
         let id = UUID()
         let itemId: String
-        let before: UIImage
-        let after: UIImage
+        var versions: [UIImage]   // [0] = 원본, 이후 = 다듬은 버전
+        var selected: Int
+        var current: UIImage { versions[Swift.min(Swift.max(0, selected), versions.count - 1)] }
     }
     @State private var refineCompare: RefineCompareContext?
+    /// 이 항목에 저장된 다듬기 이력이 있는지 — 상세 시트에 '다듬기 이력' 재열람 버튼 노출용.
+    @State private var hasStoredRefineHistory: Bool = false
 
     // 움직이는 캐릭터 만들기 — frame 1 없는 항목에 2번째 장면을 생성해 부착.
     @State private var isMakingMotion: Bool = false
@@ -875,8 +878,16 @@ struct GalleryGrid<Header: View>: View {
                             .buttonStyle(.bordered)
                             .tint(.withuPinkText)
                             .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            Text("전과 후를 비교해 보고 바꿀지 고를 수 있어요.")
+                            Text("다듬은 이력에서 골라 적용할 수 있어요.")
                                 .font(.caption2).foregroundStyle(.secondary)
+                            // 저장된 다듬기 이력이 있으면 다시 열기.
+                            if hasStoredRefineHistory {
+                                Button { restoreRefineHistory(item) } label: {
+                                    Label("다듬기 이력 보기", systemImage: "clock.arrow.circlepath")
+                                        .font(.footnote)
+                                }
+                                .tint(Color.withuCTAGreen)
+                            }
 
                             if !(item.hasFrame1 ?? false),
                                CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
@@ -994,6 +1005,8 @@ struct GalleryGrid<Header: View>: View {
                 bgCutout = nil
                 bgCutoutF1 = nil
                 refineText = ""
+                // 이 항목에 저장된 다듬기 이력이 있으면 '이력 보기' 버튼 노출.
+                hasStoredRefineHistory = GalleryRefineHistoryStore.exists(itemId: item.id)
             }
         }
     }
@@ -1110,8 +1123,14 @@ struct GalleryGrid<Header: View>: View {
             hideToastAfter(2.0)
             return
         }
-        guard let base = CharacterImageStore.loadGalleryImage(id: item.id),
-              let refB64 = base.pngData()?.base64EncodedString() else { return }
+        // 이어서 다듬기면 현재 선택 버전을, 아니면 갤러리 원본을 기준으로.
+        let base: UIImage
+        if let ctx = refineCompare, ctx.itemId == item.id {
+            base = ctx.current
+        } else if let orig = CharacterImageStore.loadGalleryImage(id: item.id) {
+            base = orig
+        } else { return }
+        guard let refB64 = base.pngData()?.base64EncodedString() else { return }
         let trimmed = refineText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isRefining = true
@@ -1149,8 +1168,20 @@ struct GalleryGrid<Header: View>: View {
                     hideToastAfter(2.0)
                 }
             } else {
-                // 바로 반영하지 않고 전/후 비교 시트로 — 선택 전까지 원본을 덮어쓰지 않음.
-                refineCompare = RefineCompareContext(itemId: item.id, before: base, after: small)
+                // 바로 반영하지 않고 버전 이력에 이어붙임 — 선택 전까지 갤러리 원본을 덮어쓰지 않음.
+                if var ctx = refineCompare, ctx.itemId == item.id {
+                    ctx.versions.append(small)
+                    if ctx.versions.count > 8 { ctx.versions.remove(at: 1) }   // 원본[0] 보존
+                    ctx.selected = ctx.versions.count - 1
+                    refineCompare = ctx
+                } else {
+                    let orig = CharacterImageStore.loadGalleryImage(id: item.id) ?? base
+                    refineCompare = RefineCompareContext(itemId: item.id, versions: [orig, small], selected: 1)
+                }
+                if let ctx = refineCompare {
+                    GalleryRefineHistoryStore.save(itemId: item.id, versions: ctx.versions, selected: ctx.selected)
+                    hasStoredRefineHistory = true
+                }
             }
         } catch {
             withAnimation { toastText = error.koreanizedDescription }
@@ -1158,65 +1189,140 @@ struct GalleryGrid<Header: View>: View {
         }
     }
 
-    // MARK: 다듬기 전/후 비교
+    // MARK: 다듬기 이력 (버전 스트립)
 
-    /// 전/후 비교 시트 — "이전" / "다듬은 결과" 나란히 보여주고 선택.
+    /// 다듬기 이력 시트 — 원본/다듬음 N 스트립에서 골라 큰 미리보기 + 이어서 다듬기 + 적용/취소.
+    /// (닫아도 이력은 저장돼 다시 열 수 있음. '취소'만 이력을 버림.)
     private func refineCompareSheet(_ ctx: RefineCompareContext) -> some View {
-        NavigationStack {
+        let item = items.first { $0.id == ctx.itemId }
+        return NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    HStack(alignment: .top, spacing: 12) {
-                        compareColumn(image: ctx.before, label: String(localized: "이전"))
-                        compareColumn(image: ctx.after, label: String(localized: "다듬은 결과"))
+                VStack(spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.regularMaterial)
+                        Image(uiImage: ctx.current).resizable().scaledToFit().padding(12)
                     }
+                    .aspectRatio(1, contentMode: .fit)
+                    .padding(.horizontal)
+
+                    // 버전 스트립 — 탭해서 고른 버전이 적용 대상.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(Array(ctx.versions.enumerated()), id: \.offset) { idx, img in
+                                VStack(spacing: 4) {
+                                    Image(uiImage: img).resizable().scaledToFit()
+                                        .frame(width: 68, height: 68)
+                                        .background(Color(.systemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .strokeBorder(idx == ctx.selected ? Color.withuCTAGreen : .clear,
+                                                              lineWidth: 2.5)
+                                        }
+                                    Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
+                                        .font(.caption2.weight(idx == ctx.selected ? .semibold : .regular))
+                                        .foregroundStyle(idx == ctx.selected ? Color.withuCTAGreen : .secondary)
+                                }
+                                .onTapGesture { selectRefineVersion(idx) }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // 이어서 다듬기 — 고른 버전을 기준으로 한 번 더.
+                    if let item {
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
+                                .font(.callout)
+                            Button {
+                                Task { await refineItem(item) }
+                            } label: {
+                                if isRefining {
+                                    HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
+                                } else {
+                                    HStack {
+                                        Text("이어서 다듬기").frame(maxWidth: .infinity)
+                                        candyBadge(GenerationQuota.cost(forQuality: "low"))
+                                    }
+                                }
+                            }
+                            .buttonStyle(.bordered).tint(.withuCTAGreen)
+                            .disabled(isRefining || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        .padding(14)
+                        .frostedCard()
+                        .padding(.horizontal)
+                    }
+
                     HStack {
                         Button("적용") { adoptRefined(ctx) }
                             .font(.callout.weight(.semibold))
                             .tint(Color.withuCTAGreen)
                         Spacer()
-                        Button("취소") { refineCompare = nil }   // 원본 그대로 — 아무것도 안 바뀜
-                            .font(.callout)
-                            .tint(.secondary)
+                        Button("취소") {   // 이력 버리고 원본 유지
+                            GalleryRefineHistoryStore.clear(itemId: ctx.itemId)
+                            hasStoredRefineHistory = false
+                            refineCompare = nil
+                        }
+                        .font(.callout)
+                        .tint(.secondary)
                     }
                     .padding(.horizontal)
                 }
-                .padding(20)
+                .padding(.vertical)
             }
-            .navigationTitle("다듬기 결과")
+            .navigationTitle("다듬기 이력")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 닫아도 이력은 남음(저장됨) — 다시 열 수 있음. 취소만 버림.
+                ToolbarItem(placement: .topBarTrailing) { Button("닫기") { refineCompare = nil } }
+            }
         }
-        .presentationDetents([.medium, .large])
-        // 취소를 누른 게 아니면 스와이프로 닫혀 결과가 사라지지 않게 — 적용/취소로만 닫힘.
-        .interactiveDismissDisabled(true)
+        .presentationDetents([.large])
     }
 
-    private func compareColumn(image: UIImage, label: String) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.regularMaterial)
-                Image(uiImage: image).resizable().scaledToFit().padding(8)
-            }
-            .aspectRatio(1, contentMode: .fit)
-            Text(label).font(.caption).foregroundStyle(.secondary)
+    /// 스트립에서 버전 선택 — 큰 미리보기·적용 대상 변경 + 저장.
+    private func selectRefineVersion(_ idx: Int) {
+        guard var ctx = refineCompare, ctx.versions.indices.contains(idx) else { return }
+        ctx.selected = idx
+        refineCompare = ctx
+        GalleryRefineHistoryStore.save(itemId: ctx.itemId, versions: ctx.versions, selected: idx)
+    }
+
+    /// 저장된 다듬기 이력 다시 열기 — 나갔다 와도 이어서 고를 수 있게.
+    private func restoreRefineHistory(_ item: GalleryItem) {
+        guard let restored = GalleryRefineHistoryStore.load(itemId: item.id) else {
+            hasStoredRefineHistory = false
+            return
         }
+        refineCompare = RefineCompareContext(itemId: item.id,
+                                             versions: restored.versions, selected: restored.selected)
     }
 
     /// '다듬은 걸로 바꾸기' — 이때 처음으로 갤러리 원본을 교체.
     /// 적용 중인 자리(활성 슬롯)가 있으면 그 자리와 워치·위젯에도 반영.
     private func adoptRefined(_ ctx: RefineCompareContext) {
-        guard CharacterImageStore.replaceGalleryImage(ctx.itemId, with: ctx.after) else {
+        // 원본([0])을 고른 상태로 '적용'하면 바꿀 게 없음 — 이력만 정리하고 닫음.
+        guard ctx.selected != 0 else {
+            GalleryRefineHistoryStore.clear(itemId: ctx.itemId)
+            hasStoredRefineHistory = false
+            refineCompare = nil
+            return
+        }
+        guard CharacterImageStore.replaceGalleryImage(ctx.itemId, with: ctx.current) else {
             refineCompare = nil
             withAnimation { toastText = String(localized: "적용하지 못했어요") }
             hideToastAfter(1.6)
             return
         }
+        GalleryRefineHistoryStore.clear(itemId: ctx.itemId)
+        hasStoredRefineHistory = false
         // 픽셀만 바뀐 교체는 reconcile diff 로 감지 안 됨 — 서버 백업 강제 갱신.
         GallerySyncManager.shared.forceUpload(ctx.itemId)
         let activeStates = CharacterImageStore.statesUsingGalleryItem(ctx.itemId)
         for state in activeStates {
             CharacterImageStore.applyGalleryItem(ctx.itemId, to: state)
-            ConnectivityManager.shared.sendCharacterImage(ctx.after, for: state, frame: 0)
+            ConnectivityManager.shared.sendCharacterImage(ctx.current, for: state, frame: 0)
             if let f1 = CharacterImageStore.loadGalleryFrame1(id: ctx.itemId) {
                 ConnectivityManager.shared.sendCharacterImage(f1, for: state, frame: 1)
             }
@@ -1363,3 +1469,49 @@ struct GalleryGrid<Header: View>: View {
 }
 
 #Preview { NavigationStack { CharacterGalleryView() } }
+
+/// 갤러리 항목별 '다듬기 이력'(버전 체인)을 App Group 에 보관 — 상세를 나갔다 와도 복원.
+/// 갤러리 원본은 하나뿐이라 각 버전 이미지를 직접 PNG 로 저장한다. count>1(다듬은 게 있음)일 때만 의미.
+fileprivate enum GalleryRefineHistoryStore {
+    private static func dir(_ itemId: String) -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedAppState.groupID)?
+            .appendingPathComponent("gallery_refine/\(itemId)", isDirectory: true)
+    }
+
+    static func save(itemId: String, versions: [UIImage], selected: Int) {
+        guard let dir = dir(itemId), versions.count > 1 else { return }
+        try? FileManager.default.removeItem(at: dir)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        for (i, img) in versions.enumerated() {
+            try? img.pngData()?.write(to: dir.appendingPathComponent("\(i).png"),
+                                      options: [.atomic, .noFileProtection])
+        }
+        let meta = ["selected": selected, "count": versions.count]
+        try? JSONEncoder().encode(meta).write(to: dir.appendingPathComponent("meta.json"),
+                                              options: [.atomic, .noFileProtection])
+    }
+
+    static func clear(itemId: String) {
+        guard let dir = dir(itemId) else { return }
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    static func exists(itemId: String) -> Bool {
+        guard let dir = dir(itemId) else { return false }
+        return FileManager.default.fileExists(atPath: dir.appendingPathComponent("meta.json").path)
+    }
+
+    static func load(itemId: String) -> (versions: [UIImage], selected: Int)? {
+        guard let dir = dir(itemId),
+              let data = try? Data(contentsOf: dir.appendingPathComponent("meta.json")),
+              let meta = try? JSONDecoder().decode([String: Int].self, from: data),
+              let count = meta["count"], count > 1 else { return nil }
+        var versions: [UIImage] = []
+        for i in 0..<count {
+            guard let img = UIImage(contentsOfFile: dir.appendingPathComponent("\(i).png").path) else { return nil }
+            versions.append(img)
+        }
+        return (versions, Swift.min(Swift.max(0, meta["selected"] ?? 0), versions.count - 1))
+    }
+}
