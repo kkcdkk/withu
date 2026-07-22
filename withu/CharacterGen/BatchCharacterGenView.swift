@@ -726,7 +726,7 @@ struct BatchCharacterGenView: View {
     }
 
     private var pendingActionConfirmLabel: String {
-        if case .reviseIdle = pendingAction { return String(localized: "바꾸기") }
+        if case .reviseIdle = pendingAction { return String(localized: "다듬기") }
         return String(localized: "만들기")
     }
 
@@ -741,8 +741,8 @@ struct BatchCharacterGenView: View {
             return String(localized: "나머지 모습에 캔디 약 \(rest * unit)개를 써요. 성공했을 때만 차감돼요.")
         case .reviseIdle:
             return idleRevisionCost == 0
-                ? String(localized: "이번 수정은 무료예요.")
-                : String(localized: "이번 수정에 캔디 \(idleRevisionCost)개를 써요. 성공했을 때만 차감돼요.")
+                ? String(localized: "이번 다듬기는 무료예요.")
+                : String(localized: "이번 다듬기에 캔디 \(idleRevisionCost)개를 써요. 성공했을 때만 차감돼요.")
         case nil:
             return ""
         }
@@ -783,7 +783,7 @@ struct BatchCharacterGenView: View {
                         HStack { ProgressView(); Text("만드는 중…") }
                     } else {
                         HStack {
-                            Label("수정해서 생성하기", systemImage: "wand.and.stars")
+                            Label("다듬어서 다시 만들기", systemImage: "wand.and.stars")
                             Spacer()
                             Text(idleRevisionCost == 0 ? String(localized: "무료")
                                                        : String(localized: "캔디 \(idleRevisionCost)개"))
@@ -826,8 +826,8 @@ struct BatchCharacterGenView: View {
     private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
         Section {
             TabView {
-                compareSlide(rev.after, label: String(localized: "수정된 모습")).tag(0)
-                compareSlide(rev.before, label: String(localized: "수정 전")).tag(1)
+                compareSlide(rev.after, label: String(localized: "다듬은 모습")).tag(0)
+                compareSlide(rev.before, label: String(localized: "이전")).tag(1)
             }
             .tabViewStyle(.page)
             .frame(height: 320)
@@ -845,7 +845,7 @@ struct BatchCharacterGenView: View {
             }
             .buttonStyle(.borderless)
         } header: {
-            Text("수정 결과")
+            Text("다듬기 결과")
         }
     }
 
@@ -1123,7 +1123,7 @@ struct BatchCharacterGenView: View {
         if revisingFrame[state] != nil {
             HStack(spacing: 4) {
                 ProgressView().scaleEffect(0.55).tint(.white)
-                Text("수정 중").font(.caption2)
+                Text("다듬는 중").font(.caption2)
             }
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(Capsule().fill(.black.opacity(0.55)))
@@ -1132,7 +1132,7 @@ struct BatchCharacterGenView: View {
         } else if revisedDone[state] != nil {
             HStack(spacing: 3) {
                 Image(systemName: "checkmark.circle.fill")
-                Text("수정 완료").font(.caption2.weight(.semibold))
+                Text("다듬음").font(.caption2.weight(.semibold))
             }
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(Capsule().fill(Color.withuCTAGreen))
@@ -1675,7 +1675,7 @@ struct BatchCharacterGenView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 수정할까요?") : String(localized: "더 수정할까요?"))
+                        Text(hasF1 && detailFrame == 1 ? String(localized: "이 움직임 프레임을 더 다듬을까요?") : String(localized: "더 다듬을까요?"))
                             .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         // 사진 자리 먼저 — 누르면 앨범/내 캐릭터 선택. 이어서 수정사항 입력.
                         HStack(spacing: 10) {
@@ -1746,7 +1746,7 @@ struct BatchCharacterGenView: View {
                                 ProgressView()
                                     .frame(maxWidth: .infinity)
                             } else {
-                                Label("바꾸기", systemImage: "wand.and.stars")
+                                Label("다듬기", systemImage: "wand.and.stars")
                                     .frame(maxWidth: .infinity)
                             }
                         }
@@ -1776,21 +1776,21 @@ struct BatchCharacterGenView: View {
             }
             // 입력한 수정 문구/사진이 있으면 스와이프로도 못 닫게 + 닫기 시 경고.
             .interactiveDismissDisabled(reviseHasChanges)
-            .confirmationDialog("입력한 수정 내용이 있어요",
+            .confirmationDialog("입력한 다듬기 내용이 있어요",
                                 isPresented: $showReviseDiscardConfirm, titleVisibility: .visible) {
                 Button("닫기", role: .destructive) { selectedResult = nil }
                 Button("계속 편집", role: .cancel) {}
             } message: {
-                Text("닫으면 방금 입력한 수정 문구·사진이 지워져요.")
+                Text("닫으면 방금 입력한 다듬기 문구·사진이 지워져요.")
             }
             // 캔디 소모 확인 — 시트 위에 떠야 해서 시트 로컬 alert.
             .alert("캔디를 사용해요", isPresented: $pendingReviseConfirm) {
-                Button("바꾸기") {
+                Button("다듬기") {
                     Task { await reviseOne(state, frame: hasF1 ? detailFrame : 0, text: revisionText) }
                 }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("이번 수정에 캔디 \(GenerationQuota.cost(forQuality: quality))개를 써요. 성공했을 때만 차감돼요.")
+                Text("이번 다듬기에 캔디 \(GenerationQuota.cost(forQuality: quality))개를 써요. 성공했을 때만 차감돼요.")
             }
             }
         }
@@ -1801,8 +1801,8 @@ struct BatchCharacterGenView: View {
     private func revisionCompareView(_ state: CharacterState, _ rev: BatchRevision) -> some View {
         VStack(spacing: 16) {
             TabView {
-                compareSlide(rev.after, label: String(localized: "수정된 모습")).tag(0)
-                compareSlide(rev.before, label: String(localized: "수정 전")).tag(1)
+                compareSlide(rev.after, label: String(localized: "다듬은 모습")).tag(0)
+                compareSlide(rev.before, label: String(localized: "이전")).tag(1)
             }
             .tabViewStyle(.page)
             .frame(height: 360)
@@ -1820,7 +1820,7 @@ struct BatchCharacterGenView: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical)
-        .navigationTitle("수정 결과")
+        .navigationTitle("다듬기 결과")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // 취소를 누른 게 아니면 닫아도 카드에 '수정 완료'로 남아 다시 열 수 있음.
