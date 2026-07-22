@@ -1726,6 +1726,24 @@ struct BatchCharacterGenView: View {
                             }
                             Spacer()
                         }
+                        Divider()
+                        // 다듬기 버튼을 입력 카드 안으로 — 다른 다듬기와 형식 통일.
+                        Button {
+                            pendingReviseConfirm = true
+                        } label: {
+                            if isRevising {
+                                HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
+                            } else {
+                                HStack {
+                                    Label("다듬기", systemImage: "wand.and.stars")
+                                    Spacer()
+                                    Text("캔디 \(GenerationQuota.cost(forQuality: quality))개")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .buttonStyle(.borderless).tint(Color.withuCTAGreen)
+                        .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(14)
                     .frostedCard()
@@ -1739,39 +1757,16 @@ struct BatchCharacterGenView: View {
                         GalleryReferencePicker { img in revisionRefImage = img }
                     }
 
-                    HStack(spacing: 12) {
-                        Button {
-                            let img = displayedImage(for: state, frame: hasF1 ? detailFrame : 0)
-                                ?? results[state] ?? UIImage()
-                            Task { await saveOneToPhotos(img) }
-                        } label: {
-                            Label("저장", systemImage: "square.and.arrow.down")
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 4)
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.roundedRectangle(radius: 12))
-                        .tint(.secondary)
-
-                        Button {
-                            pendingReviseConfirm = true        // 캔디 안내 팝업 → 확인 시 실행
-                        } label: {
-                            if isRevising {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "wand.and.stars")
-                                    Text("다듬기")
-                                    Text("· 캔디 \(GenerationQuota.cost(forQuality: quality))개")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                        }
-                        .buttonStyle(WithuCTAButtonStyle())
-                        .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button {
+                        let img = displayedImage(for: state, frame: hasF1 ? detailFrame : 0)
+                            ?? results[state] ?? UIImage()
+                        Task { await saveOneToPhotos(img) }
+                    } label: {
+                        Label("사진 앱에 저장", systemImage: "square.and.arrow.down")
+                            .font(.footnote)
                     }
+                    .buttonStyle(.borderless)
+                    .tint(.secondary)
                     .padding(.horizontal)
 
                     if let revisionError {
