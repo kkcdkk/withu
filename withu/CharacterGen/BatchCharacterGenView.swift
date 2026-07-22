@@ -117,13 +117,16 @@ struct BatchCharacterGenView: View {
     /// 상세 시트에서 '바꾸기'로 재생성 중인 프레임(state→frame). 시트를 닫아도
     /// 결과 그리드가 처음 만들 때처럼 로딩을 보여주도록(고치는 프레임에만) 추적.
     @State private var revisingFrame: [CharacterState: Int] = [:]
-    /// '바꾸기' 완료 후 적용 전 보관 — 상세 시트에서 before/after 비교, 카드엔 '수정 완료' 배지.
+    /// 다듬기 완료 후 적용 전 보관 — 상세 시트에서 버전 이력 스트립(원본/다듬음 N), 카드엔 '다듬음' 배지.
+    /// versions[0] = 다듬기 전 원본, 이후 = 다듬은 버전. (하나씩 만들기와 같은 이력 모델)
     struct BatchRevision {
         let frame: Int
-        let before: UIImage
-        let after: UIImage        // 128 썸네일 (표시·저장용)
-        let afterFull: UIImage    // frame0 원본(1024) — 적용 시 frame0FullRes 갱신
-        let prompt: String        // 갤러리 '만든 기록' 저장용
+        var versions: [UIImage]      // 128 썸네일 — [0]=원본, 이후=다듬음
+        var fullVersions: [UIImage]  // 대응 1024 (적용 시 frame0FullRes 갱신용)
+        var selected: Int
+        var prompt: String           // 갤러리 '만든 기록' 저장용
+        var current: UIImage { versions[Swift.min(Swift.max(0, selected), versions.count - 1)] }
+        var currentFull: UIImage { fullVersions[Swift.min(Swift.max(0, selected), fullVersions.count - 1)] }
     }
     @State private var revisedDone: [CharacterState: BatchRevision] = [:]
 
@@ -822,17 +825,43 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 기준 모습 '수정해서 생성하기' 결과 — 다른 수정과 동일한 전후 비교 + 적용/취소.
+    /// 기준 모습 다듬기 결과 — 다른 다듬기와 동일한 원본/다듬음 N 이력 스트립 + 적용/취소.
     private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
         Section {
-            TabView {
-                compareSlide(rev.after, label: String(localized: "다듬은 모습")).tag(0)
-                compareSlide(rev.before, label: String(localized: "이전")).tag(1)
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.regularMaterial)
+                Image(uiImage: rev.current).resizable().scaledToFit().padding(12)
             }
-            .tabViewStyle(.page)
-            .frame(height: 320)
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxHeight: 300)
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
+
+            revisionStrip(.idle, rev)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+
+            // 이어서 다듬기 (기준 모습) — 무료 1회 로직 유지.
+            Button {
+                pendingAction = .reviseIdle
+            } label: {
+                if isGenerating {
+                    HStack { ProgressView(); Text("다듬는 중…") }
+                } else {
+                    HStack {
+                        Label("이어서 다듬기", systemImage: "wand.and.stars")
+                        Spacer()
+                        Text(idleRevisionCost == 0 ? String(localized: "무료")
+                                                   : String(localized: "캔디 \(idleRevisionCost)개"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(.borderless)
+            .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
+                      text: $idleRevisionText, axis: .vertical)
+                .font(.callout).disabled(isGenerating)
 
             HStack {
                 Button("적용") { acceptRevision(.idle) }
@@ -845,7 +874,7 @@ struct BatchCharacterGenView: View {
             }
             .buttonStyle(.borderless)
         } header: {
-            Text("다듬기 결과")
+            Text("다듬기 이력")
         }
     }
 
@@ -1477,12 +1506,8 @@ struct BatchCharacterGenView: View {
                 // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
                 let flat = await ImageProcessing.transparentized(img)
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
-                // 즉시 덮어쓰지 않고 before/after 로 보관 — 비교 후 '적용'해야 기준 모습이 바뀜.
-                let before = results[.idle] ?? small
-                revisedDone[.idle] = BatchRevision(frame: 0, before: before,
-                                                   after: small, afterFull: flat, prompt: prompt)
-                PendingRevisionStore.save(state: .idle, frame: 0, after: small,
-                                          afterFull: flat, prompt: prompt)
+                // 즉시 덮어쓰지 않고 이력에 이어붙임 — 골라서 '적용'해야 기준 모습이 바뀜.
+                appendRevision(state: .idle, frame: 0, small: small, full: flat, prompt: prompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 // 1번째 수정은 무료, 2번째부터 차감.
                 if idleRevisionsUsed > 0 {
@@ -1796,46 +1821,86 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// '바꾸기' 결과 비교 — 수정된 모습(먼저) ↔ 수정 전 좌우 스와이프 + 적용/취소.
+    /// 다듬기 이력 — 고른 버전 크게 + 원본/다듬음 N 스트립 + 이어서 다듬기 + 적용/취소.
+    /// (하나씩 만들기와 같은 이력 모델. 취소 아니면 닫아도 카드 '다듬음'으로 남아 재열람.)
     @ViewBuilder
     private func revisionCompareView(_ state: CharacterState, _ rev: BatchRevision) -> some View {
-        VStack(spacing: 16) {
-            TabView {
-                compareSlide(rev.after, label: String(localized: "다듬은 모습")).tag(0)
-                compareSlide(rev.before, label: String(localized: "이전")).tag(1)
-            }
-            .tabViewStyle(.page)
-            .frame(height: 360)
+        ScrollView {
+            VStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.regularMaterial)
+                    Image(uiImage: rev.current).resizable().scaledToFit().padding(12)
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxHeight: 320)
+                .padding(.horizontal)
 
-            HStack {
-                Button("적용") { acceptRevision(state) }
-                    .font(.callout.weight(.semibold))
-                    .tint(Color.withuCTAGreen)
-                Spacer()
-                Button("취소") { rejectRevision(state) }
-                    .font(.callout)
-                    .tint(.secondary)
+                revisionStrip(state, rev)
+
+                // 이어서 다듬기 — 고른 버전 기준으로 한 번 더.
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
+                        .font(.footnote).lineLimit(2...4)
+                    Button {
+                        Task { await reviseOne(state, frame: rev.frame, text: revisionText) }
+                    } label: {
+                        if isRevising {
+                            HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
+                        } else {
+                            HStack {
+                                Text("이어서 다듬기").frame(maxWidth: .infinity)
+                                Text("캔디 \(GenerationQuota.cost(forQuality: quality))개 소모")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered).tint(Color.withuCTAGreen)
+                    .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(14).frostedCard().padding(.horizontal)
+
+                HStack {
+                    Button("적용") { acceptRevision(state) }
+                        .font(.callout.weight(.semibold)).tint(Color.withuCTAGreen)
+                    Spacer()
+                    Button("취소") { rejectRevision(state) }
+                        .font(.callout).tint(.secondary)
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
-            Spacer(minLength: 0)
+            .padding(.vertical)
         }
-        .padding(.vertical)
-        .navigationTitle("다듬기 결과")
+        .navigationTitle("다듬기 이력")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // 취소를 누른 게 아니면 닫아도 카드에 '수정 완료'로 남아 다시 열 수 있음.
             ToolbarItem(placement: .topBarTrailing) {
                 Button("닫기") { selectedResult = nil }
             }
         }
     }
 
-    private func compareSlide(_ image: UIImage, label: String) -> some View {
-        VStack(spacing: 8) {
-            Image(uiImage: image).resizable().scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal)
-            Text(label).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+    /// 원본/다듬음 N 버전 스트립 — 탭해서 고른 버전이 적용 대상.
+    private func revisionStrip(_ state: CharacterState, _ rev: BatchRevision) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(Array(rev.versions.enumerated()), id: \.offset) { idx, img in
+                    VStack(spacing: 4) {
+                        Image(uiImage: img).resizable().scaledToFit()
+                            .frame(width: 68, height: 68)
+                            .background(Color(.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(idx == rev.selected ? Color.withuCTAGreen : .clear, lineWidth: 2.5)
+                            }
+                        Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
+                            .font(.caption2.weight(idx == rev.selected ? .semibold : .regular))
+                            .foregroundStyle(idx == rev.selected ? Color.withuCTAGreen : .secondary)
+                    }
+                    .onTapGesture { selectRevisionVersion(state, idx) }
+                }
+            }
+            .padding(.horizontal)
         }
     }
 
@@ -1925,13 +1990,8 @@ struct BatchCharacterGenView: View {
                 if let ref0, let ref0Small = ref0.preparingThumbnail(of: CGSize(width: 128, height: 128)) {
                     small = ImageProcessing.colorMatched(small, reference: ref0Small)
                 }
-                // 즉시 덮어쓰지 않고 before/after 로 보관 — 상세 시트 비교 후 '적용'해야 반영.
-                let before = (frame == 1 ? resultsFrame1[state] : results[state]) ?? small
-                revisedDone[state] = BatchRevision(frame: frame, before: before,
-                                                   after: small, afterFull: flat, prompt: modifiedPrompt)
-                // 완전히 나갔다 와도 복원되게 App Group 에 저장.
-                PendingRevisionStore.save(state: state, frame: frame, after: small,
-                                          afterFull: flat, prompt: modifiedPrompt)
+                // 즉시 덮어쓰지 않고 버전 이력에 이어붙임 — 상세 시트에서 골라 '적용'해야 반영.
+                appendRevision(state: state, frame: frame, small: small, full: flat, prompt: modifiedPrompt)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
@@ -1948,29 +2008,62 @@ struct BatchCharacterGenView: View {
         }
     }
 
-    /// 비교 후 '수정된 걸로 적용' — 이때 처음으로 결과를 교체하고 갤러리에 저장.
+    /// 다듬기 결과를 버전 이력에 이어붙임 — 없으면 [원본, 새버전], 있으면 append. 저장까지.
+    @MainActor
+    private func appendRevision(state: CharacterState, frame: Int, small: UIImage, full: UIImage, prompt: String) {
+        if var chain = revisedDone[state], chain.frame == frame {
+            chain.versions.append(small)
+            chain.fullVersions.append(full)
+            if chain.versions.count > 8 { chain.versions.remove(at: 1); chain.fullVersions.remove(at: 1) }
+            chain.selected = chain.versions.count - 1
+            chain.prompt = prompt
+            revisedDone[state] = chain
+        } else {
+            let before = (frame == 1 ? resultsFrame1[state] : results[state]) ?? small
+            let beforeFull = frame == 1 ? before : (frame0FullRes[state] ?? results[state] ?? small)
+            revisedDone[state] = BatchRevision(frame: frame, versions: [before, small],
+                                               fullVersions: [beforeFull, full], selected: 1, prompt: prompt)
+        }
+        if let chain = revisedDone[state] {
+            PendingRevisionStore.save(state: state, chain: chain)
+        }
+    }
+
+    /// 스트립에서 버전 선택.
+    @MainActor
+    private func selectRevisionVersion(_ state: CharacterState, _ idx: Int) {
+        guard var chain = revisedDone[state], chain.versions.indices.contains(idx) else { return }
+        chain.selected = idx
+        revisedDone[state] = chain
+        PendingRevisionStore.save(state: state, chain: chain)
+    }
+
+    /// 이력에서 고른 버전으로 적용 — 이때 처음으로 결과를 교체하고 갤러리에 저장.
     @MainActor
     private func acceptRevision(_ state: CharacterState) {
         guard let rev = revisedDone[state] else { return }
-        if rev.frame == 1 {
-            resultsFrame1[state] = rev.after
-            transparentResultsFrame1[state] = nil
-        } else {
-            results[state] = rev.after
-            frame0FullRes[state] = rev.afterFull
-            if state == .idle { idleFullRes = rev.afterFull }
-            transparentResults[state] = nil
+        // 원본([0])을 고른 채 적용하면 바꿀 게 없음.
+        if rev.selected != 0 {
+            if rev.frame == 1 {
+                resultsFrame1[state] = rev.current
+                transparentResultsFrame1[state] = nil
+            } else {
+                results[state] = rev.current
+                frame0FullRes[state] = rev.currentFull
+                if state == .idle { idleFullRes = rev.currentFull }
+                transparentResults[state] = nil
+            }
+            displayTransparentByState[state] = false
+            CharacterImageStore.save(rev.current, for: state, frame: rev.frame, applyToActiveSlot: false,
+                                     batchId: batchSessionId, prompt: rev.prompt)
+            appliedStates.remove(state)   // 새 결과 → '적용' 다시 눌러 홈/워치에 반영
         }
-        displayTransparentByState[state] = false
-        CharacterImageStore.save(rev.after, for: state, frame: rev.frame, applyToActiveSlot: false,
-                                 batchId: batchSessionId, prompt: rev.prompt)
-        appliedStates.remove(state)   // 새 결과 → '적용' 다시 눌러 홈/워치에 반영
         revisedDone.removeValue(forKey: state)
         PendingRevisionStore.remove(state: state)
         selectedResult = nil          // 그리드로 — 바뀐 게 보이게
     }
 
-    /// 비교 후 '수정 전 그대로' — 수정본 버리고 원래 결과 유지.
+    /// 이력 버리고 원래 결과 유지.
     @MainActor
     private func rejectRevision(_ state: CharacterState) {
         revisedDone.removeValue(forKey: state)
@@ -1978,13 +2071,12 @@ struct BatchCharacterGenView: View {
         selectedResult = nil
     }
 
-    /// 완전히 나갔다 온 뒤 저장된 수정본 복원 — 카드 '수정 완료'/기준 모습 비교가 다시 뜨게.
+    /// 완전히 나갔다 온 뒤 저장된 다듬기 이력 복원 — 카드 '다듬음'/기준 모습 이력이 다시 뜨게.
     @MainActor
     private func restorePendingRevisions() {
         for r in PendingRevisionStore.loadAll() where revisedDone[r.state] == nil {
-            let before = (r.frame == 1 ? resultsFrame1[r.state] : results[r.state]) ?? r.after
-            revisedDone[r.state] = BatchRevision(frame: r.frame, before: before,
-                                                 after: r.after, afterFull: r.afterFull, prompt: r.prompt)
+            revisedDone[r.state] = BatchRevision(frame: r.frame, versions: r.versions,
+                                                 fullVersions: r.fullVersions, selected: r.selected, prompt: r.prompt)
         }
     }
 
@@ -2079,10 +2171,10 @@ struct BatchCharacterGenView: View {
     NavigationStack { BatchCharacterGenView() }
 }
 
-/// '바꾸기'/'수정해서 생성하기' 결과를 적용/취소 전에 App Group 에 보관 —
-/// 배치 화면을 완전히 나갔다 들어와도 결정 안 한 수정본을 복원한다. (캔디 쓴 결과 유실 방지)
+/// 다듬기 이력(버전 체인)을 적용/취소 전에 App Group 에 보관 —
+/// 배치 화면을 완전히 나갔다 들어와도 결정 안 한 이력을 복원한다. (캔디 쓴 결과 유실 방지)
 fileprivate enum PendingRevisionStore {
-    private struct Meta: Codable { let frame: Int; let prompt: String }
+    private struct Meta: Codable { let frame: Int; let selected: Int; let count: Int; let prompt: String }
 
     private static var folder: URL? {
         guard let c = FileManager.default
@@ -2092,24 +2184,31 @@ fileprivate enum PendingRevisionStore {
         return f
     }
 
-    static func save(state: CharacterState, frame: Int, after: UIImage, afterFull: UIImage, prompt: String) {
+    static func save(state: CharacterState, chain: BatchCharacterGenView.BatchRevision) {
         guard let folder else { return }
         let key = state.rawValue
-        try? after.pngData()?.write(to: folder.appendingPathComponent("\(key).after.png"),
-                                    options: [.atomic, .noFileProtection])
-        try? afterFull.pngData()?.write(to: folder.appendingPathComponent("\(key).full.png"),
-                                        options: [.atomic, .noFileProtection])
-        if let data = try? JSONEncoder().encode(Meta(frame: frame, prompt: prompt)) {
-            try? data.write(to: folder.appendingPathComponent("\(key).json"),
-                            options: [.atomic, .noFileProtection])
+        remove(state: state)
+        for (i, img) in chain.versions.enumerated() {
+            try? img.pngData()?.write(to: folder.appendingPathComponent("\(key).v\(i).png"),
+                                      options: [.atomic, .noFileProtection])
+        }
+        for (i, img) in chain.fullVersions.enumerated() {
+            try? img.pngData()?.write(to: folder.appendingPathComponent("\(key).f\(i).png"),
+                                      options: [.atomic, .noFileProtection])
+        }
+        let meta = Meta(frame: chain.frame, selected: chain.selected, count: chain.versions.count, prompt: chain.prompt)
+        if let data = try? JSONEncoder().encode(meta) {
+            try? data.write(to: folder.appendingPathComponent("\(key).json"), options: [.atomic, .noFileProtection])
         }
     }
 
     static func remove(state: CharacterState) {
-        guard let folder else { return }
-        let key = state.rawValue
-        for suffix in [".after.png", ".full.png", ".json"] {
-            try? FileManager.default.removeItem(at: folder.appendingPathComponent("\(key)\(suffix)"))
+        guard let folder,
+              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+        else { return }
+        let prefix = state.rawValue + "."
+        for url in files where url.lastPathComponent.hasPrefix(prefix) {
+            try? FileManager.default.removeItem(at: url)
         }
     }
 
@@ -2118,21 +2217,28 @@ fileprivate enum PendingRevisionStore {
         try? FileManager.default.removeItem(at: folder)
     }
 
-    /// 저장된 수정본 복원 — (state, frame, after 썸네일, afterFull 원본, prompt).
-    static func loadAll() -> [(state: CharacterState, frame: Int, after: UIImage, afterFull: UIImage, prompt: String)] {
+    /// 저장된 이력 복원 — (state, frame, versions, fullVersions, selected, prompt).
+    static func loadAll() -> [(state: CharacterState, frame: Int, versions: [UIImage], fullVersions: [UIImage], selected: Int, prompt: String)] {
         guard let folder,
               let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
         else { return [] }
-        var out: [(CharacterState, Int, UIImage, UIImage, String)] = []
+        var out: [(CharacterState, Int, [UIImage], [UIImage], Int, String)] = []
         for url in files where url.pathExtension == "json" {
             let key = url.deletingPathExtension().lastPathComponent
             guard let state = CharacterState(rawValue: key),
                   let data = try? Data(contentsOf: url),
-                  let meta = try? JSONDecoder().decode(Meta.self, from: data),
-                  let after = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).after.png").path),
-                  let full = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).full.png").path)
-            else { continue }
-            out.append((state, meta.frame, after, full, meta.prompt))
+                  let meta = try? JSONDecoder().decode(Meta.self, from: data), meta.count > 1 else { continue }
+            var versions: [UIImage] = [], fulls: [UIImage] = []
+            var ok = true
+            for i in 0..<meta.count {
+                guard let v = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).v\(i).png").path),
+                      let f = UIImage(contentsOfFile: folder.appendingPathComponent("\(key).f\(i).png").path)
+                else { ok = false; break }
+                versions.append(v); fulls.append(f)
+            }
+            guard ok else { continue }
+            out.append((state, meta.frame, versions, fulls,
+                        Swift.min(Swift.max(0, meta.selected), versions.count - 1), meta.prompt))
         }
         return out
     }
