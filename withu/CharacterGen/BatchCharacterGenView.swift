@@ -360,6 +360,7 @@ struct BatchCharacterGenView: View {
         } footer: {
             Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var identitySection: some View {
@@ -388,6 +389,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("캐릭터 프롬프트")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// "항목별 입력" 한 줄 — 라벨 + 입력칸. (하나씩 만들기와 동일)
@@ -436,6 +438,7 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택된 상태 중 2프레임 움직임이 가능한 것들 — 움직임 섹션 노출 여부·캔디 소모 위치 판단.
@@ -622,6 +625,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("참고 사진 (선택)")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var optionsSection: some View {
@@ -635,6 +639,7 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("스타일")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
@@ -686,6 +691,7 @@ struct BatchCharacterGenView: View {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
                     .foregroundStyle(.secondary)
             }
+            .listRowBackground(Color.withuCardFill)
             .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
                 Button("확인", role: .cancel) {}
             } message: {
@@ -936,6 +942,7 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var resultsSection: some View {

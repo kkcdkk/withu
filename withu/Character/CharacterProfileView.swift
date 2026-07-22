@@ -82,6 +82,7 @@ struct CharacterProfileView: View {
                     Text(sleepFooterText)
                         .font(.caption2)
                 }
+                .listRowBackground(Color.withuCardFill)
 
                 Section {
                     DatePicker("점심 시간", selection: lunchBinding,
@@ -94,6 +95,7 @@ struct CharacterProfileView: View {
                     Text("정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.")
                         .font(.caption2)
                 }
+                .listRowBackground(Color.withuCardFill)
 
                 Section {
                     DatePicker("밤이 시작되는 시각", selection: nightStartBinding,
@@ -106,6 +108,7 @@ struct CharacterProfileView: View {
                     Text("날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.")
                         .font(.caption2)
                 }
+                .listRowBackground(Color.withuCardFill)
 
                 statesOverviewSection
 
@@ -117,6 +120,7 @@ struct CharacterProfileView: View {
                     Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
                         .font(.caption2)
                 }
+                .listRowBackground(Color.withuCardFill)
 
                 Section {
                     DisclosureGroup("캐릭터 외형 한 줄 (고급)") {
@@ -128,6 +132,7 @@ struct CharacterProfileView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .listRowBackground(Color.withuCardFill)
             }
             .scrollContentBackground(.hidden)
         }
@@ -250,6 +255,7 @@ struct CharacterProfileView: View {
             Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
                 .font(.caption2)
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     // MARK: - Sleep source indicator + toggle

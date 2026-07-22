@@ -268,6 +268,7 @@ struct CharacterGenView: View {
         } header: {
             Text("생성 방식")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var modeSection: some View {
@@ -296,6 +297,7 @@ struct CharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var stateSection: some View {
@@ -315,6 +317,7 @@ struct CharacterGenView: View {
         } header: {
             Text("상태 선택")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     // MARK: - AI generate sections
@@ -346,6 +349,7 @@ struct CharacterGenView: View {
                 Text("캐릭터 프롬프트")
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// 보유 캔디(충전 크레딧) 배지 — 탭하면 충전(Paywall). 서버 잔액 우선, 없으면 로컬.
@@ -453,6 +457,7 @@ struct CharacterGenView: View {
                 }
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     @ViewBuilder
@@ -539,6 +544,7 @@ struct CharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     private var optionsSection: some View {
@@ -551,6 +557,7 @@ struct CharacterGenView: View {
             .disabled(isGenerating)
             styleExampleImage
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
@@ -682,6 +689,7 @@ struct CharacterGenView: View {
                     }
                 }
             }
+            .listRowBackground(Color.withuCardFill)
         }
         if let err = lastError {
             Section {
@@ -743,6 +751,7 @@ struct CharacterGenView: View {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
                     .foregroundStyle(.secondary)
             }
+            .listRowBackground(Color.withuCardFill)
             versionHistorySection
         }
     }
@@ -781,6 +790,7 @@ struct CharacterGenView: View {
                 Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
                     .foregroundStyle(.secondary)
             }
+            .listRowBackground(Color.withuCardFill)
         }
     }
 
@@ -848,6 +858,7 @@ struct CharacterGenView: View {
         } header: {
             Text("사진 고르기")
         }
+        .listRowBackground(Color.withuCardFill)
     }
 
     /// 미리보기/적용에 쓸 이미지 — 토글에 따라 배경 제거본 또는 원본.
@@ -928,6 +939,7 @@ struct CharacterGenView: View {
                 }
                 .tint(.secondary)
             }
+            .listRowBackground(Color.withuCardFill)
         }
         if let err = lastError {
             Section {
@@ -1423,6 +1435,7 @@ struct WeatherBackgroundGenView: View {
             } header: {
                 Text("날씨")
             }
+            .listRowBackground(Color.withuCardFill)
 
             Section("스타일") {
                 Picker("그림 스타일", selection: $artStyle) {
@@ -1431,6 +1444,7 @@ struct WeatherBackgroundGenView: View {
                 }
                 .pickerStyle(.segmented).disabled(isGenerating)
             }
+            .listRowBackground(Color.withuCardFill)
 
             Section {
                 TextEditor(text: $prompt)
@@ -1452,6 +1466,7 @@ struct WeatherBackgroundGenView: View {
                 Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
                     .font(.caption2)
             }
+            .listRowBackground(Color.withuCardFill)
 
             if let img = resultImage {
                 Section {
@@ -1483,6 +1498,7 @@ struct WeatherBackgroundGenView: View {
                 } header: {
                     Text("결과")
                 }
+                .listRowBackground(Color.withuCardFill)
             }
 
             if let err = lastError {

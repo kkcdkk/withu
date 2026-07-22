@@ -324,10 +324,6 @@ struct ContentView: View {
     private var characterHero: some View {
         VStack(spacing: 14) {
             ZStack {
-                // 캐릭터 tint 원
-                Circle()
-                    .fill(characterState.tint.opacity(0.22))
-                    .frame(width: 240, height: 240)
                 // 캐릭터 (투명 PNG)
                 CharacterImageView(state: characterState, animated: true)
                     .frame(width: 200, height: 200)
