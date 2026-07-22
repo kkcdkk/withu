@@ -3631,6 +3631,16 @@
         }
       }
     },
+    "사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding a photo uses candy. Your free creation is for prompt-only."
+          }
+        }
+      }
+    },
     "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요." : {
       "localizations" : {
         "en" : {

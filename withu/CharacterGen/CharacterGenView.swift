@@ -120,6 +120,9 @@ struct CharacterGenView: View {
     private var hasFreeCreation: Bool {
         (AuthManager.shared.entitlement?.freeSingleRemaining ?? 0) > 0
     }
+    /// 이번 '만들기'가 실제로 무료인지 — 무료가 남아 있고 '사진 없이 프롬프트로만' 만들 때만.
+    /// 사진을 넣으면 무료를 안 쓰고 캔디로 — 공짜 사진→캐릭터 남용 방지.
+    private var creationIsFree: Bool { hasFreeCreation && referenceImage == nil }
     /// 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed).
     @State private var lastFreeConsumed: Bool = false
     /// 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용.
@@ -358,8 +361,17 @@ struct CharacterGenView: View {
 
     // MARK: 캔디 안내 팝업 텍스트
 
+    /// 이번 확인 팝업의 동작이 무료인지 — 만들기는 사진 없을 때만, 다듬기는 무료 남았으면.
+    private var pendingActionIsFree: Bool {
+        switch pendingAction {
+        case .newGeneration: return creationIsFree
+        case .refine: return hasFreeCreation
+        case .importMotion, nil: return false
+        }
+    }
+
     private var pendingActionTitle: String {
-        hasFreeCreation
+        pendingActionIsFree
             ? String(localized: "첫 만들기는 무료예요")
             : String(localized: "캔디를 사용해요")
     }
@@ -373,7 +385,7 @@ struct CharacterGenView: View {
         let unit = GenerationQuota.cost(forQuality: quality)
         let isNew: Bool = { if case .newGeneration = pendingAction { return true }; return false }()
         let cost = (isNew && generateAnimated && targetState.usesGeneratedMotion) ? unit * 2 : unit
-        if hasFreeCreation {
+        if pendingActionIsFree {
             return String(localized: "이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (한 장 1개).")
         }
         let isRefine: Bool = { if case .refine = pendingAction { return true }; return false }()
@@ -397,7 +409,7 @@ struct CharacterGenView: View {
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
-            } else if remainingGenerations < cost && !hasFreeCreation {
+            } else if remainingGenerations < cost && !creationIsFree {
                 Button {
                     showPaywall = true
                 } label: {
@@ -428,9 +440,12 @@ struct CharacterGenView: View {
                     Text("보통 20~30초 정도 걸려요.")
                         .foregroundStyle(.secondary)
                 }
-                if hasFreeCreation {
+                if creationIsFree {
                     Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
                         .foregroundStyle(Color.withuPinkText)
+                } else if referenceImage != nil && hasFreeCreation {
+                    Text("사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요.")
+                        .foregroundStyle(.secondary)
                 } else if remainingGenerations < cost {
                     Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
                         .foregroundStyle(.orange)
@@ -977,7 +992,8 @@ struct CharacterGenView: View {
     }
 
     private func generate() async {
-        let freeAvailable = hasFreeCreation   // 계정 무료 1회 (서버 판정은 응답에서)
+        // 무료 1회는 '사진 없이 프롬프트로만' 만들 때만 — 사진을 넣으면 캔디로(공짜 사진→캐릭터 남용 방지).
+        let freeAvailable = creationIsFree
         guard freeAvailable || GenerationQuota.canGenerate(GenerationQuota.cost(forQuality: quality)) else {
             lastError = String(localized: "캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
             return
@@ -1016,8 +1032,10 @@ struct CharacterGenView: View {
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         let raw = rawUserInput
+        // 사진 첨부 생성은 kind=photo → 서버가 무료 1회를 소진하지 않음(캔디로 차감).
         await send(prompt: composedPrompt, reference: referenceB64, frame: 0,
-                   userInput: raw.text, inputField: raw.field)
+                   userInput: raw.text, inputField: raw.field,
+                   kind: referenceImage != nil ? "photo" : nil)
         let frame0Succeeded = resultImage !== prevResult
         // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
         let freeSession = lastFreeConsumed
@@ -1116,7 +1134,7 @@ struct CharacterGenView: View {
     }
 
     private func send(prompt: String, reference: String?, frame: Int = 0, matchReference: UIImage? = nil,
-                      userInput: String? = nil, inputField: String? = nil) async {
+                      userInput: String? = nil, inputField: String? = nil, kind: String? = nil) async {
         // AI 에 흰 배경 강제 — 결과를 사용자가 post-gen 에 Vision 으로 정제할 수 있음.
         // 격자(체커보드) 방지: 일부 모델이 "투명"을 격자 무늬로 그려버림 → 단색 흰배경 명시.
         let finalPrompt = "\(prompt). Only the character on a transparent background — no background fill, no shadows, no extra elements."
@@ -1130,6 +1148,7 @@ struct CharacterGenView: View {
                 quality: quality,
                 artStyle: artStyle,
                 style: "auto",
+                kind: kind,
                 model: "gpt-image-2",
                 userInput: userInput?.trimmingCharacters(in: .whitespacesAndNewlines),
                 inputField: inputField
