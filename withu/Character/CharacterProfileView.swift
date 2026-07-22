@@ -44,6 +44,7 @@ struct CharacterProfileView: View {
                         .listRowBackground(Color.clear)
                 }
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     sleepStatusRow
                     Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
                     // 자동 감지인데 수면 Focus 필터를 아직 연결 안 했으면 안내 —
@@ -76,53 +77,77 @@ struct CharacterProfileView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text("수면 시간")
                 } footer: {
                     Text(sleepFooterText)
                         .font(.caption2)
                 }
-                .listRowBackground(Color.withuCardFill)
 
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     DatePicker("점심 시간", selection: lunchBinding,
                                displayedComponents: .hourAndMinute)
                     DatePicker("저녁 시간", selection: dinnerBinding,
                                displayedComponents: .hourAndMinute)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text("식사 시간")
                 } footer: {
                     Text("정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.")
                         .font(.caption2)
                 }
-                .listRowBackground(Color.withuCardFill)
 
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     DatePicker("밤이 시작되는 시각", selection: nightStartBinding,
                                displayedComponents: .hourAndMinute)
                     DatePicker("밤이 끝나는 시각", selection: nightEndBinding,
                                displayedComponents: .hourAndMinute)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text("밤하늘 시간")
                 } footer: {
                     Text("날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.")
                         .font(.caption2)
                 }
-                .listRowBackground(Color.withuCardFill)
 
                 statesOverviewSection
 
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     Toggle("캐릭터 움직이게 하기", isOn: $animationEnabled)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text("움직임")
                 } footer: {
                     Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
                         .font(.caption2)
                 }
-                .listRowBackground(Color.withuCardFill)
 
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     DisclosureGroup("캐릭터 외형 한 줄 (고급)") {
                         TextField("예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터",
                                   text: $profile.aiPrompt, axis: .vertical)
@@ -131,8 +156,13 @@ struct CharacterProfileView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
-                .listRowBackground(Color.withuCardFill)
             }
             .scrollContentBackground(.hidden)
         }
@@ -229,6 +259,7 @@ struct CharacterProfileView: View {
     /// 상태마다 적용된 캐릭터 미리보기. 탭하면 그 상태의 갤러리 폴더로.
     private var statesOverviewSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             ForEach(CharacterState.userFacing, id: \.self) { state in
                 NavigationLink {
                     StateFolderView(state: state)
@@ -249,13 +280,18 @@ struct CharacterProfileView: View {
                     .padding(.vertical, 2)
                 }
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("상태별 캐릭터")
         } footer: {
             Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
                 .font(.caption2)
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     // MARK: - Sleep source indicator + toggle

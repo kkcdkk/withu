@@ -243,6 +243,7 @@ struct CharacterGenView: View {
     /// '여러 상태 한 번에' → 배치 화면, '하나씩' → 단건 생성 폼 화면.
     private var scopeSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             NavigationLink {
                 BatchCharacterGenView()
             } label: {
@@ -265,14 +266,20 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("생성 방식")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var modeSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             ForEach(GenerationMode.allCases, id: \.self) { m in
                 Button {
                     mode = m
@@ -289,6 +296,12 @@ struct CharacterGenView: View {
                 }
                 .disabled(isGenerating || isProcessing)
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("생성 옵션")
         } footer: {
@@ -297,11 +310,11 @@ struct CharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var stateSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             Picker("상태", selection: $targetState) {
                 ForEach(CharacterState.userFacing, id: \.self) { s in
                     Text(s.koreanShortLabel).tag(s)
@@ -314,16 +327,22 @@ struct CharacterGenView: View {
                 Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
                     .disabled(isGenerating || isProcessing)
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("상태 선택")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     // MARK: - AI generate sections
 
     private var promptSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $prompt)
                 .frame(minHeight: 80)
                 .font(.callout)
@@ -344,12 +363,17 @@ struct CharacterGenView: View {
             }
             .font(.callout)
             .disabled(isGenerating)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             VStack(alignment: .leading, spacing: 3) {
                 Text("캐릭터 프롬프트")
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// 보유 캔디(충전 크레딧) 배지 — 탭하면 충전(Paywall). 서버 잔액 우선, 없으면 로컬.
@@ -457,7 +481,6 @@ struct CharacterGenView: View {
                 }
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     @ViewBuilder
@@ -477,6 +500,7 @@ struct CharacterGenView: View {
 
     private var referenceSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 if let ref = referenceImage {
                     Image(uiImage: ref)
@@ -536,6 +560,12 @@ struct CharacterGenView: View {
                         .disabled(isGenerating)
                 }
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
         } footer: {
@@ -544,11 +574,11 @@ struct CharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var optionsSection: some View {
         Section("스타일") {
+            VStack(alignment: .leading, spacing: 12) {
             Picker("그림 스타일", selection: $artStyle) {
                 Text("Soft").tag("casual")
                 Text("Pixel").tag("pixel")
@@ -556,8 +586,13 @@ struct CharacterGenView: View {
             .pickerStyle(.segmented)
             .disabled(isGenerating)
             styleExampleImage
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
@@ -585,6 +620,7 @@ struct CharacterGenView: View {
     private var resultSection: some View {
         if resultImage != nil {
             Section("결과") {
+                VStack(alignment: .leading, spacing: 12) {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
                     VStack(alignment: .leading, spacing: 2) {
@@ -688,8 +724,13 @@ struct CharacterGenView: View {
                             .font(.caption2).foregroundStyle(.tertiary)
                     }
                 }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
-            .listRowBackground(Color.withuCardFill)
         }
         if let err = lastError {
             Section {
@@ -732,6 +773,7 @@ struct CharacterGenView: View {
     private var refinementSection: some View {
         if resultImage != nil {
             Section {
+                VStack(alignment: .leading, spacing: 12) {
                 TextEditor(text: $refinementPrompt)
                     .frame(minHeight: 80)
                     .font(.callout)
@@ -745,13 +787,18 @@ struct CharacterGenView: View {
                     }
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             } header: {
                 Text(resultFrame2 != nil && singleDetailFrame == 1 ? String(localized: "이어서 다듬기 (움직임 프레임)") : String(localized: "이어서 다듬기"))
             } footer: {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
                     .foregroundStyle(.secondary)
             }
-            .listRowBackground(Color.withuCardFill)
             versionHistorySection
         }
     }
@@ -761,6 +808,7 @@ struct CharacterGenView: View {
     private var versionHistorySection: some View {
         if versions.count > 1 {
             Section {
+                VStack(alignment: .leading, spacing: 12) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(Array(versions.enumerated()), id: \.element.id) { idx, v in
@@ -784,13 +832,18 @@ struct CharacterGenView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             } header: {
                 Text("다듬기 이력")
             } footer: {
                 Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
                     .foregroundStyle(.secondary)
             }
-            .listRowBackground(Color.withuCardFill)
         }
     }
 
@@ -846,6 +899,7 @@ struct CharacterGenView: View {
 
     private var importSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             PhotosPicker(importedRawImage == nil ? String(localized: "사진 고르기") : String(localized: "다른 사진으로 바꾸기"),
                          selection: $importPickerItem,
                          matching: .images)
@@ -855,10 +909,15 @@ struct CharacterGenView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("사진 고르기")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// 미리보기/적용에 쓸 이미지 — 토글에 따라 배경 제거본 또는 원본.
@@ -873,6 +932,7 @@ struct CharacterGenView: View {
         if let raw = importedRawImage {
             let display = displayedImport ?? raw
             Section("미리보기") {
+                VStack(alignment: .leading, spacing: 12) {
                 Toggle("배경 빼기", isOn: $removeBackground)
                     .disabled(isProcessing)
 
@@ -938,8 +998,13 @@ struct CharacterGenView: View {
                     Task { await saveToPhotos(display) }
                 }
                 .tint(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
-            .listRowBackground(Color.withuCardFill)
         }
         if let err = lastError {
             Section {
@@ -1418,6 +1483,7 @@ struct WeatherBackgroundGenView: View {
             backgroundGradient(for: .idle).ignoresSafeArea()
             Form {
             Section {
+                VStack(alignment: .leading, spacing: 12) {
                 Picker("날씨", selection: $condition) {
                     ForEach(WeatherBackgroundCondition.allCases, id: \.self) { c in
                         Text(c.displayName).tag(c)
@@ -1432,21 +1498,33 @@ struct WeatherBackgroundGenView: View {
                         .foregroundStyle(.secondary)
                         .font(.footnote)
                 }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             } header: {
                 Text("날씨")
             }
-            .listRowBackground(Color.withuCardFill)
 
             Section("스타일") {
+                VStack(alignment: .leading, spacing: 12) {
                 Picker("그림 스타일", selection: $artStyle) {
                     Text("soft").tag("casual")
                     Text("pixel").tag("pixel")
                 }
                 .pickerStyle(.segmented).disabled(isGenerating)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
-            .listRowBackground(Color.withuCardFill)
 
             Section {
+                VStack(alignment: .leading, spacing: 12) {
                 TextEditor(text: $prompt)
                     .frame(minHeight: 100)
                     .font(.callout)
@@ -1460,16 +1538,22 @@ struct WeatherBackgroundGenView: View {
                     }
                 }
                 .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             } header: {
                 Text("배경")
             } footer: {
                 Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
                     .font(.caption2)
             }
-            .listRowBackground(Color.withuCardFill)
 
             if let img = resultImage {
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
                     // 단독 — 생성된 배경 자체
                     Image(uiImage: img).resizable().scaledToFit()
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -1495,10 +1579,15 @@ struct WeatherBackgroundGenView: View {
                         Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "square.and.arrow.down")
                     }
                     .buttonStyle(WithuCTAButtonStyle())
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .pixelCardSurface()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text("결과")
                 }
-                .listRowBackground(Color.withuCardFill)
             }
 
             if let err = lastError {

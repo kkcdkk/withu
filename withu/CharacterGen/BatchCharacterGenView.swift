@@ -347,6 +347,7 @@ struct BatchCharacterGenView: View {
 
     private var nameSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             TextField("이 캐릭터의 이름 (선택)", text: $characterName)
                 .font(.callout)
                 .disabled(isGenerating)
@@ -355,16 +356,22 @@ struct BatchCharacterGenView: View {
                     // 생성 후 이름을 바꿔도 이미 저장된 캐릭터에 반영 (같은 batchSessionId).
                     CharacterImageStore.setCharacterName(new, for: batchSessionId)
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 이름")
         } footer: {
             Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var identitySection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $baseIdentity)
                 .frame(minHeight: 80)
                 .font(.callout)
@@ -386,10 +393,15 @@ struct BatchCharacterGenView: View {
             }
             .font(.callout)
             .disabled(isGenerating)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 프롬프트")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// "항목별 입력" 한 줄 — 라벨 + 입력칸. (하나씩 만들기와 동일)
@@ -416,6 +428,7 @@ struct BatchCharacterGenView: View {
 
     private var stateListSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             ForEach(CharacterState.userFacing, id: \.self) { state in
                 stateRow(state)
             }
@@ -429,6 +442,12 @@ struct BatchCharacterGenView: View {
                     .buttonStyle(.borderless)
             }
             .disabled(isGenerating)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
         } footer: {
@@ -438,7 +457,6 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택된 상태 중 2프레임 움직임이 가능한 것들 — 움직임 섹션 노출 여부·캔디 소모 위치 판단.
@@ -567,6 +585,7 @@ struct BatchCharacterGenView: View {
 
     private var referenceSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 if let ref = referenceImage {
                     Image(uiImage: ref).resizable().scaledToFill()
@@ -622,24 +641,35 @@ struct BatchCharacterGenView: View {
                         .disabled(isGenerating)
                 }
             }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var optionsSection: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             Picker("그림 스타일", selection: $artStyle) {
                 Text("Soft").tag("casual")
                 Text("Pixel").tag("pixel")
             }
             .pickerStyle(.segmented).disabled(isGenerating)
             styleExampleImage
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         } header: {
             Text("스타일")
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     /// 선택한 스타일 예시 — Soft 는 기본 idle 일러스트, Pixel 은 픽셀 샘플.
@@ -668,6 +698,7 @@ struct BatchCharacterGenView: View {
         let animatable = animatableSelected
         if !animatable.isEmpty {
             Section {
+                VStack(alignment: .leading, spacing: 12) {
                 animatedStateChips
                 Toggle("모두 움직이는 캐릭터로", isOn: Binding(
                     get: { Set(animatable).isSubset(of: animatedStates) },
@@ -677,6 +708,12 @@ struct BatchCharacterGenView: View {
                     }
                 ))
                 .disabled(isGenerating)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .pixelCardSurface()
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             } header: {
                 HStack(spacing: 6) {
                     Text("움직이는 캐릭터")
@@ -691,7 +728,6 @@ struct BatchCharacterGenView: View {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
                     .foregroundStyle(.secondary)
             }
-            .listRowBackground(Color.withuCardFill)
             .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
                 Button("확인", role: .cancel) {}
             } message: {
@@ -867,6 +903,7 @@ struct BatchCharacterGenView: View {
     /// 기준 모습 다듬기 결과 — 한 행으로 묶어(구분선 없이) 원본/다듬음 N 스트립 + 이어서 다듬기 + 적용/취소.
     private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 14) {
                 Image(uiImage: rev.current).resizable().scaledToFit()
                     .frame(maxHeight: 280).frame(maxWidth: .infinity)
@@ -887,6 +924,12 @@ struct BatchCharacterGenView: View {
             }
             .padding(.vertical, 4)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .pixelCardSurface()
+            .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
             Text("다듬기 이력")
@@ -942,7 +985,6 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .listRowBackground(Color.withuCardFill)
     }
 
     private var resultsSection: some View {
