@@ -769,6 +769,9 @@ struct BatchCharacterGenView: View {
                     .frame(maxHeight: 280)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+                // 설명을 버튼 위로 — 무슨 모습인지 먼저 읽고 진행하게.
+                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Button {
                     pendingAction = .approveRest        // 캔디 안내 팝업 → 확인 시 실행
                 } label: {
@@ -818,9 +821,6 @@ struct BatchCharacterGenView: View {
                 .disabled(isGenerating)
             } header: {
                 Text("기준 모습 확인")
-            } footer: {
-                Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -828,12 +828,15 @@ struct BatchCharacterGenView: View {
     /// 기준 모습 다듬기 결과 — 다른 다듬기와 동일한 원본/다듬음 N 이력 스트립 + 적용/취소.
     private func idleRevisionCompareSection(_ rev: BatchRevision) -> some View {
         Section {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.regularMaterial)
-                Image(uiImage: rev.current).resizable().scaledToFit().padding(12)
+            // 미리보기 — 가운데 정렬 + 아래 여백.
+            HStack {
+                Spacer()
+                Image(uiImage: rev.current).resizable().scaledToFit()
+                    .frame(maxHeight: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                Spacer()
             }
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxHeight: 300)
+            .padding(.bottom, 12)
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
 
@@ -841,7 +844,10 @@ struct BatchCharacterGenView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
 
-            // 이어서 다듬기 (기준 모습) — 무료 1회 로직 유지.
+            // 이어서 다듬기 (기준 모습) — 입력 위, 버튼 아래. 무료 1회 로직 유지.
+            TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
+                      text: $idleRevisionText, axis: .vertical)
+                .font(.callout).disabled(isGenerating)
             Button {
                 pendingAction = .reviseIdle
             } label: {
@@ -859,9 +865,6 @@ struct BatchCharacterGenView: View {
             }
             .buttonStyle(.borderless)
             .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            TextField("수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)",
-                      text: $idleRevisionText, axis: .vertical)
-                .font(.callout).disabled(isGenerating)
 
             HStack {
                 Button("적용") { acceptRevision(.idle) }
@@ -1937,8 +1940,15 @@ struct BatchCharacterGenView: View {
         isRevising = true
         defer { isRevising = false }
 
-        // frame1 은 frame0 을 앵커로 두면 캐릭터/크기 일관성이 유지됨
-        let anchor: UIImage? = frame == 1 ? (results[state] ?? resultsFrame1[state]) : results[state]
+        // 다듬기 참고는 1024 원본으로 — 128 썸네일을 반복 참고하면 화질이 계속 떨어진다.
+        // 이력이 있으면 고른 버전의 1024, 없으면 이 상태의 frame0 원본.
+        let anchor: UIImage?
+        if let chain = revisedDone[state], chain.frame == frame {
+            anchor = frame == 1 ? chain.current : chain.currentFull
+        } else {
+            anchor = frame == 1 ? (results[state] ?? resultsFrame1[state])
+                                : (frame0FullRes[state] ?? genManager.loadFrame0FullRes(state) ?? results[state])
+        }
         let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
             ?? anchor?.pngData()?.base64EncodedString()
         let pose = stateHints[state] ?? state.generationHint
@@ -2077,6 +2087,10 @@ struct BatchCharacterGenView: View {
         for r in PendingRevisionStore.loadAll() where revisedDone[r.state] == nil {
             revisedDone[r.state] = BatchRevision(frame: r.frame, versions: r.versions,
                                                  fullVersions: r.fullVersions, selected: r.selected, prompt: r.prompt)
+        }
+        // 기준 모습을 이미 다듬었으면 무료 1회는 쓴 것 — 재진입해도 '무료'로 잘못 뜨지 않게 복원.
+        if let idle = revisedDone[.idle] {
+            idleRevisionsUsed = max(idleRevisionsUsed, idle.versions.count - 1)
         }
     }
 
