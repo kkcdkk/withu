@@ -12,6 +12,16 @@
 
 import SwiftUI
 
+// MARK: - 브랜드 폰트 (Galmuri 픽셀 폰트)
+
+extension Font {
+    /// Galmuri11 픽셀 폰트 — 브랜딩/제목/캐릭터 이름 등 '일부'에만 사용.
+    /// 본문·설명은 시스템 폰트를 유지(작은 크기 가독성). Dynamic Type 대응(relativeTo).
+    static func galmuri(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
+        .custom("Galmuri11-Regular", size: size, relativeTo: textStyle)
+    }
+}
+
 // MARK: - 배경 그라데이션
 
 /// 모든 서브 화면 배경. 기조는 브랜드 그린(새싹 캐릭터 색) — 정체성 통일.
@@ -46,7 +56,7 @@ struct WithuCTAButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.callout.weight(.semibold))
+                .font(.galmuri(16, relativeTo: .callout))
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
@@ -185,7 +195,7 @@ struct SectionHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.galmuri(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             trailing

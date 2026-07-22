@@ -108,7 +108,7 @@ struct PaywallView: View {
                     if isRedeeming {
                         ProgressView()
                     } else {
-                        Text("적용").font(.callout.weight(.semibold))
+                        Text("적용")
                     }
                 }
                 .buttonStyle(WithuCTAButtonStyle())
@@ -185,7 +185,7 @@ struct PaywallView: View {
                     if isApplyingReferral {
                         ProgressView()
                     } else {
-                        Text("적용").font(.callout.weight(.semibold))
+                        Text("적용")
                     }
                 }
                 .buttonStyle(WithuCTAButtonStyle())

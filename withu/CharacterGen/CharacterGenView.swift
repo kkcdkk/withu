@@ -423,7 +423,6 @@ struct CharacterGenView: View {
                     pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
                 } label: {
                     Label("이 모습으로 만들기", systemImage: "wand.and.stars")
-                        .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WithuCTAButtonStyle())
@@ -659,7 +658,6 @@ struct CharacterGenView: View {
                         applyCurrentSelection()
                     } label: {
                         Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
-                            .font(.callout.weight(.semibold))
                     }
                     .buttonStyle(WithuCTAButtonStyle())
                     .disabled(isProcessingTransparent)
@@ -922,7 +920,6 @@ struct CharacterGenView: View {
                     apply(display, frame2: removeBackground ? importedFrame1 : nil, to: targetState)
                 } label: {
                     Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
-                        .font(.callout.weight(.semibold))
                 }
                 .buttonStyle(WithuCTAButtonStyle())
                 .disabled(removeBackground && isProcessing)
@@ -1481,7 +1478,6 @@ struct WeatherBackgroundGenView: View {
                         apply(img, for: condition)
                     } label: {
                         Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "square.and.arrow.down")
-                            .font(.callout.weight(.semibold))
                     }
                     .buttonStyle(WithuCTAButtonStyle())
                 } header: {

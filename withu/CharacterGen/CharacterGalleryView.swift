@@ -180,7 +180,7 @@ struct CharacterGalleryView: View {
                 .frostedCard(cornerRadius: 16)
 
                 Text(charName(group) ?? "이름 없는 캐릭터")
-                    .font(.callout.weight(.semibold))
+                    .font(.galmuri(15, relativeTo: .callout))
                     .foregroundStyle(charName(group) == nil ? .secondary : .primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
@@ -446,7 +446,6 @@ private struct CharacterApplyHeader: View {
             confirm = true
         } label: {
             Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
-                .font(.callout.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(WithuCTAButtonStyle())

@@ -900,7 +900,6 @@ struct BatchCharacterGenView: View {
                     }
                 } else {
                     Label("만들기 시작", systemImage: "wand.and.stars")
-                        .font(.callout.weight(.semibold))
                 }
             }
             .buttonStyle(WithuCTAButtonStyle())
@@ -967,7 +966,6 @@ struct BatchCharacterGenView: View {
                     applyAll()
                 } label: {
                     Label("모두 적용하기 (\(results.count)개)", systemImage: "square.and.arrow.down.on.square.fill")
-                        .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WithuCTAButtonStyle())

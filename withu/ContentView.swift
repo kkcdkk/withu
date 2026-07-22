@@ -341,7 +341,7 @@ struct ContentView: View {
                 }
             }
             Text(characterState.caption)
-                .font(.title3.weight(.semibold))
+                .font(.galmuri(20, relativeTo: .title3))
                 .multilineTextAlignment(.center)
                 .id(characterState)
                 .transition(.opacity)

@@ -188,7 +188,7 @@ struct CharacterProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Text(heroState.caption)
-                    .font(.subheadline)
+                    .font(.galmuri(15, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             }
             Spacer()

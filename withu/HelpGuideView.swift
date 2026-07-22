@@ -77,7 +77,6 @@ struct HelpGuideView: View {
                         onDone()
                     } label: {
                         Text("확인")
-                            .font(.callout.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)
                     }

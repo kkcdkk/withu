@@ -20,6 +20,10 @@
 	<array>
 		<string>com.seoyoung.withu.refresh</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Galmuri11.ttf</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
