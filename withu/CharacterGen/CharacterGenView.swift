@@ -304,6 +304,11 @@ struct CharacterGenView: View {
             }
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
+            // 움직임 지원 상태면 여기서 움직이는 이미지로 만들지 선택.
+            if targetState.usesGeneratedMotion {
+                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
+                    .disabled(isGenerating || isProcessing)
+            }
         } header: {
             Text("상태 선택")
         }
@@ -313,15 +318,12 @@ struct CharacterGenView: View {
 
     private var promptSection: some View {
         Section {
-            Text("내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 기본으로 시스템에 설정되어 있어요.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
             TextEditor(text: $prompt)
-                .frame(minHeight: 100)
+                .frame(minHeight: 80)
                 .font(.callout)
                 .overlay(alignment: .topLeading) {
                     if prompt.isEmpty {
-                        Text("예: 둥근 초록 새싹 캐릭터, 큰 눈, 작은 몸")
+                        Text("만들 캐릭터를 설명해 주세요")
                             .font(.callout)
                             .foregroundStyle(.tertiary)
                             .padding(.top, 8)
@@ -333,9 +335,6 @@ struct CharacterGenView: View {
                 helperField("대상", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
                 helperField("색감", text: $colorField, placeholder: "연두 파스텔톤")
-                Text("채우면 위 설명칸에 자동으로 합쳐져요.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
             .font(.callout)
             .disabled(isGenerating)
@@ -416,10 +415,7 @@ struct CharacterGenView: View {
                     Label("더 만들기 (충전)", systemImage: "sparkles")
                 }
             } else {
-                // 2프레임 생성이 의미 있는 상태만 토글 노출 — 미세 모션 상태는 자동(절차적) 애니메이션.
-                if targetState.usesGeneratedMotion {
-                    Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
-                }
+                // 움직임 토글은 '상태 선택'으로 옮김 (여러 상태 만들기와 형식 통일).
                 Button {
                     pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
                 } label: {
