@@ -46,6 +46,11 @@ struct CharacterProfileView: View {
                 Section {
                     sleepStatusRow
                     Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
+                    // 자동 감지인데 수면 Focus 필터를 아직 연결 안 했으면 안내 —
+                    // 필터가 한 번이라도 신호를 주면(lastPerformAt 설정) 카드는 사라진다.
+                    if !profile.isManualSleepOnly, focus.focusFilterLastPerformAt == nil {
+                        sleepFilterSetupCard
+                    }
                     // '수면 모드 기준'(자동 감지)에선 이 시간이 판정 기준이 아니라 회색+비활성.
                     DatePicker("잠드는 시간", selection: sleepStartBinding,
                                displayedComponents: .hourAndMinute)
@@ -128,6 +133,8 @@ struct CharacterProfileView: View {
         }
         .navigationTitle("내 캐릭터 설정")
         .navigationBarTitleDisplayMode(.inline)
+        // 필터 연결 여부(focusFilterLastPerformAt)를 최신값으로 — 안내 카드 노출 판정.
+        .onAppear { focus.refresh() }
         // 자동 저장 대신 명시적 '저장' — 편집은 초안(profile)에만, 반영은 save() 에서.
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -279,6 +286,34 @@ struct CharacterProfileView: View {
         } message: {
             Text("수면 모드가 켜지면 자고, 꺼지면 일어나요. 아이폰 건강 앱에서 수면 일정을 만들어두면 수면 모드가 매일 자동으로 켜지고 꺼져서, 캐릭터도 규칙적으로 자고 일어나요.")
         }
+    }
+
+    /// 수면 Focus 필터 연결 안내 — 자동 감지인데 필터 미연결일 때만.
+    /// 필터를 연결하면 iOS 가 수면 on/off 를 즉시 push → 첫 토글에 바로 반영.
+    /// (미연결이면 폴링 폴백이라 반영이 한 박자 늦음 — '두 번 껐다 켜야 잠드는' 증상.)
+    private var sleepFilterSetupCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("수면 필터를 연결하면 더 정확해요", systemImage: "moon.zzz.fill")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Color.withuPinkText)
+            Text("연결하지 않으면 수면 모드를 켜도 반영이 한 박자 늦어요. 한 번만 연결하면 켜자마자 잠들어요.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("설정 → 집중 모드 → 수면 → 아래 '필터 추가' → Withy → '캐릭터를 자게 하기' 켜기")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("설정 앱 열기", systemImage: "gear")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.borderless)
+            .padding(.top, 2)
+        }
+        .padding(.vertical, 4)
     }
 
     /// 기준 칩 선택 — 설정 시간 기준(true) = manualSleepOnly. 수면 모드 선택 시 안내 팝업.
