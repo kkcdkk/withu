@@ -718,7 +718,7 @@ struct CharacterGenView: View {
                     if isGenerating {
                         HStack { ProgressView(); Text("다듬는 중…") }
                     } else {
-                        Label("이대로 다듬기", systemImage: "sparkles")
+                        Label("다듬기", systemImage: "sparkles")
                     }
                 }
                 .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

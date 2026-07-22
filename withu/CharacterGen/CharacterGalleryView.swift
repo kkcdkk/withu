@@ -872,7 +872,7 @@ struct GalleryGrid<Header: View>: View {
                                     HStack { ProgressView(); Text("다듬는 중…") }
                                         .frame(maxWidth: .infinity)
                                 } else {
-                                    Text("이대로 다듬기").frame(maxWidth: .infinity)
+                                    Text("다듬기").frame(maxWidth: .infinity)
                                 }
                             }
                             .buttonStyle(.bordered)
