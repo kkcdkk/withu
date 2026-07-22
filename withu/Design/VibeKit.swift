@@ -44,6 +44,53 @@ func backgroundGradient(for state: CharacterState) -> LinearGradient {
 /// CTA 공용 스타일 — 진한 그린(아이폰 메시지 초록 톤) 배경 + 흰 글자.
 /// 누르는 동안 어두워지고 살짝 축소돼 '눌림'이 확실히 보인다.
 /// (파스텔 핑크 + .borderedProminent 는 눌림 변화가 안 보인다는 피드백 대응.)
+// MARK: - 픽셀 계단 테두리 Shape
+
+/// 모서리를 픽셀 계단(2단)으로 깎은 사각형 — 캐릭터/Galmuri 폰트의 픽셀 톤과 맞춤.
+/// InsettableShape 라 strokeBorder 로 테두리를 안쪽에 깔끔히 그린다.
+struct PixelBorderShape: InsettableShape {
+    /// 한 계단(픽셀) 크기. 모서리는 2계단(=2*pixel).
+    var pixel: CGFloat = 5
+    var inset: CGFloat = 0
+
+    func inset(by amount: CGFloat) -> some InsettableShape {
+        var s = self
+        s.inset += amount
+        return s
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: inset, dy: inset)
+        // 계단이 변 길이를 넘지 않게 제한 (아주 작은 버튼 보호).
+        let p = min(pixel, min(r.width, r.height) / 4)
+        let c = p * 2
+        let minX = r.minX, maxX = r.maxX, minY = r.minY, maxY = r.maxY
+        var path = Path()
+        path.move(to: CGPoint(x: minX + c, y: minY))
+        path.addLine(to: CGPoint(x: maxX - c, y: minY))       // 윗변
+        path.addLine(to: CGPoint(x: maxX - p, y: minY))       // TR 2계단
+        path.addLine(to: CGPoint(x: maxX - p, y: minY + p))
+        path.addLine(to: CGPoint(x: maxX, y: minY + p))
+        path.addLine(to: CGPoint(x: maxX, y: minY + c))
+        path.addLine(to: CGPoint(x: maxX, y: maxY - c))       // 오른변
+        path.addLine(to: CGPoint(x: maxX, y: maxY - p))       // BR 2계단
+        path.addLine(to: CGPoint(x: maxX - p, y: maxY - p))
+        path.addLine(to: CGPoint(x: maxX - p, y: maxY))
+        path.addLine(to: CGPoint(x: maxX - c, y: maxY))
+        path.addLine(to: CGPoint(x: minX + c, y: maxY))       // 아랫변
+        path.addLine(to: CGPoint(x: minX + p, y: maxY))       // BL 2계단
+        path.addLine(to: CGPoint(x: minX + p, y: maxY - p))
+        path.addLine(to: CGPoint(x: minX, y: maxY - p))
+        path.addLine(to: CGPoint(x: minX, y: maxY - c))
+        path.addLine(to: CGPoint(x: minX, y: minY + c))       // 왼변
+        path.addLine(to: CGPoint(x: minX, y: minY + p))       // TL 2계단
+        path.addLine(to: CGPoint(x: minX + p, y: minY + p))
+        path.addLine(to: CGPoint(x: minX + p, y: minY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 struct WithuCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CTABody(configuration: configuration)
@@ -61,16 +108,16 @@ struct WithuCTAButtonStyle: ButtonStyle {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    PixelBorderShape()
                         .fill(Color.withuCTAGreen)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            PixelBorderShape()
                                 .fill(Color.black.opacity(configuration.isPressed ? 0.18 : 0))
                         )
                         .overlay(
-                            // 스티커 같은 딥그린 테두리 — 귀여운 윤곽.
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.withuCTABorder, lineWidth: 2)
+                            // 픽셀 계단 딥그린 테두리 — 캐릭터/폰트와 톤 맞춘 귀여운 윤곽.
+                            PixelBorderShape()
+                                .strokeBorder(Color.withuCTABorder, lineWidth: 2.5)
                         )
                 )
                 .opacity(isEnabled ? 1 : 0.45)

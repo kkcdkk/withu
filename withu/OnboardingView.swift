@@ -478,15 +478,10 @@ struct OnboardingView: View {
 
     private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
-                .font(.callout.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                // 파스텔(withuPink=새싹 그린)은 흰 글자 대비가 약함 — CTA 는 진한 그린 (Android WithuCTAButton 과 동일).
-                .background(Color.withuCTAGreen)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Text(title).frame(maxWidth: .infinity)
         }
+        // 다른 초록 CTA 와 동일한 픽셀 테두리 스타일 (Galmuri 폰트 + 계단 윤곽).
+        .buttonStyle(WithuCTAButtonStyle())
     }
 
     private var backgroundGradient: LinearGradient {
