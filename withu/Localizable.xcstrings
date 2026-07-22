@@ -2858,6 +2858,16 @@
         }
       }
     },
+    "모두 기기 안에서 처리하고 비용은 들지 않아요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All done on your device, at no cost."
+          }
+        }
+      }
+    },
     "모두 적용" : {
       "localizations" : {
         "en" : {

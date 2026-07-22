@@ -289,7 +289,7 @@ struct CharacterGenView: View {
             Text("생성 옵션")
         } footer: {
             if mode == .importPhoto {
-                Text("가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.")
+                Text("모두 기기 안에서 처리하고 비용은 들지 않아요.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -826,9 +826,6 @@ struct CharacterGenView: View {
             }
         } header: {
             Text("사진 고르기")
-        } footer: {
-            Text("사진을 고르면 정사각형으로 다듬어요. 배경을 뺄지는 아래에서 고를 수 있어요. 모두 기기 안에서 처리하고 비용은 들지 않아요.")
-                .foregroundStyle(.secondary)
         }
     }
 
