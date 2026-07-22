@@ -2076,7 +2076,11 @@ struct BatchCharacterGenView: View {
             displayTransparentByState[state] = false
             CharacterImageStore.save(rev.current, for: state, frame: rev.frame, applyToActiveSlot: false,
                                      batchId: batchSessionId, prompt: rev.prompt)
-            appliedStates.remove(state)   // 새 결과 → '적용' 다시 눌러 홈/워치에 반영
+            if state == .idle {
+                appliedStates.remove(state)   // idle 은 앵커 — 홈/워치 반영은 나머지 만들기 단계에서.
+            } else {
+                applyOne(state)               // '적용' = 이 사진으로 바꿔 홈/워치에 바로 반영.
+            }
         }
         revisedDone.removeValue(forKey: state)
         PendingRevisionStore.remove(state: state)
