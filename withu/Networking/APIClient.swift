@@ -117,21 +117,27 @@ actor APIClient {
     func preflightPing() async throws {
         let url = APIConfig.baseURL.appendingPathComponent("/health")
         let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 5
-        config.timeoutIntervalForResource = 5
+        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForResource = 8
         config.waitsForConnectivity = false
         let fastSession = URLSession(configuration: config)
-        do {
-            let (_, response) = try await fastSession.data(from: url)
-            guard let http = response as? HTTPURLResponse,
-                  (200..<300).contains(http.statusCode) else {
-                throw APIError.invalidResponse
+        // 2회 시도 — 백그라운드 복귀 직후 등 일시적 실패로 잘못 '연결 안 됨' 처리되는 것 방지.
+        var lastError: Error = APIError.invalidResponse
+        for attempt in 0..<2 {
+            do {
+                let (_, response) = try await fastSession.data(from: url)
+                guard let http = response as? HTTPURLResponse,
+                      (200..<300).contains(http.statusCode) else {
+                    throw APIError.invalidResponse
+                }
+                return
+            } catch {
+                lastError = error
+                if attempt == 0 { try? await Task.sleep(nanoseconds: 700_000_000) }
             }
-        } catch let error as APIError {
-            throw error
-        } catch {
-            throw APIError.transport(error)
         }
+        if let api = lastError as? APIError { throw api }
+        throw APIError.transport(lastError)
     }
 
     // MARK: - 인증 (Phase 2)
