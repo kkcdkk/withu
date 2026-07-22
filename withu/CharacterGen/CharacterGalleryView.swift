@@ -49,8 +49,6 @@ struct CharacterGalleryView: View {
     /// 캐릭터별('한번에 만들기') 그룹 — batchId 로 묶음.
     @State private var characters: [(batchId: String, createdAt: Date, items: [GalleryItem])] = []
     @State private var toastText: String?
-    /// '모두 적용' 확인 대기 중인 그룹 items — 여러 자리를 한 번에 덮으니 확인 후 실행.
-    @State private var pendingApplyAll: [GalleryItem]?
 
     private var totalCount: Int {
         grouped.values.reduce(0) { $0 + $1.count } + legacy.count
@@ -87,18 +85,6 @@ struct CharacterGalleryView: View {
         // 서버 백업에서 복원 완료 — 화면 떠 있는 동안 도착해도 바로 보이게.
         .onReceive(NotificationCenter.default.publisher(for: .gallerySyncDidImport)) { _ in
             refresh()
-        }
-        .alert("이 캐릭터로 모두 적용할까요?", isPresented: Binding(
-            get: { pendingApplyAll != nil },
-            set: { if !$0 { pendingApplyAll = nil } }
-        )) {
-            Button("모두 적용") {
-                if let items = pendingApplyAll { applyCharacter(items) }
-                pendingApplyAll = nil
-            }
-            Button("취소", role: .cancel) { pendingApplyAll = nil }
-        } message: {
-            Text("\(pendingApplyAll?.count ?? 0)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
         }
         .overlay(alignment: .bottom) {
             if let toast = toastText {
@@ -144,65 +130,69 @@ struct CharacterGalleryView: View {
         }
     }
 
+    private let characterColumns = [GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12)]
+
     @ViewBuilder
     private var characterFolders: some View {
         if characters.isEmpty {
             VStack(spacing: 10) {
                 Image(CharacterState.idle.imageAssetName)
                     .resizable().scaledToFit().frame(width: 64, height: 64)
-                Text("'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요.")
+                Text("만든 캐릭터가 여기에 이름별로 모여요.")
                     .font(.callout).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                Text("하나씩 만든 캐릭터는 '상태별'에서 볼 수 있어요.")
-                    .font(.caption).foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }
             .padding(.top, 60)
         } else {
-            ForEach(characters, id: \.batchId) { group in
-                characterCard(group)
+            LazyVGrid(columns: characterColumns, spacing: 12) {
+                ForEach(characters, id: \.batchId) { group in
+                    characterTile(group)
+                }
             }
         }
     }
 
-    private func characterCard(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> some View {
-        VStack(spacing: 8) {
-            NavigationLink {
-                GalleryGrid(items: group.items, backgroundState: .idle, onChange: refresh) {
-                    EmptyView()
-                }
-                .navigationTitle("이 캐릭터")
-                .navigationBarTitleDisplayMode(.inline)
-            } label: {
-                HStack(spacing: 14) {
-                    if let rep = representativeImage(group.items) {
-                        Image(uiImage: rep).resizable().scaledToFit()
-                            .frame(width: 44, height: 44)
-                    } else {
-                        Image(systemName: "square.grid.2x2").font(.title3).foregroundStyle(.secondary)
-                            .frame(width: 44, height: 44)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("캐릭터 · \(group.items.count)개 모습").font(.callout.weight(.semibold))
-                        Text(group.createdAt, format: .relative(presentation: .named))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-                }
-            }
-            .buttonStyle(.plain)
+    /// 캐릭터별 표시 이름 — 사용자가 지은 이름, 없으면 nil.
+    private func charName(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> String? {
+        CharacterImageStore.characterName(for: group.batchId)
+    }
 
-            Button {
-                pendingApplyAll = group.items
-            } label: {
-                Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
+    private func characterTile(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> some View {
+        NavigationLink {
+            GalleryGrid(items: group.items, backgroundState: .idle, onChange: refresh) {
+                characterDetailHeader(group)
+            }
+            .navigationTitle(charName(group) ?? "이 캐릭터")
+            .navigationBarTitleDisplayMode(.inline)
+        } label: {
+            VStack(spacing: 8) {
+                ZStack {
+                    if let rep = representativeImage(group.items) {
+                        Image(uiImage: rep).resizable().scaledToFit().padding(14)
+                    } else {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.largeTitle).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+                .frostedCard(cornerRadius: 16)
+
+                Text(charName(group) ?? "이름 없는 캐릭터")
                     .font(.callout.weight(.semibold))
+                    .foregroundStyle(charName(group) == nil ? .secondary : .primary)
+                    .lineLimit(1)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(WithuCTAButtonStyle())
         }
-        .frostedCard()
+        .buttonStyle(.plain)
+    }
+
+    /// 캐릭터 상세(모습 그리드) 상단 — '모두 적용' 버튼.
+    /// 확인 알럿을 이 뷰에 붙여야 (랜딩이 아니라) 푸시된 상세 화면에서 뜬다.
+    private func characterDetailHeader(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> some View {
+        CharacterApplyHeader(items: group.items, apply: applyCharacter)
     }
 
     /// 대표 썸네일 — idle 있으면 idle, 없으면 첫 항목.
@@ -236,7 +226,12 @@ struct CharacterGalleryView: View {
         let g = CharacterImageStore.loadGalleryGrouped()
         grouped = g.byState
         legacy = g.legacy
-        characters = CharacterImageStore.loadGalleryByCharacter()
+        // 캐릭터별엔 '이름을 붙인 캐릭터' 또는 '상태 2개 이상(여러 모습 만들기)'만 노출 —
+        // 이름 없는 단건이 목록을 어지럽히지 않게.
+        characters = CharacterImageStore.loadGalleryByCharacter().filter { group in
+            CharacterImageStore.characterName(for: group.batchId) != nil
+                || Set(group.items.map(\.sourceState)).count > 1
+        }
     }
 
     /// 적용 중인 폴더 → 항목 있는 폴더 → 빈 폴더. 같은 그룹 안은 userFacing 선언 순서.
@@ -439,6 +434,31 @@ struct StateFolderView: View {
 }
 
 // MARK: - 재사용 그리드 (적용 / 삭제 / 저장 / 다중 선택)
+
+/// 캐릭터 상세 상단의 '모두 적용' 버튼 — 확인 알럿을 자기 자신에 붙여 푸시된 화면에서 뜨게 한다.
+private struct CharacterApplyHeader: View {
+    let items: [GalleryItem]
+    let apply: ([GalleryItem]) -> Void
+    @State private var confirm = false
+
+    var body: some View {
+        Button {
+            confirm = true
+        } label: {
+            Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
+                .font(.callout.weight(.semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(WithuCTAButtonStyle())
+        .padding(.bottom, 4)
+        .alert("이 캐릭터로 모두 적용할까요?", isPresented: $confirm) {
+            Button("모두 적용") { apply(items) }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("\(items.count)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
+        }
+    }
+}
 
 struct GalleryGrid<Header: View>: View {
     let items: [GalleryItem]

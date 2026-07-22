@@ -126,7 +126,10 @@ struct CharacterGenView: View {
     /// 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed).
     @State private var lastFreeConsumed: Bool = false
     /// 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용.
+    /// 갤러리 '캐릭터별' batchId 로도 재사용 — 한 세션의 결과가 한 캐릭터로 묶임.
     @State private var currentSessionId: String = UUID().uuidString
+    /// 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택)
+    @State private var characterName: String = ""
 
     var body: some View {
         ZStack {
@@ -665,6 +668,20 @@ struct CharacterGenView: View {
                         Task { await saveToPhotos(img) }
                     }
                     .tint(.secondary)
+
+                    Divider()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("이 캐릭터의 이름 (선택)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        TextField("이름", text: $characterName)
+                            .font(.callout)
+                            .submitLabel(.done)
+                            .onChange(of: characterName) { _, new in
+                                CharacterImageStore.setCharacterName(new, for: currentSessionId)
+                            }
+                        Text("갤러리 '캐릭터별'에 이 이름으로 보여요.")
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
                 }
             }
         }
@@ -809,6 +826,12 @@ struct CharacterGenView: View {
         resultFrame2 = v.frame2
         lastFrame0FullRes = v.small
         if v.frame2 == nil { singleDetailFrame = 0 }
+        // 이름/세션도 복원 — 저장된 갤러리 항목의 batchId 를 이어받아 같은 캐릭터로 유지.
+        if let gid = versions.compactMap(\.galleryId).first,
+           let bid = CharacterImageStore.loadGalleryMetadata().first(where: { $0.id == gid })?.batchId {
+            currentSessionId = bid
+            characterName = CharacterImageStore.characterName(for: bid) ?? ""
+        }
     }
 
     // MARK: - Import sections
@@ -997,6 +1020,7 @@ struct CharacterGenView: View {
         resultFrame2 = nil
         singleDetailFrame = 0
         currentSessionId = UUID().uuidString   // 새 원본 → 새 수정 체인
+        characterName = ""                     // 새 캐릭터 → 이름 초기화
 
         // 새 생성 — 이전 투명(배경 제거) 캐시 무효화. 안 그러면 '배경 빼기' 보기에 옛 이미지가 남음.
         transparentResult = nil
@@ -1296,7 +1320,8 @@ struct CharacterGenView: View {
     private func autoSaveToGallery() -> String? {
         guard let img = resultImage else { return nil }
         let item = CharacterImageStore.save(img, for: targetState, frame: 0,
-                                            applyToActiveSlot: false, prompt: lastSentPrompt)
+                                            applyToActiveSlot: false,
+                                            batchId: currentSessionId, prompt: lastSentPrompt)
         if let id = item?.id, let f2 = resultFrame2 {
             CharacterImageStore.attachGalleryFrame1(id, image: f2)
         }

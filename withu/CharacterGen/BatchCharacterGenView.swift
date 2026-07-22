@@ -150,6 +150,8 @@ struct BatchCharacterGenView: View {
     @State private var showPaywall: Bool = false
     /// 이번 일괄 세션 식별자 — 서버가 같은 세션의 장을 무료(free_batch)로 묶음.
     @State private var batchSessionId: String = UUID().uuidString
+    /// 이 캐릭터에 붙일 이름 — 갤러리 '캐릭터별'에 표시. (선택)
+    @State private var characterName: String = ""
     /// 사진 선택 후 정사각 자르기 시트
     @State private var cropTarget: CropTarget?
     /// 참고사진을 내 캐릭터 갤러리에서 고르는 sheet — 전체 또는 상태별.
@@ -178,6 +180,7 @@ struct BatchCharacterGenView: View {
                 } else {
                     stateListSection
                     motionSection
+                    nameSection
                     identitySection
                     referenceSection
                     optionsSection
@@ -341,6 +344,23 @@ struct BatchCharacterGenView: View {
     }
 
     // MARK: - Sections
+
+    private var nameSection: some View {
+        Section {
+            TextField("이 캐릭터의 이름 (선택)", text: $characterName)
+                .font(.callout)
+                .disabled(isGenerating)
+                .submitLabel(.done)
+                .onChange(of: characterName) { _, new in
+                    // 생성 후 이름을 바꿔도 이미 저장된 캐릭터에 반영 (같은 batchSessionId).
+                    CharacterImageStore.setCharacterName(new, for: batchSessionId)
+                }
+        } header: {
+            Text("캐릭터 이름")
+        } footer: {
+            Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
+        }
+    }
 
     private var identitySection: some View {
         Section {
@@ -1300,6 +1320,7 @@ struct BatchCharacterGenView: View {
     private func startBatch() async {
         isGenerating = true
         batchSessionId = UUID().uuidString   // 새 일괄 세션 — 서버가 free_batch 로 묶음
+        CharacterImageStore.setCharacterName(characterName, for: batchSessionId)  // 갤러리 '캐릭터별' 이름
         saveDescription()                    // 캐릭터 설명을 프로필에 저장 — 단건 생성과 공유
         results.removeAll()
         appliedStates.removeAll()

@@ -666,6 +666,31 @@ enum CharacterImageStore {
         .sorted { $0.createdAt > $1.createdAt }
     }
 
+    // MARK: - 캐릭터 이름 (batchId → 사용자가 지은 이름)
+
+    /// batchId 로 묶인 한 캐릭터에 사용자가 붙인 이름. 갤러리 '캐릭터별' 표시용.
+    /// GalleryItem 스키마를 건드리지 않으려고 별도 맵으로 보관 — 생성 후에도(단건은 결과 뒤) 갱신 가능.
+    private static let characterNamesKey = "withu.characterNames.v1"
+
+    /// batchId 의 이름. 없거나 공백이면 nil.
+    static func characterName(for batchId: String) -> String? {
+        let map = UserDefaults(suiteName: SharedAppState.groupID)?
+            .dictionary(forKey: characterNamesKey) as? [String: String]
+        let n = map?[batchId]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (n?.isEmpty == false) ? n : nil
+    }
+
+    /// batchId 에 이름 지정. 공백이면 제거.
+    static func setCharacterName(_ name: String, for batchId: String) {
+        guard let ud = UserDefaults(suiteName: SharedAppState.groupID) else { return }
+        var map = (ud.dictionary(forKey: characterNamesKey) as? [String: String]) ?? [:]
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { map.removeValue(forKey: batchId) }
+        else { map[batchId] = trimmed }
+        ud.set(map, forKey: characterNamesKey)
+        NotificationCenter.default.post(name: .galleryChanged, object: nil)
+    }
+
     private static func saveGalleryMetadata(_ items: [GalleryItem]) {
         guard let url = metadataURL,
               let data = try? JSONEncoder().encode(items) else { return }
