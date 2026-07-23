@@ -378,21 +378,25 @@ struct ContentView: View {
             .padding(.horizontal, 14)
 
             HStack(spacing: 0) {
-                metricItem(emoji: "👟",
+                metricItem(icon: PixelIconSet.footsteps,
                            value: health.todaySteps.map { "\(Int($0))" } ?? "-",
-                           label: "걸음")
+                           label: "걸음",
+                           dim: (health.todaySteps ?? 0) == 0)
                 Divider().frame(height: 32)
-                metricItem(emoji: "🏃",
+                metricItem(icon: PixelIconSet.clock,
                            value: health.todayActiveMinutes.map { "\(Int($0))" } ?? "-",
-                           label: "활동분")
+                           label: "활동분",
+                           dim: (health.todayActiveMinutes ?? 0) == 0)
                 Divider().frame(height: 32)
-                metricItem(emoji: "🔥",
+                metricItem(icon: PixelIconSet.flame,
                            value: health.todayActiveKcal.map { "\(Int($0))" } ?? "-",
-                           label: "kcal")
+                           label: "kcal",
+                           dim: (health.todayActiveKcal ?? 0) == 0)
                 Divider().frame(height: 32)
-                metricItem(emoji: "💤",
+                metricItem(icon: PixelIconSet.moon,
                            value: sleepHoursText,
-                           label: "수면")
+                           label: "수면",
+                           dim: sleepHoursText == "-")
             }
 
             if !activityMessage.isEmpty {
@@ -408,11 +412,18 @@ struct ContentView: View {
         .pixelCardSurface()
     }
 
-    private func metricItem(emoji: String, value: String, label: LocalizedStringKey) -> some View {
+    /// dim = 값이 0/없음 → 흐리고 작게(허전함 완화). 의미값은 크고 또렷하게.
+    private func metricItem(icon: [[UInt8]], value: String,
+                            label: LocalizedStringKey, dim: Bool) -> some View {
         VStack(spacing: 4) {
-            Text(emoji).font(.subheadline)
-            Text(value).font(.galmuri(16, relativeTo: .callout))
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            PixelIcon(grid: icon, tint: .withuPixelOutline, size: 18)
+                .opacity(dim ? 0.3 : 0.9)
+            Text(value)
+                .font(.galmuri(dim ? 15 : 19, relativeTo: .callout))
+                .foregroundStyle(dim ? Color.secondary : Color.primary)
+            Text(label)
+                .font(.galmuri(10, relativeTo: .caption2))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

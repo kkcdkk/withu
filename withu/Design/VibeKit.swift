@@ -91,6 +91,97 @@ struct PixelBorderShape: InsettableShape {
     }
 }
 
+// MARK: - 픽셀(도트) 아이콘
+
+/// 직접 그린 도트 아이콘 — 기성 이모지 대신. Canvas 로 antialiasing 없이 픽셀 사각형만 채운다.
+/// tint 로 의미색을 그대로 통과(SF Symbol 사용 패턴과 동일). 벡터라 배율 걱정 없음.
+struct PixelIcon: View {
+    let grid: [[UInt8]]      // 0 = 빈칸, 그 외 = 채움
+    var tint: Color = .primary
+    var size: CGFloat = 20
+
+    var body: some View {
+        Canvas { ctx, canvas in
+            let rows = grid.count
+            let cols = grid.map(\.count).max() ?? 0
+            guard rows > 0, cols > 0 else { return }
+            let cell = min(canvas.width / CGFloat(cols), canvas.height / CGFloat(rows))
+            let ox = (canvas.width - cell * CGFloat(cols)) / 2
+            let oy = (canvas.height - cell * CGFloat(rows)) / 2
+            for (r, row) in grid.enumerated() {
+                for (c, v) in row.enumerated() where v != 0 {
+                    let rect = CGRect(x: ox + CGFloat(c) * cell, y: oy + CGFloat(r) * cell,
+                                      width: cell + 0.5, height: cell + 0.5)  // 0.5 = 픽셀 사이 실틈 방지
+                    ctx.fill(Path(rect), with: .color(tint))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+enum PixelIconSet {
+    /// "#" = 채움, 그 외("." 등) = 빈칸. 줄 길이는 같게.
+    private static func rows(_ s: String) -> [[UInt8]] {
+        s.split(separator: "\n").map { line in line.map { $0 == "#" ? UInt8(1) : UInt8(0) } }
+    }
+
+    /// 걸음 — 발자국 둘.
+    static let footsteps = rows("""
+    .##.........
+    ###.........
+    ###.........
+    .##.........
+    ............
+    ........##..
+    .......####.
+    .......####.
+    ........##..
+    """)
+
+    /// 활동분 — 시계(테두리 + 바늘).
+    static let clock = rows("""
+    ...####...
+    .##....##.
+    #........#
+    #...#....#
+    #...#....#
+    #...###..#
+    #........#
+    .##....##.
+    ...####...
+    """)
+
+    /// kcal — 불꽃.
+    static let flame = rows("""
+    ...##....
+    ..###....
+    ..##.....
+    .##.#....
+    ##..##...
+    #....##..
+    #....##..
+    ##...#...
+    .##.##...
+    ..###....
+    """)
+
+    /// 수면 — 초승달.
+    static let moon = rows("""
+    ..###....
+    .#####...
+    ####.....
+    ###......
+    ###......
+    ###......
+    ###......
+    ####.....
+    .#####...
+    ..###....
+    """)
+}
+
 struct WithuCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CTABody(configuration: configuration)

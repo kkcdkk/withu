@@ -566,6 +566,14 @@ extension Color {
             : UIColor(red: 0.96, green: 0.91, blue: 0.80, alpha: 1.0)
     })
 
+    /// 보조 액센트 — 채도 낮춘 세이지 그린. 핑크(포인트)와 짝을 이루는 2색 체계의 '보조'.
+    /// withuGreen(배경 기조)보다 차분해 카드 아이콘 tint 로 써도 배경과 뭉개지지 않음.
+    static let withuSage = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.45, green: 0.55, blue: 0.44, alpha: 1.0)
+            : UIColor(red: 0.55, green: 0.66, blue: 0.50, alpha: 1.0)
+    })
+
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.
     /// 라이트 = 연한 새싹색, 다크 = 채도 낮은 딥그린.
     static let withuGreen = Color(uiColor: UIColor { trait in
