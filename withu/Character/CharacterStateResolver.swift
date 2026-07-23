@@ -59,16 +59,19 @@ enum CharacterStateResolver {
         //     단 시스템 수면 신호(Focus/수면 일정)가 켜져 있으면 무시 — 밤중에 폰 들고
         //     서성이는 정도로 수면 상태를 덮지 않는다. (워치 HR 경로는 '명시적 운동
         //     시작' 신호라 수면보다 우선하는 기존 정책 유지 — 폰 모션은 부수 신호.)
-        if let phoneWorkoutState, !isFocusActive, !inSleepSchedule {
-            return phoneWorkoutState
-        }
-
         let hour = calendar.component(.hour, from: now)
         let minute = calendar.component(.minute, from: now)
         let nowMin = hour * 60 + minute
 
         let sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
         let sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
+        // '설정 시간 기준'의 수면 시간창 안이면 폰 모션으로 수면을 덮지 않는다.
+        let inManualSleepWindow = profile.isManualSleepOnly
+            && isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin)
+
+        if let phoneWorkoutState, !isFocusActive, !inSleepSchedule, !inManualSleepWindow {
+            return phoneWorkoutState
+        }
 
         // 2) 수면 — 두 갈래 (프로필의 manualSleepOnly = 기준 칩 선택):
         //    · '수면 모드 기준'(manualSleepOnly=false): 실제 수면 신호만 재운다.

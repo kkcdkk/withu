@@ -1100,7 +1100,14 @@ struct CharacterGenView: View {
         transparentResult = nil
         transparentResultFrame2 = nil
         // 백그라운드 진입해도 30초까지 살아남게 background task assertion.
-        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "withu.generate")
+        // ⚠️ 만료 핸들러 필수 — 없으면 화면 끄고 시간 만료 시 iOS 가 앱을 강제 종료(튕김)한다.
+        var bgTask: UIBackgroundTaskIdentifier = .invalid
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "withu.generate") {
+            if bgTask != .invalid {
+                UIApplication.shared.endBackgroundTask(bgTask)
+                bgTask = .invalid
+            }
+        }
         defer {
             isGenerating = false
             generationStartedAt = nil
