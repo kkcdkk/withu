@@ -40,7 +40,7 @@ struct CharacterProfileView: View {
             Form {
                 Section {
                     heroCard
-                        .listRowInsets(EdgeInsets())
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
                 Section {
@@ -81,7 +81,7 @@ struct CharacterProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("수면 시간")
@@ -100,7 +100,7 @@ struct CharacterProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("식사 시간")
@@ -119,7 +119,7 @@ struct CharacterProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("밤하늘 시간")
@@ -137,7 +137,7 @@ struct CharacterProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("움직임")
@@ -160,7 +160,7 @@ struct CharacterProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 }
             }
@@ -284,7 +284,7 @@ struct CharacterProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("상태별 캐릭터")

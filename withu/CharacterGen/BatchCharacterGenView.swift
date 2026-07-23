@@ -360,7 +360,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 이름")
@@ -397,7 +397,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 프롬프트")
@@ -446,7 +446,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
@@ -646,7 +646,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
@@ -666,7 +666,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("스타일")
@@ -713,7 +713,7 @@ struct BatchCharacterGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             } header: {
                 HStack(spacing: 6) {
@@ -930,7 +930,7 @@ struct BatchCharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("다듬기 이력")

@@ -270,7 +270,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 방식")
@@ -300,7 +300,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 옵션")
@@ -331,7 +331,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("상태 선택")
@@ -367,7 +367,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             VStack(alignment: .leading, spacing: 3) {
@@ -564,7 +564,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
@@ -590,7 +590,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         }
     }
@@ -728,14 +728,14 @@ struct CharacterGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             }
         }
         if let err = lastError {
             Section {
                 WarningBanner(text: err)
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
             }
         }
@@ -791,7 +791,7 @@ struct CharacterGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             } header: {
                 Text(resultFrame2 != nil && singleDetailFrame == 1 ? String(localized: "이어서 다듬기 (움직임 프레임)") : String(localized: "이어서 다듬기"))
@@ -836,7 +836,7 @@ struct CharacterGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             } header: {
                 Text("다듬기 이력")
@@ -913,7 +913,7 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .plainCard()
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("사진 고르기")
@@ -1002,14 +1002,14 @@ struct CharacterGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             }
         }
         if let err = lastError {
             Section {
                 WarningBanner(text: err)
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
             }
         }
@@ -1509,7 +1509,7 @@ struct WeatherBackgroundGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             } header: {
                 Text("날씨")
@@ -1526,7 +1526,7 @@ struct WeatherBackgroundGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             }
 
@@ -1549,7 +1549,7 @@ struct WeatherBackgroundGenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .plainCard()
-                .listRowInsets(EdgeInsets())
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowBackground(Color.clear)
             } header: {
                 Text("배경")
@@ -1590,7 +1590,7 @@ struct WeatherBackgroundGenView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .plainCard()
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("결과")
@@ -1600,7 +1600,7 @@ struct WeatherBackgroundGenView: View {
             if let err = lastError {
                 Section {
                     WarningBanner(text: err)
-                        .listRowInsets(EdgeInsets())
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
             }

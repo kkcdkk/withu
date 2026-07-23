@@ -213,15 +213,26 @@ final class HealthKitManager {
             HKCategoryValueSleepAnalysis.asleepREM.rawValue,
         ]
         let asleep = samples.filter { asleepValues.contains($0.value) }
-        let total = asleep.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+        // '오늘 활동'의 수면은 '지난 밤'만 — 예전엔 7일치를 전부 합산해 값이 부풀거나
+        // 새 수면이 없으면 옛날 총합이 고정으로 남았음(2h 고정 버그).
+        // 가장 최근 수면 샘플 기준 14시간 창 안에서 시작한 것만 = 한 번의 수면 세션.
+        let lastNight: [HKCategorySample]
+        if let lastEnd = asleep.map(\.endDate).max() {
+            let windowStart = lastEnd.addingTimeInterval(-14 * 3600)
+            lastNight = asleep.filter { $0.startDate >= windowStart }
+        } else {
+            lastNight = []
+        }
+        let total = lastNight.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
         let summary = SleepSummary(
             totalAsleep: total,
-            sampleCount: asleep.count,
-            lastNight: asleep.first?.startDate
+            sampleCount: lastNight.count,
+            lastNight: lastNight.map(\.startDate).min()
         )
         sleep = summary
         // 값이 실제로 읽혔을 때만 허용 확정 — 거부돼도 read 쿼리는 빈 결과로 "성공"한다.
-        if summary.sampleCount > 0 { authStatus = .authorized }
+        // (지난밤이 비어도 최근 7일에 샘플이 있으면 권한은 확정)
+        if !asleep.isEmpty { authStatus = .authorized }
         return summary
     }
 
