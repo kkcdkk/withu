@@ -22,7 +22,8 @@ struct GalleryReferencePicker: View {
             Group {
                 if items.isEmpty {
                     VStack(spacing: 12) {
-                        Text("🎨").font(.system(size: 44))
+                        Image(CharacterState.idle.imageAssetName)
+                            .resizable().scaledToFit().frame(width: 56, height: 56)
                         Text("아직 만든 캐릭터가 없어요")
                             .font(.callout.weight(.semibold))
                         Text("캐릭터를 만들면 여기서 참고사진으로 고를 수 있어요.")
