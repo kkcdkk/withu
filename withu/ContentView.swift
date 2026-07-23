@@ -109,8 +109,7 @@ struct ContentView: View {
                     Button {
                         showSettings = true
                     } label: {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundStyle(.secondary)
+                        PixelIcon(grid: PixelIconSet.sliders, tint: .secondary, size: 20)
                     }
                 }
             }
@@ -316,9 +315,7 @@ struct ContentView: View {
                 Button {
                     weather.refresh(force: true)
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    PixelIcon(grid: PixelIconSet.refresh, tint: .secondary, size: 15)
                 }
                 .buttonStyle(.plain)
             }
