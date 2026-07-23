@@ -234,30 +234,6 @@ enum PixelIconSet {
     ##########
     """)
 
-    /// 설정 — 슬라이더 3줄(톱니 대체, 픽셀에 더 잘 맞음).
-    static let sliders = rows("""
-    ..##.....
-    #########
-    ..##.....
-    ......##.
-    #########
-    ......##.
-    ....##...
-    #########
-    ....##...
-    """)
-
-    /// 새로고침 — 원형 화살표(얇게).
-    static let refresh = rows("""
-    ..####..
-    .#....#.
-    #....##.
-    #...###.
-    #......#
-    #.....#.
-    .#...#..
-    ..###...
-    """)
 }
 
 // MARK: - 픽셀 토글 (iOS 기본 초록 스위치 대체)
@@ -349,7 +325,9 @@ struct RefreshIconButton: View {
                     isRunning = false
                 }
             } label: {
-                PixelIcon(grid: PixelIconSet.refresh, tint: .secondary, size: 15)
+                Image(systemName: "arrow.clockwise")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
         }

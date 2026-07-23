@@ -109,7 +109,8 @@ struct ContentView: View {
                     Button {
                         showSettings = true
                     } label: {
-                        PixelIcon(grid: PixelIconSet.sliders, tint: .secondary, size: 20)
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -315,7 +316,9 @@ struct ContentView: View {
                 Button {
                     weather.refresh(force: true)
                 } label: {
-                    PixelIcon(grid: PixelIconSet.refresh, tint: .secondary, size: 15)
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -534,10 +537,9 @@ struct ContentView: View {
     private var watchStatusCard: some View {
         VStack(spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: "applewatch")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text("Apple Watch").font(.galmuri(14, relativeTo: .subheadline))
+                Text("Apple Watch")
+                    .font(.galmuri(12, relativeTo: .caption))
+                    .foregroundStyle(Color.withuPixelOutline)
                 Spacer()
                 if let last = connectivity.lastSentAt {
                     Text(last.formatted(date: .omitted, time: .shortened))
@@ -548,9 +550,9 @@ struct ContentView: View {
             }
             HStack(spacing: 0) {
                 statusItem(label: "페어링", ok: connectivity.isPaired)
-                Divider().frame(height: 28)
+                Divider().frame(height: 32)
                 statusItem(label: "앱 설치", ok: connectivity.isWatchAppInstalled)
-                Divider().frame(height: 28)
+                Divider().frame(height: 32)
                 statusItem(label: "연결", ok: connectivity.isReachable)
             }
         }
