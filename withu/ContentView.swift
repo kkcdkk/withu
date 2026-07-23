@@ -373,7 +373,7 @@ struct ContentView: View {
             HStack {
                 Text("오늘 활동")
                     .font(.galmuri(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.withuPixelOutline)
                 Spacer()
                 RefreshIconButton { await loadAll() }
             }
@@ -561,7 +561,7 @@ struct ContentView: View {
     private func statusItem(label: String, ok: Bool) -> some View {
         VStack(spacing: 4) {
             Image(systemName: ok ? "checkmark.circle.fill" : "minus.circle.fill")
-                .foregroundStyle(ok ? .green : .secondary)
+                .foregroundStyle(ok ? Color.withuSage : .secondary)
                 .font(.callout)
             Text(label).font(.galmuri(10, relativeTo: .caption2)).foregroundStyle(.secondary)
         }

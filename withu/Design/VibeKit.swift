@@ -209,18 +209,15 @@ enum PixelIconSet {
     ##########
     """)
 
-    /// 갤러리 — 사진 겹침.
+    /// 갤러리 — 사진(액자 + 해 + 산).
     static let gallery = rows("""
-    ..#######.
-    ..#.....#.
-    ..#.##..#.
-    ..#######.
-    .#######..
-    .#.....#..
-    .#..##.#..
-    .#######..
-    #######...
-    #######...
+    ########
+    #.#....#
+    #......#
+    #.....##
+    #....###
+    #..#####
+    ########
     """)
 
     /// 내 캐릭터 설정 — 사람.
@@ -250,16 +247,16 @@ enum PixelIconSet {
     ....##...
     """)
 
-    /// 새로고침 — 원형 화살표.
+    /// 새로고침 — 원형 화살표(얇게).
     static let refresh = rows("""
-    .####...
-    ##..##..
-    #....#.#
-    #....###
+    ..####..
+    .#....#.
+    #....##.
+    #...###.
     #......#
-    #....#..
-    ##..##..
-    .####...
+    #.....#.
+    .#...#..
+    ..###...
     """)
 }
 
@@ -287,8 +284,8 @@ struct PixelToggleStyle: ToggleStyle {
             Rectangle()
                 .fill(Color.withuCardFill)
                 .overlay(Rectangle().strokeBorder(Color.withuPixelOutline, lineWidth: 2))
-                .frame(width: 14, height: 14)
-                .padding(3)
+                .frame(width: 12, height: 12)
+                .padding(4)
         }
         .frame(width: 42, height: 24)
     }
