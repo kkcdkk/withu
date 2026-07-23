@@ -180,6 +180,62 @@ enum PixelIconSet {
     .#####...
     ..###....
     """)
+
+    /// 캐릭터 생성 — 마법봉 + 반짝.
+    static let wand = rows("""
+    .......#.#
+    ........#.
+    .......#.#
+    .....##...
+    ....##....
+    ...##.....
+    ..##......
+    .##.......
+    ##........
+    #.........
+    """)
+
+    /// 사진 찍기 — 카메라.
+    static let camera = rows("""
+    ...##.....
+    ..####....
+    ##########
+    #........#
+    #..####..#
+    #.##..##.#
+    #.#....#.#
+    #.##..##.#
+    #..####..#
+    ##########
+    """)
+
+    /// 갤러리 — 사진 겹침.
+    static let gallery = rows("""
+    ..#######.
+    ..#.....#.
+    ..#.##..#.
+    ..#######.
+    .#######..
+    .#.....#..
+    .#..##.#..
+    .#######..
+    #######...
+    #######...
+    """)
+
+    /// 내 캐릭터 설정 — 사람.
+    static let person = rows("""
+    ...####...
+    ..######..
+    ..######..
+    ..######..
+    ...####...
+    .########.
+    ##########
+    ##########
+    ##########
+    ##########
+    """)
 }
 
 // MARK: - 픽셀 토글 (iOS 기본 초록 스위치 대체)
@@ -352,9 +408,9 @@ extension View {
 
     /// 카드 표면만 — 동물의 숲/레트로: 따뜻한 크림 + 먹빛 픽셀 계단 테두리.
     /// padding 은 호출부가 관리 (이미 padding 을 가진 카드에 적용할 때).
-    func pixelCardSurface(lineWidth: CGFloat = 2) -> some View {
+    func pixelCardSurface(fill: Color = .withuCardFill, lineWidth: CGFloat = 2) -> some View {
         self
-            .background(Color.withuCardFill, in: PixelBorderShape())
+            .background(fill, in: PixelBorderShape())
             .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: lineWidth))
             .clipShape(PixelBorderShape())
     }

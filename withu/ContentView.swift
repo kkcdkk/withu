@@ -474,59 +474,61 @@ struct ContentView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            actionLink(title: "함께할 캐릭터 생성하기",
+            // 핵심 액션 — 핑크 강조, 크게
+            heroAction(title: "함께할 캐릭터 생성하기",
                        subtitle: "함께할 캐릭터를 만들어요",
-                       icon: "wand.and.stars",
-                       tint: .withuHeroPink) {
+                       icon: PixelIconSet.wand) {
                 CharacterGenView()
             }
-            actionLink(title: "함께 사진 찍기",
-                       subtitle: "캐릭터와 함께 사진 찍어요",
-                       icon: "camera.fill",
-                       tint: .withuGreen) {
-                CameraView()
-            }
-            actionLink(title: "캐릭터 갤러리",
-                       subtitle: "만든 캐릭터를 모아봐요",
-                       icon: "photo.stack",
-                       tint: .mint) {
-                CharacterGalleryView()
-            }
-            actionLink(title: "내 캐릭터 설정하기",
-                       subtitle: "이름 · 수면 · 식사 시간",
-                       icon: "person.crop.circle.fill",
-                       tint: .brown) {
-                CharacterProfileView()
+            // 보조 3개 — 2열 그리드 (작게)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                gridAction(title: "함께 사진 찍기",
+                           subtitle: "캐릭터와 함께 사진 찍어요",
+                           icon: PixelIconSet.camera) { CameraView() }
+                gridAction(title: "캐릭터 갤러리",
+                           subtitle: "만든 캐릭터를 모아봐요",
+                           icon: PixelIconSet.gallery) { CharacterGalleryView() }
+                gridAction(title: "내 캐릭터 설정하기",
+                           subtitle: "이름 · 수면 · 식사 시간",
+                           icon: PixelIconSet.person) { CharacterProfileView() }
             }
         }
     }
 
     @ViewBuilder
-    private func actionLink<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
-                                         icon: String, tint: Color,
-                                         @ViewBuilder destination: () -> Dest) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
+    private func heroAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
+                                        icon: [[UInt8]], @ViewBuilder destination: () -> Dest) -> some View {
+        NavigationLink { destination() } label: {
             HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(tint.opacity(0.18))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundStyle(tint)
-                }
+                PixelIcon(grid: icon, tint: .withuPixelOutline, size: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.galmuri(15, relativeTo: .callout))
+                    Text(title).font(.galmuri(16, relativeTo: .callout))
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color.withuPinkText)
             }
-            .padding(14)
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .pixelCardSurface(fill: .withuPinkSoft)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func gridAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
+                                        icon: [[UInt8]], @ViewBuilder destination: () -> Dest) -> some View {
+        NavigationLink { destination() } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                PixelIcon(grid: icon, tint: .withuSage, size: 24)
+                Text(title).font(.galmuri(13, relativeTo: .callout)).lineLimit(1)
+                Text(subtitle).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
             .pixelCardSurface()
         }
         .buttonStyle(.plain)
