@@ -284,7 +284,7 @@ struct WithuCTAButtonStyle: ButtonStyle {
                 .padding(.vertical, 11)
                 .background(
                     PixelBorderShape()
-                        .fill(Color.withuCTAGreen)
+                        .fill(Color.withuSage)
                         .overlay(
                             PixelBorderShape()
                                 .fill(Color.black.opacity(configuration.isPressed ? 0.18 : 0))

@@ -773,20 +773,30 @@ struct CharacterGenView: View {
     private var refinementSection: some View {
         if resultImage != nil {
             Section {
-                VStack(alignment: .leading, spacing: 12) {
-                TextEditor(text: $refinementPrompt)
-                    .frame(minHeight: 80)
-                    .font(.callout)
-                Button {
-                    pendingAction = .refine(frame: resultFrame2 != nil ? singleDetailFrame : 0)
-                } label: {
-                    if isGenerating {
-                        HStack { ProgressView(); Text("다듬는 중…") }
-                    } else {
-                        Label("다듬기", systemImage: "sparkles")
+                VStack(alignment: .leading, spacing: 10) {
+                    TextEditor(text: $refinementPrompt)
+                        .frame(minHeight: 80)
+                        .font(.callout)
+                    HStack {
+                        Spacer()
+                        Button {
+                            pendingAction = .refine(frame: resultFrame2 != nil ? singleDetailFrame : 0)
+                        } label: {
+                            Group {
+                                if isGenerating {
+                                    ProgressView().controlSize(.small).tint(.white)
+                                } else {
+                                    PixelIcon(grid: PixelIconSet.wand, tint: .white, size: 22)
+                                }
+                            }
+                            .frame(width: 48, height: 48)
+                            .background(PixelBorderShape().fill(Color.withuSage))
+                            .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .opacity(refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1)
                     }
-                }
-                .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
