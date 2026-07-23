@@ -133,7 +133,7 @@ struct CharacterGenView: View {
 
     var body: some View {
         ZStack {
-            backgroundGradient(for: targetState).ignoresSafeArea()
+            backgroundGradient(for: targetState, topTint: .withuPinkSoft).ignoresSafeArea()
                 .animation(.snappy, value: targetState)
             Form {
                 if singleFormOnly {
@@ -269,7 +269,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -299,7 +299,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -330,7 +330,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -366,7 +366,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -563,7 +563,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -589,7 +589,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         }
@@ -727,7 +727,7 @@ struct CharacterGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
@@ -790,7 +790,7 @@ struct CharacterGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
@@ -835,7 +835,7 @@ struct CharacterGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
@@ -912,7 +912,7 @@ struct CharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -1001,7 +1001,7 @@ struct CharacterGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
@@ -1501,7 +1501,7 @@ struct WeatherBackgroundGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
@@ -1518,7 +1518,7 @@ struct WeatherBackgroundGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
@@ -1541,7 +1541,7 @@ struct WeatherBackgroundGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
@@ -1582,7 +1582,7 @@ struct WeatherBackgroundGenView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 } header: {

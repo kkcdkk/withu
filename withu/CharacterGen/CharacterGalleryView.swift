@@ -177,7 +177,7 @@ struct CharacterGalleryView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .aspectRatio(1, contentMode: .fit)
-                .frostedCard(cornerRadius: 16)
+                .plainFrostedCard(cornerRadius: 16)
 
                 Text(charName(group) ?? "이름 없는 캐릭터")
                     .font(.galmuri(15, relativeTo: .callout))
@@ -279,7 +279,7 @@ struct CharacterGalleryView: View {
                 .foregroundStyle(.tertiary)
         }
         .opacity(isEmpty ? 0.55 : 1)
-        .frostedCard()
+        .plainFrostedCard()
     }
 
     private var legacyRow: some View {
@@ -304,7 +304,7 @@ struct CharacterGalleryView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
-        .frostedCard()
+        .plainFrostedCard()
     }
 
     private var legacyHeader: some View {
@@ -323,7 +323,7 @@ struct CharacterGalleryView: View {
             }
             Spacer()
         }
-        .frostedCard()
+        .plainFrostedCard()
     }
 
     private var emptyState: some View {
@@ -396,7 +396,7 @@ struct StateFolderView: View {
             }
             Spacer()
         }
-        .frostedCard()
+        .plainFrostedCard()
     }
 
     private var emptyState: some View {
@@ -783,7 +783,7 @@ struct GalleryGrid<Header: View>: View {
                                         .foregroundStyle(Color.withuCTAGreen)
                                 }
                             }
-                            .frostedCard()
+                            .plainFrostedCard()
                             .padding(.horizontal)
                         } else {
                             // 아직 어디에도 적용 안 함 — 큰 적용 CTA + 아래 전체폭 '다른 자리에' 메뉴.
@@ -933,7 +933,7 @@ struct GalleryGrid<Header: View>: View {
                                     .font(.caption2).foregroundStyle(.secondary)
                             }
                         }
-                        .frostedCard()
+                        .plainFrostedCard()
                         .padding(.horizontal)
                         .alert("캔디를 사용해요", isPresented: $showMotionConfirm) {
                             Button("만들기") { Task { await makeMotionFrame(item) } }
@@ -1269,7 +1269,7 @@ struct GalleryGrid<Header: View>: View {
                             .disabled(isRefining || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                         .padding(14)
-                        .frostedCard()
+                        .plainFrostedCard()
                         .padding(.horizontal)
                     }
 

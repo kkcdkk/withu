@@ -27,10 +27,10 @@ extension Font {
 /// 모든 서브 화면 배경. 기조는 브랜드 그린(새싹 캐릭터 색) — 정체성 통일.
 /// 상태 무드(state.tint)는 중간에 아주 옅게만 스며들게.
 /// top → bottom: 그린 @ 0.14 → state tint @ 0.04 → 시스템 배경.
-func backgroundGradient(for state: CharacterState) -> LinearGradient {
+func backgroundGradient(for state: CharacterState, topTint: Color? = nil) -> LinearGradient {
     LinearGradient(
         colors: [
-            Color.withuWarmBackground,
+            topTint ?? Color.withuWarmBackground,
             state.tint.opacity(0.05),
             Color.withuCardFill,
         ],
@@ -127,17 +127,17 @@ enum PixelIconSet {
         s.split(separator: "\n").map { line in line.map { $0 == "#" ? UInt8(1) : UInt8(0) } }
     }
 
-    /// 걸음 — 발자국 둘.
+    /// 걸음 — 발자국 둘(굵고 또렷하게).
     static let footsteps = rows("""
-    .##.........
-    ###.........
-    ###.........
-    .##.........
-    ............
-    ........##..
-    .......####.
-    .......####.
-    ........##..
+    .##.....
+    ###.....
+    ###.....
+    .##.....
+    ........
+    .....##.
+    .....###
+    .....###
+    ......#.
     """)
 
     /// 활동분 — 시계(테두리 + 바늘).
@@ -195,16 +195,15 @@ enum PixelIconSet {
     #.........
     """)
 
-    /// 사진 찍기 — 카메라.
+    /// 사진 찍기 — 카메라(몸통 크게, 렌즈는 꽉 찬 원).
     static let camera = rows("""
-    ...##.....
-    ..####....
+    ..##......
+    .####.....
     ##########
     #........#
     #..####..#
-    #.##..##.#
-    #.#....#.#
-    #.##..##.#
+    #.######.#
+    #.######.#
     #..####..#
     ##########
     """)
@@ -309,11 +308,12 @@ struct WithuCTAButtonStyle: ButtonStyle {
 /// 즉시 끝나는 동작도 최소 0.5초 스피너를 보여줘 '눌렸다'는 피드백을 준다.
 struct RefreshIconButton: View {
     var action: () async -> Void
+    var tint: Color = .secondary
     @State private var isRunning = false
 
     var body: some View {
         if isRunning {
-            ProgressView().controlSize(.mini)
+            ProgressView().controlSize(.mini).tint(tint)
         } else {
             Button {
                 Task {
@@ -327,7 +327,7 @@ struct RefreshIconButton: View {
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(tint)
             }
             .buttonStyle(.plain)
         }
@@ -411,6 +411,20 @@ extension View {
             .background(fill, in: PixelBorderShape())
             .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: lineWidth))
             .clipShape(PixelBorderShape())
+    }
+
+    /// 하위 화면 카드 — 픽셀 계단 대신 깔끔한 둥근 사각 + 먹빛 테두리(카톡 말풍선 느낌).
+    /// Form 행 안에서 픽셀 모서리가 잘리는 문제도 없음.
+    func plainCard(fill: Color = .withuCardFill, lineWidth: CGFloat = 2) -> some View {
+        self
+            .background(fill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.withuPixelOutline, lineWidth: lineWidth))
+    }
+
+    /// plainCard + 안쪽 padding 14 (frostedCard 의 하위화면 대체).
+    func plainFrostedCard(cornerRadius: CGFloat = 16) -> some View {
+        self.padding(14).plainCard()
     }
 }
 

@@ -372,49 +372,60 @@ struct ContentView: View {
     }
 
     private var metricsCard: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("오늘 활동")
-                    .font(.galmuri(12, relativeTo: .caption))
-                    .foregroundStyle(Color.withuPixelOutline)
-                Spacer()
-                RefreshIconButton { await loadAll() }
-            }
-            .padding(.horizontal, 14)
+        VStack(spacing: 0) {
+            cardHeaderBar(title: "오늘 활동") { RefreshIconButton(action: { await loadAll() }, tint: .withuCardFill) }
 
-            HStack(spacing: 0) {
-                metricItem(icon: PixelIconSet.footsteps,
-                           value: health.todaySteps.map { "\(Int($0))" } ?? "-",
-                           label: "걸음",
-                           dim: (health.todaySteps ?? 0) == 0)
-                Divider().frame(height: 32)
-                metricItem(icon: PixelIconSet.clock,
-                           value: health.todayActiveMinutes.map { "\(Int($0))" } ?? "-",
-                           label: "활동분",
-                           dim: (health.todayActiveMinutes ?? 0) == 0)
-                Divider().frame(height: 32)
-                metricItem(icon: PixelIconSet.flame,
-                           value: health.todayActiveKcal.map { "\(Int($0))" } ?? "-",
-                           label: "kcal",
-                           dim: (health.todayActiveKcal ?? 0) == 0)
-                Divider().frame(height: 32)
-                metricItem(icon: PixelIconSet.moon,
-                           value: sleepHoursText,
-                           label: "수면",
-                           dim: sleepHoursText == "-")
-            }
+            VStack(spacing: 8) {
+                HStack(spacing: 0) {
+                    metricItem(icon: PixelIconSet.footsteps,
+                               value: health.todaySteps.map { "\(Int($0))" } ?? "-",
+                               label: "걸음",
+                               dim: (health.todaySteps ?? 0) == 0)
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.clock,
+                               value: health.todayActiveMinutes.map { "\(Int($0))" } ?? "-",
+                               label: "활동분",
+                               dim: (health.todayActiveMinutes ?? 0) == 0)
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.flame,
+                               value: health.todayActiveKcal.map { "\(Int($0))" } ?? "-",
+                               label: "kcal",
+                               dim: (health.todayActiveKcal ?? 0) == 0)
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.moon,
+                               value: sleepHoursText,
+                               label: "수면",
+                               dim: sleepHoursText == "-")
+                }
 
-            if !activityMessage.isEmpty {
-                Text(activityMessage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 14)
+                if !activityMessage.isEmpty {
+                    Text(activityMessage)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 14)
+                }
             }
+            .padding(.vertical, 12)
         }
-        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .pixelCardSurface()
+    }
+
+    /// 카드 상단 갈색(먹빛) 바 — 크림 제목 + (선택) 우측 요소.
+    @ViewBuilder
+    private func cardHeaderBar<Trailing: View>(title: LocalizedStringKey,
+                                               @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack {
+            Text(title)
+                .font(.galmuri(12, relativeTo: .caption))
+                .foregroundStyle(Color.withuCardFill)
+            Spacer()
+            trailing()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.withuPixelOutline)
     }
 
     /// dim = 값이 0/없음 → 흐리고 작게(허전함 완화). 의미값은 크고 또렷하게.
@@ -535,18 +546,16 @@ struct ContentView: View {
     }
 
     private var watchStatusCard: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Text("Apple Watch")
-                    .font(.galmuri(12, relativeTo: .caption))
-                    .foregroundStyle(Color.withuPixelOutline)
-                Spacer()
-                if let last = connectivity.lastSentAt {
-                    Text(last.formatted(date: .omitted, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+        VStack(spacing: 0) {
+            cardHeaderBar(title: "Apple Watch") {
+                HStack(spacing: 8) {
+                    if let last = connectivity.lastSentAt {
+                        Text(last.formatted(date: .omitted, time: .shortened))
+                            .font(.caption2)
+                            .foregroundStyle(Color.withuCardFill.opacity(0.75))
+                    }
+                    RefreshIconButton(action: { sendStateToWatch(characterState) }, tint: .withuCardFill)
                 }
-                RefreshIconButton { sendStateToWatch(characterState) }
             }
             HStack(spacing: 0) {
                 statusItem(label: "페어링", ok: connectivity.isPaired)
@@ -555,8 +564,8 @@ struct ContentView: View {
                 Divider().frame(height: 32)
                 statusItem(label: "연결", ok: connectivity.isReachable)
             }
+            .padding(.vertical, 12)
         }
-        .padding(14)
         .pixelCardSurface()
     }
 

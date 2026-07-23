@@ -80,7 +80,7 @@ struct CharacterProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 } header: {
@@ -99,7 +99,7 @@ struct CharacterProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 } header: {
@@ -118,7 +118,7 @@ struct CharacterProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 } header: {
@@ -136,7 +136,7 @@ struct CharacterProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 } header: {
@@ -159,7 +159,7 @@ struct CharacterProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
-                    .pixelCardSurface()
+                    .plainCard()
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 }
@@ -235,7 +235,7 @@ struct CharacterProfileView: View {
             }
             Spacer()
         }
-        .frostedCard(cornerRadius: 18)
+        .plainFrostedCard(cornerRadius: 18)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -283,7 +283,7 @@ struct CharacterProfileView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {

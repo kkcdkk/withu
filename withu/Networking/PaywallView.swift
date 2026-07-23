@@ -114,7 +114,7 @@ struct PaywallView: View {
                 .buttonStyle(WithuCTAButtonStyle())
                 .disabled(redeemInput.trimmingCharacters(in: .whitespaces).isEmpty || isRedeeming)
             }
-            .frostedCard()
+            .plainFrostedCard()
             if let msg = redeemMessage {
                 Text(msg)
                     .font(.caption)
@@ -172,7 +172,7 @@ struct PaywallView: View {
                             .foregroundStyle(Color.withuPinkText)
                     }
                 }
-                .frostedCard()
+                .plainFrostedCard()
             }
 
             HStack(spacing: 10) {
@@ -191,7 +191,7 @@ struct PaywallView: View {
                 .buttonStyle(WithuCTAButtonStyle())
                 .disabled(referralInput.trimmingCharacters(in: .whitespaces).isEmpty || isApplyingReferral)
             }
-            .frostedCard()
+            .plainFrostedCard()
 
             Text("입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요.")
                 .font(.caption2)
@@ -229,7 +229,7 @@ struct PaywallView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .frostedCard(cornerRadius: 18)
+        .plainFrostedCard(cornerRadius: 18)
     }
 
     private var creditSection: some View {
@@ -281,7 +281,7 @@ struct PaywallView: View {
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(.primary)
             }
-            .frostedCard()
+            .plainFrostedCard()
             .overlay {
                 if isRecommended {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)

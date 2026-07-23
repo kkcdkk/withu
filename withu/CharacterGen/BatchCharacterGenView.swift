@@ -172,7 +172,7 @@ struct BatchCharacterGenView: View {
 
     var body: some View {
         ZStack {
-            backgroundGradient(for: .idle).ignoresSafeArea()
+            backgroundGradient(for: .idle, topTint: .withuPinkSoft).ignoresSafeArea()
             Form {
                 if awaitingIdleApproval {
                     // 기준 모습 승인 단계 — 사진과 버튼이 바로 보이게 이 섹션만 표시
@@ -359,7 +359,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -396,7 +396,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -445,7 +445,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -645,7 +645,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -665,7 +665,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -712,7 +712,7 @@ struct BatchCharacterGenView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .pixelCardSurface()
+                .plainCard()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
@@ -898,7 +898,7 @@ struct BatchCharacterGenView: View {
             .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(12)
-        .frostedCard(cornerRadius: 12)
+        .plainFrostedCard(cornerRadius: 12)
     }
 
     /// 기준 모습 다듬기 결과 — 한 행으로 묶어(구분선 없이) 원본/다듬음 N 스트립 + 이어서 다듬기 + 적용/취소.
@@ -929,7 +929,7 @@ struct BatchCharacterGenView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .pixelCardSurface()
+            .plainCard()
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         } header: {
@@ -1816,7 +1816,7 @@ struct BatchCharacterGenView: View {
                         .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(14)
-                    .frostedCard()
+                    .plainFrostedCard()
                     .padding(.horizontal)
                     .onChange(of: revisionRefItem) { _, item in
                         Task { await loadRevisionRef(item) }
@@ -1916,7 +1916,7 @@ struct BatchCharacterGenView: View {
                     .buttonStyle(.bordered).tint(Color.withuCTAGreen)
                     .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .padding(14).frostedCard().padding(.horizontal)
+                .padding(14).plainFrostedCard().padding(.horizontal)
 
                 HStack {
                     Button("적용") { acceptRevision(state) }
