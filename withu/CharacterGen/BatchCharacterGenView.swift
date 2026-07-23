@@ -494,6 +494,7 @@ struct BatchCharacterGenView: View {
                     }
                 ))
                 .labelsHidden()
+                .fixedSize()
                 .disabled(isGenerating)
 
                 Text(state.koreanShortLabel)
@@ -1752,6 +1753,7 @@ struct BatchCharacterGenView: View {
                                 }
                             ))
                             .labelsHidden()
+                            .fixedSize()
                         }
                         .padding(.horizontal)
                     }

@@ -287,23 +287,28 @@ struct ContentView: View {
     private var weatherHeader: some View {
         HStack(spacing: 8) {
             if let snap = weather.snapshot {
-                Text("\(snap.condition.emoji) \(snap.condition.caption)")
-                    .font(.subheadline.weight(.medium))
+                // 이모지 대신 이미 있는 픽셀 날씨 PNG 재사용 (야간 판정 포함 — 캐릭터 옆 장식과 같은 그림).
+                if let cond = weatherBackgroundCondition, UIImage(named: cond.decorationAssetName) != nil {
+                    Image(cond.decorationAssetName)
+                        .resizable().interpolation(.none).scaledToFit()
+                        .frame(width: 20, height: 20)
+                }
+                Text(snap.condition.caption)
+                    .font(.galmuri(13, relativeTo: .subheadline))
                 Text("·")
                     .foregroundStyle(.secondary)
                 Text(String(format: "%.0f°", snap.temperatureC))
-                    .font(.subheadline)
+                    .font(.galmuri(13, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             } else {
                 Text("날씨 가져오는 중…")
-                    .font(.subheadline)
+                    .font(.galmuri(13, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             }
             Spacer()
             Toggle("날씨 표시", isOn: $showWeather)
                 .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.mini)
+                .fixedSize()
             if weather.isFetching {
                 ProgressView()
                     .controlSize(.mini)
@@ -559,7 +564,7 @@ struct ContentView: View {
             Image(systemName: ok ? "checkmark.circle.fill" : "minus.circle.fill")
                 .foregroundStyle(ok ? .green : .secondary)
                 .font(.callout)
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(label).font(.galmuri(10, relativeTo: .caption2)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

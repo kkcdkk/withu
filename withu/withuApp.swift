@@ -40,6 +40,8 @@ struct withuApp: App {
             ContentView()
                 // 다크모드에서 캐릭터/카드 대비가 어긋나 항상 밝은 화면으로 고정.
                 .preferredColorScheme(.light)
+                // 앱 전체 토글을 픽셀 스타일로 (iOS 초록 스위치 제거). sheet/네비도 상속.
+                .toggleStyle(PixelToggleStyle())
         }
         // 포그라운드 복귀 시 Apple 로그인 권한 철회/계정 삭제 감지
         .onChange(of: scenePhase) { _, phase in

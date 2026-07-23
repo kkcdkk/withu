@@ -182,6 +182,37 @@ enum PixelIconSet {
     """)
 }
 
+// MARK: - 픽셀 토글 (iOS 기본 초록 스위치 대체)
+
+/// 레트로 픽셀 토글 — 계단 트랙 + 사각 노브. off=크림, on=세이지. iOS 초록 채도 제거.
+/// 라벨 있는 폼 행/라벨 숨긴 인라인 둘 다 대응 (인라인은 호출부에서 .fixedSize()).
+struct PixelToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.label
+            Spacer(minLength: 0)
+            track(isOn: configuration.isOn)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.snappy(duration: 0.16)) { configuration.isOn.toggle() }
+        }
+    }
+
+    private func track(isOn: Bool) -> some View {
+        ZStack(alignment: isOn ? .trailing : .leading) {
+            PixelBorderShape(pixel: 3).fill(isOn ? Color.withuSage : Color.withuCardFill)
+            PixelBorderShape(pixel: 3).strokeBorder(Color.withuPixelOutline, lineWidth: 2)
+            Rectangle()
+                .fill(Color.withuCardFill)
+                .overlay(Rectangle().strokeBorder(Color.withuPixelOutline, lineWidth: 2))
+                .frame(width: 14, height: 14)
+                .padding(3)
+        }
+        .frame(width: 42, height: 24)
+    }
+}
+
 struct WithuCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CTABody(configuration: configuration)
