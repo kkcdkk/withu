@@ -217,10 +217,12 @@ final class HealthKitManager {
         // 새 수면이 없으면 옛날 총합이 고정으로 남았음(2h 고정 버그).
         // 가장 최근 수면 샘플 기준 14시간 창 안에서 시작한 것만 = 한 번의 수면 세션.
         let lastNight: [HKCategorySample]
-        if let lastEnd = asleep.map(\.endDate).max() {
+        if let lastEnd = asleep.map(\.endDate).max(),
+           end.timeIntervalSince(lastEnd) < 36 * 3600 {   // 최근 36h 안에 끝난 수면만 = 진짜 지난 밤
             let windowStart = lastEnd.addingTimeInterval(-14 * 3600)
             lastNight = asleep.filter { $0.startDate >= windowStart }
         } else {
+            // 최근 수면 기록 없음(옛 샘플만 남아 2h 고정으로 뜨던 케이스) → 빈 값 → "-"
             lastNight = []
         }
         let total = lastNight.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
