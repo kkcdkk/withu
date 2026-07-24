@@ -426,6 +426,18 @@ extension View {
     func plainFrostedCard(cornerRadius: CGFloat = 16) -> some View {
         self.padding(14).plainCard()
     }
+
+    /// 텍스트 입력칸을 카드(크림) 배경과 구분 — 흰빛 배경 + 얇은 먹빛 테두리.
+    /// TextEditor/TextField 에 붙여 "여기 입력" 임을 또렷하게.
+    func pixelInputField() -> some View {
+        self
+            .scrollContentBackground(.hidden)   // TextEditor 기본 배경 숨김 (TextField 엔 무해)
+            .padding(8)
+            .background(Color.white.opacity(0.6),
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.withuPixelOutline.opacity(0.45), lineWidth: 1.5))
+    }
 }
 
 // MARK: - 섹션 헤더

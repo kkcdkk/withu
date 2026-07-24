@@ -386,6 +386,7 @@ struct BatchCharacterGenView: View {
                             .allowsHitTesting(false)
                     }
                 }
+                .pixelInputField()
             DisclosureGroup("항목별 입력") {
                 helperField("대상", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
@@ -878,6 +879,7 @@ struct BatchCharacterGenView: View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
                 .font(.callout).disabled(isGenerating)
+                .pixelInputField()
             Divider()
             Button {
                 pendingAction = .reviseIdle
@@ -1764,6 +1766,7 @@ struct BatchCharacterGenView: View {
                         // 프롬프트 입력 위, 사진 아래 (다른 다듬기와 형식 통일).
                         TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
                             .font(.footnote)
+                            .pixelInputField()
                             .lineLimit(2...4)
                         HStack(spacing: 10) {
                             Menu {
@@ -1900,6 +1903,7 @@ struct BatchCharacterGenView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
                         .font(.footnote).lineLimit(2...4)
+                        .pixelInputField()
                     Button {
                         Task { await reviseOne(state, frame: rev.frame, text: revisionText) }
                     } label: {

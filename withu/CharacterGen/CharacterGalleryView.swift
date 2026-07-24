@@ -884,6 +884,7 @@ struct GalleryGrid<Header: View>: View {
                             // 선은 버튼 아래(다음 섹션 Divider 또는 카드 끝)로 둔다.
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
                                 .font(.callout)
+                                .pixelInputField()
                             Button {
                                 showRefineConfirm = true
                             } label: {
@@ -1253,6 +1254,7 @@ struct GalleryGrid<Header: View>: View {
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
                                 .font(.callout)
+                                .pixelInputField()
                             Button {
                                 Task { await refineItem(item) }
                             } label: {

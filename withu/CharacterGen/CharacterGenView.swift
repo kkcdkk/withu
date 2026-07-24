@@ -356,6 +356,7 @@ struct CharacterGenView: View {
                             .allowsHitTesting(false)
                     }
                 }
+                .pixelInputField()
             DisclosureGroup("항목별 입력") {
                 helperField("대상", text: $subjectField, placeholder: "마시멜로 캐릭터")
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
@@ -777,6 +778,7 @@ struct CharacterGenView: View {
                     TextEditor(text: $refinementPrompt)
                         .frame(minHeight: 80)
                         .font(.callout)
+                        .pixelInputField()
                     HStack {
                         Spacer()
                         Button {
@@ -1548,6 +1550,7 @@ struct WeatherBackgroundGenView: View {
                 TextEditor(text: $prompt)
                     .frame(minHeight: 100)
                     .font(.callout)
+                    .pixelInputField()
                 Button {
                     Task { await generate() }
                 } label: {
