@@ -545,11 +545,11 @@ extension Color {
             : UIColor(red: 0.16, green: 0.52, blue: 0.28, alpha: 1.0)
     })
 
-    /// 카드/홈 항목 픽셀 테두리 — 따뜻한 먹빛(까망에 갈색기). 동물의 숲/레트로 카툰 윤곽.
+    /// 카드/홈 항목 픽셀 테두리 — 따뜻한 중간 갈색. 동물의 숲/레트로 카툰 윤곽.
     static let withuPixelOutline = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.10, green: 0.09, blue: 0.08, alpha: 1.0)
-            : UIColor(red: 0.20, green: 0.16, blue: 0.12, alpha: 1.0)
+            ? UIColor(red: 0.22, green: 0.17, blue: 0.12, alpha: 1.0)
+            : UIColor(red: 0.36, green: 0.27, blue: 0.19, alpha: 1.0)
     })
 
     /// 카드 표면 — 따뜻한 크림. 먹빛 테두리와 짝. 어두운 글자(.primary)와 대비 충분.

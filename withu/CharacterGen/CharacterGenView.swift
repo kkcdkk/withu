@@ -249,7 +249,7 @@ struct CharacterGenView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("여러 상태 한 번에 만들기")
-                        .font(.callout.weight(.semibold))
+                        .font(.galmuri(15, relativeTo: .callout))
                     Text("모든 상태의 모습을 한번에 만들어요")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -260,7 +260,7 @@ struct CharacterGenView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("하나씩 만들기")
-                        .font(.callout.weight(.semibold))
+                        .font(.galmuri(15, relativeTo: .callout))
                     Text("원하는 상태 하나만 만들어요")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -274,6 +274,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 방식")
+                .font(.galmuri(12, relativeTo: .caption))
         }
     }
 
@@ -286,6 +287,7 @@ struct CharacterGenView: View {
                 } label: {
                     HStack {
                         Text(LocalizedStringKey(m.rawValue))
+                            .font(.galmuri(15, relativeTo: .callout))
                             .foregroundStyle(.primary)
                         Spacer()
                         if mode == m {
@@ -304,6 +306,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 옵션")
+                .font(.galmuri(12, relativeTo: .caption))
         } footer: {
             if mode == .importPhoto {
                 Text("모두 기기 안에서 처리하고 비용은 들지 않아요.")
