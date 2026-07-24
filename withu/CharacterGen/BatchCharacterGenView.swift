@@ -886,7 +886,7 @@ struct BatchCharacterGenView: View {
                     HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
                 } else {
                     HStack {
-                        Label(label, systemImage: "wand.and.stars")
+                        Text(label)
                         Spacer()
                         Text(idleRevisionCost == 0 ? String(localized: "무료")
                                                    : String(localized: "캔디 \(idleRevisionCost)개"))
@@ -949,7 +949,7 @@ struct BatchCharacterGenView: View {
                         Text("만드는 중… \(progressDone)/\(requiredCount)")
                     }
                 } else {
-                    Label("만들기 시작", systemImage: "wand.and.stars")
+                    Text("만들기 시작")
                 }
             }
             .buttonStyle(WithuCTAButtonStyle())
@@ -1805,7 +1805,7 @@ struct BatchCharacterGenView: View {
                                 HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
                             } else {
                                 HStack {
-                                    Label("다듬기", systemImage: "wand.and.stars")
+                                    Text("다듬기")
                                     Spacer()
                                     Text("캔디 \(GenerationQuota.cost(forQuality: quality))개")
                                         .font(.caption).foregroundStyle(.secondary)

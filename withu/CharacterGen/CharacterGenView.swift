@@ -450,7 +450,7 @@ struct CharacterGenView: View {
                 Button {
                     pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
                 } label: {
-                    Label("이 모습으로 만들기", systemImage: "wand.and.stars")
+                    Text("이 모습으로 만들기")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WithuCTAButtonStyle())
@@ -786,10 +786,13 @@ struct CharacterGenView: View {
                                 if isGenerating {
                                     ProgressView().controlSize(.small).tint(.white)
                                 } else {
-                                    PixelIcon(grid: PixelIconSet.wand, tint: .white, size: 22)
+                                    Text("다듬기")
+                                        .font(.galmuri(14, relativeTo: .callout))
+                                        .foregroundStyle(.white)
                                 }
                             }
-                            .frame(width: 48, height: 48)
+                            .frame(minWidth: 64, minHeight: 46)
+                            .padding(.horizontal, 10)
                             .background(PixelBorderShape().fill(Color.withuSage))
                             .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
                         }
@@ -1551,7 +1554,7 @@ struct WeatherBackgroundGenView: View {
                     if isGenerating {
                         generatingLabel
                     } else {
-                        Label("배경 만들기", systemImage: "wand.and.stars")
+                        Text("배경 만들기")
                     }
                 }
                 .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

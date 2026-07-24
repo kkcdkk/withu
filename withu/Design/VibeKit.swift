@@ -290,9 +290,9 @@ struct WithuCTAButtonStyle: ButtonStyle {
                                 .fill(Color.black.opacity(configuration.isPressed ? 0.18 : 0))
                         )
                         .overlay(
-                            // 픽셀 계단 딥그린 테두리 — 캐릭터/폰트와 톤 맞춘 귀여운 윤곽.
+                            // 픽셀 계단 먹빛(까망) 테두리.
                             PixelBorderShape()
-                                .strokeBorder(Color.withuCTABorder, lineWidth: 2.5)
+                                .strokeBorder(Color.withuPixelOutline, lineWidth: 2.5)
                         )
                 )
                 .opacity(isEnabled ? 1 : 0.45)
