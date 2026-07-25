@@ -10,6 +10,13 @@ import WidgetKit
 import CoreLocation
 import WatchConnectivity
 
+/// 활동 카드 아래 격려 문구 — 이모지 대신 손그림 픽셀 아이콘을 옆에 붙인다.
+struct ActivityMessage: Equatable {
+    let text: String
+    /// Assets 이미지 이름 (msg_sun / msg_leaf / msg_stretch / msg_water). nil 이면 아이콘 없음.
+    let asset: String?
+}
+
 struct ContentView: View {
     @State private var health = HealthKitManager.shared
     @State private var connectivity = ConnectivityManager.shared
@@ -29,7 +36,7 @@ struct ContentView: View {
     // 30초 타이머 + foreground 진입 때 갱신. resolver 에 now 로 주입.
     @State private var currentTime: Date = Date()
     /// 활동 종합 메시지 — task / 새로고침 시 갱신
-    @State private var activityMessage: String = ""
+    @State private var activityMessage: ActivityMessage = .init(text: "", asset: nil)
     @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
     /// 사용법 안내를 봤는지 — 첫 실행 후 1회 자동 표시.
     @AppStorage("withu.seenGuide.v1") private var seenGuide: Bool = false
@@ -403,12 +410,19 @@ struct ContentView: View {
                                dim: sleepHoursText == "-")
                 }
 
-                if !activityMessage.isEmpty {
-                    Text(activityMessage)
-                        .font(.pretendard(11, relativeTo: .caption2))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 14)
+                if !activityMessage.text.isEmpty {
+                    HStack(spacing: 6) {
+                        if let asset = activityMessage.asset {
+                            Image(asset)
+                                .resizable().interpolation(.none).scaledToFit()
+                                .frame(width: 18, height: 18)
+                        }
+                        Text(activityMessage.text)
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 14)
                 }
             }
             .padding(.vertical, 12)
@@ -460,7 +474,7 @@ struct ContentView: View {
 
     /// Slack 새로고침 메시지 같은 가벼운 격려/안내. 시간대 + 활동량 기반.
     /// 메시지 문구 수정: 이 함수 안 morningMessages / lazyMessages / 활동량 분기 메시지.
-    private func computeActivityMessage() -> String {
+    private func computeActivityMessage() -> ActivityMessage {
         let hour = Calendar.current.component(.hour, from: Date())
         let kcal = Int(health.todayActiveKcal ?? 0)
         let steps = Int(health.todaySteps ?? 0)
@@ -468,27 +482,28 @@ struct ContentView: View {
 
         // 아침 (11시 전) — 활동 적을 때 랜덤 인사
         if hour < 11 && kcal < 100 {
-            let morningMessages = [
-                String(localized: "좋은 아침! 오늘도 함께해요 ☀️"),
-                String(localized: "새 하루 시작이에요 🌱"),
-                String(localized: "기지개 펴고 시작해봐요 🧘"),
-                String(localized: "물 한 잔 마시는 거 잊지 마세요 💧")
+            let morningMessages: [ActivityMessage] = [
+                .init(text: String(localized: "좋은 아침! 오늘도 함께해요"), asset: "msg_sun"),
+                .init(text: String(localized: "새 하루 시작이에요"), asset: "msg_leaf"),
+                .init(text: String(localized: "기지개 펴고 시작해봐요"), asset: "msg_stretch"),
+                .init(text: String(localized: "물 한 잔 마시는 거 잊지 마세요"), asset: "msg_water")
             ]
-            return morningMessages.randomElement() ?? ""
+            return morningMessages.randomElement() ?? .init(text: "", asset: nil)
         }
         // 활발한 날
         if kcal >= 400 || minutes >= 60 || steps >= 10000 {
-            return String(localized: "오늘 알찬 하루였네요! 평소보다 많이 움직였어요")
+            return .init(text: String(localized: "오늘 알찬 하루였네요! 평소보다 많이 움직였어요"),
+                         asset: "msg_stretch")
         }
         // 보통
         if kcal >= 150 || steps >= 4000 {
-            return String(localized: "오늘 \(steps)보 걸었어요 🌿")
+            return .init(text: String(localized: "오늘 \(steps)보 걸었어요"), asset: "msg_leaf")
         }
         // 잔잔한 날
-        let lazyMessages = [
-            String(localized: "가벼운 산책 어때요 🌿")
+        let lazyMessages: [ActivityMessage] = [
+            .init(text: String(localized: "가벼운 산책 어때요"), asset: "msg_leaf")
         ]
-        return lazyMessages.randomElement() ?? ""
+        return lazyMessages.randomElement() ?? .init(text: "", asset: nil)
     }
 
     private var sleepHoursText: String {
