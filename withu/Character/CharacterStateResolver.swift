@@ -26,6 +26,7 @@ enum CharacterStateResolver {
         hasSleepSchedule: Bool = false,
         isFocusActive: Bool = false,
         isGenericFocusActive: Bool = false,
+        sleepWindowFallback: Bool = false,
         isLikelyInWorkout: Bool = false,
         recentStepsPerMinute: Double = 0,
         phoneWorkoutState: CharacterState? = nil,
@@ -91,6 +92,14 @@ enum CharacterStateResolver {
         // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
         // '수면 모드 기준'은 실제 수면 신호(위 1·2순위)만 따르고 시간창으로는 안 잔다.
         if profile.isManualSleepOnly,
+           isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
+            return .sleeping
+        }
+        // 3.5순위 — '수면 모드 기준'인데 iOS Focus 를 아예 감지할 수 없는 환경
+        //   (Focus 상태 공유 꺼짐/권한 없음 + 예약 활성화 때 필터 intent 유실).
+        //   신호가 하나도 없다고 밤새 깨어 있는 것보다, 설정한 시간창을 믿는 게 낫다.
+        //   (사용자가 방금 수면 모드를 끈 경우는 caller 가 false 로 넘겨 폴백 안 함)
+        if sleepWindowFallback,
            isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }

@@ -430,6 +430,21 @@ final class FocusModeManager {
         return now < wake
     }
 
+    /// iOS Focus 상태를 아예 알 수 없는 환경인지 — 권한 없음 또는 'Focus 상태 공유' 꺼짐(nil).
+    /// 이 경우 예약(자동) 수면 모드가 켜져도 앱에 도착하는 신호가 하나도 없다.
+    var isFocusUndetectable: Bool { !isAuthorized || rawFocusedValue == nil }
+
+    /// 예약 수면 모드를 못 잡는 환경에서 프로필 수면 시간창을 수면 신호로 대신 쓸지.
+    /// iOS 는 잠긴 폰에서 예약 활성화 시 필터 intent 를 안 부르는 경우가 있어(수동은 됨),
+    /// Focus 를 전혀 감지 못 하면 밤새 깨어 있게 된다 → 설정한 시간창으로 폴백.
+    /// 단 최근(3시간 내)에 필터가 '수면 꺼짐'을 알려줬으면 사용자가 직접 끈 것이라 폴백 안 함.
+    func shouldFallbackToSleepWindow(now: Date = Date()) -> Bool {
+        guard isFocusUndetectable else { return false }
+        if !isFocusFilterSleeping, let at = focusFilterLastPerformAt,
+           now.timeIntervalSince(at) < 3 * 3600 { return false }
+        return true
+    }
+
     /// 현재 권한 상태 한국어 라벨 (디버그 UI 용).
     var authorizationStatusLabel: String {
         switch INFocusStatusCenter.default.authorizationStatus {
@@ -500,6 +515,8 @@ enum SyncCoordinator {
             hasSleepSchedule: hasSleepSchedule,
             isFocusActive: isFocusActive,
             isGenericFocusActive: manualOnly ? false : focus.isFocused,
+            // Focus 를 전혀 감지 못 하는 환경이면 설정한 수면 시간창으로 폴백.
+            sleepWindowFallback: manualOnly ? false : focus.shouldFallbackToSleepWindow(),
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: phoneWorkoutState(),

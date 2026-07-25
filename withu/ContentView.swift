@@ -71,6 +71,8 @@ struct ContentView: View {
             isFocusActive: manualOnly ? false : focus.filterSleepingCorrected(
                 sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute),
             isGenericFocusActive: manualOnly ? false : focus.isFocused,
+            // Focus 를 전혀 감지 못 하는 환경이면 설정한 수면 시간창으로 폴백.
+            sleepWindowFallback: manualOnly ? false : focus.shouldFallbackToSleepWindow(),
             isLikelyInWorkout: health.isLikelyInWorkout,
             recentStepsPerMinute: health.recentStepsPerMinute,
             phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
@@ -1174,6 +1176,12 @@ struct AdvancedDiagnosticsView: View {
                 Spacer()
                 StatusPill(kind: focus.isFocusFilterSleeping ? .ok : .off,
                            label: focus.isFocusFilterSleeping ? "받는 중" : "꺼짐")
+            }
+            HStack {
+                Text("설정 시간으로 대신 자기")
+                Spacer()
+                StatusPill(kind: focus.shouldFallbackToSleepWindow() ? .ok : .off,
+                           label: focus.shouldFallbackToSleepWindow() ? "켜짐" : "꺼짐")
             }
             HStack {
                 Text("마지막으로 받은 시각")
