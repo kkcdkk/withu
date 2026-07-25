@@ -38,6 +38,9 @@ struct withuApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // 폰트를 따로 지정 안 한 텍스트(Form 라벨·토글·버튼 등)의 기본값 —
+                // iOS 기본 산돌고딕 대신 Pretendard. 개별 .font() 지정이 있으면 그게 우선.
+                .font(.pretendard(17, relativeTo: .body))
                 // 다크모드에서 캐릭터/카드 대비가 어긋나 항상 밝은 화면으로 고정.
                 .preferredColorScheme(.light)
                 // 앱 전체 토글을 픽셀 스타일로 (iOS 초록 스위치 제거). sheet/네비도 상속.

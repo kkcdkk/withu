@@ -364,6 +364,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 이름")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         } footer: {
             Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
         }
@@ -402,6 +403,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("캐릭터 프롬프트")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         }
     }
 
@@ -451,6 +453,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("만들고 싶은 상태 (\(selectedStates.count)개)")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         } footer: {
             // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시.
             if animatableSelected.isEmpty {
@@ -651,6 +654,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         }
     }
 
@@ -671,6 +675,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("스타일")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         }
     }
 
@@ -719,6 +724,7 @@ struct BatchCharacterGenView: View {
             } header: {
                 HStack(spacing: 6) {
                     Text("움직이는 캐릭터")
+                        .font(.pretendardBold(13, relativeTo: .footnote))
                     Button { showMotionInfo = true } label: {
                         Image(systemName: "questionmark.circle")
                             .font(.pretendard(12, relativeTo: .caption))
@@ -869,6 +875,7 @@ struct BatchCharacterGenView: View {
                 .listRowBackground(Color.clear)
             } header: {
                 Text("기준 모습 확인")
+                    .font(.pretendardBold(13, relativeTo: .footnote))
             }
         }
     }
@@ -936,6 +943,7 @@ struct BatchCharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("다듬기 이력")
+                .font(.pretendardBold(13, relativeTo: .footnote))
         }
     }
 

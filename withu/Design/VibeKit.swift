@@ -24,6 +24,11 @@ extension Font {
     static func pretendard(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
         .custom("Pretendard-Light", size: size, relativeTo: textStyle)
     }
+
+    /// 섹션 헤더용 — Pretendard Bold.
+    static func pretendardBold(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
+        .custom("Pretendard-Bold", size: size, relativeTo: textStyle)
+    }
 }
 
 // MARK: - 배경 그라데이션
@@ -399,7 +404,7 @@ struct SectionHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.pretendard(12, relativeTo: .caption))
+                .font(.pretendardBold(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             trailing
