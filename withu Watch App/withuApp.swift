@@ -16,6 +16,8 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func applicationDidFinishLaunching() {
         Task { @MainActor in
             ConnectivityManager.shared.activate()
+            // 워치 자체 손목 모션으로 운동을 바로 감지 → 폰 왕복 없이 캐릭터 갱신.
+            WatchMotionManager.shared.start()
         }
     }
 }
