@@ -649,7 +649,7 @@ struct GalleryGrid<Header: View>: View {
                 // 연속 이미지 배지
                 if hasFrame1 && !isSelectionMode {
                     Text("연속")
-                        .font(.system(size: 10).weight(.medium))
+                        .font(.pretendard(10))
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Capsule().fill(.ultraThinMaterial))
                         .padding(6)

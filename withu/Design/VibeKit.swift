@@ -222,7 +222,7 @@ struct WithuCTAButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.pretendard(16, relativeTo: .callout))
+                .font(.galmuri(16, relativeTo: .callout))   // 초록 버튼 글씨 = 둥근모꼴
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
@@ -270,7 +270,7 @@ struct RefreshIconButton: View {
                 }
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(tint)
             }
             .buttonStyle(.plain)
@@ -434,16 +434,16 @@ struct ActionLinkRow: View {
                 .frame(width: 44, height: 44)
                 .overlay(
                     Image(systemName: systemImage)
-                        .font(.title3)
+                        .font(.pretendard(20, relativeTo: .title3))
                         .foregroundStyle(tint)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.pretendard(12, relativeTo: .caption))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -459,17 +459,17 @@ struct ActionLinkRow: View {
         switch trailing {
         case .chevron:
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.tertiary)
         case .checkmark:
             Image(systemName: "checkmark")
-                .font(.callout.weight(.semibold))
+                .font(.pretendard(16, relativeTo: .callout))
                 .foregroundStyle(tint)
         case .none:
             EmptyView()
         case .text(let t):
             Text(t)
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -491,10 +491,10 @@ struct StatusPill: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: symbol)
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
         }
     }
@@ -543,7 +543,7 @@ struct StateEmojiChip: View {
         ZStack {
             Circle().fill(state.tint.opacity(0.22))
             Text(state.symbolEmoji)
-                .font(.system(size: size * 0.46))
+                .font(.pretendard(size * 0.46))
         }
         .frame(width: size, height: size)
     }
@@ -558,7 +558,7 @@ struct HelperFooter: View {
 
     var body: some View {
         Text(text)
-            .font(.caption2)
+            .font(.pretendard(11, relativeTo: .caption2))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 4)
             .fixedSize(horizontal: false, vertical: true)
@@ -575,13 +575,13 @@ struct WarningBanner: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
             Text(text)
-                .font(.subheadline)
+                .font(.pretendard(15, relativeTo: .subheadline))
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             if let retry {
                 Button("다시 시도", action: retry)
-                    .font(.caption.weight(.semibold))
+                    .font(.pretendard(12, relativeTo: .caption))
                     .buttonStyle(.plain)
                     .foregroundStyle(.orange)
             }

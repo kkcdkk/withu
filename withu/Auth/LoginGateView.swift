@@ -29,9 +29,9 @@ struct LoginGateView: View {
 
                 VStack(spacing: 8) {
                     Text("Withy 시작하기")
-                        .font(.title3.weight(.semibold))
+                        .font(.pretendard(20, relativeTo: .title3))
                     Text("내 일상과 함께하는 나의 캐릭터")
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -58,7 +58,7 @@ struct LoginGateView: View {
                 .disabled(auth.isAuthenticating)
 
                 Text("로그인하면 개인정보처리방침과 이용약관에 동의하는 것으로 간주됩니다.")
-                    .font(.caption2)
+                    .font(.pretendard(11, relativeTo: .caption2))
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -67,7 +67,7 @@ struct LoginGateView: View {
                 Button("로그인 없이 둘러보기 (개발용)") {
                     auth.skipForDebug()
                 }
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 16)
                 #else

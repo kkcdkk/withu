@@ -122,9 +122,9 @@ struct OnboardingView: View {
                 }
                 VStack(spacing: 8) {
                     Text("Withy")
-                        .font(.title3.weight(.semibold))
+                        .font(.pretendard(20, relativeTo: .title3))
                     Text("내 캐릭터가 일상에 함께해요")
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -284,9 +284,9 @@ struct OnboardingView: View {
             }
             VStack(spacing: 8) {
                 Text("준비가 끝났어요")
-                    .font(.title3.weight(.semibold))
+                    .font(.pretendard(20, relativeTo: .title3))
                 Text("이제 내 캐릭터를 만들어 봐요")
-                    .font(.callout)
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -302,7 +302,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
             Spacer()
             Text("켜지 않은 권한은 메인 화면 설정에서 다시 켤 수 있어요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -311,7 +311,7 @@ struct OnboardingView: View {
 
     private func summaryRow(_ label: String, _ result: PermissionResult) -> some View {
         HStack {
-            Text(label).font(.callout)
+            Text(label).font(.pretendard(16, relativeTo: .callout))
             Spacer()
             StatusPill(kind: result.statusKind ?? .off, label: LocalizedStringKey(summaryShortLabel(result)))
         }
@@ -344,9 +344,9 @@ struct OnboardingView: View {
                         .foregroundStyle(tint)
                 }
                 Text(title)
-                    .font(.title3.weight(.semibold))
+                    .font(.pretendard(20, relativeTo: .title3))
                 Text(bodyText)
-                    .font(.callout)
+                    .font(.pretendard(16, relativeTo: .callout))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 28)
@@ -356,11 +356,11 @@ struct OnboardingView: View {
                 ForEach(details, id: \.text) { d in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: d.symbol)
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(tint)
                             .frame(width: 18)
                         Text(d.text)
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -369,7 +369,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 32)
             if let skipNote {
                 Text(skipNote)
-                    .font(.caption2)
+                    .font(.pretendard(11, relativeTo: .caption2))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 32)
                     .padding(.top, 4)
@@ -405,7 +405,7 @@ struct OnboardingView: View {
                     Button("건너뛰기") {
                         markSkippedAndAdvance()
                     }
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.secondary)
                 }
             }
@@ -466,11 +466,11 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(tint.opacity(0.25))
                     .frame(width: 40, height: 40)
-                Image(systemName: icon).font(.callout).foregroundStyle(tint)
+                Image(systemName: icon).font(.pretendard(16, relativeTo: .callout)).foregroundStyle(tint)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.callout.weight(.semibold))
-                Text(description).font(.caption).foregroundStyle(.secondary)
+                Text(title).font(.pretendard(16, relativeTo: .callout))
+                Text(description).font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
             }
             Spacer()
         }

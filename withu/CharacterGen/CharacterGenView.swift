@@ -789,7 +789,7 @@ struct CharacterGenView: View {
                                     ProgressView().controlSize(.small).tint(.white)
                                 } else {
                                     Text("다듬기")
-                                        .font(.pretendard(14, relativeTo: .callout))
+                                        .font(.galmuri(14, relativeTo: .callout))   // 초록 버튼 = 둥근모꼴
                                         .foregroundStyle(.white)
                                 }
                             }

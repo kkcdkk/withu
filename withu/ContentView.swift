@@ -317,7 +317,7 @@ struct ContentView: View {
                     weather.refresh(force: true)
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption)
+                        .font(.pretendard(12, relativeTo: .caption))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -403,7 +403,7 @@ struct ContentView: View {
 
                 if !activityMessage.isEmpty {
                     Text(activityMessage)
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 14)
@@ -529,11 +529,11 @@ struct ContentView: View {
                     .frame(width: 34, height: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.galmuri(16, relativeTo: .callout))
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(subtitle).font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(Color.withuPinkText)
             }
             .padding(16)
@@ -553,7 +553,7 @@ struct ContentView: View {
                     .resizable().interpolation(.none).scaledToFit()
                     .frame(width: 30, height: 30)
                 Text(title).font(.galmuri(13, relativeTo: .callout)).lineLimit(1)
-                Text(subtitle).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                Text(subtitle).font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary).lineLimit(2)
             }
             .padding(13)
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
@@ -568,7 +568,7 @@ struct ContentView: View {
                 HStack(spacing: 8) {
                     if let last = connectivity.lastSentAt {
                         Text(last.formatted(date: .omitted, time: .shortened))
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                             .foregroundStyle(Color.withuCardFill.opacity(0.75))
                     }
                     RefreshIconButton(action: { sendStateToWatch(characterState) }, tint: .withuCardFill)
@@ -590,7 +590,7 @@ struct ContentView: View {
         VStack(spacing: 4) {
             Image(systemName: ok ? "checkmark.circle.fill" : "minus.circle.fill")
                 .foregroundStyle(ok ? Color.withuSage : .secondary)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
             Text(label).font(.galmuri(10, relativeTo: .caption2)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -611,7 +611,7 @@ struct ContentView: View {
                 Text("백그라운드 갱신 대기 중")
             }
         }
-        .font(.system(size: 10))
+        .font(.pretendard(10))
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
@@ -642,19 +642,19 @@ struct ContentView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(deniedPermissions.joined(separator: " · ")) 권한이 꺼져 있어요")
-                            .font(.footnote.weight(.semibold))
+                            .font(.pretendard(13, relativeTo: .footnote))
                             .foregroundStyle(.primary)
                         Text("기능이 제한될 수 있어요. iOS 설정에서 켤 수 있어요.")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 12)
@@ -726,7 +726,7 @@ struct SettingsView: View {
                         Text("더 만들기")
                     } footer: {
                         Text("보유 캔디 \(GenerationQuota.displayedCandy())개")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                     }
                     watchSection
                     healthSection
@@ -753,7 +753,7 @@ struct SettingsView: View {
                         Text("캐릭터")
                     } footer: {
                         Text("집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                     }
                     Section {
                         Button {
@@ -810,7 +810,7 @@ struct SettingsView: View {
                             Text("계정")
                         } footer: {
                             Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
-                                .font(.caption2)
+                                .font(.pretendard(11, relativeTo: .caption2))
                         }
                     }
                 }
@@ -896,7 +896,7 @@ struct SettingsView: View {
                 }
             }
             if let imgState = connectivity.lastImageTransferState {
-                Text(imgState).font(.footnote).foregroundStyle(.secondary)
+                Text(imgState).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
             }
             RefreshRowButton(title: "지금 바로 동기화",
                              systemImage: "applewatch.radiowaves.left.and.right") {
@@ -908,7 +908,7 @@ struct SettingsView: View {
             Text(connectivity.isPaired
                  ? "운동(산책·달리기 등)은 워치 기준으로 알아채요."
                  : "워치가 없으면 아이폰을 지니고 있을 때의 움직임으로 운동을 알아채요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 
@@ -949,13 +949,13 @@ struct SettingsView: View {
                 await reloadHealth()
             }
             if !healthMessage.isEmpty {
-                Text(healthMessage).font(.footnote).foregroundStyle(.secondary)
+                Text(healthMessage).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
             }
         } header: {
             Text("건강 데이터")
         } footer: {
             Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 
@@ -997,7 +997,7 @@ struct SettingsView: View {
                 notifMessage = String(localized: "알림을 모두 취소했어요")
             }
             if !notifMessage.isEmpty {
-                Text(notifMessage).font(.footnote).foregroundStyle(.secondary)
+                Text(notifMessage).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
             }
         }
     }
@@ -1114,20 +1114,20 @@ struct WidgetGuideView: View {
                         .fill(tint.opacity(0.18))
                         .frame(width: 40, height: 40)
                     Image(systemName: icon)
-                        .font(.title3)
+                        .font(.pretendard(20, relativeTo: .title3))
                         .foregroundStyle(tint)
                 }
-                Text(title).font(.callout.weight(.semibold))
+                Text(title).font(.pretendard(16, relativeTo: .callout))
                 Spacer()
             }
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
                     HStack(alignment: .top, spacing: 8) {
                         Text("\(i + 1).")
-                            .font(.callout.weight(.semibold))
+                            .font(.pretendard(16, relativeTo: .callout))
                             .foregroundStyle(tint)
                             .frame(width: 20, alignment: .leading)
-                        Text(step).font(.callout)
+                        Text(step).font(.pretendard(16, relativeTo: .callout))
                     }
                 }
             }
@@ -1198,7 +1198,7 @@ struct AdvancedDiagnosticsView: View {
                                 .font(.caption.monospaced())
                             Spacer()
                             Text(entry.sleeping ? String(localized: "수면 켜짐") : String(localized: "수면 꺼짐"))
-                                .font(.caption)
+                                .font(.pretendard(12, relativeTo: .caption))
                                 .foregroundStyle(entry.sleeping ? .indigo : .secondary)
                         }
                     }
@@ -1345,7 +1345,7 @@ struct AdvancedDiagnosticsView: View {
                 HStack {
                     Text("워치 마지막 전송")
                     Spacer()
-                    Text(s).font(.caption2).foregroundStyle(.secondary)
+                    Text(s).font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                         .lineLimit(2).multilineTextAlignment(.trailing)
                 }
             }
@@ -1353,7 +1353,7 @@ struct AdvancedDiagnosticsView: View {
             Text("위젯·워치 다시 맞추기")
         } footer: {
             Text("백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요. 워치 동기화는 첫 실행이나 워치 앱 설치 때 자동으로 한 번 돼요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 

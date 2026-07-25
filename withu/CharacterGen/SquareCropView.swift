@@ -46,7 +46,7 @@ struct SquareCropView: View {
                             }
                         } label: {
                             Text("선택")
-                                .font(.callout.weight(.semibold))
+                                .font(.pretendard(16, relativeTo: .callout))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 22).padding(.vertical, 9)
                                 .background(Color.withuPink, in: Capsule())
@@ -60,7 +60,7 @@ struct SquareCropView: View {
                     cropWindow(side: side)
 
                     Text("두 손가락으로 확대 · 드래그로 위치를 맞춰요")
-                        .font(.caption)
+                        .font(.pretendard(12, relativeTo: .caption))
                         .foregroundStyle(.white.opacity(0.7))
 
                     Spacer()
