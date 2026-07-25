@@ -229,8 +229,8 @@ struct WithuCTAButtonStyle: ButtonStyle {
             configuration.label
                 .font(.galmuri(16, relativeTo: .callout))   // 초록 버튼 글씨 = 둥근모꼴
                 .foregroundStyle(Color.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
                 .background(
                     PixelBorderShape()
                         .fill(Color.withuSage)

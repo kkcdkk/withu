@@ -640,14 +640,14 @@ final class HealthKitManager {
 extension HKWorkoutActivityType {
     var displayName: String {
         switch self {
-        case .running: return String(localized: "달리기 🏃")
-        case .cycling: return String(localized: "자전거 🚴")
-        case .walking: return String(localized: "걷기 🚶")
-        case .hiking: return String(localized: "등산 🥾")
-        case .swimming: return String(localized: "수영 🏊")
-        case .yoga: return String(localized: "요가 🧘")
+        case .running: return String(localized: "달리기")
+        case .cycling: return String(localized: "자전거")
+        case .walking: return String(localized: "걷기")
+        case .hiking: return String(localized: "등산")
+        case .swimming: return String(localized: "수영")
+        case .yoga: return String(localized: "요가")
         case .traditionalStrengthTraining,
-             .functionalStrengthTraining: return String(localized: "근력 💪")
+             .functionalStrengthTraining: return String(localized: "근력")
         default: return String(localized: "운동")
         }
     }
