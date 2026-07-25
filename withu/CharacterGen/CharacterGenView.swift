@@ -309,6 +309,7 @@ struct CharacterGenView: View {
         } footer: {
             if mode == .importPhoto {
                 Text("모두 기기 안에서 처리하고 비용은 들지 않아요.")
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
         }
@@ -485,6 +486,7 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -574,11 +576,6 @@ struct CharacterGenView: View {
         } header: {
             Text("참고 사진 (선택)")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            if referenceImage == nil {
-                Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요.")
-                    .foregroundStyle(.secondary)
-            }
         }
     }
 
@@ -818,6 +815,7 @@ struct CharacterGenView: View {
                     .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             versionHistorySection
@@ -864,6 +862,7 @@ struct CharacterGenView: View {
                     .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
                 Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
         }

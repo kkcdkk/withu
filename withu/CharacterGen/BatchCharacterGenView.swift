@@ -367,6 +367,7 @@ struct BatchCharacterGenView: View {
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
+                .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -458,6 +459,7 @@ struct BatchCharacterGenView: View {
             // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시.
             if animatableSelected.isEmpty {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
         }
@@ -734,6 +736,7 @@ struct BatchCharacterGenView: View {
                 }
             } footer: {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
