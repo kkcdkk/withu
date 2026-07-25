@@ -51,6 +51,17 @@
     "·" : {
 
     },
+    "· 캔디 %lld개" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· %lld candies"
+          }
+        }
+      }
+    },
     "'%@' 배경으로 적용하기" : {
       "localizations" : {
         "en" : {
@@ -82,6 +93,7 @@
       }
     },
     "'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -123,6 +135,9 @@
         }
       }
     },
+    "'잠 깨는 중'은 일어나는 시간부터 1시간 동안 나와요." : {
+
+    },
     ")) 권한이 꺼져 있어요" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -156,12 +171,12 @@
         }
       }
     },
-    "%@ %@" : {
+    "%@ ~ %@" : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@ %2$@"
+            "value" : "%1$@ ~ %2$@"
           }
         }
       }
@@ -567,9 +582,6 @@
           }
         }
       }
-    },
-    "🎨" : {
-
     },
     "🏃 %lld분" : {
       "extractionState" : "stale",
@@ -1061,7 +1073,11 @@
         }
       }
     },
+    "가벼운 산책 어때요" : {
+
+    },
     "가벼운 산책 어때요 🌿" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1082,6 +1098,7 @@
       }
     },
     "가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1111,6 +1128,12 @@
           }
         }
       }
+    },
+    "갤러리 '캐릭터별'에 이 이름으로 보여요." : {
+
+    },
+    "갤러리 '캐릭터별'에서 이 이름으로 보여요." : {
+
     },
     "갤러리에 저장했어요" : {
       "localizations" : {
@@ -1204,7 +1227,11 @@
         }
       }
     },
+    "걷기" : {
+
+    },
     "걷기 🚶" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1396,7 +1423,11 @@
         }
       }
     },
+    "구름 낀 하루" : {
+
+    },
     "구름 낀 하루 ☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1536,7 +1567,11 @@
         }
       }
     },
+    "근력" : {
+
+    },
     "근력 💪" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1616,7 +1651,11 @@
         }
       }
     },
+    "기지개 펴고 시작해봐요" : {
+
+    },
     "기지개 펴고 시작해봐요 🧘" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1882,6 +1921,7 @@
       }
     },
     "내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 기본으로 시스템에 설정되어 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2003,7 +2043,11 @@
         }
       }
     },
+    "눈 속 달리기" : {
+
+    },
     "눈 속 달리기 🏃❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2013,7 +2057,11 @@
         }
       }
     },
+    "눈 속 자전거" : {
+
+    },
     "눈 속 자전거 🚴❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2023,7 +2071,11 @@
         }
       }
     },
+    "눈 속에서 신나게" : {
+
+    },
     "눈 속에서 신나게 ❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2033,7 +2085,11 @@
         }
       }
     },
+    "눈길 산책" : {
+
+    },
     "눈길 산책 🚶❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2094,101 +2150,12 @@
       }
     },
     "다듬기 결과" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Refine result"
-          }
-        }
-      }
-    },
-    "다듬어서 다시 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refine & retry"
-          }
-        }
-      }
-    },
-    "다듬은 모습" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refined"
-          }
-        }
-      }
-    },
-    "다듬는 중" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refining"
-          }
-        }
-      }
-    },
-    "다듬음" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refined"
-          }
-        }
-      }
-    },
-    "더 다듬을까요?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refine more?"
-          }
-        }
-      }
-    },
-    "이 움직임 프레임을 더 다듬을까요?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refine this animation frame more?"
-          }
-        }
-      }
-    },
-    "이번 다듬기는 무료예요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This refine is free."
-          }
-        }
-      }
-    },
-    "입력한 다듬기 내용이 있어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You have unsaved refine input"
-          }
-        }
-      }
-    },
-    "닫으면 방금 입력한 다듬기 문구·사진이 지워져요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you close, the refine note and photo you just entered will be discarded."
           }
         }
       }
@@ -2213,12 +2180,12 @@
         }
       }
     },
-    "다듬은 이력에서 골라 적용할 수 있어요." : {
+    "다듬는 중" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pick from your refine history and apply."
+            "value" : "Refining"
           }
         }
       }
@@ -2229,6 +2196,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Refining…"
+          }
+        }
+      }
+    },
+    "다듬어서 다시 만들기" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine & retry"
           }
         }
       }
@@ -2255,6 +2233,18 @@
       }
     },
     "다듬은 결과" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refined"
+          }
+        }
+      }
+    },
+    "다듬은 모습" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2270,6 +2260,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Viewing refined version %lld"
+          }
+        }
+      }
+    },
+    "다듬은 이력에서 골라 적용할 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick from your refine history and apply."
           }
         }
       }
@@ -2312,6 +2312,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Each refine uses %lld candy. You can compare before and after, then choose."
+          }
+        }
+      }
+    },
+    "다듬음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refined"
           }
         }
       }
@@ -2406,7 +2416,18 @@
         }
       }
     },
+    "닫으면 방금 입력한 다듬기 문구·사진이 지워져요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you close, the refine note and photo you just entered will be discarded."
+          }
+        }
+      }
+    },
     "닫으면 방금 입력한 수정 문구·사진이 지워져요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2427,6 +2448,7 @@
       }
     },
     "달리기 🏃" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2436,7 +2458,11 @@
         }
       }
     },
+    "달리는 중" : {
+
+    },
     "달리는 중 🏃" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2462,6 +2488,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Subject"
+          }
+        }
+      }
+    },
+    "더 다듬을까요?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine more?"
           }
         }
       }
@@ -2507,6 +2544,7 @@
       }
     },
     "더 수정할까요?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2566,7 +2604,11 @@
         }
       }
     },
+    "등산" : {
+
+    },
     "등산 🥾" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2759,6 +2801,7 @@
       }
     },
     "마지막으로 받은 시각" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2767,6 +2810,9 @@
           }
         }
       }
+    },
+    "마지막으로 신호를 받은 시각" : {
+
     },
     "만드는 중…" : {
       "localizations" : {
@@ -2807,6 +2853,9 @@
           }
         }
       }
+    },
+    "만든 캐릭터가 여기에 이름별로 모여요." : {
+
     },
     "만든 캐릭터를 모아봐요" : {
       "localizations" : {
@@ -2898,7 +2947,11 @@
         }
       }
     },
+    "맛있게 식사 중" : {
+
+    },
     "맛있게 식사 중 🍽️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2928,6 +2981,16 @@
         }
       }
     },
+    "모두 기기 안에서 처리하고 비용은 들지 않아요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All done on your device, at no cost."
+          }
+        }
+      }
+    },
     "모두 끄기" : {
       "localizations" : {
         "en" : {
@@ -2944,16 +3007,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Make all animated"
-          }
-        }
-      }
-    },
-    "모두 기기 안에서 처리하고 비용은 들지 않아요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All done on your device, at no cost."
           }
         }
       }
@@ -3030,16 +3083,6 @@
         }
       }
     },
-    "· 캔디 %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "· %lld candies"
-          }
-        }
-      }
-    },
     "무료" : {
       "localizations" : {
         "en" : {
@@ -3080,7 +3123,11 @@
         }
       }
     },
+    "물 한 잔 마시는 거 잊지 마세요" : {
+
+    },
     "물 한 잔 마시는 거 잊지 마세요 💧" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3124,6 +3171,7 @@
 
     },
     "바꾸기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3519,7 +3567,11 @@
         }
       }
     },
+    "비 맞으며 달리기" : {
+
+    },
     "비 맞으며 달리기 🏃☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3529,7 +3581,11 @@
         }
       }
     },
+    "비 오는데 산책" : {
+
+    },
     "비 오는데 산책 🚶☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3539,7 +3595,11 @@
         }
       }
     },
+    "비 오는데 자전거" : {
+
+    },
     "비 오는데 자전거 🚴☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3732,6 +3792,7 @@
       }
     },
     "사진을 고르면 정사각형으로 다듬어요. 배경을 뺄지는 아래에서 고를 수 있어요. 모두 기기 안에서 처리하고 비용은 들지 않아요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3741,17 +3802,8 @@
         }
       }
     },
-    "사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adding a photo uses candy. Your free creation is for prompt-only."
-          }
-        }
-      }
-    },
     "사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3768,6 +3820,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add a photo to generate that character in many looks. Leave it empty to draw a new one from just the description above."
+          }
+        }
+      }
+    },
+    "사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding a photo uses candy. Your free creation is for prompt-only."
           }
         }
       }
@@ -3833,7 +3895,11 @@
         }
       }
     },
+    "산책 중" : {
+
+    },
     "산책 중 🚶" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3923,7 +3989,11 @@
         }
       }
     },
+    "새 하루 시작이에요" : {
+
+    },
     "새 하루 시작이에요 🌱" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4134,6 +4204,16 @@
         }
       }
     },
+    "선택한 버전을 기준으로 다듬어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refines from the selected version."
+          }
+        }
+      }
+    },
     "설정" : {
       "localizations" : {
         "en" : {
@@ -4143,6 +4223,9 @@
           }
         }
       }
+    },
+    "설정 → 집중 모드 → 수면 → 아래 '필터 추가' → Withy → '캐릭터를 자게 하기' 켜기" : {
+
     },
     "설정 시간 기준" : {
       "localizations" : {
@@ -4164,6 +4247,9 @@
         }
       }
     },
+    "설정시간 기준" : {
+
+    },
     "설정에서 집중·수면 필터에 Withy 를 연결하면 더 정확해요" : {
       "localizations" : {
         "en" : {
@@ -4173,6 +4259,9 @@
           }
         }
       }
+    },
+    "설정한 수면 시간" : {
+
     },
     "설정한 시간이라서 자고 있어요" : {
       "extractionState" : "stale",
@@ -4295,7 +4384,11 @@
         }
       }
     },
+    "수면 시간 설정" : {
+
+    },
     "수면 집중 모드 신호" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4336,6 +4429,9 @@
         }
       }
     },
+    "수면 필터를 연결하면 더 정확해요" : {
+
+    },
     "수면·집중 모드" : {
       "localizations" : {
         "en" : {
@@ -4345,6 +4441,9 @@
           }
         }
       }
+    },
+    "수면/집중 모드 신호" : {
+
     },
     "수신 파일 metadata 누락" : {
       "extractionState" : "stale",
@@ -4368,7 +4467,11 @@
         }
       }
     },
+    "수영" : {
+
+    },
     "수영 🏊" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4378,17 +4481,8 @@
         }
       }
     },
-    "선택한 버전을 기준으로 다듬어요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refines from the selected version."
-          }
-        }
-      }
-    },
     "수정 결과" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4399,6 +4493,7 @@
       }
     },
     "수정 완료" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4409,6 +4504,7 @@
       }
     },
     "수정 전" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4430,6 +4526,7 @@
       }
     },
     "수정 중" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4451,6 +4548,7 @@
       }
     },
     "수정된 모습" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4471,6 +4569,7 @@
       }
     },
     "수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4481,6 +4580,7 @@
       }
     },
     "수정해서 생성하기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4571,6 +4671,15 @@
         }
       }
     },
+    "신호 기록 복사" : {
+
+    },
+    "신호 기록 지우기" : {
+
+    },
+    "신호 모니터 (%lld건)" : {
+
+    },
     "실제로 사용한 설명 보기" : {
       "localizations" : {
         "en" : {
@@ -4620,6 +4729,9 @@
           }
         }
       }
+    },
+    "아직 기록이 없어요. 앱을 열어두거나 수면 모드를 켜보면 쌓여요." : {
+
     },
     "아직 기본 모습이에요" : {
       "localizations" : {
@@ -4882,6 +4994,9 @@
         }
       }
     },
+    "연결하지 않으면 수면 모드를 켜도 반영이 한 박자 늦어요. 한 번만 연결하면 켜자마자 잠들어요." : {
+
+    },
     "연두 파스텔톤" : {
       "localizations" : {
         "en" : {
@@ -4923,6 +5038,7 @@
       }
     },
     "예: 둥근 초록 새싹 캐릭터, 큰 눈, 작은 몸" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4983,7 +5099,11 @@
         }
       }
     },
+    "오늘 %lld보 걸었어요" : {
+
+    },
     "오늘 %lld보 걸었어요 🌿" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5053,7 +5173,11 @@
         }
       }
     },
+    "요가" : {
+
+    },
     "요가 🧘" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5133,7 +5257,11 @@
         }
       }
     },
+    "우산 쓰고 비 구경" : {
+
+    },
     "우산 쓰고 비 구경 ☔️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5213,16 +5341,6 @@
         }
       }
     },
-    "움직이는 캐릭터로 만들기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Make it an animated character"
-          }
-        }
-      }
-    },
     "움직임" : {
       "localizations" : {
         "en" : {
@@ -5270,6 +5388,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "For characters made as animated, choose whether the character moves."
+          }
+        }
+      }
+    },
+    "움직이는 캐릭터로 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make it an animated character"
           }
         }
       }
@@ -5691,7 +5819,19 @@
         }
       }
     },
+    "이 움직임 프레임을 더 다듬을까요?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refine this animation frame more?"
+          }
+        }
+      }
+    },
     "이 움직임 프레임을 더 수정할까요?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5741,7 +5881,11 @@
         }
       }
     },
+    "이 캐릭터의 이름 (선택)" : {
+
+    },
     "이대로 다듬기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5774,6 +5918,9 @@
           }
         }
       }
+    },
+    "이름" : {
+
     },
     "이름 · 수면 · 식사 시간" : {
       "localizations" : {
@@ -5886,6 +6033,16 @@
         }
       }
     },
+    "이번 다듬기는 무료예요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This refine is free."
+          }
+        }
+      }
+    },
     "이번 다듬기에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
       "localizations" : {
         "en" : {
@@ -5906,10 +6063,8 @@
         }
       }
     },
-    "이번 수정에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
-
-    },
     "이번 수정은 무료예요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5950,6 +6105,7 @@
       }
     },
     "이전" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6020,7 +6176,18 @@
         }
       }
     },
+    "입력한 다듬기 내용이 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have unsaved refine input"
+          }
+        }
+      }
+    },
     "입력한 수정 내용이 있어요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6092,6 +6259,7 @@
       }
     },
     "자전거 🚴" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6101,7 +6269,11 @@
         }
       }
     },
+    "자전거 타는 중" : {
+
+    },
     "자전거 타는 중 🚴" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6111,7 +6283,11 @@
         }
       }
     },
+    "잠 깨는 중" : {
+
+    },
     "잠 깨는 중 🥱" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6120,6 +6296,9 @@
           }
         }
       }
+    },
+    "잠 깨는 중 구간" : {
+
     },
     "잠금 화면 위젯" : {
       "localizations" : {
@@ -6170,6 +6349,9 @@
           }
         }
       }
+    },
+    "잠자리 시간대 여부" : {
+
     },
     "저녁 시간" : {
       "localizations" : {
@@ -6322,6 +6504,7 @@
       }
     },
     "전과 후를 비교해 보고 바꿀지 고를 수 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6382,7 +6565,11 @@
         }
       }
     },
+    "좋은 아침! 오늘도 함께해요" : {
+
+    },
     "좋은 아침! 오늘도 함께해요 ☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6453,6 +6640,7 @@
       }
     },
     "지금 잠자리 시간대" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6471,6 +6659,9 @@
           }
         }
       }
+    },
+    "지금 판정" : {
+
     },
     "지금은" : {
       "extractionState" : "stale",
@@ -6520,6 +6711,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deleted"
+          }
+        }
+      }
+    },
+    "집중 %@%@%@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "집중 %1$@%2$@%3$@"
           }
         }
       }
@@ -6584,6 +6785,9 @@
         }
       }
     },
+    "집중모드" : {
+
+    },
     "차례 기다리는 중" : {
       "localizations" : {
         "en" : {
@@ -6615,6 +6819,7 @@
       }
     },
     "채우면 위 설명칸에 자동으로 합쳐져요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6886,6 +7091,7 @@
       }
     },
     "캐릭터 · %lld개 모습" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7473,6 +7679,7 @@
       }
     },
     "하나씩 만든 캐릭터는 '상태별'에서 볼 수 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7552,7 +7759,11 @@
         }
       }
     },
+    "해변에서 일광욕" : {
+
+    },
     "해변에서 일광욕 🏖️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7562,7 +7773,11 @@
         }
       }
     },
+    "햇살 받으며 산책" : {
+
+    },
     "햇살 받으며 산책 🚶☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7572,7 +7787,11 @@
         }
       }
     },
+    "햇살 아래 달리기" : {
+
+    },
     "햇살 아래 달리기 🏃☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7582,7 +7801,11 @@
         }
       }
     },
+    "햇살 자전거" : {
+
+    },
     "햇살 자전거 🚴☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7693,6 +7916,7 @@
       }
     },
     "현재 집중 모드" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7802,7 +8026,11 @@
         }
       }
     },
+    "흐린 날 달리기" : {
+
+    },
     "흐린 날 달리기 🏃☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7812,7 +8040,11 @@
         }
       }
     },
+    "흐린 날 산책" : {
+
+    },
     "흐린 날 산책 🚶☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7822,7 +8054,11 @@
         }
       }
     },
+    "흐린 날 자전거" : {
+
+    },
     "흐린 날 자전거 🚴☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

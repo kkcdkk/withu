@@ -1406,7 +1406,11 @@
         }
       }
     },
+    "구름 낀 하루" : {
+
+    },
     "구름 낀 하루 ☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2017,7 +2021,11 @@
         }
       }
     },
+    "눈 속 달리기" : {
+
+    },
     "눈 속 달리기 🏃❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2027,7 +2035,11 @@
         }
       }
     },
+    "눈 속 자전거" : {
+
+    },
     "눈 속 자전거 🚴❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2037,7 +2049,11 @@
         }
       }
     },
+    "눈 속에서 신나게" : {
+
+    },
     "눈 속에서 신나게 ❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2047,7 +2063,11 @@
         }
       }
     },
+    "눈길 산책" : {
+
+    },
     "눈길 산책 🚶❄️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2241,7 +2261,11 @@
         }
       }
     },
+    "달리는 중" : {
+
+    },
     "달리는 중 🏃" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2302,6 +2326,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Make More (top up)"
+          }
+        }
+      }
+    },
+    "데이터 새로고침" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh today's data"
           }
         }
       }
@@ -2701,7 +2736,11 @@
         }
       }
     },
+    "맛있게 식사 중" : {
+
+    },
     "맛있게 식사 중 🍽️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3292,7 +3331,11 @@
         }
       }
     },
+    "비 맞으며 달리기" : {
+
+    },
     "비 맞으며 달리기 🏃☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3302,7 +3345,11 @@
         }
       }
     },
+    "비 오는데 산책" : {
+
+    },
     "비 오는데 산책 🚶☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3312,7 +3359,11 @@
         }
       }
     },
+    "비 오는데 자전거" : {
+
+    },
     "비 오는데 자전거 🚴☔" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3618,7 +3669,11 @@
         }
       }
     },
+    "산책 중" : {
+
+    },
     "산책 중 🚶" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4681,17 +4736,6 @@
         }
       }
     },
-    "데이터 새로고침" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refresh today's data"
-          }
-        }
-      }
-    },
     "오늘 알찬 하루였네요! 평소보다 많이 움직였어요" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4823,7 +4867,11 @@
         }
       }
     },
+    "우산 쓰고 비 구경" : {
+
+    },
     "우산 쓰고 비 구경 ☔️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4910,17 +4958,6 @@
         }
       }
     },
-    "움직임" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
-          }
-        }
-      }
-    },
     "움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4950,6 +4987,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
+          }
+        }
+      }
+    },
+    "움직임" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
           }
         }
       }
@@ -5668,7 +5716,11 @@
         }
       }
     },
+    "자전거 타는 중" : {
+
+    },
     "자전거 타는 중 🚴" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5678,7 +5730,11 @@
         }
       }
     },
+    "잠 깨는 중" : {
+
+    },
     "잠 깨는 중 🥱" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7105,7 +7161,11 @@
         }
       }
     },
+    "해변에서 일광욕" : {
+
+    },
     "해변에서 일광욕 🏖️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7115,7 +7175,11 @@
         }
       }
     },
+    "햇살 받으며 산책" : {
+
+    },
     "햇살 받으며 산책 🚶☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7125,7 +7189,11 @@
         }
       }
     },
+    "햇살 아래 달리기" : {
+
+    },
     "햇살 아래 달리기 🏃☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7135,7 +7203,11 @@
         }
       }
     },
+    "햇살 자전거" : {
+
+    },
     "햇살 자전거 🚴☀️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7375,7 +7447,11 @@
         }
       }
     },
+    "흐린 날 달리기" : {
+
+    },
     "흐린 날 달리기 🏃☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7385,7 +7461,11 @@
         }
       }
     },
+    "흐린 날 산책" : {
+
+    },
     "흐린 날 산책 🚶☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7395,7 +7475,11 @@
         }
       }
     },
+    "흐린 날 자전거" : {
+
+    },
     "흐린 날 자전거 🚴☁️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
