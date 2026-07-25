@@ -1002,7 +1002,7 @@ struct BatchCharacterGenView: View {
     }
 
     private var resultsSection: some View {
-        Section("만들어진 모습") {
+        Section(header: Text("만들어진 모습").font(.pretendardBold(16, relativeTo: .callout))) {
             // LazyVGrid 는 Form 섹션 안에서 높이 계산이 어긋나 아래가 잘림 → 수동 2열 그리드.
             // 생성 중이면 사용자가 고른 모든 상태를 미리 placeholder 로 — '기본만 만들어진다'는 착각 방지.
             let shown = CharacterState.allCases.filter {

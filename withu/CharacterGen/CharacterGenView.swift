@@ -580,7 +580,7 @@ struct CharacterGenView: View {
     }
 
     private var optionsSection: some View {
-        Section("스타일") {
+        Section(header: Text("스타일").font(.pretendardBold(16, relativeTo: .callout))) {
             VStack(alignment: .leading, spacing: 12) {
             Picker("그림 스타일", selection: $artStyle) {
                 Text("Soft").tag("casual")
@@ -622,7 +622,7 @@ struct CharacterGenView: View {
     @ViewBuilder
     private var resultSection: some View {
         if resultImage != nil {
-            Section("결과") {
+            Section(header: Text("결과").font(.pretendardBold(16, relativeTo: .callout))) {
                 VStack(alignment: .leading, spacing: 12) {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
@@ -791,12 +791,12 @@ struct CharacterGenView: View {
                                     ProgressView().controlSize(.small).tint(.white)
                                 } else {
                                     Text("다듬기")
-                                        .font(.galmuri(14, relativeTo: .callout))   // 초록 버튼 = 둥근모꼴
+                                        .font(.galmuri(13, relativeTo: .footnote))   // 초록 버튼 = 둥근모꼴
                                         .foregroundStyle(.white)
                                 }
                             }
-                            .frame(minWidth: 64, minHeight: 46)
-                            .padding(.horizontal, 10)
+                            .frame(minWidth: 52, minHeight: 34)
+                            .padding(.horizontal, 8)
                             .background(PixelBorderShape().fill(Color.withuSage))
                             .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
                         }
@@ -953,7 +953,7 @@ struct CharacterGenView: View {
     private var importResultSection: some View {
         if let raw = importedRawImage {
             let display = displayedImport ?? raw
-            Section("미리보기") {
+            Section(header: Text("미리보기").font(.pretendardBold(16, relativeTo: .callout))) {
                 VStack(alignment: .leading, spacing: 12) {
                 Toggle("배경 빼기", isOn: $removeBackground)
                     .disabled(isProcessing)
@@ -1538,7 +1538,7 @@ struct WeatherBackgroundGenView: View {
                     .font(.pretendardBold(16, relativeTo: .callout))
             }
 
-            Section("스타일") {
+            Section(header: Text("스타일").font(.pretendardBold(16, relativeTo: .callout))) {
                 VStack(alignment: .leading, spacing: 12) {
                 Picker("그림 스타일", selection: $artStyle) {
                     Text("soft").tag("casual")

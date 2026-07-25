@@ -984,7 +984,7 @@ struct SettingsView: View {
     }
 
     private var notificationsSection: some View {
-        Section("알림") {
+        Section(header: Text("알림").font(.pretendardBold(16, relativeTo: .callout))) {
             HStack {
                 Text("권한 상태")
                 Spacer()
