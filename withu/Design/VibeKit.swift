@@ -15,10 +15,14 @@ import SwiftUI
 // MARK: - 브랜드 폰트 (Galmuri 픽셀 폰트)
 
 extension Font {
-    /// Galmuri11 픽셀 폰트 — 브랜딩/제목/캐릭터 이름 등 '일부'에만 사용.
-    /// 본문·설명은 시스템 폰트를 유지(작은 크기 가독성). Dynamic Type 대응(relativeTo).
+    /// 홈 픽셀/레트로 폰트 — 이제 둥근모꼴(DungGeunMo). (예전 Galmuri 슬롯, 호출부 호환 위해 이름 유지)
     static func galmuri(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        .custom("Galmuri11-Regular", size: size, relativeTo: textStyle)
+        .custom("DungGeunMo", size: size, relativeTo: textStyle)
+    }
+
+    /// 서브 화면 본문 폰트 — Pretendard Light(가장 얇게). Dynamic Type 대응.
+    static func pretendard(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
+        .custom("Pretendard-Light", size: size, relativeTo: textStyle)
     }
 }
 
@@ -278,7 +282,7 @@ struct WithuCTAButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.galmuri(16, relativeTo: .callout))
+                .font(.pretendard(16, relativeTo: .callout))
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
@@ -455,7 +459,7 @@ struct SectionHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.galmuri(12, relativeTo: .caption))
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             trailing

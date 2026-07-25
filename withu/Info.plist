@@ -23,6 +23,8 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>Galmuri11.ttf</string>
+		<string>DungGeunMo.ttf</string>
+		<string>Pretendard-Light.otf</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

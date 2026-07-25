@@ -23,10 +23,10 @@ struct withuApp: App {
         // 배경은 투명(각 화면의 따뜻한 그라데이션이 그대로 비치게).
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
-        if let title = UIFont(name: "Galmuri11-Regular", size: 17) {
+        if let title = UIFont(name: "DungGeunMo", size: 17) {
             appearance.titleTextAttributes = [.font: title, .foregroundColor: UIColor.label]
         }
-        if let large = UIFont(name: "Galmuri11-Regular", size: 26) {
+        if let large = UIFont(name: "DungGeunMo", size: 26) {
             appearance.largeTitleTextAttributes = [.font: large, .foregroundColor: UIColor.label]
         }
         let bar = UINavigationBar.appearance()

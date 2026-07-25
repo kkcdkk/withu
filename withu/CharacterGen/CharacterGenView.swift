@@ -789,7 +789,7 @@ struct CharacterGenView: View {
                                     ProgressView().controlSize(.small).tint(.white)
                                 } else {
                                     Text("다듬기")
-                                        .font(.galmuri(14, relativeTo: .callout))
+                                        .font(.pretendard(14, relativeTo: .callout))
                                         .foregroundStyle(.white)
                                 }
                             }

@@ -180,7 +180,7 @@ struct CharacterGalleryView: View {
                 .plainFrostedCard(cornerRadius: 16)
 
                 Text(charName(group) ?? "이름 없는 캐릭터")
-                    .font(.galmuri(15, relativeTo: .callout))
+                    .font(.pretendard(15, relativeTo: .callout))
                     .foregroundStyle(charName(group) == nil ? .secondary : .primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
