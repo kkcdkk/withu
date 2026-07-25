@@ -1185,7 +1185,7 @@ struct AdvancedDiagnosticsView: View {
                            label: focus.isFocusFilterSleeping ? "받는 중" : "꺼짐")
             }
             HStack {
-                Text("설정 시간으로 대신 자기")
+                Text("설정 시간에 자기")
                 Spacer()
                 StatusPill(kind: focus.shouldFallbackToSleepWindow() ? .ok : .off,
                            label: focus.shouldFallbackToSleepWindow() ? "켜짐" : "꺼짐")
