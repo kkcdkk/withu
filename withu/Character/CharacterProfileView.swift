@@ -85,7 +85,7 @@ struct CharacterProfileView: View {
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("수면 시간")
-                        .font(.pretendardBold(13, relativeTo: .footnote))
+                        .font(.pretendardBold(16, relativeTo: .callout))
                 } footer: {
                     Text(sleepFooterText)
                         .font(.pretendard(11, relativeTo: .caption2))
@@ -105,7 +105,7 @@ struct CharacterProfileView: View {
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("식사 시간")
-                        .font(.pretendardBold(13, relativeTo: .footnote))
+                        .font(.pretendardBold(16, relativeTo: .callout))
                 } footer: {
                     Text("정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.")
                         .font(.pretendard(11, relativeTo: .caption2))
@@ -125,7 +125,7 @@ struct CharacterProfileView: View {
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("밤하늘 시간")
-                        .font(.pretendardBold(13, relativeTo: .footnote))
+                        .font(.pretendardBold(16, relativeTo: .callout))
                 } footer: {
                     Text("날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.")
                         .font(.pretendard(11, relativeTo: .caption2))
@@ -144,7 +144,7 @@ struct CharacterProfileView: View {
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("움직임")
-                        .font(.pretendardBold(13, relativeTo: .footnote))
+                        .font(.pretendardBold(16, relativeTo: .callout))
                 } footer: {
                     Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
                         .font(.pretendard(11, relativeTo: .caption2))
@@ -292,7 +292,7 @@ struct CharacterProfileView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("상태별 캐릭터")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
                 .font(.pretendard(11, relativeTo: .caption2))

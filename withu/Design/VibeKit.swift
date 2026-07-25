@@ -404,7 +404,7 @@ struct SectionHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.pretendardBold(12, relativeTo: .caption))
+                .font(.pretendardBold(14, relativeTo: .subheadline))
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             trailing

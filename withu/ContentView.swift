@@ -726,7 +726,7 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("더 만들기")
-                            .font(.pretendardBold(13, relativeTo: .footnote))
+                            .font(.pretendardBold(16, relativeTo: .callout))
                     } footer: {
                         Text("보유 캔디 \(GenerationQuota.displayedCandy())개")
                             .font(.pretendard(11, relativeTo: .caption2))
@@ -754,7 +754,7 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("캐릭터")
-                            .font(.pretendardBold(13, relativeTo: .footnote))
+                            .font(.pretendardBold(16, relativeTo: .callout))
                     } footer: {
                         Text("집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.")
                             .font(.pretendard(11, relativeTo: .caption2))
@@ -777,7 +777,7 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("도움말")
-                            .font(.pretendardBold(13, relativeTo: .footnote))
+                            .font(.pretendardBold(16, relativeTo: .callout))
                     }
                     Section {
                         // ⚠️ 호스팅 후 URL 갱신 — GitHub Pages 등에 legal/ 의 두 markdown 을 HTML 로 배포.
@@ -789,7 +789,7 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("법적 정보")
-                            .font(.pretendardBold(13, relativeTo: .footnote))
+                            .font(.pretendardBold(16, relativeTo: .callout))
                     }
                     if KeychainStore.sessionToken() != nil {
                         Section {
@@ -814,7 +814,7 @@ struct SettingsView: View {
                             .disabled(isDeletingAccount)
                         } header: {
                             Text("계정")
-                                .font(.pretendardBold(13, relativeTo: .footnote))
+                                .font(.pretendardBold(16, relativeTo: .callout))
                         } footer: {
                             Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
                                 .font(.pretendard(11, relativeTo: .caption2))
@@ -911,7 +911,7 @@ struct SettingsView: View {
             }
         } header: {
             Text("애플 워치")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text(connectivity.isPaired
                  ? "운동(산책·달리기 등)은 워치 기준으로 알아채요."
@@ -961,7 +961,7 @@ struct SettingsView: View {
             }
         } header: {
             Text("건강 데이터")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요.")
                 .font(.pretendard(11, relativeTo: .caption2))
@@ -1280,7 +1280,7 @@ struct AdvancedDiagnosticsView: View {
             }
         } header: {
             Text("수면·집중 모드")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -1317,7 +1317,7 @@ struct AdvancedDiagnosticsView: View {
             }
         } header: {
             Text("수면 시간 설정")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text("'잠 깨는 중'은 일어나는 시간부터 1시간 동안 나와요.")
                 .font(.pretendard(11, relativeTo: .caption2))
@@ -1367,7 +1367,7 @@ struct AdvancedDiagnosticsView: View {
             }
         } header: {
             Text("건강 앱 수면 정보")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -1399,7 +1399,7 @@ struct AdvancedDiagnosticsView: View {
             }
         } header: {
             Text("운동 감지")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -1450,7 +1450,7 @@ struct AdvancedDiagnosticsView: View {
             }
         } header: {
             Text("위젯·워치 다시 맞추기")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             Text("백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요. 워치 동기화는 첫 실행이나 워치 앱 설치 때 자동으로 한 번 돼요.")
                 .font(.pretendard(11, relativeTo: .caption2))

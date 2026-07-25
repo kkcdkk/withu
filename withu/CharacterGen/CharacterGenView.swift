@@ -274,7 +274,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 방식")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -305,7 +305,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("생성 옵션")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             if mode == .importPhoto {
                 Text("모두 기기 안에서 처리하고 비용은 들지 않아요.")
@@ -337,7 +337,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("상태 선택")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -376,7 +376,7 @@ struct CharacterGenView: View {
         } header: {
             VStack(alignment: .leading, spacing: 3) {
                 Text("캐릭터 프롬프트")
-                    .font(.pretendardBold(13, relativeTo: .footnote))
+                    .font(.pretendardBold(16, relativeTo: .callout))
             }
         }
     }
@@ -573,7 +573,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("참고 사진 (선택)")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             if referenceImage == nil {
                 Text("사진을 넣으면 그 모습을 참고해서 만들어요. 비워두면 텍스트로만 만들어요.")
@@ -815,7 +815,7 @@ struct CharacterGenView: View {
                 .listRowBackground(Color.clear)
             } header: {
                 Text(resultFrame2 != nil && singleDetailFrame == 1 ? String(localized: "이어서 다듬기 (움직임 프레임)") : String(localized: "이어서 다듬기"))
-                    .font(.pretendardBold(13, relativeTo: .footnote))
+                    .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
                 Text("위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).")
                     .foregroundStyle(.secondary)
@@ -861,7 +861,7 @@ struct CharacterGenView: View {
                 .listRowBackground(Color.clear)
             } header: {
                 Text("다듬기 이력")
-                    .font(.pretendardBold(13, relativeTo: .footnote))
+                    .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
                 Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
                     .foregroundStyle(.secondary)
@@ -939,7 +939,7 @@ struct CharacterGenView: View {
             .listRowBackground(Color.clear)
         } header: {
             Text("사진 고르기")
-                .font(.pretendardBold(13, relativeTo: .footnote))
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
 
@@ -1536,7 +1536,7 @@ struct WeatherBackgroundGenView: View {
                 .listRowBackground(Color.clear)
             } header: {
                 Text("날씨")
-                    .font(.pretendardBold(13, relativeTo: .footnote))
+                    .font(.pretendardBold(16, relativeTo: .callout))
             }
 
             Section("스타일") {
@@ -1578,7 +1578,7 @@ struct WeatherBackgroundGenView: View {
                 .listRowBackground(Color.clear)
             } header: {
                 Text("배경")
-                    .font(.pretendardBold(13, relativeTo: .footnote))
+                    .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
                 Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
                     .font(.pretendard(11, relativeTo: .caption2))
@@ -1620,7 +1620,7 @@ struct WeatherBackgroundGenView: View {
                     .listRowBackground(Color.clear)
                 } header: {
                     Text("결과")
-                        .font(.pretendardBold(13, relativeTo: .footnote))
+                        .font(.pretendardBold(16, relativeTo: .callout))
                 }
             }
 
