@@ -103,7 +103,7 @@ struct CharacterGalleryView: View {
     @ViewBuilder
     private var stateFolders: some View {
         SectionHeader("상태별 폴더") {
-            Text("\(totalCount)개").font(.caption).foregroundStyle(.tertiary)
+            Text("\(totalCount)개").font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.tertiary)
         }
         .padding(.bottom, 2)
 
@@ -140,7 +140,7 @@ struct CharacterGalleryView: View {
                 Image(CharacterState.idle.imageAssetName)
                     .resizable().scaledToFit().frame(width: 64, height: 64)
                 Text("만든 캐릭터가 여기에 이름별로 모여요.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.pretendard(16, relativeTo: .callout)).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.top, 60)
@@ -172,7 +172,7 @@ struct CharacterGalleryView: View {
                         Image(uiImage: rep).resizable().scaledToFit().padding(14)
                     } else {
                         Image(systemName: "square.grid.2x2")
-                            .font(.largeTitle).foregroundStyle(.secondary)
+                            .font(.pretendard(34, relativeTo: .largeTitle)).foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -267,15 +267,15 @@ struct CharacterGalleryView: View {
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(state.koreanShortLabel)
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.primary)
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.tertiary)
         }
         .opacity(isEmpty ? 0.55 : 1)
@@ -287,21 +287,21 @@ struct CharacterGalleryView: View {
             ZStack {
                 Circle().fill(Color.secondary.opacity(0.15))
                 Image(systemName: "tray.full")
-                    .font(.title3)
+                    .font(.pretendard(20, relativeTo: .title3))
                     .foregroundStyle(.secondary)
             }
             .frame(width: 44, height: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text("기타")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.primary)
                 Text("\(legacy.count)개 · 예전에 만든 캐릭터")
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.tertiary)
         }
         .plainFrostedCard()
@@ -311,14 +311,14 @@ struct CharacterGalleryView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle().fill(Color.secondary.opacity(0.15))
-                Image(systemName: "tray.full").font(.title2).foregroundStyle(.secondary)
+                Image(systemName: "tray.full").font(.pretendard(22, relativeTo: .title2)).foregroundStyle(.secondary)
             }
             .frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text("예전에 만든 캐릭터")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                 Text("\(legacy.count)개")
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -337,9 +337,9 @@ struct CharacterGalleryView: View {
             }
             VStack(spacing: 6) {
                 Text("아직 만든 캐릭터가 없어요")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                 Text("캐릭터를 만들면 상태별 폴더에\n차곡차곡 모여요.")
-                    .font(.callout)
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -389,9 +389,9 @@ struct StateFolderView: View {
             GalleryStateChip(state: state, firstItem: items.first, size: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.caption)
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                 Text(items.isEmpty ? String(localized: "아직 없어요") : String(localized: "\(items.count)개"))
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -412,16 +412,16 @@ struct StateFolderView: View {
                         .padding(12)
                 )
             Text("\(state.koreanShortLabel) 캐릭터가 아직 없어요")
-                .font(.callout.weight(.semibold))
+                .font(.pretendard(16, relativeTo: .callout))
             Text("이 순간에 어울리는 캐릭터를 만들어 보세요.")
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             NavigationLink {
                 CharacterGenView()
             } label: {
                 Text("생성하러 가기")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 11)
@@ -598,7 +598,7 @@ struct GalleryGrid<Header: View>: View {
             .disabled(selectedIDs.isEmpty)
             Spacer()
             Text("\(selectedIDs.count)개 선택")
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .foregroundStyle(.secondary)
             Spacer()
             Button(role: .destructive) {
@@ -628,11 +628,11 @@ struct GalleryGrid<Header: View>: View {
                     Image(uiImage: img).resizable().scaledToFit().padding(6)
                 } else {
                     Image(systemName: "photo")
-                        .font(.title2).foregroundStyle(.secondary)
+                        .font(.pretendard(22, relativeTo: .title2)).foregroundStyle(.secondary)
                 }
                 if isSelectionMode {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
+                        .font(.pretendard(20, relativeTo: .title3))
                         .foregroundStyle(isSelected ? Color.withuPink : .secondary)
                         .background(Circle().fill(.regularMaterial))
                         .padding(6)
@@ -663,7 +663,7 @@ struct GalleryGrid<Header: View>: View {
             )
 
             Text(item.createdAt, format: .relative(presentation: .named))
-                .font(.system(size: 10))
+                .font(.pretendard(10))
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -701,7 +701,7 @@ struct GalleryGrid<Header: View>: View {
     /// 캔디 비용 표시 — "캔디 1개 소모". (배지/아이콘은 보유량으로 오해될 수 있어 문구로.)
     private func candyBadge(_ count: Int) -> some View {
         Text("캔디 \(count)개 소모")
-            .font(.caption2)
+            .font(.pretendard(11, relativeTo: .caption2))
             .foregroundStyle(.secondary)
     }
 
@@ -727,12 +727,12 @@ struct GalleryGrid<Header: View>: View {
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(img, cutout: bgCutout)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    Text("1번째").font(.caption2).foregroundStyle(.secondary)
+                                    Text("1번째").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                                 }
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(f1, cutout: bgCutoutF1)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    Text("2번째").font(.caption2).foregroundStyle(.secondary)
+                                    Text("2번째").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                                 }
                             }
                             .padding(.horizontal)
@@ -747,13 +747,13 @@ struct GalleryGrid<Header: View>: View {
                         // 캡션 — 제목·시간은 이미지 밖 한 줄로 (겹침 제거)
                         HStack(spacing: 6) {
                             Text("\(stateKoreanLabel(item.sourceState)) 캐릭터")
-                                .font(.callout.weight(.semibold))
+                                .font(.pretendard(16, relativeTo: .callout))
                             Text("·").foregroundStyle(.tertiary)
                             Text(item.createdAt, format: .relative(presentation: .named))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                             if item.hasFrame1 ?? false {
                                 Text("·").foregroundStyle(.tertiary)
-                                Text("연속 이미지").font(.caption).foregroundStyle(.secondary)
+                                Text("연속 이미지").font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                             }
                         }
 
@@ -776,7 +776,7 @@ struct GalleryGrid<Header: View>: View {
                                     }
                                 } label: {
                                     Text("다른 자리에")
-                                        .font(.caption.weight(.semibold))
+                                        .font(.pretendard(12, relativeTo: .caption))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
                                         .background(Color.withuCTAGreen.opacity(0.14), in: Capsule())
@@ -807,7 +807,7 @@ struct GalleryGrid<Header: View>: View {
                                 }
                             } label: {
                                 Text("다른 자리에 적용하기")
-                                    .font(.callout.weight(.semibold))
+                                    .font(.pretendard(16, relativeTo: .callout))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
                                     .background(Color.withuCTAGreen.opacity(0.14),
@@ -832,7 +832,7 @@ struct GalleryGrid<Header: View>: View {
                             .disabled(isRemovingBackground)
                             if isRemovingBackground {
                                 HStack { ProgressView(); Text("배경 빼는 중…") }
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                             }
                             if bgPreview != nil {
                                 Button {
@@ -876,14 +876,14 @@ struct GalleryGrid<Header: View>: View {
                             Divider()
 
                             HStack {
-                                Text("다듬기").font(.callout.weight(.medium))
+                                Text("다듬기").font(.pretendard(16, relativeTo: .callout))
                                 Spacer()
                                 candyBadge(GenerationQuota.cost(forQuality: "low"))
                             }
                             // 헤더·입력칸·'이대로 다듬기'를 한 묶음으로 — 버튼이 다듬기에 속해 보이게
                             // 선은 버튼 아래(다음 섹션 Divider 또는 카드 끝)로 둔다.
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
-                                .font(.callout)
+                                .font(.pretendard(16, relativeTo: .callout))
                                 .pixelInputField()
                             Button {
                                 showRefineConfirm = true
@@ -899,12 +899,12 @@ struct GalleryGrid<Header: View>: View {
                             .tint(.withuPinkText)
                             .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             Text("다듬은 이력에서 골라 적용할 수 있어요.")
-                                .font(.caption2).foregroundStyle(.secondary)
+                                .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             // 저장된 다듬기 이력이 있으면 다시 열기.
                             if hasStoredRefineHistory {
                                 Button { restoreRefineHistory(item) } label: {
                                     Label("다듬기 이력 보기", systemImage: "clock.arrow.circlepath")
-                                        .font(.footnote)
+                                        .font(.pretendard(13, relativeTo: .footnote))
                                 }
                                 .tint(Color.withuCTAGreen)
                             }
@@ -913,7 +913,7 @@ struct GalleryGrid<Header: View>: View {
                                CharacterState(rawValue: item.sourceState)?.usesGeneratedMotion == true {
                                 Divider()
                                 HStack {
-                                    Text("움직이는 캐릭터 만들기").font(.callout.weight(.medium))
+                                    Text("움직이는 캐릭터 만들기").font(.pretendard(16, relativeTo: .callout))
                                     Spacer()
                                     candyBadge(GenerationQuota.cost(forQuality: "low"))
                                 }
@@ -931,7 +931,7 @@ struct GalleryGrid<Header: View>: View {
                                 .tint(.withuPinkText)
                                 .disabled(isMakingMotion || isRefining)
                                 Text("2번째 장면을 만들어 캐릭터가 움직이게 해요.")
-                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             }
                         }
                         .plainFrostedCard()
@@ -949,7 +949,7 @@ struct GalleryGrid<Header: View>: View {
                         if let prompt = item.prompt, !prompt.isEmpty {
                             DisclosureGroup {
                                 Text(prompt)
-                                    .font(.caption)
+                                    .font(.pretendard(12, relativeTo: .caption))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .textSelection(.enabled)
@@ -957,18 +957,18 @@ struct GalleryGrid<Header: View>: View {
                                     UIPasteboard.general.string = prompt
                                 } label: {
                                     Text("프롬프트 복사")
-                                        .font(.caption)
+                                        .font(.pretendard(12, relativeTo: .caption))
                                 }
                                 .padding(.top, 4)
                             } label: {
                                 Text("만든 기록")
-                                    .font(.callout.weight(.medium))
+                                    .font(.pretendard(16, relativeTo: .callout))
                             }
                             .padding(.horizontal)
                         }
                     } else {
                         Image(systemName: "photo")
-                            .font(.largeTitle).foregroundStyle(.secondary)
+                            .font(.pretendard(34, relativeTo: .largeTitle)).foregroundStyle(.secondary)
                             .padding()
                     }
                 }
@@ -1240,7 +1240,7 @@ struct GalleryGrid<Header: View>: View {
                                                               lineWidth: 2.5)
                                         }
                                     Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
-                                        .font(.caption2.weight(idx == ctx.selected ? .semibold : .regular))
+                                        .font(.pretendard(11, relativeTo: .caption2))
                                         .foregroundStyle(idx == ctx.selected ? Color.withuCTAGreen : .secondary)
                                 }
                                 .onTapGesture { selectRefineVersion(idx) }
@@ -1253,7 +1253,7 @@ struct GalleryGrid<Header: View>: View {
                     if let item {
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
-                                .font(.callout)
+                                .font(.pretendard(16, relativeTo: .callout))
                                 .pixelInputField()
                             Button {
                                 Task { await refineItem(item) }
@@ -1277,7 +1277,7 @@ struct GalleryGrid<Header: View>: View {
 
                     HStack {
                         Button("적용") { adoptRefined(ctx) }
-                            .font(.callout.weight(.semibold))
+                            .font(.pretendard(16, relativeTo: .callout))
                             .tint(Color.withuCTAGreen)
                         Spacer()
                         Button("취소") {   // 이력 버리고 원본 유지
@@ -1285,7 +1285,7 @@ struct GalleryGrid<Header: View>: View {
                             hasStoredRefineHistory = false
                             refineCompare = nil
                         }
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .tint(.secondary)
                     }
                     .padding(.horizontal)

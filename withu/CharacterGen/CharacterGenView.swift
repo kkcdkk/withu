@@ -249,9 +249,9 @@ struct CharacterGenView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("여러 상태 한 번에 만들기")
-                        .font(.callout.weight(.semibold))
+                        .font(.pretendard(16, relativeTo: .callout))
                     Text("모든 상태의 모습을 한번에 만들어요")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -260,9 +260,9 @@ struct CharacterGenView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("하나씩 만들기")
-                        .font(.callout.weight(.semibold))
+                        .font(.pretendard(16, relativeTo: .callout))
                     Text("원하는 상태 하나만 만들어요")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -345,11 +345,11 @@ struct CharacterGenView: View {
             VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $prompt)
                 .frame(minHeight: 80)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .overlay(alignment: .topLeading) {
                     if prompt.isEmpty {
                         Text("만들 캐릭터를 설명해 주세요")
-                            .font(.callout)
+                            .font(.pretendard(16, relativeTo: .callout))
                             .foregroundStyle(.tertiary)
                             .padding(.top, 8)
                             .padding(.leading, 5)
@@ -362,7 +362,7 @@ struct CharacterGenView: View {
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
                 helperField("색감", text: $colorField, placeholder: "연두 파스텔톤")
             }
-            .font(.callout)
+            .font(.pretendard(16, relativeTo: .callout))
             .disabled(isGenerating)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -383,7 +383,7 @@ struct CharacterGenView: View {
             HStack(spacing: 3) {
                 Text("🍬")
                 Text("\(GenerationQuota.displayedCandy())")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .monospacedDigit()
             }
         }
@@ -540,24 +540,24 @@ struct CharacterGenView: View {
                     referenceImage = nil
                     photoPickerItem = nil
                 }
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
             }
             if referenceImage != nil {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("그대로 둘 것")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     TextField("비우면 사진 그대로 유지돼요", text: $referenceKeep, axis: .vertical)
                         .lineLimit(1...4)
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .disabled(isGenerating)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     TextField("바꿀 점을 적어요", text: $referenceChange, axis: .vertical)
                         .lineLimit(1...4)
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .disabled(isGenerating)
                 }
             }
@@ -610,7 +610,7 @@ struct CharacterGenView: View {
                 Spacer()
             }
             Text("예시 사진")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
@@ -626,17 +626,17 @@ struct CharacterGenView: View {
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
                     VStack(alignment: .leading, spacing: 2) {
                         Label("다듬은 버전 \(selectedVersion) 을 보고 있어요", systemImage: "sparkles")
-                            .font(.caption.weight(.semibold))
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(Color.withuPinkText)
                         Text("다듬었어요 — 다듬기 이력에서 이전 버전과 비교해 보세요")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                             .foregroundStyle(.secondary)
                     }
                 }
                 // 결과 유실 방지 — 만들어진 결과는 갤러리에 자동 저장됨을 알림.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].galleryId != nil {
                     Label("캐릭터 갤러리에 저장됨", systemImage: "checkmark.circle")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                         .foregroundStyle(.secondary)
                 }
                 // 표시할 frame 0, frame 1 — 현재 모드 (raw / transparent) 에 따라
@@ -654,7 +654,7 @@ struct CharacterGenView: View {
                     .indexViewStyle(.page(backgroundDisplayMode: .interactive))
                     .frame(height: 260)
                     Text(singleDetailFrame == 1 ? String(localized: "2번째 (움직임)") : String(localized: "1번째"))
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                 } else if let f0 {
                     ZStack(alignment: .bottomTrailing) {
@@ -669,7 +669,7 @@ struct CharacterGenView: View {
                     }
                     if isGeneratingMotionFrame {
                         Text("움직임 프레임을 만드는 중이에요 — 잠시만 기다려 주세요")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -688,13 +688,13 @@ struct CharacterGenView: View {
                 }
                 if isProcessingTransparent {
                     HStack { ProgressView(); Text("배경 빼는 중…") }
-                        .font(.footnote)
+                        .font(.pretendard(13, relativeTo: .footnote))
                         .foregroundStyle(.secondary)
                 }
 
                 if let revised = revisedPrompt {
                     DisclosureGroup("실제로 사용한 설명 보기") {
-                        Text(revised).font(.caption).foregroundStyle(.secondary)
+                        Text(revised).font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     }
                 }
                 if let f0 {
@@ -714,15 +714,15 @@ struct CharacterGenView: View {
                     Divider()
                     VStack(alignment: .leading, spacing: 4) {
                         Text("이 캐릭터의 이름 (선택)")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                         TextField("이름", text: $characterName)
-                            .font(.callout)
+                            .font(.pretendard(16, relativeTo: .callout))
                             .submitLabel(.done)
                             .onChange(of: characterName) { _, new in
                                 CharacterImageStore.setCharacterName(new, for: currentSessionId)
                             }
                         Text("갤러리 '캐릭터별'에 이 이름으로 보여요.")
-                            .font(.caption2).foregroundStyle(.tertiary)
+                            .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.tertiary)
                     }
                 }
                 }
@@ -777,7 +777,7 @@ struct CharacterGenView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     TextEditor(text: $refinementPrompt)
                         .frame(minHeight: 80)
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .pixelInputField()
                     HStack {
                         Spacer()
@@ -839,7 +839,7 @@ struct CharacterGenView: View {
                                                           lineWidth: 2.5)
                                     }
                                 Text(v.isRefined ? String(localized: "다듬음 \(idx)") : String(localized: "원본"))
-                                    .font(.caption2.weight(idx == selectedVersion ? .semibold : .regular))
+                                    .font(.pretendard(11, relativeTo: .caption2))
                                     .foregroundStyle(idx == selectedVersion ? Color.withuPinkText : .secondary)
                             }
                             .onTapGesture { selectVersion(idx) }
@@ -921,7 +921,7 @@ struct CharacterGenView: View {
                 .disabled(isProcessing)
             if isProcessing {
                 HStack { ProgressView(); Text("배경 빼고 다듬는 중…") }
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.secondary)
             }
             }
@@ -977,7 +977,7 @@ struct CharacterGenView: View {
 
                 if isProcessing {
                     HStack { ProgressView(); Text("배경 빼는 중…") }
-                        .font(.footnote)
+                        .font(.pretendard(13, relativeTo: .footnote))
                         .foregroundStyle(.secondary)
                 }
 
@@ -1068,11 +1068,11 @@ struct CharacterGenView: View {
     private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label)
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .leading)
             TextField(placeholder, text: text, axis: .vertical)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
         }
     }
 
@@ -1518,7 +1518,7 @@ struct WeatherBackgroundGenView: View {
                     Spacer()
                     Text(CharacterImageStore.hasBackground(condition) ? String(localized: "생성한 그림") : String(localized: "없음"))
                         .foregroundStyle(.secondary)
-                        .font(.footnote)
+                        .font(.pretendard(13, relativeTo: .footnote))
                 }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1549,7 +1549,7 @@ struct WeatherBackgroundGenView: View {
                 VStack(alignment: .leading, spacing: 12) {
                 TextEditor(text: $prompt)
                     .frame(minHeight: 100)
-                    .font(.callout)
+                    .font(.pretendard(16, relativeTo: .callout))
                     .pixelInputField()
                 Button {
                     Task { await generate() }
@@ -1571,7 +1571,7 @@ struct WeatherBackgroundGenView: View {
                 Text("배경")
             } footer: {
                 Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
-                    .font(.caption2)
+                    .font(.pretendard(11, relativeTo: .caption2))
             }
 
             if let img = resultImage {
@@ -1582,7 +1582,7 @@ struct WeatherBackgroundGenView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     // 합성 미리보기 — 실제 메인 화면처럼 idle 캐릭터 올림
                     VStack(spacing: 4) {
-                        Text("홈 화면에서 보이는 모습").font(.caption2).foregroundStyle(.secondary)
+                        Text("홈 화면에서 보이는 모습").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                         ZStack {
                             Image(uiImage: img)
                                 .resizable()

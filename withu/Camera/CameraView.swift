@@ -77,14 +77,14 @@ struct CameraView: View {
                     .fill(Color.orange.opacity(0.18))
                     .frame(width: 130, height: 130)
                 Image(systemName: "camera.fill.badge.ellipsis")
-                    .font(.system(size: 56))
+                    .font(.pretendard(56))
                     .foregroundStyle(.orange)
             }
             VStack(spacing: 8) {
                 Text("카메라 권한이 필요해요")
-                    .font(.title2.weight(.semibold))
+                    .font(.pretendard(22, relativeTo: .title2))
                 Text("캐릭터와 함께 사진을 찍으려면 카메라 접근을\n허용해 주세요.")
-                    .font(.callout)
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -95,7 +95,7 @@ struct CameraView: View {
                 }
             } label: {
                 Label("iOS 설정 열기", systemImage: "gear")
-                    .font(.headline)
+                    .font(.pretendard(17, relativeTo: .headline))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.withuPink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -105,7 +105,7 @@ struct CameraView: View {
 
             PhotosPicker(selection: $backgroundPickerItem, matching: .images) {
                 Text("또는 앨범 사진으로 만들기")
-                    .font(.callout.weight(.medium))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(Color.withuPinkText)
             }
             .padding(.bottom, 40)
@@ -143,7 +143,7 @@ struct CameraView: View {
                 .overlay(
                     VStack(spacing: 8) {
                         Image(systemName: "camera.metering.unknown")
-                            .font(.system(size: 60))
+                            .font(.pretendard(60))
                         Text("시뮬레이터엔 카메라가 없어요\n실기기에서 테스트하세요")
                             .multilineTextAlignment(.center)
                     }
@@ -226,7 +226,7 @@ struct CameraView: View {
             HStack {
                 Spacer()
                 Text(statusText)
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(.ultraThinMaterial, in: Capsule())
@@ -244,7 +244,7 @@ struct CameraView: View {
                         backgroundPickerItem = nil
                     } label: {
                         Image(systemName: "camera.fill")
-                            .font(.title3)
+                            .font(.pretendard(20, relativeTo: .title3))
                             .foregroundStyle(.white)
                             .frame(width: 50, height: 50)
                             .background(.ultraThinMaterial, in: Circle())
@@ -252,7 +252,7 @@ struct CameraView: View {
                 } else {
                     PhotosPicker(selection: $backgroundPickerItem, matching: .images) {
                         Image(systemName: "photo.on.rectangle")
-                            .font(.title3)
+                            .font(.pretendard(20, relativeTo: .title3))
                             .foregroundStyle(.white)
                             .frame(width: 50, height: 50)
                             .background(.ultraThinMaterial, in: Circle())
@@ -276,7 +276,7 @@ struct CameraView: View {
                         camera.switchCamera()
                     } label: {
                         Image(systemName: "camera.rotate.fill")
-                            .font(.title3)
+                            .font(.pretendard(20, relativeTo: .title3))
                             .foregroundStyle(.white)
                             .frame(width: 50, height: 50)
                             .background(.ultraThinMaterial, in: Circle())
@@ -295,7 +295,7 @@ struct CameraView: View {
     private var characterPicker: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("탭하면 캐릭터 추가 · 드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .foregroundStyle(.white.opacity(0.7))
                 .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {

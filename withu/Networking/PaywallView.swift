@@ -46,14 +46,14 @@ struct PaywallView: View {
                     } else if store.products.isEmpty {
                         VStack(spacing: 10) {
                             Text("지금은 충전 상품을 불러올 수 없어요.\n아래 코드로 충전하거나 잠시 후 다시 열어 주세요.")
-                                .font(.caption)
+                                .font(.pretendard(12, relativeTo: .caption))
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                             Button {
                                 Task { await store.loadProducts() }
                             } label: {
                                 Label("다시 시도", systemImage: "arrow.clockwise")
-                                    .font(.caption)
+                                    .font(.pretendard(12, relativeTo: .caption))
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
@@ -73,7 +73,7 @@ struct PaywallView: View {
                         Link("이용약관", destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!)
                         Link("개인정보처리방침", destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!)
                     }
-                    .font(.caption2.weight(.semibold))
+                    .font(.pretendard(11, relativeTo: .caption2))
                     .tint(Color.withuPinkText)   // 링크는 글자 — 파스텔은 안 읽혀서 진한 로즈
                     .padding(.top, 4)
 
@@ -117,13 +117,13 @@ struct PaywallView: View {
             .plainFrostedCard()
             if let msg = redeemMessage {
                 Text(msg)
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
             }
             if GenerationQuota.allowsTestCandyCode {
                 Text("테스트: '\(GenerationQuota.testCandyCode)' 입력하면 캔디 \(GenerationQuota.testCandyAmount)개")
-                    .font(.caption2)
+                    .font(.pretendard(11, relativeTo: .caption2))
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 4)
             }
@@ -160,15 +160,15 @@ struct PaywallView: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("내 초대 코드")
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(.secondary)
                         Text(myCode)
-                            .font(.title3.weight(.semibold))
+                            .font(.pretendard(20, relativeTo: .title3))
                     }
                     Spacer()
                     ShareLink(item: "Withy 같이 해요! 초대 코드 \(myCode) 를 입력하면 둘 다 보너스를 받아요.") {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
+                            .font(.pretendard(20, relativeTo: .title3))
                             .foregroundStyle(Color.withuPinkText)
                     }
                 }
@@ -194,13 +194,13 @@ struct PaywallView: View {
             .plainFrostedCard()
 
             Text("입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)
 
             if let msg = referralMessage {
                 Text(msg)
-                    .font(.caption)
+                    .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
             }
@@ -223,9 +223,9 @@ struct PaywallView: View {
     private var header: some View {
         VStack(spacing: 6) {
             Text("보유하고 있는 캔디는 \(GenerationQuota.displayedCandy())개예요")
-                .font(.title3.weight(.semibold))
+                .font(.pretendard(20, relativeTo: .title3))
             Text("더 만들고 싶다면 캔디를 충전해요.")
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -256,29 +256,29 @@ struct PaywallView: View {
                     .frame(width: 44, height: 44)
                     .overlay(
                         Image(systemName: "wand.and.stars")
-                            .font(.title3)
+                            .font(.pretendard(20, relativeTo: .title3))
                             .foregroundStyle(Color.withuPinkText)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(name)
-                            .font(.callout.weight(.semibold))
+                            .font(.pretendard(16, relativeTo: .callout))
                             .foregroundStyle(.primary)
                         if isRecommended {
                             Text("가장 인기")
-                                .font(.caption2.weight(.semibold))
+                                .font(.pretendard(11, relativeTo: .caption2))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Color.withuPink.opacity(0.18), in: Capsule())
                                 .foregroundStyle(Color.withuPinkText)
                         }
                     }
                     Text("캔디 \(amount)개 · 만료 없이 사용할 수 있어요")
-                        .font(.caption)
+                        .font(.pretendard(12, relativeTo: .caption))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 Text(pack.displayPrice)
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .foregroundStyle(.primary)
             }
             .plainFrostedCard()

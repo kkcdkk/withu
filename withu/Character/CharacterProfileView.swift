@@ -74,7 +74,7 @@ struct CharacterProfileView: View {
                     .opacity(sleepTimesDisabled ? 0.4 : 1)
                     if let msg = sleepAlignMessage {
                         Text(msg)
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(.secondary)
                     }
                     }
@@ -87,7 +87,7 @@ struct CharacterProfileView: View {
                     Text("수면 시간")
                 } footer: {
                     Text(sleepFooterText)
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
                 Section {
@@ -106,7 +106,7 @@ struct CharacterProfileView: View {
                     Text("식사 시간")
                 } footer: {
                     Text("정한 시각부터 30분 동안 밥 먹는 캐릭터로 보여요.")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
                 Section {
@@ -125,7 +125,7 @@ struct CharacterProfileView: View {
                     Text("밤하늘 시간")
                 } footer: {
                     Text("날씨를 받아오면 실제 해 뜨고 지는 시각에 맞춰 해와 달이 저절로 바뀌어요. 위치를 알 수 없을 때만 여기서 정한 시간을 사용해요.")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
                 statesOverviewSection
@@ -143,7 +143,7 @@ struct CharacterProfileView: View {
                     Text("움직임")
                 } footer: {
                     Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
                 Section {
@@ -153,7 +153,7 @@ struct CharacterProfileView: View {
                                   text: $profile.aiPrompt, axis: .vertical)
                             .lineLimit(2...5)
                         Text("캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.")
-                            .font(.caption2)
+                            .font(.pretendard(11, relativeTo: .caption2))
                             .foregroundStyle(.secondary)
                     }
                     }
@@ -224,13 +224,13 @@ struct CharacterProfileView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(profile.name.isEmpty ? "내 캐릭터" : profile.name)
-                        .font(.title3.weight(.semibold))
+                        .font(.pretendard(20, relativeTo: .title3))
                     Image(systemName: "pencil")
-                        .font(.caption)
+                        .font(.pretendard(12, relativeTo: .caption))
                         .foregroundStyle(.tertiary)
                 }
                 Text(heroState.caption)
-                    .font(.galmuri(15, relativeTo: .subheadline))
+                    .font(.pretendard(15, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -268,11 +268,11 @@ struct CharacterProfileView: View {
                         KoreanStateChip(state: state, size: 44)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(state.koreanShortLabel)
-                                .font(.callout.weight(.medium))
+                                .font(.pretendard(16, relativeTo: .callout))
                             Text(CharacterImageStore.hasImage(for: state)
                                  ? String(localized: "내 캐릭터가 적용됐어요")
                                  : String(localized: "아직 기본 모습이에요"))
-                                .font(.caption2)
+                                .font(.pretendard(11, relativeTo: .caption2))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -290,7 +290,7 @@ struct CharacterProfileView: View {
             Text("상태별 캐릭터")
         } footer: {
             Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 
@@ -301,7 +301,7 @@ struct CharacterProfileView: View {
     private var sleepStatusRow: some View {
         HStack(spacing: 10) {
             Text(isSleepingNow ? "자는 중" : "깨어 있음")
-                .font(.callout.weight(.semibold))
+                .font(.pretendard(16, relativeTo: .callout))
             Spacer()
             Menu {
                 Picker("수면 기준", selection: sleepBasisBinding) {
@@ -311,11 +311,11 @@ struct CharacterProfileView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: sleepBasisIcon)
-                        .font(.caption2)
+                        .font(.pretendard(11, relativeTo: .caption2))
                     Text(sleepBasisLabel)
-                        .font(.caption.weight(.medium))
+                        .font(.pretendard(12, relativeTo: .caption))
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.pretendard(9))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -336,13 +336,13 @@ struct CharacterProfileView: View {
     private var sleepFilterSetupCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Label("수면 필터를 연결하면 더 정확해요", systemImage: "moon.zzz.fill")
-                .font(.callout.weight(.semibold))
+                .font(.pretendard(16, relativeTo: .callout))
                 .foregroundStyle(Color.withuPinkText)
             Text("연결하지 않으면 수면 모드를 켜도 반영이 한 박자 늦어요. 한 번만 연결하면 켜자마자 잠들어요.")
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
             Text("설정 → 집중 모드 → 수면 → 아래 '필터 추가' → Withy → '캐릭터를 자게 하기' 켜기")
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -350,7 +350,7 @@ struct CharacterProfileView: View {
                 }
             } label: {
                 Label("설정 앱 열기", systemImage: "gear")
-                    .font(.caption.weight(.semibold))
+                    .font(.pretendard(12, relativeTo: .caption))
             }
             .buttonStyle(.borderless)
             .padding(.top, 2)

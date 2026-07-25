@@ -42,9 +42,9 @@ struct HelpGuideView: View {
                 VStack(spacing: 20) {
                     VStack(spacing: 8) {
                         Text("Withy 사용법")
-                            .font(.title2.weight(.bold))
+                            .font(.pretendard(22, relativeTo: .title2))
                         Text("캐릭터를 만들고 내 하루에 맞춰 보여줘요.")
-                            .font(.callout)
+                            .font(.pretendard(16, relativeTo: .callout))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -54,14 +54,14 @@ struct HelpGuideView: View {
                         ForEach(steps) { step in
                             HStack(alignment: .top, spacing: 14) {
                                 Image(systemName: step.icon)
-                                    .font(.title3)
+                                    .font(.pretendard(20, relativeTo: .title3))
                                     .foregroundStyle(Color.withuPinkText)
                                     .frame(width: 32, height: 32)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(step.title)
-                                        .font(.callout.weight(.semibold))
+                                        .font(.pretendard(16, relativeTo: .callout))
                                     Text(step.body)
-                                        .font(.footnote)
+                                        .font(.pretendard(13, relativeTo: .footnote))
                                         .foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }

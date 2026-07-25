@@ -201,7 +201,7 @@ struct BatchCharacterGenView: View {
         .overlay(alignment: .bottom) {
             if bgToastVisible {
                 Text("미리보기를 바꿨어요. 적용하려면 적용 버튼을 눌러주세요.")
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -329,7 +329,7 @@ struct BatchCharacterGenView: View {
             HStack(spacing: 3) {
                 Text("🍬")
                 Text("\(GenerationQuota.displayedCandy())")
-                    .font(.callout.weight(.semibold))
+                    .font(.pretendard(16, relativeTo: .callout))
                     .monospacedDigit()
             }
         }
@@ -349,7 +349,7 @@ struct BatchCharacterGenView: View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
             TextField("이 캐릭터의 이름 (선택)", text: $characterName)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
                 .submitLabel(.done)
                 .onChange(of: characterName) { _, new in
@@ -374,12 +374,12 @@ struct BatchCharacterGenView: View {
             VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $baseIdentity)
                 .frame(minHeight: 80)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
                 .overlay(alignment: .topLeading) {
                     if baseIdentity.isEmpty {
                         Text("만들 캐릭터를 설명해 주세요")
-                            .font(.callout)
+                            .font(.pretendard(16, relativeTo: .callout))
                             .foregroundStyle(.tertiary)
                             .padding(.top, 8)
                             .padding(.leading, 5)
@@ -392,7 +392,7 @@ struct BatchCharacterGenView: View {
                 helperField("생김새", text: $looksField, placeholder: "큰 눈, 둥근 몸, 새싹")
                 helperField("색감", text: $colorField, placeholder: "연두 파스텔톤")
             }
-            .font(.callout)
+            .font(.pretendard(16, relativeTo: .callout))
             .disabled(isGenerating)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -409,11 +409,11 @@ struct BatchCharacterGenView: View {
     private func helperField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label)
-                .font(.caption)
+                .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
                 .frame(width: 64, alignment: .leading)
             TextField(placeholder, text: text, axis: .vertical)
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
         }
     }
 
@@ -476,7 +476,7 @@ struct BatchCharacterGenView: View {
                     set: { stateHints[state] = $0 }
                 ))
                 .frame(minHeight: 60)
-                .font(.footnote)
+                .font(.pretendard(13, relativeTo: .footnote))
                 .disabled(isGenerating)
             }
             .padding(.vertical, 4)
@@ -484,7 +484,7 @@ struct BatchCharacterGenView: View {
             Button("기본값으로 되돌리기") {
                 stateHints[state] = state.generationHint
             }
-            .font(.footnote)
+            .font(.pretendard(13, relativeTo: .footnote))
             .disabled(isGenerating)
         } label: {
             HStack(spacing: 8) {
@@ -518,7 +518,7 @@ struct BatchCharacterGenView: View {
             if on { animatedStates.remove(state) } else { animatedStates.insert(state) }
         } label: {
             Text("움직임")
-                .font(.caption2.weight(.medium))
+                .font(.pretendard(11, relativeTo: .caption2))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Capsule().fill(on ? Color.withuCTAGreen.opacity(0.18)
@@ -560,7 +560,7 @@ struct BatchCharacterGenView: View {
                     stateReferenceImages.removeValue(forKey: state)
                     stateReferencePickerItems.removeValue(forKey: state)
                 }
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .buttonStyle(.borderless)
                 .disabled(isGenerating)
             }
@@ -575,7 +575,7 @@ struct BatchCharacterGenView: View {
                 let elapsed = Int(ctx.date.timeIntervalSince(started))
                 HStack(spacing: 4) {
                     ProgressView().scaleEffect(0.7)
-                    Text("\(elapsed)초").font(.caption2)
+                    Text("\(elapsed)초").font(.pretendard(11, relativeTo: .caption2))
                 }
             }
         } else if results[state] != nil {
@@ -621,25 +621,25 @@ struct BatchCharacterGenView: View {
                     referenceImage = nil
                     photoPickerItem = nil
                 }
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
             }
             if referenceImage != nil {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("그대로 둘 것")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     TextField("비우면 사진 그대로 유지돼요", text: $referenceKeep, axis: .vertical)
                         .lineLimit(1...4)
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .disabled(isGenerating)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("바꿀 것")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     TextField("모든 모습에 함께 반영할 변화",
                               text: $referenceChange, axis: .vertical)
                         .lineLimit(1...4)
-                        .font(.callout)
+                        .font(.pretendard(16, relativeTo: .callout))
                         .disabled(isGenerating)
                 }
             }
@@ -688,7 +688,7 @@ struct BatchCharacterGenView: View {
                 Spacer()
             }
             Text("예시 사진")
-                .font(.caption2)
+                .font(.pretendard(11, relativeTo: .caption2))
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
@@ -721,7 +721,7 @@ struct BatchCharacterGenView: View {
                     Text("움직이는 캐릭터")
                     Button { showMotionInfo = true } label: {
                         Image(systemName: "questionmark.circle")
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                     }
                     .buttonStyle(.borderless)
                     .foregroundStyle(.secondary)
@@ -758,7 +758,7 @@ struct BatchCharacterGenView: View {
                                     .scaledToFit()
                                     .frame(width: 18, height: 18)
                                 Text(state.koreanShortLabel)
-                                    .font(.footnote.weight(on ? .semibold : .regular))
+                                    .font(.pretendard(13, relativeTo: .footnote))
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
@@ -836,7 +836,7 @@ struct BatchCharacterGenView: View {
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         pendingAction = .approveRest
@@ -878,7 +878,7 @@ struct BatchCharacterGenView: View {
     private func idleRefineGroup(label: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
-                .font(.callout).disabled(isGenerating)
+                .font(.pretendard(16, relativeTo: .callout)).disabled(isGenerating)
                 .pixelInputField()
             Divider()
             Button {
@@ -892,7 +892,7 @@ struct BatchCharacterGenView: View {
                         Spacer()
                         Text(idleRevisionCost == 0 ? String(localized: "무료")
                                                    : String(localized: "캔디 \(idleRevisionCost)개"))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -918,10 +918,10 @@ struct BatchCharacterGenView: View {
 
                 HStack {
                     Button("적용") { acceptRevision(.idle) }
-                        .font(.callout.weight(.semibold)).tint(Color.withuCTAGreen)
+                        .font(.pretendard(16, relativeTo: .callout)).tint(Color.withuCTAGreen)
                     Spacer()
                     Button("취소") { rejectRevision(.idle) }
-                        .font(.callout).tint(.secondary)
+                        .font(.pretendard(16, relativeTo: .callout)).tint(.secondary)
                 }
                 .buttonStyle(.borderless)
             }
@@ -961,7 +961,7 @@ struct BatchCharacterGenView: View {
 
             if isGenerating {
                 Text("앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요. (\(progressDone)/\(requiredCount) 완료)")
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.secondary)
                 Button(role: .destructive) {
                     batchTask?.cancel()
@@ -974,7 +974,7 @@ struct BatchCharacterGenView: View {
                 .tint(.secondary)
             } else if remainingGenerations < need {
                 Text("캔디 \(remainingGenerations)개로는 \(selectedStates.count)개 상태(약 \(need)캔디)를 한 번에 만들 수 없어요. 만들 상태를 줄이거나 캔디를 충전해 주세요.")
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.orange)
                 Button {
                     showPaywall = true
@@ -984,7 +984,7 @@ struct BatchCharacterGenView: View {
                 .tint(.withuPink)
             } else {
                 Text("보유 캔디 \(remainingGenerations)개 · \(need)캔디 소모")
-                    .font(.footnote)
+                    .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.secondary)
             }
         }
@@ -1043,7 +1043,7 @@ struct BatchCharacterGenView: View {
                     .buttonStyle(.borderless)
                     .tint(.secondary)
                 }
-                .font(.callout)
+                .font(.pretendard(16, relativeTo: .callout))
 
                 Button {
                     Task { await saveAllToPhotos() }
@@ -1088,13 +1088,13 @@ struct BatchCharacterGenView: View {
                 .overlay(
                     Image(systemName: "hourglass")
                         .foregroundStyle(.tertiary)
-                        .font(.title3)
+                        .font(.pretendard(20, relativeTo: .title3))
                 )
             HStack {
-                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Text(state.koreanShortLabel).font(.pretendard(12, relativeTo: .caption)).lineLimit(1)
                 Spacer()
             }
-            Text("차례 기다리는 중").font(.caption2).foregroundStyle(.secondary)
+            Text("차례 기다리는 중").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
         }
     }
 
@@ -1110,16 +1110,16 @@ struct BatchCharacterGenView: View {
                         if let started = stateStartedAt[state] {
                             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                                 Text("\(Int(ctx.date.timeIntervalSince(started)))초")
-                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             }
                         }
                     }
                 )
             HStack {
-                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Text(state.koreanShortLabel).font(.pretendard(12, relativeTo: .caption)).lineLimit(1)
                 Spacer()
             }
-            Text("만드는 중…").font(.caption2).foregroundStyle(.secondary)
+            Text("만드는 중…").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
         }
     }
 
@@ -1211,7 +1211,7 @@ struct BatchCharacterGenView: View {
         if revisingFrame[state] != nil {
             HStack(spacing: 4) {
                 ProgressView().scaleEffect(0.55).tint(.white)
-                Text("다듬는 중").font(.caption2)
+                Text("다듬는 중").font(.pretendard(11, relativeTo: .caption2))
             }
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(Capsule().fill(.black.opacity(0.55)))
@@ -1220,7 +1220,7 @@ struct BatchCharacterGenView: View {
         } else if revisedDone[state] != nil {
             HStack(spacing: 3) {
                 Image(systemName: "checkmark.circle.fill")
-                Text("다듬음").font(.caption2.weight(.semibold))
+                Text("다듬음").font(.pretendard(11, relativeTo: .caption2))
             }
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(Capsule().fill(Color.withuCTAGreen))
@@ -1268,7 +1268,7 @@ struct BatchCharacterGenView: View {
                             .fill(.orange.opacity(0.18))
                             .frame(width: 40, height: 40)
                             .overlay(Image(systemName: "arrow.clockwise")
-                                .foregroundStyle(.orange).font(.caption))
+                                .foregroundStyle(.orange).font(.pretendard(12, relativeTo: .caption)))
                     }
                     .buttonStyle(.plain)
                     .padding(6)
@@ -1282,16 +1282,16 @@ struct BatchCharacterGenView: View {
                 detailFrame = 0
             }
             HStack {
-                Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                Text(state.koreanShortLabel).font(.pretendard(12, relativeTo: .caption)).lineLimit(1)
                 Spacer()
                 if appliedStates.contains(state) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.pretendard(12, relativeTo: .caption))
                 }
             }
             // 이 모습만 적용
             Button { applyOne(state) } label: {
                 Text(appliedStates.contains(state) ? String(localized: "적용됨") : String(localized: "적용"))
-                    .font(.caption.weight(.semibold))
+                    .font(.pretendard(12, relativeTo: .caption))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -1309,17 +1309,17 @@ struct BatchCharacterGenView: View {
                     .overlay(
                         VStack(spacing: 4) {
                             Image(systemName: "arrow.clockwise.circle.fill")
-                                .foregroundStyle(.orange).font(.title)
+                                .foregroundStyle(.orange).font(.pretendard(28, relativeTo: .title))
                             Text("눌러서 다시 만들기")
-                                .font(.caption2).foregroundStyle(.orange)
+                                .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.orange)
                         }
                     )
                 HStack {
-                    Text(state.koreanShortLabel).font(.caption).lineLimit(1)
+                    Text(state.koreanShortLabel).font(.pretendard(12, relativeTo: .caption)).lineLimit(1)
                     Spacer()
                 }
                 Text(error)
-                    .font(.caption2)
+                    .font(.pretendard(11, relativeTo: .caption2))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1720,7 +1720,7 @@ struct BatchCharacterGenView: View {
                     Text(hasF1
                          ? "\(state.koreanShortLabel) · \(detailFrame == 1 ? String(localized: "움직임 프레임") : String(localized: "기본"))"
                          : state.koreanShortLabel)
-                        .font(.callout.weight(.semibold))
+                        .font(.pretendard(16, relativeTo: .callout))
 
                     // 이 모습만 배경 토글 (개별)
                     Picker("배경", selection: Binding(
@@ -1762,10 +1762,10 @@ struct BatchCharacterGenView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("다듬기")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                            .font(.pretendard(15, relativeTo: .subheadline)).foregroundStyle(.primary)
                         // 프롬프트 입력 위, 사진 아래 (다른 다듬기와 형식 통일).
                         TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
-                            .font(.footnote)
+                            .font(.pretendard(13, relativeTo: .footnote))
                             .pixelInputField()
                             .lineLimit(2...4)
                         HStack(spacing: 10) {
@@ -1794,7 +1794,7 @@ struct BatchCharacterGenView: View {
                                     revisionRefImage = nil
                                     revisionRefItem = nil
                                 }
-                                .font(.caption2)
+                                .font(.pretendard(11, relativeTo: .caption2))
                                 .buttonStyle(.borderless)
                             }
                             Spacer()
@@ -1811,7 +1811,7 @@ struct BatchCharacterGenView: View {
                                     Text("다듬기")
                                     Spacer()
                                     Text("캔디 \(GenerationQuota.cost(forQuality: quality))개")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -1836,7 +1836,7 @@ struct BatchCharacterGenView: View {
                         Task { await saveOneToPhotos(img) }
                     } label: {
                         Label("사진 앱에 저장", systemImage: "square.and.arrow.down")
-                            .font(.footnote)
+                            .font(.pretendard(13, relativeTo: .footnote))
                     }
                     .buttonStyle(.borderless)
                     .tint(.secondary)
@@ -1844,7 +1844,7 @@ struct BatchCharacterGenView: View {
 
                     if let revisionError {
                         Text(revisionError)
-                            .font(.caption)
+                            .font(.pretendard(12, relativeTo: .caption))
                             .foregroundStyle(.orange)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
@@ -1902,7 +1902,7 @@ struct BatchCharacterGenView: View {
                 // 이어서 다듬기 — 고른 버전 기준으로 한 번 더.
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
-                        .font(.footnote).lineLimit(2...4)
+                        .font(.pretendard(13, relativeTo: .footnote)).lineLimit(2...4)
                         .pixelInputField()
                     Button {
                         Task { await reviseOne(state, frame: rev.frame, text: revisionText) }
@@ -1913,7 +1913,7 @@ struct BatchCharacterGenView: View {
                             HStack {
                                 Text("이어서 다듬기").frame(maxWidth: .infinity)
                                 Text("캔디 \(GenerationQuota.cost(forQuality: quality))개 소모")
-                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -1924,10 +1924,10 @@ struct BatchCharacterGenView: View {
 
                 HStack {
                     Button("적용") { acceptRevision(state) }
-                        .font(.callout.weight(.semibold)).tint(Color.withuCTAGreen)
+                        .font(.pretendard(16, relativeTo: .callout)).tint(Color.withuCTAGreen)
                     Spacer()
                     Button("취소") { rejectRevision(state) }
-                        .font(.callout).tint(.secondary)
+                        .font(.pretendard(16, relativeTo: .callout)).tint(.secondary)
                 }
                 .padding(.horizontal)
             }
@@ -1958,7 +1958,7 @@ struct BatchCharacterGenView: View {
                                         .strokeBorder(idx == rev.selected ? Color.withuCTAGreen : .clear, lineWidth: 2.5)
                                 }
                             Text(idx == 0 ? String(localized: "원본") : String(localized: "다듬음 \(idx)"))
-                                .font(.caption2.weight(idx == rev.selected ? .semibold : .regular))
+                                .font(.pretendard(11, relativeTo: .caption2))
                                 .foregroundStyle(idx == rev.selected ? Color.withuCTAGreen : .secondary)
                         }
                         .onTapGesture { selectRevisionVersion(state, idx) }
@@ -1968,7 +1968,7 @@ struct BatchCharacterGenView: View {
             }
             if rev.versions.count > 1 {
                 Text("선택한 버전을 기준으로 다듬어요.")
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
             }
         }
     }
