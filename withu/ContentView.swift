@@ -1161,6 +1161,7 @@ struct AdvancedDiagnosticsView: View {
         ZStack {
             backgroundGradient(for: .idle).ignoresSafeArea()
             Form {
+                sleepWindowSection
                 focusSection
                 healthSleepSection
                 motionSection
@@ -1280,6 +1281,46 @@ struct AdvancedDiagnosticsView: View {
         } header: {
             Text("수면·집중 모드")
                 .font(.pretendardBold(13, relativeTo: .footnote))
+        }
+    }
+
+    /// 지금 상태가 왜 이렇게 나왔는지 바로 읽히게 — 설정된 수면/기상 시간창과 기준.
+    /// (예: '잠 깨는 중'은 일어나는 시간부터 1시간 동안 뜬다)
+    private var sleepWindowSection: some View {
+        let p = CharacterProfileStore.load()
+        func hhmm(_ h: Int, _ m: Int) -> String { String(format: "%02d:%02d", h, m) }
+        let wakeEndH = (p.sleepEndHour * 60 + p.sleepEndMinute + 60) / 60 % 24
+        let wakeEndM = (p.sleepEndHour * 60 + p.sleepEndMinute + 60) % 60
+        return Section {
+            HStack {
+                Text("수면 기준")
+                Spacer()
+                Text(p.isManualSleepOnly ? "설정 시간 기준" : "수면 모드 기준")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("설정한 수면 시간")
+                Spacer()
+                Text("\(hhmm(p.sleepStartHour, p.sleepStartMinute)) ~ \(hhmm(p.sleepEndHour, p.sleepEndMinute))")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("잠 깨는 중 구간")
+                Spacer()
+                Text("\(hhmm(p.sleepEndHour, p.sleepEndMinute)) ~ \(hhmm(wakeEndH, wakeEndM))")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("지금 판정")
+                Spacer()
+                Text(characterState.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("수면 시간 설정")
+                .font(.pretendardBold(13, relativeTo: .footnote))
+        } footer: {
+            Text("'잠 깨는 중'은 일어나는 시간부터 1시간 동안 나와요.")
+                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 
