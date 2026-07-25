@@ -363,7 +363,8 @@ final class FocusModeManager {
     }
 
     /// 현재 Focus 상태 즉시 폴링. INFocusStatusCenter + App Group 의 Focus Filter 플래그 둘 다 갱신.
-    func refresh() {
+    /// source: 신호 모니터에 남길 계기 라벨 (앱 실행 / 앱 열림 / 백그라운드 갱신 / 폴링 …).
+    func refresh(source: String = "폴링") {
         // 1) INFocusStatusCenter (제약 많음 — "Focus 상태 공유" 토글 필요)
         let status = INFocusStatusCenter.default.authorizationStatus
         isAuthorized = (status == .authorized)
@@ -395,6 +396,12 @@ final class FocusModeManager {
         }
 
         lastCheckedAt = Date()
+
+        // 신호 모니터 — 값이 바뀐 순간만 기록 (3초 폴링이 로그를 덮지 않게).
+        FocusSignalLog.record(source: source,
+                              focusRaw: rawFocusedValue,
+                              filter: isFocusFilterSleeping,
+                              inBed: HealthKitManager.shared.isInBedSchedule)
     }
 
     /// SleepFocusFilterIntent.perform() 가 호출. 로그에 1줄 추가 (최신 우선, 10개 제한).
@@ -487,7 +494,7 @@ enum SyncCoordinator {
         let profile = CharacterProfileStore.load()
 
         // Focus 는 push 알림이 안 와서 매번 폴링.
-        focus.refresh()
+        focus.refresh(source: "동기화")
         // 폰 전용 운동 분류(CoreMotion)도 push 가 없어 폴링 — 캐시 갱신은 비동기,
         // 이번 sync 는 직전 캐시를 쓰고 다음 sync 에 반영된다.
         // 워치가 연결돼 있으면 워치 기준만 쓰므로 폴링도 생략.
@@ -608,7 +615,8 @@ struct SleepFocusFilterIntent: SetFocusFilterIntent {
 
         // 위젯/워치 즉시 갱신. 메인 앱이 잠들어 있어도 SyncCoordinator 가 깨워 처리.
         await MainActor.run {
-            FocusModeManager.shared.refresh()
+            // 신호 모니터 — 이 intent 가 '언제' 불렸는지가 수동 vs 예약 차이의 핵심 증거.
+            FocusModeManager.shared.refresh(source: setSleeping ? "수면필터 ON" : "수면필터 OFF")
             SyncCoordinator.syncNow()
         }
 

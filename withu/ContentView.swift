@@ -124,7 +124,7 @@ struct ContentView: View {
             .task {
                 // 시작 즉시 Focus 플래그·현재 시각 반영 — 수면 집중모드가 이미 켜진 채로
                 // 앱을 열면 3초 타이머 전까지 깨어있음으로 뜨던 문제 방지.
-                focus.refresh()
+                focus.refresh(source: "앱 실행")
                 currentTime = Date()
                 #if DEBUG
                 // 진단/시뮬레이터 검증용: --state <raw> 로 시작하면 해당 상태로 override 고정.
@@ -184,7 +184,7 @@ struct ContentView: View {
                 // Foreground 진입 시 Focus 폴링 + 즉시 sync (iOS 가 Focus 변화를 push 안 함).
                 guard newPhase == .active else { return }
                 currentTime = Date()   // 앱 열 때 화면 상태 즉시 재판정 (열어도 자고 있던 문제)
-                focus.refresh()
+                focus.refresh(source: "앱 열림")
                 SyncCoordinator.syncNow(override: overrideState)
             }
             .onChange(of: focus.isFocusFilterSleeping) { _, _ in
@@ -1174,6 +1174,44 @@ struct AdvancedDiagnosticsView: View {
 
     // MARK: - Sections (옮겨옴)
 
+    /// 수면/집중 신호 모니터 — 신호가 바뀐 순간마다 계기(앱 열림·동기화·수면필터)와 함께 쌓인다.
+    /// 예약 전환 시각에 '수면필터 ON' 줄이 없으면 = iOS 가 그 시점에 앱을 안 깨운 것.
+    @ViewBuilder
+    private var signalMonitorRows: some View {
+        let entries = FocusSignalLog.load()
+        DisclosureGroup("신호 모니터 (\(entries.count)건)") {
+            if entries.isEmpty {
+                Text("아직 기록이 없어요. 앱을 열어두거나 수면 모드를 켜보면 쌓여요.")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(entries.suffix(40).reversed()) { e in
+                    HStack(spacing: 6) {
+                        Text(e.t.formatted(date: .omitted, time: .standard))
+                            .font(.caption.monospaced())
+                        Text(e.src)
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(e.src.hasPrefix("수면필터") ? Color.withuPinkText : .secondary)
+                        Spacer(minLength: 4)
+                        Text("집중 \(e.focusLabel)\(e.filter ? " · 필터수면" : "")\(e.inBed ? " · inBed" : "")")
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        Button {
+            UIPasteboard.general.string = FocusSignalLog.exportText()
+        } label: {
+            Label("신호 기록 복사", systemImage: "doc.on.doc")
+        }
+        Button(role: .destructive) {
+            FocusSignalLog.clear()
+        } label: {
+            Text("신호 기록 지우기")
+        }
+    }
+
     private var focusSection: some View {
         Section {
             HStack { Text("권한"); Spacer(); Text(focus.authorizationStatusLabel).foregroundStyle(.secondary) }
@@ -1219,13 +1257,15 @@ struct AdvancedDiagnosticsView: View {
                     }
                 }
             }
+            // 신호 모니터 — 수동 vs 예약(자동) 전환 때 실제로 뭐가 도착했는지 밤새 기록.
+            signalMonitorRows
             if !focus.isAuthorized {
                 Button("집중 모드 권한 요청") {
                     Task { await focus.requestAuthorization() }
                 }
             }
             RefreshRowButton(title: "지금 다시 확인") {
-                focus.refresh()
+                focus.refresh(source: "수동 확인")
                 sendStateToWatch(characterState)
             }
             if focus.isAuthorized && focus.rawFocusedValue == nil {
