@@ -496,13 +496,13 @@ struct ContentView: View {
                                 GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 gridAction(title: "함께 사진 찍기",
                            subtitle: "캐릭터와 함께 사진 찍어요",
-                           icon: PixelIconSet.camera) { CameraView() }
+                           asset: "menu_camera") { CameraView() }
                 gridAction(title: "캐릭터 갤러리",
                            subtitle: "만든 캐릭터를 모아봐요",
-                           icon: PixelIconSet.gallery) { CharacterGalleryView() }
+                           asset: "menu_gallery") { CharacterGalleryView() }
                 gridAction(title: "내 캐릭터 설정하기",
                            subtitle: "이름 · 수면 · 식사 시간",
-                           icon: PixelIconSet.person) { CharacterProfileView() }
+                           asset: "menu_settings") { CharacterProfileView() }
             }
         }
     }
@@ -531,10 +531,13 @@ struct ContentView: View {
 
     @ViewBuilder
     private func gridAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
-                                        icon: [[UInt8]], @ViewBuilder destination: () -> Dest) -> some View {
+                                        asset: String, @ViewBuilder destination: () -> Dest) -> some View {
         NavigationLink { destination() } label: {
             VStack(alignment: .leading, spacing: 7) {
-                PixelIcon(grid: icon, tint: .withuSage, size: 24)
+                // 손그림 픽셀 아이콘(컬러) — interpolation(.none) 으로 픽셀 또렷하게.
+                Image(asset)
+                    .resizable().interpolation(.none).scaledToFit()
+                    .frame(width: 30, height: 30)
                 Text(title).font(.galmuri(13, relativeTo: .callout)).lineLimit(1)
                 Text(subtitle).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
             }
