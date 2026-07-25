@@ -377,10 +377,13 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 HStack(spacing: 0) {
-                    metricItem(icon: PixelIconSet.footsteps,
-                               value: health.todaySteps.map { "\(Int($0))" } ?? "-",
+                    metricItem(value: health.todaySteps.map { "\(Int($0))" } ?? "-",
                                label: "걸음",
-                               dim: (health.todaySteps ?? 0) == 0)
+                               dim: (health.todaySteps ?? 0) == 0) {
+                        Image("metric_steps")
+                            .resizable().interpolation(.none).scaledToFit()
+                            .frame(width: 20, height: 20)
+                    }
                     Divider().frame(height: 32)
                     metricItem(icon: PixelIconSet.clock,
                                value: health.todayActiveMinutes.map { "\(Int($0))" } ?? "-",
@@ -428,11 +431,20 @@ struct ContentView: View {
         .background(Color.withuPixelOutline)
     }
 
-    /// dim = 값이 0/없음 → 흐리고 작게(허전함 완화). 의미값은 크고 또렷하게.
+    /// 단색 도트 아이콘 버전 (활동분·kcal·수면).
     private func metricItem(icon: [[UInt8]], value: String,
                             label: LocalizedStringKey, dim: Bool) -> some View {
-        VStack(spacing: 4) {
+        metricItem(value: value, label: label, dim: dim) {
             PixelIcon(grid: icon, tint: .withuPixelOutline, size: 18)
+        }
+    }
+
+    /// dim = 값이 0/없음 → 흐리고 작게(허전함 완화). 의미값은 크고 또렷하게.
+    /// icon 은 도트/컬러 이미지 아무거나 (손그림 픽셀 아이콘도 그대로 받음).
+    private func metricItem<Icon: View>(value: String, label: LocalizedStringKey, dim: Bool,
+                                        @ViewBuilder icon: () -> Icon) -> some View {
+        VStack(spacing: 4) {
+            icon()
                 .opacity(dim ? 0.3 : 0.9)
             Text(value)
                 .font(.galmuri(dim ? 15 : 19, relativeTo: .callout))
@@ -488,7 +500,7 @@ struct ContentView: View {
             // 핵심 액션 — 핑크 강조, 크게
             heroAction(title: "함께할 캐릭터 생성하기",
                        subtitle: "함께할 캐릭터를 만들어요",
-                       icon: PixelIconSet.wand) {
+                       asset: "menu_wand") {
                 CharacterGenView()
             }
             // 보조 3개 — 2열 그리드 (작게)
@@ -509,10 +521,12 @@ struct ContentView: View {
 
     @ViewBuilder
     private func heroAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
-                                        icon: [[UInt8]], @ViewBuilder destination: () -> Dest) -> some View {
+                                        asset: String, @ViewBuilder destination: () -> Dest) -> some View {
         NavigationLink { destination() } label: {
             HStack(spacing: 14) {
-                PixelIcon(grid: icon, tint: .withuPixelOutline, size: 30)
+                Image(asset)
+                    .resizable().interpolation(.none).scaledToFit()
+                    .frame(width: 34, height: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.galmuri(16, relativeTo: .callout))
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
