@@ -1177,21 +1177,21 @@ struct AdvancedDiagnosticsView: View {
     private var focusSection: some View {
         Section {
             HStack { Text("권한"); Spacer(); Text(focus.authorizationStatusLabel).foregroundStyle(.secondary) }
-            HStack { Text("현재 집중 모드"); Spacer(); Text(focus.focusStateLabel).foregroundStyle(.secondary) }
+            HStack { Text("집중모드"); Spacer(); Text(focus.focusStateLabel).foregroundStyle(.secondary) }
             HStack {
-                Text("수면 집중 모드 신호")
+                Text("수면/집중 모드 신호")
                 Spacer()
                 StatusPill(kind: focus.isFocusFilterSleeping ? .ok : .off,
                            label: focus.isFocusFilterSleeping ? "받는 중" : "꺼짐")
             }
             HStack {
-                Text("설정 시간에 자기")
+                Text("설정시간 기준")
                 Spacer()
                 StatusPill(kind: focus.shouldFallbackToSleepWindow() ? .ok : .off,
                            label: focus.shouldFallbackToSleepWindow() ? "켜짐" : "꺼짐")
             }
             HStack {
-                Text("마지막으로 받은 시각")
+                Text("마지막으로 신호를 받은 시각")
                 Spacer()
                 Text(focus.focusFilterLastPerformAt.map { $0.formatted(date: .omitted, time: .standard) }
                      ?? String(localized: "없음"))
@@ -1252,7 +1252,7 @@ struct AdvancedDiagnosticsView: View {
                     .foregroundStyle(.secondary)
             }
             HStack {
-                Text("지금 잠자리 시간대")
+                Text("잠자리 시간대 여부")
                 Spacer()
                 StatusPill(kind: health.isInBedSchedule ? .ok : .off,
                            label: health.isInBedSchedule ? "예" : "아니요")
