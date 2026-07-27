@@ -102,6 +102,20 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         }
     }
 
+    /// 이름을 '{이름}의 ~' 로 앞에 붙여도 자연스러운 문구인지.
+    /// 명사구만 true — '자고 있어요' · '산책 중' 같은 동사구는 '코코의 산책 중' 처럼 어색해진다.
+    var captionAllowsNamePrefix: Bool {
+        switch self {
+        case .idle, .energetic, .cloudy,
+             .walkingCloudy, .walkingSnowy,
+             .runningSunny, .runningCloudy, .runningSnowy,
+             .cyclingSunny, .cyclingCloudy, .cyclingSnowy:
+            return true
+        default:
+            return false
+        }
+    }
+
     var caption: String {
         switch self {
         case .idle:           return String(localized: "느긋한 하루")

@@ -66,6 +66,8 @@ struct ContentView: View {
     /// 이름이 없으면 원래 문구 그대로.
     private var captionWithName: String {
         let caption = characterState.caption
+        // 동사구 문구('산책 중', '자고 있어요')는 '~의'를 붙이면 어색해서 이름을 안 붙인다.
+        guard characterState.captionAllowsNamePrefix else { return caption }
         // 1순위: 그 캐릭터를 만들 때 붙인 이름, 2순위: '내 캐릭터 설정'의 이름.
         // 프로필 기본값("내 캐릭터")은 사용자가 정한 이름이 아니므로 안 쓴다.
         let profileName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
