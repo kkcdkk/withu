@@ -888,24 +888,15 @@ struct BatchCharacterGenView: View {
             TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
                 .font(.pretendard(16, relativeTo: .callout)).disabled(isGenerating)
                 .pixelInputField()
-            Divider()
-            Button {
+            PixelActionButton(
+                title: label,
+                note: idleRevisionCost == 0 ? String(localized: "무료")
+                                            : String(localized: "캔디 \(idleRevisionCost)개"),
+                isBusy: isGenerating,
+                isEnabled: !idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ) {
                 pendingAction = .reviseIdle
-            } label: {
-                if isGenerating {
-                    HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
-                } else {
-                    HStack {
-                        Text(label)
-                        Spacer()
-                        Text(idleRevisionCost == 0 ? String(localized: "무료")
-                                                   : String(localized: "캔디 \(idleRevisionCost)개"))
-                            .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                    }
-                }
             }
-            .buttonStyle(.borderless).tint(Color.withuCTAGreen)
-            .disabled(isGenerating || idleRevisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(12)
         .plainFrostedCard(cornerRadius: 12)
@@ -1822,24 +1813,15 @@ struct BatchCharacterGenView: View {
                             }
                             Spacer()
                         }
-                        Divider()
-                        // 다듬기 버튼을 입력 카드 안으로 — 다른 다듬기와 형식 통일.
-                        Button {
+                        // 다듬기 버튼 — 다른 다듬기와 같은 우하단 네모 픽셀 버튼.
+                        PixelActionButton(
+                            title: "다듬기",
+                            note: String(localized: "캔디 \(GenerationQuota.cost(forQuality: quality))개"),
+                            isBusy: isRevising,
+                            isEnabled: !revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ) {
                             pendingReviseConfirm = true
-                        } label: {
-                            if isRevising {
-                                HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
-                            } else {
-                                HStack {
-                                    Text("다듬기")
-                                    Spacer()
-                                    Text("캔디 \(GenerationQuota.cost(forQuality: quality))개")
-                                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                                }
-                            }
                         }
-                        .buttonStyle(.borderless).tint(Color.withuCTAGreen)
-                        .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(14)
                     .plainFrostedCard()
@@ -1853,16 +1835,16 @@ struct BatchCharacterGenView: View {
                         GalleryReferencePicker { img in revisionRefImage = img }
                     }
 
-                    Button {
-                        let img = displayedImage(for: state, frame: hasF1 ? detailFrame : 0)
-                            ?? results[state] ?? UIImage()
-                        Task { await saveOneToPhotos(img) }
-                    } label: {
-                        Label("사진 앱에 저장", systemImage: "square.and.arrow.down")
-                            .font(.pretendard(13, relativeTo: .footnote))
+                    // 저장은 아이보리 픽셀 아이콘 버튼 — 하나씩 만들기 결과와 같은 형식.
+                    HStack {
+                        Spacer()
+                        PixelIconButton(systemImage: "square.and.arrow.down",
+                                        accessibilityTitle: "사진 앱에 저장") {
+                            let img = displayedImage(for: state, frame: hasF1 ? detailFrame : 0)
+                                ?? results[state] ?? UIImage()
+                            Task { await saveOneToPhotos(img) }
+                        }
                     }
-                    .buttonStyle(.borderless)
-                    .tint(.secondary)
                     .padding(.horizontal)
 
                     if let revisionError {
@@ -1927,21 +1909,14 @@ struct BatchCharacterGenView: View {
                     TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
                         .font(.pretendard(13, relativeTo: .footnote)).lineLimit(2...4)
                         .pixelInputField()
-                    Button {
+                    PixelActionButton(
+                        title: "이어서 다듬기",
+                        note: String(localized: "캔디 \(GenerationQuota.cost(forQuality: quality))개"),
+                        isBusy: isRevising,
+                        isEnabled: !revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ) {
                         Task { await reviseOne(state, frame: rev.frame, text: revisionText) }
-                    } label: {
-                        if isRevising {
-                            HStack { ProgressView(); Text("다듬는 중…") }.frame(maxWidth: .infinity)
-                        } else {
-                            HStack {
-                                Text("이어서 다듬기").frame(maxWidth: .infinity)
-                                Text("캔디 \(GenerationQuota.cost(forQuality: quality))개 소모")
-                                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
-                            }
-                        }
                     }
-                    .buttonStyle(.bordered).tint(Color.withuCTAGreen)
-                    .disabled(isRevising || revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(14).plainFrostedCard().padding(.horizontal)
 

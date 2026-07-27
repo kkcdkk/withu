@@ -215,6 +215,70 @@ struct PixelToggleStyle: ToggleStyle {
     }
 }
 
+/// 입력칸 오른쪽 하단에 놓는 작은 네모 픽셀 버튼 (다듬기 전용).
+/// 다듬기가 있는 모든 화면이 이걸 써서 모양이 어긋나지 않게 한다.
+struct PixelActionButton: View {
+    let title: LocalizedStringKey
+    /// 오른쪽에 작게 붙는 보조 문구 (예: "무료", "캔디 2개"). nil 이면 생략.
+    var note: String? = nil
+    var isBusy: Bool = false
+    var isEnabled: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            if let note {
+                Text(note)
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            }
+            Button(action: action) {
+                Group {
+                    if isBusy {
+                        ProgressView().controlSize(.small).tint(.white)
+                    } else {
+                        Text(title)
+                            .font(.galmuri(13, relativeTo: .footnote))   // 초록 버튼 = 둥근모꼴
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(minWidth: 52, minHeight: 34)
+                .padding(.horizontal, 8)
+                .background(PixelBorderShape().fill(Color.withuSage))
+                .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
+            }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled || isBusy)
+            .opacity(isEnabled ? 1 : 0.4)
+        }
+    }
+}
+
+/// 보조 액션용 네모 픽셀 버튼 — 아이보리 채움 + 갈색 픽셀 테두리.
+/// 초록 CTA 옆에 둥근 시스템 버튼이 붙어 어긋나 보이는 것을 막는다.
+struct PixelIconButton: View {
+    let systemImage: String
+    var accessibilityTitle: LocalizedStringKey
+    var isEnabled: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.pretendard(16, relativeTo: .callout))
+                .foregroundStyle(Color.withuPixelOutline)
+                .frame(width: 46, height: 46)
+                .background(PixelBorderShape().fill(Color.withuCardFill))
+                .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
+        .accessibilityLabel(accessibilityTitle)
+    }
+}
+
 struct WithuCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CTABody(configuration: configuration)

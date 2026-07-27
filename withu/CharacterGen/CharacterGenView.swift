@@ -834,17 +834,11 @@ struct CharacterGenView: View {
                         .buttonStyle(WithuCTAButtonStyle())
                         .disabled(isProcessingTransparent)
 
-                        Button {
+                        PixelIconButton(systemImage: "square.and.arrow.down",
+                                        accessibilityTitle: "사진 앱에 저장") {
                             let img = (f1 != nil ? currentDisplay(frame: singleDetailFrame) : f0) ?? f0
                             Task { await saveToPhotos(img) }
-                        } label: {
-                            Image(systemName: "square.and.arrow.down")
-                                .font(.pretendard(16, relativeTo: .callout))
-                                .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
-                        .accessibilityLabel("사진 앱에 저장")
                     }
                 }
                 }
@@ -902,28 +896,12 @@ struct CharacterGenView: View {
                         .frame(minHeight: 80)
                         .font(.pretendard(16, relativeTo: .callout))
                         .pixelInputField()
-                    HStack {
-                        Spacer()
-                        Button {
-                            pendingAction = .refine(frame: resultFrame2 != nil ? singleDetailFrame : 0)
-                        } label: {
-                            Group {
-                                if isGenerating {
-                                    ProgressView().controlSize(.small).tint(.white)
-                                } else {
-                                    Text("다듬기")
-                                        .font(.galmuri(13, relativeTo: .footnote))   // 초록 버튼 = 둥근모꼴
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                            .frame(minWidth: 52, minHeight: 34)
-                            .padding(.horizontal, 8)
-                            .background(PixelBorderShape().fill(Color.withuSage))
-                            .overlay(PixelBorderShape().strokeBorder(Color.withuPixelOutline, lineWidth: 2.5))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(isGenerating || refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .opacity(refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1)
+                    PixelActionButton(
+                        title: "다듬기",
+                        isBusy: isGenerating,
+                        isEnabled: !refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ) {
+                        pendingAction = .refine(frame: resultFrame2 != nil ? singleDetailFrame : 0)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
