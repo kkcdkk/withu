@@ -522,8 +522,8 @@ struct CharacterGenView: View {
                 if isGenerating {
                     generatingLabel
                 } else {
+                    // 폭은 글자에 맞춤 — '여러 모습 만들기' 버튼과 같은 크기감.
                     Text("만들기 시작")
-                        .frame(maxWidth: .infinity)
                 }
             }
             .buttonStyle(WithuCTAButtonStyle())

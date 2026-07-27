@@ -66,7 +66,11 @@ struct ContentView: View {
     /// 이름이 없으면 원래 문구 그대로.
     private var captionWithName: String {
         let caption = characterState.caption
-        guard let name = CharacterImageStore.appliedCharacterName(for: characterState) else {
+        // 1순위: 그 캐릭터를 만들 때 붙인 이름, 2순위: '내 캐릭터 설정'의 이름.
+        // 프로필 기본값("내 캐릭터")은 사용자가 정한 이름이 아니므로 안 쓴다.
+        let profileName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = (profileName.isEmpty || profileName == "내 캐릭터") ? nil : profileName
+        guard let name = CharacterImageStore.appliedCharacterName(for: characterState) ?? fallback else {
             return caption
         }
         return "\(name)의 \(caption)"
