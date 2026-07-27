@@ -52,6 +52,9 @@ struct CharacterGalleryView: View {
     /// 캐릭터별 선택 모드 — 꾹 눌러 진입, 고른 캐릭터를 상단 '삭제' 로 지운다.
     @State private var isCharacterSelectionMode: Bool = false
     @State private var selectedCharacterIDs: Set<String> = []
+    /// 선택한 캐릭터 이름 변경 (한 명 선택했을 때만)
+    @State private var showCharacterRename: Bool = false
+    @State private var renameDraft: String = ""
     @State private var showCharacterDeleteConfirm: Bool = false
 
     private var totalCount: Int {
@@ -90,7 +93,9 @@ struct CharacterGalleryView: View {
         .onReceive(NotificationCenter.default.publisher(for: .gallerySyncDidImport)) { _ in
             refresh()
         }
-        // 선택 모드일 때만 상단에 삭제/취소 — 고른 뒤 경고 확인까지 거쳐야 지워진다.
+        // 선택 모드에선 뒤로가기를 숨긴다 — 실수로 화면을 벗어나지 않게.
+        .navigationBarBackButtonHidden(mode == .byCharacter && isCharacterSelectionMode)
+        // 선택 모드일 때만 상단에 이름 변경/삭제/취소 — 삭제는 경고 확인까지 거쳐야 지워진다.
         .toolbar {
             if mode == .byCharacter && isCharacterSelectionMode {
                 ToolbarItem(placement: .topBarLeading) {
@@ -98,6 +103,16 @@ struct CharacterGalleryView: View {
                         isCharacterSelectionMode = false
                         selectedCharacterIDs = []
                     }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        guard let id = selectedCharacterIDs.first else { return }
+                        renameDraft = CharacterImageStore.characterName(for: id) ?? ""
+                        showCharacterRename = true
+                    } label: {
+                        Label("이름 변경", systemImage: "pencil")
+                    }
+                    .disabled(selectedCharacterIDs.count != 1)   // 한 명일 때만
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .destructive) {
@@ -108,6 +123,11 @@ struct CharacterGalleryView: View {
                     .disabled(selectedCharacterIDs.isEmpty)
                 }
             }
+        }
+        .alert("이름 변경", isPresented: $showCharacterRename) {
+            TextField("이름", text: $renameDraft)
+            Button("저장") { renameSelectedCharacter() }
+            Button("취소", role: .cancel) {}
         }
         .alert("\(selectedCharacterIDs.count)명의 캐릭터를 지울까요?",
                isPresented: $showCharacterDeleteConfirm) {
@@ -266,6 +286,18 @@ struct CharacterGalleryView: View {
     private func representativeImage(_ items: [GalleryItem]) -> UIImage? {
         let rep = items.first { $0.sourceState == CharacterState.idle.rawValue } ?? items.first
         return rep.flatMap { CharacterImageStore.loadGalleryImage(id: $0.id) }
+    }
+
+    /// 선택 모드에서 고른 캐릭터(한 명) 이름 변경. 적용 중이면 '내 캐릭터' 이름도 연동.
+    private func renameSelectedCharacter() {
+        guard let batchId = selectedCharacterIDs.first else { return }
+        CharacterImageStore.setCharacterName(renameDraft, for: batchId)
+        let isApplied = characters.first { $0.batchId == batchId }?.items
+            .contains { !CharacterImageStore.statesUsingGalleryItem($0.id).isEmpty } ?? false
+        if isApplied { CharacterProfileStore.syncName(renameDraft) }
+        isCharacterSelectionMode = false
+        selectedCharacterIDs = []
+        refresh()
     }
 
     /// 선택한 캐릭터들(batchId 그룹)의 모습을 전부 삭제.
@@ -573,7 +605,7 @@ private struct CharacterApplyHeader: View {
             Text("\(items.count)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
         }
         .alert("캐릭터 이름", isPresented: $showRename) {
-            TextField("이 캐릭터의 이름", text: $nameDraft)
+            TextField("이름", text: $nameDraft)
             Button("저장") {
                 CharacterImageStore.setCharacterName(nameDraft, for: batchId)
                 // 지금 적용 중인 캐릭터면 '내 캐릭터 설정'의 이름과도 연동.
@@ -582,9 +614,9 @@ private struct CharacterApplyHeader: View {
             }
             Button("취소", role: .cancel) {}
         } message: {
-            Text(isApplied
-                 ? String(localized: "지금 적용 중인 캐릭터예요. 바꾸면 '내 캐릭터 설정'의 이름도 같이 바뀌어요.")
-                 : String(localized: "갤러리와 홈 화면에서 이 이름으로 보여요."))
+            if isApplied {
+                Text("지금 적용 중인 캐릭터예요. 바꾸면 '내 캐릭터 설정'의 이름도 같이 바뀌어요.")
+            }
         }
     }
 }

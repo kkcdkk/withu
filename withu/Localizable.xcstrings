@@ -92,6 +92,29 @@
         }
       }
     },
+    "'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The 'Default' state is created first, and the rest are drawn based on that result."
+          }
+        }
+      }
+    },
+    "'기본'은 나머지 모습의 기준이 되는 그림이라 항상 만들어요." : {
+
+    },
+    "'기본'은 항상 만들어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "'Default' is always created"
+          }
+        }
+      }
+    },
     "'여러 모습 만들기'로 만든 캐릭터가\n여기에 묶여요." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -201,7 +224,18 @@
         }
       }
     },
+    "%@ 동안 잘 움직였어요. %@ 함께 뛰었어요." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ 동안 잘 움직였어요. %2$@ 함께 뛰었어요."
+          }
+        }
+      }
+    },
     "%@ 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -355,6 +389,7 @@
 
     },
     "%lld 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -486,6 +521,9 @@
           }
         }
       }
+    },
+    "%lld명의 캐릭터를 지울까요?" : {
+
     },
     "%lld분" : {
       "localizations" : {
@@ -1129,12 +1167,6 @@
         }
       }
     },
-    "갤러리 '캐릭터별'에 이 이름으로 보여요." : {
-
-    },
-    "갤러리 '캐릭터별'에서 이 이름으로 보여요." : {
-
-    },
     "갤러리에 저장했어요" : {
       "localizations" : {
         "en" : {
@@ -1144,6 +1176,9 @@
           }
         }
       }
+    },
+    "갤러리와 홈 화면에서 이 이름으로 보여요." : {
+
     },
     "거부됨" : {
       "localizations" : {
@@ -1402,6 +1437,19 @@
         }
       }
     },
+    "고른 캐릭터로 만든 모습이 모두 지워져요. 되돌릴 수 없어요." : {
+
+    },
+    "고른 캐릭터의 생김새를 이어받아 진화한 모습을 그려요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draws an evolved form that inherits the look of the character you picked."
+          }
+        }
+      }
+    },
     "공유" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1630,6 +1678,9 @@
           }
         }
       }
+    },
+    "기준" : {
+
     },
     "기준 모습 확인" : {
       "localizations" : {
@@ -2043,6 +2094,9 @@
         }
       }
     },
+    "눈 놀이 중" : {
+
+    },
     "눈 속 달리기" : {
 
     },
@@ -2070,9 +2124,6 @@
           }
         }
       }
-    },
-    "눈 속에서 신나게" : {
-
     },
     "눈 속에서 신나게 ❄️" : {
       "extractionState" : "stale",
@@ -2128,6 +2179,9 @@
           }
         }
       }
+    },
+    "다 되면 여기에 새 캐릭터가 나와요." : {
+
     },
     "다 만들었어요" : {
       "localizations" : {
@@ -2376,6 +2430,16 @@
         }
       }
     },
+    "다른 캐릭터로 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick another character"
+          }
+        }
+      }
+    },
     "다시 보기" : {
       "localizations" : {
         "en" : {
@@ -2534,6 +2598,7 @@
       }
     },
     "더 만들기 (충전)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2867,6 +2932,16 @@
         }
       }
     },
+    "만든 캐릭터를 진화시켜요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve a character you made"
+          }
+        }
+      }
+    },
     "만들 캐릭터를 설명해 주세요" : {
       "localizations" : {
         "en" : {
@@ -2876,6 +2951,9 @@
           }
         }
       }
+    },
+    "만들고 싶은 상태" : {
+
     },
     "만들고 싶은 상태 (%lld개)" : {
       "localizations" : {
@@ -2972,6 +3050,7 @@
       }
     },
     "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3476,6 +3555,7 @@
       }
     },
     "보유 캔디 %lld개 · 이번 만들기 %lld캔디" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3567,6 +3647,9 @@
         }
       }
     },
+    "비 구경" : {
+
+    },
     "비 맞으며 달리기" : {
 
     },
@@ -3581,9 +3664,6 @@
         }
       }
     },
-    "비 오는데 산책" : {
-
-    },
     "비 오는데 산책 🚶☔" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3594,9 +3674,6 @@
           }
         }
       }
-    },
-    "비 오는데 자전거" : {
-
     },
     "비 오는데 자전거 🚴☔" : {
       "extractionState" : "stale",
@@ -3920,6 +3997,7 @@
       }
     },
     "상태 선택" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4224,9 +4302,6 @@
         }
       }
     },
-    "설정 → 집중 모드 → 수면 → 아래 '필터 추가' → Withy → '캐릭터를 자게 하기' 켜기" : {
-
-    },
     "설정 시간 기준" : {
       "localizations" : {
         "en" : {
@@ -4345,6 +4420,7 @@
       }
     },
     "수면 모드 기준으로 자요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4355,6 +4431,7 @@
       }
     },
     "수면 모드가 켜지면 자고, 꺼지면 일어나요. 아이폰 건강 앱에서 수면 일정을 만들어두면 수면 모드가 매일 자동으로 켜지고 꺼져서, 캐릭터도 규칙적으로 자고 일어나요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4365,6 +4442,7 @@
       }
     },
     "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4428,9 +4506,6 @@
           }
         }
       }
-    },
-    "수면 필터를 연결하면 더 정확해요" : {
-
     },
     "수면·집중 모드" : {
       "localizations" : {
@@ -4884,6 +4959,16 @@
         }
       }
     },
+    "어떤 모습으로 진화할지 적어 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe how it should evolve"
+          }
+        }
+      }
+    },
     "없음" : {
       "localizations" : {
         "en" : {
@@ -4913,6 +4998,9 @@
           }
         }
       }
+    },
+    "여기서 정한 시간에 자고 일어나요. 수면 모드를 직접 켜면 그때도 자는 모습이 돼요." : {
+
     },
     "여러 모습 만들기" : {
       "localizations" : {
@@ -4964,7 +5052,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4974,7 +5062,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4993,9 +5081,6 @@
           }
         }
       }
-    },
-    "연결하지 않으면 수면 모드를 켜도 반영이 한 박자 늦어요. 한 번만 연결하면 켜자마자 잠들어요." : {
-
     },
     "연두 파스텔톤" : {
       "localizations" : {
@@ -5060,6 +5145,7 @@
       }
     },
     "예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5113,7 +5199,18 @@
         }
       }
     },
+    "오늘 %lld보 걸었어요. %@ 신났어요 ✨" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "오늘 %1$lld보 걸었어요. %2$@ 신났어요 ✨"
+          }
+        }
+      }
+    },
     "오늘 %lld보 걸었어요. 캐릭터도 신났어요 ✨" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5143,7 +5240,11 @@
         }
       }
     },
+    "오늘도 수고했어요. %@ 같이 잘 준비 중이에요." : {
+
+    },
     "오늘도 수고했어요. 캐릭터가 같이 잘 준비 중이에요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5257,9 +5358,6 @@
         }
       }
     },
-    "우산 쓰고 비 구경" : {
-
-    },
     "우산 쓰고 비 구경 ☔️" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5270,6 +5368,12 @@
           }
         }
       }
+    },
+    "우중 산책" : {
+
+    },
+    "우중 자전거" : {
+
     },
     "운동" : {
       "localizations" : {
@@ -5341,16 +5445,6 @@
         }
       }
     },
-    "움직임" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
-          }
-        }
-      }
-    },
     "움직이게 만들기" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5409,6 +5503,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
+          }
+        }
+      }
+    },
+    "움직임" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
           }
         }
       }
@@ -5617,6 +5721,26 @@
         }
       }
     },
+    "원하는 진화의 모습" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How it should evolve"
+          }
+        }
+      }
+    },
+    "원하는 진화의 모습을 적어 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe how you want it to evolve."
+          }
+        }
+      }
+    },
     "원하는 크기를 골라 추가해주세요" : {
       "localizations" : {
         "en" : {
@@ -5789,6 +5913,7 @@
       }
     },
     "이 모습으로 만들기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5881,6 +6006,9 @@
         }
       }
     },
+    "이 캐릭터의 이름" : {
+
+    },
     "이 캐릭터의 이름 (선택)" : {
 
     },
@@ -5919,9 +6047,6 @@
         }
       }
     },
-    "이름" : {
-
-    },
     "이름 · 수면 · 식사 시간" : {
       "localizations" : {
         "en" : {
@@ -5931,6 +6056,12 @@
           }
         }
       }
+    },
+    "이름 바꾸기" : {
+
+    },
+    "이름 없는 캐릭터" : {
+
     },
     "이미지 변환 실패." : {
       "localizations" : {
@@ -6070,6 +6201,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This edit is free."
+          }
+        }
+      }
+    },
+    "이번 진화에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This evolution uses %lld candy. It's only deducted when it succeeds."
           }
         }
       }
@@ -6229,6 +6370,7 @@
       }
     },
     "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6331,6 +6473,7 @@
       }
     },
     "잠든 시간 자동으로 알아채기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6565,6 +6708,9 @@
         }
       }
     },
+    "좋아요" : {
+
+    },
     "좋은 아침! 오늘도 함께해요" : {
 
     },
@@ -6650,6 +6796,9 @@
         }
       }
     },
+    "지금 적용 중인 캐릭터예요. 바꾸면 '내 캐릭터 설정'의 이름도 같이 바뀌어요." : {
+
+    },
     "지금 적용된 배경" : {
       "localizations" : {
         "en" : {
@@ -6711,6 +6860,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deleted"
+          }
+        }
+      }
+    },
+    "진화시키기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve"
+          }
+        }
+      }
+    },
+    "진화시킬 캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Character to evolve"
+          }
+        }
+      }
+    },
+    "진화시킬 캐릭터를 골라 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a character to evolve."
+          }
+        }
+      }
+    },
+    "진화한 모습" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolved look"
           }
         }
       }
@@ -6869,6 +7058,12 @@
           }
         }
       }
+    },
+    "첫 만들기 1번은 무료예요. 캔디 %lld개도 넣어 뒀어요 — 마음껏 만들어 보세요!" : {
+
+    },
+    "첫 만들기 선물이 도착했어요" : {
+
     },
     "첫 만들기는 무료예요" : {
       "localizations" : {
@@ -7172,6 +7367,7 @@
       }
     },
     "캐릭터 외형 한 줄 (고급)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7201,6 +7397,16 @@
         }
       }
     },
+    "캐릭터 진화시키기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve Character"
+          }
+        }
+      }
+    },
     "캐릭터 프롬프트" : {
       "localizations" : {
         "en" : {
@@ -7211,6 +7417,12 @@
         }
       }
     },
+    "캐릭터 프롬프트를 적거나 참고 사진을 넣어 주세요." : {
+
+    },
+    "캐릭터가" : {
+
+    },
     "캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요." : {
       "localizations" : {
         "en" : {
@@ -7220,6 +7432,9 @@
           }
         }
       }
+    },
+    "캐릭터도" : {
+
     },
     "캐릭터를 다 만들었어요" : {
       "localizations" : {
@@ -7232,6 +7447,7 @@
       }
     },
     "캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7926,6 +8142,16 @@
         }
       }
     },
+    "현재 캐릭터의 상태" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current state"
+          }
+        }
+      }
+    },
     "홈 화면 빈 곳을 길게 눌러주세요" : {
       "localizations" : {
         "en" : {
@@ -8098,162 +8324,22 @@
         }
       }
     },
-    "'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요." : {
+    "이름 변경" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The 'Default' state is created first, and the rest are drawn based on that result."
+            "value" : "Rename"
           }
         }
       }
     },
-    "'기본'은 항상 만들어요" : {
+    "이름" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "'Default' is always created"
-          }
-        }
-      }
-    },
-    "고른 캐릭터의 생김새를 이어받아 진화한 모습을 그려요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Draws an evolved form that inherits the look of the character you picked."
-          }
-        }
-      }
-    },
-    "다 되면 여기에 진화한 캐릭터가 나와요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your evolved character will appear here when it's ready."
-          }
-        }
-      }
-    },
-    "다른 캐릭터로 바꾸기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pick another character"
-          }
-        }
-      }
-    },
-    "만든 캐릭터를 진화시켜요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evolve a character you made"
-          }
-        }
-      }
-    },
-    "어떤 모습으로 진화할지 적어 주세요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Describe how it should evolve"
-          }
-        }
-      }
-    },
-    "원하는 진화의 모습" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How it should evolve"
-          }
-        }
-      }
-    },
-    "원하는 진화의 모습을 적어 주세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Describe how you want it to evolve."
-          }
-        }
-      }
-    },
-    "이번 진화에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This evolution uses %lld candy. It's only deducted when it succeeds."
-          }
-        }
-      }
-    },
-    "진화시킬 캐릭터" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Character to evolve"
-          }
-        }
-      }
-    },
-    "진화시킬 캐릭터를 골라 주세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pick a character to evolve."
-          }
-        }
-      }
-    },
-    "진화시키기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evolve"
-          }
-        }
-      }
-    },
-    "진화한 모습" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evolved look"
-          }
-        }
-      }
-    },
-    "캐릭터 진화시키기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evolve Character"
-          }
-        }
-      }
-    },
-    "현재 캐릭터의 상태" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current state"
+            "value" : "Name"
           }
         }
       }

@@ -37,9 +37,9 @@ struct CharacterEvolveView: View {
     @State private var showPaywall: Bool = false
     @State private var remainingGenerations: Int = GenerationQuota.remainingToday()
 
-    /// 진화는 항상 한 장 — low 품질(캔디 1개) 고정.
+    /// 진화는 항상 한 장 — low 품질로 만들고 캔디는 2개 소모.
     private let quality: String = "low"
-    private var cost: Int { GenerationQuota.cost(forQuality: quality) }
+    private let cost: Int = 2
 
     private static let resultAnchor = "withu.evolve.result"
 
@@ -311,23 +311,18 @@ struct CharacterEvolveView: View {
 
     /// 생성 중 결과 자리 — 이전 사진 대신 '만드는 중'.
     private var generatingPlaceholder: some View {
-        VStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.secondary.opacity(0.12))
-                .frame(height: 220)
-                .overlay {
-                    VStack(spacing: 8) {
-                        ProgressView()
-                        Text("만드는 중…")
-                            .font(.pretendard(13, relativeTo: .footnote))
-                            .foregroundStyle(.secondary)
-                    }
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.secondary.opacity(0.12))
+            .frame(height: 220)
+            .overlay {
+                VStack(spacing: 8) {
+                    ProgressView()
+                    Text("만드는 중…")
+                        .font(.pretendard(13, relativeTo: .footnote))
+                        .foregroundStyle(.secondary)
                 }
-            Text("다 되면 여기에 진화한 캐릭터가 나와요.")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
