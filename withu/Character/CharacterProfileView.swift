@@ -150,15 +150,19 @@ struct CharacterProfileView: View {
         // 필터 연결 여부(focusFilterLastPerformAt)를 최신값으로 — 안내 카드 노출 판정.
         .onAppear { focus.refresh() }
         // 자동 저장 대신 명시적 '저장' — 편집은 초안(profile)에만, 반영은 save() 에서.
-        .navigationBarBackButtonHidden(true)
+        // 저장 안 한 변경이 있을 때만 기본 뒤로가기를 가린다 —
+        // 항상 가리면 손가락으로 미는 뒤로가기(interactive pop)까지 막혀서 나갈 수가 없다.
+        .navigationBarBackButtonHidden(hasChanges)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    if hasChanges { showDiscardConfirm = true } else { dismiss() }
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "chevron.left")
-                        Text("설정")
+            if hasChanges {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showDiscardConfirm = true
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                            Text("설정")
+                        }
                     }
                 }
             }
