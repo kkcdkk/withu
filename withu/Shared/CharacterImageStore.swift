@@ -96,8 +96,10 @@ struct GalleryItem: Identifiable, Codable, Equatable {
     /// '한번에 만들기'(배치) 세션 식별자 — 같은 batchId 항목들이 한 캐릭터의 여러 상태.
     /// 단건 생성·옛 항목은 nil. 갤러리 '캐릭터별' 묶기에 사용.
     var batchId: String?
-    /// 이 이미지를 만들 때 서버로 보낸 프롬프트 — 갤러리 '만든 기록' 표시용. 옛 항목은 nil.
+    /// 이 이미지를 만들 때 서버로 보낸 프롬프트 — 내부 기록용. **화면에 절대 노출하지 않는다.**
     var prompt: String?
+    /// 사용자가 직접 입력한 문구 — 갤러리 '만든 기록'에 이것만 보여준다. 옛 항목은 nil.
+    var userInput: String?
 
     /// 사용자 친화적 표시용. 필요 시 추가 필드.
 }
@@ -532,7 +534,7 @@ enum CharacterImageStore {
     @discardableResult
     static func save(_ image: UIImage, for state: CharacterState, frame: Int = 0,
                      applyToActiveSlot: Bool = true, batchId: String? = nil,
-                     prompt: String? = nil) -> GalleryItem? {
+                     prompt: String? = nil, userInput: String? = nil) -> GalleryItem? {
         guard let data = image.pngData() else { return nil }
         // 1) 활성 슬롯 (위젯이 보는 곳) — frame 별
         if applyToActiveSlot {
@@ -551,7 +553,8 @@ enum CharacterImageStore {
         // 2) 갤러리 — frame 별 분기
         if frame == 0 {
             let item = addToGalleryInternal(data: data, sourceState: state,
-                                            batchId: batchId, prompt: prompt)
+                                            batchId: batchId, prompt: prompt,
+                                            userInput: userInput)
             if let id = item?.id, applyToActiveSlot {
                 // 활성 슬롯에 실제로 적용했을 때만 활성 source 갱신 —
                 // 갤러리 전용 저장(생성 결과 자동 보관 등)이 map 을 오염시키면
@@ -724,7 +727,8 @@ enum CharacterImageStore {
     private static func addToGalleryInternal(data: Data,
                                               sourceState: CharacterState,
                                               batchId: String? = nil,
-                                              prompt: String? = nil) -> GalleryItem? {
+                                              prompt: String? = nil,
+                                              userInput: String? = nil) -> GalleryItem? {
         let id = UUID().uuidString
         guard let url = galleryFileURL(id: id) else { return nil }
         do {
@@ -733,7 +737,8 @@ enum CharacterImageStore {
             return nil
         }
         let item = GalleryItem(id: id, sourceState: sourceState.rawValue,
-                               createdAt: Date(), batchId: batchId, prompt: prompt)
+                               createdAt: Date(), batchId: batchId, prompt: prompt,
+                               userInput: userInput)
         var all = loadGalleryMetadata()
         all.append(item)
         saveGalleryMetadata(all)

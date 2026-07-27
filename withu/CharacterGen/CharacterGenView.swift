@@ -75,9 +75,10 @@ struct CharacterGenView: View {
     /// 움직임 프레임(frame 1) 을 만드는 중 — 결과 우하단 슬롯에 로딩 표시 (완성 착각 방지).
     @State private var isGeneratingMotionFrame: Bool = false
     @State private var isProcessingTransparent: Bool = false
-    @State private var revisedPrompt: String?
-    /// 마지막 성공 생성에 실제로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
+    /// 마지막 성공 생성에 실제로 보낸 프롬프트 — 내부 기록용. 화면에 노출하지 않는다.
     @State private var lastSentPrompt: String?
+    /// 사용자가 직접 입력한 문구 — 갤러리 '만든 기록'에 그대로 보여줄 것.
+    @State private var lastUserInput: String?
     @State private var lastError: String?
     /// 직전 만들기/다듬기가 실패했는지 — 실패면 결과 자리에 이전 그림 대신 이유를 띄운다.
     @State private var lastAttemptFailed: Bool = false
@@ -269,7 +270,6 @@ struct CharacterGenView: View {
         .onChange(of: mode) { _, _ in
             // 모드 전환 시 결과/에러 reset
             resultImage = nil
-            revisedPrompt = nil
             lastError = nil
             importedRawImage = nil
             importedProcessedImage = nil
@@ -859,11 +859,6 @@ struct CharacterGenView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if let revised = revisedPrompt {
-                    DisclosureGroup("실제로 사용한 설명 보기") {
-                        Text(revised).font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                    }
-                }
                 if let f0 {
                     // 적용(초록 CTA) + 사진 앱 저장(아이콘) 을 한 줄에 — 저장이 '적용의 부속'처럼
                     // 보이던 것 정리. 적용 버튼에서는 저장 아이콘을 뺀다.
@@ -1297,6 +1292,7 @@ struct CharacterGenView: View {
         let referenceB64 = referenceImage?.pngData()?.base64EncodedString()
         let prevResult = resultImage   // 실패 시 이전 런 이미지가 남아 frame1/쿼터에 새는 것 방지
         let raw = rawUserInput
+        lastUserInput = raw.text.isEmpty ? nil : raw.text
         // 사진 첨부 생성은 kind=photo → 서버가 무료 1회를 소진하지 않음(캔디로 차감).
         await send(prompt: composedPrompt, reference: referenceB64, frame: 0,
                    userInput: raw.text, inputField: raw.field,
@@ -1363,6 +1359,7 @@ struct CharacterGenView: View {
         if frame == 1 {
             prompt += ". Animation frame 2 (for a 2-frame swap loop): \(targetState.animationFrame2Hint). CRITICAL: keep the character at the EXACT same size, scale, and centered position as the reference image; only the pose changes."
         }
+        lastUserInput = refinementPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let prevSlot = frame == 1 ? resultFrame2 : resultImage   // 실패 감지 — 옛 이미지 그대로면 차감 안 함
         await send(prompt: prompt, reference: referenceB64, frame: frame,
                    matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil,
@@ -1451,8 +1448,7 @@ struct CharacterGenView: View {
             if frame == 0 {
                 resultImage = small
                 lastFrame0FullRes = processed   // frame1 정규화 reference (1024 투명)
-                revisedPrompt = resp.revisedPrompt
-                lastSentPrompt = finalPrompt    // 갤러리 '만든 기록' 저장용
+                lastSentPrompt = finalPrompt    // 내부 기록용 (화면에 노출하지 않음)
             } else {
                 resultFrame2 = small
             }
@@ -1572,7 +1568,8 @@ struct CharacterGenView: View {
         guard let img = resultImage else { return nil }
         let item = CharacterImageStore.save(img, for: targetState, frame: 0,
                                             applyToActiveSlot: false,
-                                            batchId: currentSessionId, prompt: lastSentPrompt)
+                                            batchId: currentSessionId, prompt: lastSentPrompt,
+                                            userInput: lastUserInput)
         if let id = item?.id, let f2 = resultFrame2 {
             CharacterImageStore.attachGalleryFrame1(id, image: f2)
         }
@@ -1594,7 +1591,8 @@ struct CharacterGenView: View {
             }
             ok = true
         } else {
-            ok = CharacterImageStore.save(image, for: state, frame: 0, prompt: lastSentPrompt) != nil
+            ok = CharacterImageStore.save(image, for: state, frame: 0, prompt: lastSentPrompt,
+                                          userInput: lastUserInput) != nil
             if ok, let frame2 {
                 CharacterImageStore.save(frame2, for: state, frame: 1)
             }
@@ -1631,240 +1629,6 @@ struct CharacterGenView: View {
 
 #Preview {
     NavigationStack { CharacterGenView() }
-}
-
-// MARK: - WeatherBackgroundGenView
-
-/// 날씨 배경 (4가지) 을 AI 로 생성. 캐릭터 없이 풍경만.
-/// 한 번 생성하면 App Group 에 저장 — 메인 화면 / 워치 / 위젯의 배경 layer 로 사용됨.
-struct WeatherBackgroundGenView: View {
-    /// 진입 시점에 미리 선택할 condition. CharacterProfileView 에서 특정 날씨 탭 시 사용.
-    let initialCondition: WeatherBackgroundCondition
-
-    @State private var condition: WeatherBackgroundCondition
-    @State private var prompt: String
-    @State private var quality: String = "low"
-    @State private var artStyle: String = "pixel"
-    @State private var isGenerating: Bool = false
-    @State private var generationStartedAt: Date?
-    @State private var resultImage: UIImage?
-    @State private var lastError: String?
-    @State private var showAppliedAlert: Bool = false
-
-    init(initialCondition: WeatherBackgroundCondition = .sunny) {
-        self.initialCondition = initialCondition
-        _condition = State(initialValue: initialCondition)
-        _prompt = State(initialValue: initialCondition.generationHint)
-    }
-
-    var body: some View {
-        ZStack {
-            backgroundGradient(for: .idle).ignoresSafeArea()
-            Form {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                Picker("날씨", selection: $condition) {
-                    ForEach(WeatherBackgroundCondition.allCases, id: \.self) { c in
-                        Text(c.displayName).tag(c)
-                    }
-                }
-                .pickerStyle(.menu)
-                .disabled(isGenerating)
-                HStack {
-                    Text("지금 적용된 배경")
-                    Spacer()
-                    Text(CharacterImageStore.hasBackground(condition) ? String(localized: "생성한 그림") : String(localized: "없음"))
-                        .foregroundStyle(.secondary)
-                        .font(.pretendard(13, relativeTo: .footnote))
-                }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .plainCard()
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
-            } header: {
-                Text("날씨")
-                    .font(.pretendardBold(16, relativeTo: .callout))
-            }
-
-            Section(header: Text("스타일").font(.pretendardBold(16, relativeTo: .callout))) {
-                VStack(alignment: .leading, spacing: 12) {
-                Picker("그림 스타일", selection: $artStyle) {
-                    Text("soft").tag("casual")
-                    Text("pixel").tag("pixel")
-                }
-                .pickerStyle(.segmented).disabled(isGenerating)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .plainCard()
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                TextEditor(text: $prompt)
-                    .frame(minHeight: 100)
-                    .font(.pretendard(16, relativeTo: .callout))
-                    .pixelInputField()
-                Button {
-                    Task { await generate() }
-                } label: {
-                    if isGenerating {
-                        generatingLabel
-                    } else {
-                        Text("배경 만들기")
-                    }
-                }
-                .disabled(isGenerating || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .plainCard()
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
-            } header: {
-                Text("배경")
-                    .font(.pretendardBold(16, relativeTo: .callout))
-            } footer: {
-                Text("캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요.")
-                    .font(.pretendard(11, relativeTo: .caption2))
-            }
-
-            if let img = resultImage {
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                    // 단독 — 생성된 배경 자체
-                    Image(uiImage: img).resizable().scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    // 합성 미리보기 — 실제 메인 화면처럼 idle 캐릭터 올림
-                    VStack(spacing: 4) {
-                        Text("홈 화면에서 보이는 모습").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
-                        ZStack {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 200, height: 200)
-                                .clipShape(Circle())
-                            Circle().fill(CharacterState.idle.tint.opacity(0.18))
-                                .frame(width: 200, height: 200)
-                            CharacterImageView(state: .idle, animated: true)
-                                .frame(width: 160, height: 160)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    Button {
-                        apply(img, for: condition)
-                    } label: {
-                        Label("'\(condition.displayName)' 배경으로 적용하기", systemImage: "square.and.arrow.down")
-                    }
-                    .buttonStyle(WithuCTAButtonStyle())
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .plainCard()
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .listRowBackground(Color.clear)
-                } header: {
-                    Text("결과")
-                        .font(.pretendardBold(16, relativeTo: .callout))
-                }
-            }
-
-            if let err = lastError {
-                Section {
-                    WarningBanner(text: err)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                        .listRowBackground(Color.clear)
-                }
-            }
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .navigationTitle("날씨 배경 만들기")
-        .scrollDismissesKeyboard(.interactively)
-        .alert("적용했어요", isPresented: $showAppliedAlert) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text("\(condition.displayName) 배경을 적용했어요. 그 날씨일 때 홈 화면·위젯·워치에 보여요.")
-        }
-        .onChange(of: condition) { _, new in
-            prompt = new.generationHint
-            resultImage = nil
-        }
-    }
-
-    @ViewBuilder
-    private var generatingLabel: some View {
-        if let start = generationStartedAt {
-            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
-                let elapsed = Int(ctx.date.timeIntervalSince(start))
-                HStack { ProgressView(); Text("그리는 중… \(elapsed)초") }
-            }
-        } else {
-            HStack { ProgressView(); Text("생성 중…") }
-        }
-    }
-
-    private func generate() async {
-        isGenerating = true
-        generationStartedAt = .now
-        lastError = nil
-        defer {
-            isGenerating = false
-            generationStartedAt = nil
-        }
-        do { try await APIClient.shared.preflightPing() }
-        catch {
-            lastError = String(localized: "지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요.")
-            return
-        }
-        // 서버의 SYSTEM_PROMPT 가 매번 캐릭터 가드레일을 prepend 함 (FastAPI proxy).
-        // 사용자 prompt 가 "밤하늘" 처럼 짧으면 캐릭터 가 그려짐.
-        // → send 시점에 "NO character" 가드레일 강제 append. 그래도 캐릭터 가 나오면 서버 SYSTEM_PROMPT 수정 필요.
-        let finalPrompt = "\(prompt). Background scene ONLY — NO character, NO person, NO mascot, NO creature, NO animal. Empty landscape / sky illustration only."
-        do {
-            let req = GenerateImageRequest(
-                prompt: finalPrompt,
-                referenceImageBase64: nil,
-                steps: 30,
-                width: 1024,
-                height: 1024,
-                quality: quality,
-                artStyle: artStyle,
-                style: "auto",
-                kind: "background",   // 서버가 SYSTEM_PROMPT 건너뜀
-                model: "gpt-image-2"
-            )
-            let resp = try await APIClient.shared.generateImage(req)
-            guard let data = Data(base64Encoded: resp.imageBase64),
-                  let img = UIImage(data: data) else {
-                lastError = String(localized: "이미지를 불러오지 못했어요. 다시 시도해 주세요.")
-                return
-            }
-            // 배경은 256px 면 충분 (메인 hero 240, 위젯 small ~150). 디스크 절약.
-            let small = img.preparingThumbnail(of: CGSize(width: 256, height: 256)) ?? img
-            resultImage = small
-        } catch {
-            lastError = error.koreanizedDescription
-        }
-    }
-
-    private func apply(_ image: UIImage, for cond: WeatherBackgroundCondition) {
-        if CharacterImageStore.saveBackground(image, for: cond) {
-            WidgetCenter.shared.reloadAllTimelines()
-            ConnectivityManager.shared.sendWeatherBackground(image, for: cond)
-            showAppliedAlert = true
-        } else {
-            lastError = String(localized: "저장하지 못했어요. 다시 시도해 주세요.")
-        }
-    }
-}
-
-#Preview("WeatherBg") {
-    NavigationStack { WeatherBackgroundGenView() }
 }
 
 /// 하나씩 만들기 '다듬기 이력' 을 App Group 에 저장 — 화면을 나갔다 와도 이력·선택이 복원된다.

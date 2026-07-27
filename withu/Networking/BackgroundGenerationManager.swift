@@ -40,8 +40,10 @@ struct BackgroundGenJob: Codable, Identifiable {
     /// true 면 이 장의 색을 idle 앵커 색에 맞춤 (상태 간 색 통일).
     /// idle 자신·per-state 첨부사진 상태는 false (사진 색 존중).
     var matchIdleColor: Bool?
-    /// 서버로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용. 옛 잡은 nil.
+    /// 서버로 보낸 프롬프트 — 내부 기록용. 화면에 노출하지 않는다. 옛 잡은 nil.
     var prompt: String?
+    /// 사용자가 직접 입력한 문구 — 갤러리 '만든 기록'용. 옛 잡은 nil.
+    var userInput: String?
 }
 
 /// 뷰가 넘겨주는 한 장 스펙. 프롬프트는 뷰가 조립(기존 runOne 로직 그대로).
@@ -56,6 +58,8 @@ struct BackgroundGenJobSpec {
     let frame1Prompt: String?
     /// true 면 색을 idle 앵커에 맞춤 (나머지 상태·앵커 기반). idle·per-state 사진은 false.
     var matchIdleColor: Bool = false
+    /// 사용자가 직접 입력한 문구 — 갤러리 '만든 기록'용.
+    var userInput: String? = nil
 }
 
 @Observable
@@ -211,7 +215,8 @@ final class BackgroundGenerationManager: NSObject {
                                    frame1Prompt: spec.frame1Prompt,
                                    status: .queued,
                                    matchIdleColor: spec.matchIdleColor,
-                                   prompt: spec.prompt)
+                                   prompt: spec.prompt,
+                                   userInput: spec.userInput)
         let req = GenerateImageRequest(prompt: spec.prompt,
                                        referenceImageBase64: spec.referenceB64,
                                        steps: 30, width: 1024, height: 1024,
@@ -337,7 +342,7 @@ final class BackgroundGenerationManager: NSObject {
                 // batchId 로 같은 '한번에 만들기' 캐릭터를 묶는다(갤러리 캐릭터별 보기).
                 CharacterImageStore.save(small, for: state, frame: job.frame,
                                          applyToActiveSlot: false, batchId: job.batchId,
-                                         prompt: job.prompt)
+                                         prompt: job.prompt, userInput: job.userInput)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(GenerationQuota.cost(forQuality: job.quality))
                 images["\(job.stateRaw)#\(job.frame)"] = small
@@ -352,7 +357,8 @@ final class BackgroundGenerationManager: NSObject {
                     let spec = BackgroundGenJobSpec(state: state, frame: 1, prompt: f1Prompt,
                                                     referenceB64: refB64, frame0Reference: nil,
                                                     wantsFrame1: false, frame1Prompt: nil,
-                                                    matchIdleColor: job.matchIdleColor ?? false)
+                                                    matchIdleColor: job.matchIdleColor ?? false,
+                                                    userInput: job.userInput)
                     appendJob(spec: spec, quality: job.quality, artStyle: job.artStyle, batchId: job.batchId)
                 }
             } else if (data == nil || data?.isEmpty == true), (jobs[idx].attempts ?? 1) < 2 {

@@ -115,7 +115,9 @@ struct BatchCharacterGenView: View {
         var versions: [UIImage]      // 128 썸네일 — [0]=원본, 이후=다듬음
         var fullVersions: [UIImage]  // 대응 1024 (적용 시 frame0FullRes 갱신용)
         var selected: Int
-        var prompt: String           // 갤러리 '만든 기록' 저장용
+        var prompt: String           // 서버로 보낸 프롬프트 (내부 기록, 화면 노출 금지)
+        /// 사용자가 직접 친 수정 문구 — 갤러리 '만든 기록'용.
+        var userInput: String?
         var current: UIImage { versions[Swift.min(Swift.max(0, selected), versions.count - 1)] }
         var currentFull: UIImage { fullVersions[Swift.min(Swift.max(0, selected), fullVersions.count - 1)] }
     }
@@ -892,6 +894,12 @@ struct BatchCharacterGenView: View {
         referenceImage != nil
     }
 
+    /// 사용자가 직접 친 캐릭터 설명 — 갤러리 '만든 기록'에 그대로 보여줄 문구.
+    private var userTypedIdentity: String? {
+        let t = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
     private var startSection: some View {
         let need = requiredCount * GenerationQuota.cost(forQuality: quality)
         return Section {
@@ -1372,7 +1380,7 @@ struct BatchCharacterGenView: View {
                                 keepNote: userRefKeep(for: .idle),
                                 changeNote: userRefChange(for: .idle), frame: 0),
             referenceB64: idleRef, frame0Reference: nil,
-            wantsFrame1: false, frame1Prompt: nil)
+            wantsFrame1: false, frame1Prompt: nil, userInput: userTypedIdentity)
         genManager.start(specs: [spec], quality: quality, artStyle: artStyle,
                          batchId: batchSessionId, phase: .anchor)
         syncFromManager()
@@ -1397,7 +1405,7 @@ struct BatchCharacterGenView: View {
                 state: .idle, frame: 1,
                 prompt: buildPrompt(for: .idle, consistencyPrefix: true, frame: 1),
                 referenceB64: anchorB64, frame0Reference: idle,
-                wantsFrame1: false, frame1Prompt: nil))
+                wantsFrame1: false, frame1Prompt: nil, userInput: userTypedIdentity))
         }
         // 나머지 선택 상태 (idle 제외) — 승인한 idle 앵커가 기준.
         // (전역 첨부사진·keep/change 는 idle 만들 때만 반영됨.)
@@ -1413,7 +1421,7 @@ struct BatchCharacterGenView: View {
                 wantsFrame1: animated,
                 frame1Prompt: animated ? buildPrompt(for: state, consistencyPrefix: true, frame: 1) : nil,
                 // 앵커 기반이라 idle 색에 통일.
-                matchIdleColor: true))
+                matchIdleColor: true, userInput: userTypedIdentity))
         }
         // 만들 게 없음 (idle 만 선택 + 움직임 없음) — 즉시 완료 처리.
         guard !specs.isEmpty else {
@@ -1525,7 +1533,8 @@ struct BatchCharacterGenView: View {
                 let flat = await ImageProcessing.transparentized(img)
                 let small = flat.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? flat
                 // 즉시 덮어쓰지 않고 이력에 이어붙임 — 골라서 '적용'해야 기준 모습이 바뀜.
-                appendRevision(state: .idle, frame: 0, small: small, full: flat, prompt: prompt)
+                appendRevision(state: .idle, frame: 0, small: small, full: flat, prompt: prompt,
+                               userInput: trimmed)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 // 1번째 수정은 무료, 2번째부터 차감.
                 if idleRevisionsUsed > 0 {
@@ -1576,7 +1585,8 @@ struct BatchCharacterGenView: View {
             prompt: buildPrompt(for: state, consistencyPrefix: refB64 != nil,
                                 keepNote: keep, changeNote: change, frame: 0),
             referenceB64: refB64, frame0Reference: nil,
-            wantsFrame1: false, frame1Prompt: nil, matchIdleColor: alignIdle)
+            wantsFrame1: false, frame1Prompt: nil, matchIdleColor: alignIdle,
+            userInput: userTypedIdentity)
         genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
         syncFromManager()
     }
@@ -1593,7 +1603,7 @@ struct BatchCharacterGenView: View {
             prompt: buildPrompt(for: state, consistencyPrefix: true, frame: 1),
             referenceB64: refB64, frame0Reference: f0,
             wantsFrame1: false, frame1Prompt: nil,
-            matchIdleColor: state != .idle)
+            matchIdleColor: state != .idle, userInput: userTypedIdentity)
         genManager.retry(spec: spec, quality: quality, artStyle: artStyle, batchId: batchSessionId)
         syncFromManager()
     }
@@ -1975,7 +1985,8 @@ struct BatchCharacterGenView: View {
                     small = ImageProcessing.colorMatched(small, reference: ref0Small)
                 }
                 // 즉시 덮어쓰지 않고 버전 이력에 이어붙임 — 상세 시트에서 골라 '적용'해야 반영.
-                appendRevision(state: state, frame: frame, small: small, full: flat, prompt: modifiedPrompt)
+                appendRevision(state: state, frame: frame, small: small, full: flat,
+                               prompt: modifiedPrompt, userInput: trimmed)
                 if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
@@ -1992,19 +2003,22 @@ struct BatchCharacterGenView: View {
 
     /// 다듬기 결과를 버전 이력에 이어붙임 — 없으면 [원본, 새버전], 있으면 append. 저장까지.
     @MainActor
-    private func appendRevision(state: CharacterState, frame: Int, small: UIImage, full: UIImage, prompt: String) {
+    private func appendRevision(state: CharacterState, frame: Int, small: UIImage, full: UIImage,
+                                prompt: String, userInput: String?) {
         if var chain = revisedDone[state], chain.frame == frame {
             chain.versions.append(small)
             chain.fullVersions.append(full)
             if chain.versions.count > 8 { chain.versions.remove(at: 1); chain.fullVersions.remove(at: 1) }
             chain.selected = chain.versions.count - 1
             chain.prompt = prompt
+            chain.userInput = userInput
             revisedDone[state] = chain
         } else {
             let before = (frame == 1 ? resultsFrame1[state] : results[state]) ?? small
             let beforeFull = frame == 1 ? before : (frame0FullRes[state] ?? results[state] ?? small)
             revisedDone[state] = BatchRevision(frame: frame, versions: [before, small],
-                                               fullVersions: [beforeFull, full], selected: 1, prompt: prompt)
+                                               fullVersions: [beforeFull, full], selected: 1,
+                                               prompt: prompt, userInput: userInput)
         }
         if let chain = revisedDone[state] {
             PendingRevisionStore.save(state: state, chain: chain)
@@ -2037,7 +2051,8 @@ struct BatchCharacterGenView: View {
             }
             displayTransparentByState[state] = false
             CharacterImageStore.save(rev.current, for: state, frame: rev.frame, applyToActiveSlot: false,
-                                     batchId: batchSessionId, prompt: rev.prompt)
+                                     batchId: batchSessionId, prompt: rev.prompt,
+                                     userInput: rev.userInput)
             if state == .idle {
                 appliedStates.remove(state)   // idle 은 앵커 — 홈/워치 반영은 나머지 만들기 단계에서.
             } else {
@@ -2062,7 +2077,8 @@ struct BatchCharacterGenView: View {
     private func restorePendingRevisions() {
         for r in PendingRevisionStore.loadAll() where revisedDone[r.state] == nil {
             revisedDone[r.state] = BatchRevision(frame: r.frame, versions: r.versions,
-                                                 fullVersions: r.fullVersions, selected: r.selected, prompt: r.prompt)
+                                                 fullVersions: r.fullVersions, selected: r.selected,
+                                                 prompt: r.prompt, userInput: r.userInput)
         }
         // 기준 모습을 이미 다듬었으면 무료 1회는 쓴 것 — 재진입해도 '무료'로 잘못 뜨지 않게 복원.
         if let idle = revisedDone[.idle] {
@@ -2132,7 +2148,10 @@ struct BatchCharacterGenView: View {
 /// 다듬기 이력(버전 체인)을 적용/취소 전에 App Group 에 보관 —
 /// 배치 화면을 완전히 나갔다 들어와도 결정 안 한 이력을 복원한다. (캔디 쓴 결과 유실 방지)
 fileprivate enum PendingRevisionStore {
-    private struct Meta: Codable { let frame: Int; let selected: Int; let count: Int; let prompt: String }
+    private struct Meta: Codable {
+        let frame: Int; let selected: Int; let count: Int; let prompt: String
+        var userInput: String?
+    }
 
     private static var folder: URL? {
         guard let c = FileManager.default
@@ -2154,7 +2173,8 @@ fileprivate enum PendingRevisionStore {
             try? img.pngData()?.write(to: folder.appendingPathComponent("\(key).f\(i).png"),
                                       options: [.atomic, .noFileProtection])
         }
-        let meta = Meta(frame: chain.frame, selected: chain.selected, count: chain.versions.count, prompt: chain.prompt)
+        let meta = Meta(frame: chain.frame, selected: chain.selected, count: chain.versions.count,
+                        prompt: chain.prompt, userInput: chain.userInput)
         if let data = try? JSONEncoder().encode(meta) {
             try? data.write(to: folder.appendingPathComponent("\(key).json"), options: [.atomic, .noFileProtection])
         }
@@ -2176,11 +2196,11 @@ fileprivate enum PendingRevisionStore {
     }
 
     /// 저장된 이력 복원 — (state, frame, versions, fullVersions, selected, prompt).
-    static func loadAll() -> [(state: CharacterState, frame: Int, versions: [UIImage], fullVersions: [UIImage], selected: Int, prompt: String)] {
+    static func loadAll() -> [(state: CharacterState, frame: Int, versions: [UIImage], fullVersions: [UIImage], selected: Int, prompt: String, userInput: String?)] {
         guard let folder,
               let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
         else { return [] }
-        var out: [(CharacterState, Int, [UIImage], [UIImage], Int, String)] = []
+        var out: [(CharacterState, Int, [UIImage], [UIImage], Int, String, String?)] = []
         for url in files where url.pathExtension == "json" {
             let key = url.deletingPathExtension().lastPathComponent
             guard let state = CharacterState(rawValue: key),
@@ -2196,7 +2216,8 @@ fileprivate enum PendingRevisionStore {
             }
             guard ok else { continue }
             out.append((state, meta.frame, versions, fulls,
-                        Swift.min(Swift.max(0, meta.selected), versions.count - 1), meta.prompt))
+                        Swift.min(Swift.max(0, meta.selected), versions.count - 1),
+                        meta.prompt, meta.userInput))
         }
         return out
     }

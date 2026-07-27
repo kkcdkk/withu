@@ -1095,21 +1095,14 @@ struct GalleryGrid<Header: View>: View {
 
                         // 사진 앱 저장은 상단 툴바(닫기 옆) 아이콘으로 이동 — 맨 아래 버튼 제거.
 
-                        // 만든 기록 — 이 이미지를 만들 때 보낸 프롬프트 (옛 항목엔 없음)
-                        if let prompt = item.prompt, !prompt.isEmpty {
+                        // 만든 기록 — 사용자가 직접 입력한 문구만 (내부 프롬프트는 노출하지 않는다).
+                        if let typed = item.userInput, !typed.isEmpty {
                             DisclosureGroup {
-                                Text(prompt)
+                                Text(typed)
                                     .font(.pretendard(12, relativeTo: .caption))
                                     .foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .textSelection(.enabled)
-                                Button {
-                                    UIPasteboard.general.string = prompt
-                                } label: {
-                                    Text("프롬프트 복사")
-                                        .font(.pretendard(12, relativeTo: .caption))
-                                }
-                                .padding(.top, 4)
                             } label: {
                                 Text("만든 기록")
                                     .font(.pretendard(16, relativeTo: .callout))
@@ -1344,7 +1337,8 @@ struct GalleryGrid<Header: View>: View {
                 // 캔디 쓴 결과 유실 방지: 예전처럼 갤러리에 새 항목으로 저장.
                 if let state = CharacterState(rawValue: item.sourceState) {
                     CharacterImageStore.save(small, for: state, frame: 0, applyToActiveSlot: false,
-                                             batchId: item.batchId, prompt: prompt)
+                                             batchId: item.batchId, prompt: prompt,
+                                             userInput: trimmed)
                     onChange()
                     withAnimation { toastText = String(localized: "다듬은 캐릭터를 갤러리에 저장했어요") }
                     hideToastAfter(2.0)

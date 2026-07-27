@@ -25,8 +25,7 @@ struct CharacterEvolveView: View {
     @State private var lastError: String?
     /// 직전 만들기가 실패했는지 — 실패면 결과 자리에 이전 그림 대신 이유를 띄운다.
     @State private var lastAttemptFailed: Bool = false
-    @State private var revisedPrompt: String?
-    /// 마지막으로 서버에 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
+    /// 마지막으로 서버에 보낸 프롬프트 — 내부 기록용. 화면에 노출하지 않는다.
     @State private var lastSentPrompt: String?
     /// 결과를 자동 저장한 갤러리 항목 — '적용' 시 재사용해 중복 저장을 막음.
     @State private var galleryId: String?
@@ -371,13 +370,6 @@ struct CharacterEvolveView: View {
                             .resizable()
                             .scaledToFit()
                             .clipShape(RoundedRectangle(cornerRadius: 16))
-                        if let revised = revisedPrompt {
-                            DisclosureGroup("실제로 사용한 설명 보기") {
-                                Text(revised)
-                                    .font(.pretendard(12, relativeTo: .caption))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
                         HStack(spacing: 10) {
                             Button {
                                 apply(img)
@@ -487,7 +479,8 @@ struct CharacterEvolveView: View {
         // 결과 유실 방지 — 갤러리에 자동 저장 (활성 슬롯은 '적용' 눌러야 반영).
         let item = CharacterImageStore.save(img, for: targetState, frame: 0,
                                             applyToActiveSlot: false,
-                                            batchId: sessionId, prompt: lastSentPrompt)
+                                            batchId: sessionId, prompt: lastSentPrompt,
+                                            userInput: evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines))
         galleryId = item?.id
     }
 
@@ -519,7 +512,6 @@ struct CharacterEvolveView: View {
             // gpt-image-2 는 마젠타 단색 배경으로 옴 → 크로마키로 투명화.
             let img = await ImageProcessing.transparentized(rawImg)
             resultImage = img.preparingThumbnail(of: CGSize(width: 128, height: 128)) ?? img
-            revisedPrompt = resp.revisedPrompt
             lastSentPrompt = finalPrompt
             if let ent = resp.entitlement { AuthManager.shared.applyEntitlement(ent) }
         } catch APIError.paymentRequired {
@@ -536,7 +528,8 @@ struct CharacterEvolveView: View {
             ok = true
         } else {
             ok = CharacterImageStore.save(image, for: targetState, frame: 0,
-                                          prompt: lastSentPrompt) != nil
+                                          prompt: lastSentPrompt,
+                                          userInput: evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
         }
         if ok {
             CharacterProfileStore.syncNameFromApplied(targetState)
