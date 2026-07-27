@@ -62,6 +62,16 @@ struct ContentView: View {
     private var showWeather: Bool = true
     @State private var auth = AuthManager.shared
 
+    /// 상태 문구 — 지금 적용된 캐릭터에 이름이 있으면 '(이름)의 ~' 로 보여준다.
+    /// 이름이 없으면 원래 문구 그대로.
+    private var captionWithName: String {
+        let caption = characterState.caption
+        guard let name = CharacterImageStore.appliedCharacterName(for: characterState) else {
+            return caption
+        }
+        return "\(name)의 \(caption)"
+    }
+
     private var characterState: CharacterState {
         // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
         let manualOnly = profile.isManualSleepOnly
@@ -350,7 +360,7 @@ struct ContentView: View {
                         .allowsHitTesting(false)
                 }
             }
-            Text(characterState.caption)
+            Text(captionWithName)
                 .font(.galmuri(20, relativeTo: .title3))
                 .multilineTextAlignment(.center)
                 .id(characterState)

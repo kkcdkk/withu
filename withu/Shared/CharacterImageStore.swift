@@ -680,6 +680,15 @@ enum CharacterImageStore {
         return (n?.isEmpty == false) ? n : nil
     }
 
+    /// 지금 이 state 자리에 적용된 캐릭터의 이름. 없으면 nil.
+    /// 활성 슬롯이 가리키는 갤러리 항목 → 그 항목의 batchId → 이름 맵 순으로 찾는다.
+    static func appliedCharacterName(for state: CharacterState) -> String? {
+        guard let galleryId = loadActiveSourceMap()[state.rawValue],
+              let item = loadGalleryMetadata().first(where: { $0.id == galleryId }),
+              let batchId = item.batchId else { return nil }
+        return characterName(for: batchId)
+    }
+
     /// batchId 에 이름 지정. 공백이면 제거.
     static func setCharacterName(_ name: String, for batchId: String) {
         guard let ud = UserDefaults(suiteName: SharedAppState.groupID) else { return }
