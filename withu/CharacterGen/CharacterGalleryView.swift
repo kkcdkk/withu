@@ -1048,8 +1048,6 @@ struct GalleryGrid<Header: View>: View {
                             ) {
                                 showRefineConfirm = true
                             }
-                            Text("다듬은 이력에서 골라 적용할 수 있어요.")
-                                .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             // 저장된 다듬기 이력이 있으면 다시 열기.
                             if hasStoredRefineHistory {
                                 Button { restoreRefineHistory(item) } label: {
@@ -1080,8 +1078,6 @@ struct GalleryGrid<Header: View>: View {
                                 .buttonStyle(.bordered)
                                 .tint(.withuPinkText)
                                 .disabled(isMakingMotion || isRefining)
-                                Text("2번째 장면을 만들어 캐릭터가 움직이게 해요.")
-                                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             }
                         }
                         .plainFrostedCard()

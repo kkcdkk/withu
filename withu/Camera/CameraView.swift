@@ -22,7 +22,6 @@ struct CameraView: View {
     @State private var isCapturing: Bool = false
     @State private var previewCaptured: UIImage?
     @State private var showSavedToast: Bool = false
-    @State private var showDeleteHint: Bool = false
     /// 카메라 권한 거절돼서 사용 불가 — 정식 회복 화면 표시.
     @State private var isPermissionDenied: Bool = false
     /// 앨범에서 고른 배경 사진 (있으면 라이브 카메라 대신 이 사진 위에 캐릭터 합성)
@@ -53,9 +52,6 @@ struct CameraView: View {
                 }
                 if showSavedToast {
                     toast(String(localized: "갤러리에 저장했어요"))
-                }
-                if showDeleteHint {
-                    toast(String(localized: "드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제"))
                 }
             }
         }
@@ -294,10 +290,6 @@ struct CameraView: View {
     /// 가로 스크롤 picker — 탭 시 새 캐릭터 추가.
     private var characterPicker: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("탭하면 캐릭터 추가 · 드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제")
-                .font(.pretendard(11, relativeTo: .caption2))
-                .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(CharacterState.userFacing, id: \.self) { state in

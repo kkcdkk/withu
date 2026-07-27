@@ -422,9 +422,6 @@ struct BatchCharacterGenView: View {
             Text("만들고 싶은 상태 (\(selectedStates.union([.idle]).count)개)")
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
-            Text("'기본'은 나머지 모습의 기준이 되는 그림이라 항상 만들어요.")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
             // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시.
             if animatableSelected.isEmpty {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
@@ -781,9 +778,6 @@ struct BatchCharacterGenView: View {
                         .frame(maxHeight: 280)
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                    Text("먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.")
-                        .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         pendingAction = .approveRest
                     } label: {
@@ -1886,8 +1880,6 @@ struct BatchCharacterGenView: View {
                 .padding(.horizontal)
             }
             if rev.versions.count > 1 {
-                Text("선택한 버전을 기준으로 다듬어요.")
-                    .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
             }
         }
     }

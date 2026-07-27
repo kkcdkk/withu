@@ -362,9 +362,6 @@ struct CharacterGenView: View {
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
             if mode == .importPhoto {
-                Text("모두 기기 안에서 처리하고 비용은 들지 않아요.")
-                    .font(.pretendard(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -999,9 +996,6 @@ struct CharacterGenView: View {
                 Text("다듬기 이력")
                     .font(.pretendardBold(16, relativeTo: .callout))
             } footer: {
-                Text("탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요.")
-                    .font(.pretendard(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
             }
         }
     }

@@ -533,42 +533,29 @@ struct ContentView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             // 핵심 액션 — 핑크 강조, 크게
-            heroAction(title: "함께할 캐릭터 생성하기",
-                       subtitle: "함께할 캐릭터를 만들어요",
-                       asset: "menu_wand") {
+            heroAction(title: "함께할 캐릭터 생성하기", asset: "menu_wand") {
                 CharacterGenView()
             }
-            // 보조 3개 — 2열 그리드 (작게)
+            // 보조 4개 — 2열 그리드 (작게)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                gridAction(title: "함께 사진 찍기",
-                           subtitle: "캐릭터와 함께 사진 찍어요",
-                           asset: "menu_camera") { CameraView() }
-                gridAction(title: "캐릭터 갤러리",
-                           subtitle: "만든 캐릭터를 모아봐요",
-                           asset: "menu_gallery") { CharacterGalleryView() }
-                gridAction(title: "캐릭터 진화시키기",
-                           subtitle: "만든 캐릭터를 진화시켜요",
-                           asset: "menu_evolve") { CharacterEvolveView() }
-                gridAction(title: "내 캐릭터 설정하기",
-                           subtitle: "이름 · 수면 · 식사 시간",
-                           asset: "menu_settings") { CharacterProfileView() }
+                gridAction(title: "함께 사진 찍기", asset: "menu_camera") { CameraView() }
+                gridAction(title: "캐릭터 갤러리", asset: "menu_gallery") { CharacterGalleryView() }
+                gridAction(title: "캐릭터 진화시키기", asset: "menu_evolve") { CharacterEvolveView() }
+                gridAction(title: "내 캐릭터 설정하기", asset: "menu_settings") { CharacterProfileView() }
             }
         }
     }
 
     @ViewBuilder
-    private func heroAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
+    private func heroAction<Dest: View>(title: LocalizedStringKey,
                                         asset: String, @ViewBuilder destination: () -> Dest) -> some View {
         NavigationLink { destination() } label: {
             HStack(spacing: 14) {
                 Image(asset)
                     .resizable().interpolation(.none).scaledToFit()
                     .frame(width: 34, height: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.galmuri(16, relativeTo: .callout))
-                    Text(subtitle).font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                }
+                Text(title).font(.galmuri(16, relativeTo: .callout))
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.pretendard(12, relativeTo: .caption))
@@ -576,13 +563,13 @@ struct ContentView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .pixelCardSurface(fill: .withuSage)   // 워치 카드 상단 바와 같은 세이지
+            .pixelCardSurface(fill: .withuSageLight)
         }
         .buttonStyle(.plain)
     }
 
     @ViewBuilder
-    private func gridAction<Dest: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey,
+    private func gridAction<Dest: View>(title: LocalizedStringKey,
                                         asset: String, @ViewBuilder destination: () -> Dest) -> some View {
         NavigationLink { destination() } label: {
             VStack(alignment: .leading, spacing: 7) {
@@ -591,10 +578,9 @@ struct ContentView: View {
                     .resizable().interpolation(.none).scaledToFit()
                     .frame(width: 30, height: 30)
                 Text(title).font(.galmuri(13, relativeTo: .callout)).lineLimit(1)
-                Text(subtitle).font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary).lineLimit(2)
             }
             .padding(13)
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
             .pixelCardSurface()
         }
         .buttonStyle(.plain)

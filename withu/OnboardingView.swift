@@ -574,6 +574,13 @@ extension Color {
             : UIColor(red: 0.55, green: 0.66, blue: 0.50, alpha: 1.0)
     })
 
+    /// 세이지의 밝은 버전 — 홈 히어로 카드(함께할 캐릭터 생성하기)처럼 넓은 면을 채울 때.
+    static let withuSageLight = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.51, green: 0.62, blue: 0.50, alpha: 1.0)
+            : UIColor(red: 0.63, green: 0.74, blue: 0.58, alpha: 1.0)
+    })
+
     /// withu 의 브랜드 그린 — 새싹 캐릭터 색. 배경 그라데이션 기조에 사용.
     /// 라이트 = 연한 새싹색, 다크 = 채도 낮은 딥그린.
     static let withuGreen = Color(uiColor: UIColor { trait in
