@@ -49,6 +49,8 @@ struct CharacterGalleryView: View {
     /// 캐릭터별('한번에 만들기') 그룹 — batchId 로 묶음.
     @State private var characters: [(batchId: String, createdAt: Date, items: [GalleryItem])] = []
     @State private var toastText: String?
+    /// 캐릭터별에서 길게 눌러 삭제 대기 중인 그룹 (batchId 로 묶인 모습 전부)
+    @State private var pendingDeleteCharacter: (batchId: String, name: String?, items: [GalleryItem])?
 
     private var totalCount: Int {
         grouped.values.reduce(0) { $0 + $1.count } + legacy.count
@@ -85,6 +87,22 @@ struct CharacterGalleryView: View {
         // 서버 백업에서 복원 완료 — 화면 떠 있는 동안 도착해도 바로 보이게.
         .onReceive(NotificationCenter.default.publisher(for: .gallerySyncDidImport)) { _ in
             refresh()
+        }
+        .confirmationDialog(
+            pendingDeleteCharacter.map { "'\($0.name ?? String(localized: "이름 없는 캐릭터"))' 를 삭제할까요?" } ?? "",
+            isPresented: Binding(
+                get: { pendingDeleteCharacter != nil },
+                set: { if !$0 { pendingDeleteCharacter = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("\(pendingDeleteCharacter?.items.count ?? 0)개 모습 모두 삭제", role: .destructive) {
+                if let g = pendingDeleteCharacter { deleteCharacter(g) }
+                pendingDeleteCharacter = nil
+            }
+            Button("취소", role: .cancel) { pendingDeleteCharacter = nil }
+        } message: {
+            Text("이 캐릭터로 만든 모습이 모두 지워져요. 되돌릴 수 없어요.")
         }
         .overlay(alignment: .bottom) {
             if let toast = toastText {
@@ -187,6 +205,15 @@ struct CharacterGalleryView: View {
             }
         }
         .buttonStyle(.plain)
+        // 상태별 폴더와 같은 방식 — 길게 누르면 삭제 (확인 후 그 캐릭터의 모습 전부 삭제).
+        .contextMenu {
+            Button(role: .destructive) {
+                pendingDeleteCharacter = (group.batchId, charName(group), group.items)
+            } label: { Label("이 캐릭터 삭제", systemImage: "trash") }
+        }
+        .onLongPressGesture {
+            pendingDeleteCharacter = (group.batchId, charName(group), group.items)
+        }
     }
 
     /// 캐릭터 상세(모습 그리드) 상단 — '모두 적용' 버튼.
@@ -199,6 +226,23 @@ struct CharacterGalleryView: View {
     private func representativeImage(_ items: [GalleryItem]) -> UIImage? {
         let rep = items.first { $0.sourceState == CharacterState.idle.rawValue } ?? items.first
         return rep.flatMap { CharacterImageStore.loadGalleryImage(id: $0.id) }
+    }
+
+    /// 캐릭터별에서 한 캐릭터(batchId 그룹)의 모습을 전부 삭제.
+    private func deleteCharacter(_ group: (batchId: String, name: String?, items: [GalleryItem])) {
+        var removed = 0
+        for item in group.items where CharacterImageStore.deleteGalleryItem(item.id) {
+            removed += 1
+        }
+        // 이름 맵에서도 정리 — 빈 이름으로 덮으면 키가 지워진다.
+        CharacterImageStore.setCharacterName("", for: group.batchId)
+        refresh()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        toastText = String(localized: "\(removed)개를 지웠어요")
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            toastText = nil
+        }
     }
 
     /// 이 캐릭터의 모든 모습을 각 상태 자리에 적용 + 워치 전송 + 위젯 reload.
