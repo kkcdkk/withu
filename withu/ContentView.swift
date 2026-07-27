@@ -837,9 +837,6 @@ struct SettingsView: View {
                         } header: {
                             Text("계정")
                                 .font(.pretendardBold(16, relativeTo: .callout))
-                        } footer: {
-                            Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
-                                .font(.pretendard(11, relativeTo: .caption2))
                         }
                     }
                 }
@@ -934,11 +931,6 @@ struct SettingsView: View {
         } header: {
             Text("애플 워치")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            Text(connectivity.isPaired
-                 ? "운동(산책·달리기 등)은 워치 기준으로 알아채요."
-                 : "워치가 없으면 아이폰을 지니고 있을 때의 움직임으로 운동을 알아채요.")
-                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 

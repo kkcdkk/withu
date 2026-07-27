@@ -669,6 +669,8 @@ struct GalleryGrid<Header: View>: View {
     // 움직이는 캐릭터 만들기 — frame 1 없는 항목에 2번째 장면을 생성해 부착.
     @State private var isMakingMotion: Bool = false
     @State private var showMotionConfirm: Bool = false
+    /// '움직이는 캐릭터' 도움말 (? 버튼)
+    @State private var showMotionInfo: Bool = false
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 12)]
 
@@ -889,6 +891,7 @@ struct GalleryGrid<Header: View>: View {
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(img, cutout: bgCutout)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .contextMenu { savePhotoButton(detailDisplay(img, cutout: bgCutout)) }
                                     Text("1번째").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                                 }
                                 // 두 장 사이의 ↔ — 누르면 1번째/2번째 순서가 바뀐다.
@@ -899,6 +902,7 @@ struct GalleryGrid<Header: View>: View {
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(f1, cutout: bgCutoutF1)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .contextMenu { savePhotoButton(detailDisplay(f1, cutout: bgCutoutF1)) }
                                     Text("2번째").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                                 }
                             }
@@ -909,6 +913,8 @@ struct GalleryGrid<Header: View>: View {
                                 .scaledToFit()
                                 .frame(maxHeight: 300)
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                // 저장은 별도 버튼 대신 그림을 꾹 눌러서.
+                                .contextMenu { savePhotoButton(detailDisplay(img, cutout: bgCutout)) }
                         }
 
                         // 캡션 — 언제 만든 건지만 (상태·연속 이미지는 그림에서 이미 보임)
@@ -1117,25 +1123,15 @@ struct GalleryGrid<Header: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    Button("닫기") {
+                        if detailHasChanges { showDetailDiscardConfirm = true } else { selectedItem = nil }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .destructive) {
                         showDeleteConfirm = true
                     } label: {
                         Image(systemName: "trash")
-                    }
-                }
-                // 사진 앱 저장 — 맨 아래 버튼에서 여기로 올림 (닫기 옆).
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        if let image = CharacterImageStore.loadGalleryImage(id: item.id) {
-                            Task { await saveOneToPhotos(image) }
-                        }
-                    } label: {
-                        Image(systemName: "square.and.arrow.down")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") {
-                        if detailHasChanges { showDetailDiscardConfirm = true } else { selectedItem = nil }
                     }
                 }
             }
@@ -1271,6 +1267,15 @@ struct GalleryGrid<Header: View>: View {
         onChange()
         withAnimation { toastText = String(localized: "저장했어요") }
         hideToastAfter(1.6)
+    }
+
+    /// 그림을 꾹 눌렀을 때 뜨는 '사진 앱에 저장'.
+    private func savePhotoButton(_ image: UIImage) -> some View {
+        Button {
+            Task { await saveOneToPhotos(image) }
+        } label: {
+            Label("사진 앱에 저장", systemImage: "square.and.arrow.down")
+        }
     }
 
     /// 연속 이미지의 1번째/2번째 순서 바꾸기 — 적용 중인 자리에도 즉시 반영.

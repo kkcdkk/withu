@@ -8411,6 +8411,16 @@
           }
         }
       }
+    },
+    "2번째 장면을 만들어 홈 화면에서 캐릭터가 움직이도록 합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a second frame so your character moves on the Home screen"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

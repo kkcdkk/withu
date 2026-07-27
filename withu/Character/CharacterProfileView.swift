@@ -85,9 +85,6 @@ struct CharacterProfileView: View {
                 } header: {
                     Text("수면 시간")
                         .font(.pretendardBold(16, relativeTo: .callout))
-                } footer: {
-                    Text(sleepFooterText)
-                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
                 Section {
@@ -145,8 +142,6 @@ struct CharacterProfileView: View {
                     Text("움직임")
                         .font(.pretendardBold(16, relativeTo: .callout))
                 } footer: {
-                    Text("움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요.")
-                        .font(.pretendard(11, relativeTo: .caption2))
                 }
 
             }
@@ -290,9 +285,6 @@ struct CharacterProfileView: View {
         } header: {
             Text("상태별 캐릭터")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            Text("상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요.")
-                .font(.pretendard(11, relativeTo: .caption2))
         }
     }
 
@@ -356,10 +348,6 @@ struct CharacterProfileView: View {
 
     /// 이제는 항상 설정 시간이 기준이라 시간 선택을 막지 않는다.
     private var sleepTimesDisabled: Bool { false }
-
-    private var sleepFooterText: String {
-        String(localized: "여기서 정한 시간에 자고 일어나요. 수면 모드를 직접 켜면 그때도 자는 모습이 돼요.")
-    }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)
 
