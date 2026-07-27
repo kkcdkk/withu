@@ -249,6 +249,20 @@ enum CharacterImageStore {
     }
 
     /// 한 갤러리 항목이 어떤 state 슬롯들에 적용 중인지 (역검색).
+    /// 활성 슬롯이 가리키는 갤러리 항목을 직접 지정.
+    /// 배치처럼 픽셀만 따로 쓰는(saveActiveSlotOnly) 경로에서 '적용 중' 표시를 맞추기 위함.
+    static func markActiveSource(state: CharacterState, galleryId: String) {
+        setActiveSource(state: state, galleryId: galleryId)
+    }
+
+    /// 그 배치(batchId)에서 만든 해당 상태의 가장 최근 갤러리 항목 id.
+    /// (메타는 createdAt 내림차순이라 first 가 최신 — 다듬은 결과가 있으면 그게 잡힌다)
+    static func latestGalleryId(state: CharacterState, batchId: String) -> String? {
+        loadGalleryMetadata().first {
+            $0.sourceState == state.rawValue && $0.batchId == batchId
+        }?.id
+    }
+
     static func statesUsingGalleryItem(_ id: String) -> [CharacterState] {
         let map = loadActiveSourceMap()
         return map.compactMap { (k, v) -> CharacterState? in

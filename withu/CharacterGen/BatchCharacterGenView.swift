@@ -1157,6 +1157,11 @@ struct BatchCharacterGenView: View {
         guard let img0 = displayedImage(for: state, frame: 0) else { return }
         // 만들 때 지은 이름을 '내 캐릭터' 이름으로 반영 (적용 시점에만).
         CharacterProfileStore.syncName(characterName)
+        // 갤러리 '적용 중'(초록 점) 표시는 활성 소스 맵을 본다 —
+        // 배치는 픽셀만 덮어써서(saveActiveSlotOnly) 맵이 옛 항목을 가리킨 채 남았다.
+        if let gid = CharacterImageStore.latestGalleryId(state: state, batchId: batchSessionId) {
+            CharacterImageStore.markActiveSource(state: state, galleryId: gid)
+        }
         CharacterImageStore.saveActiveSlotOnly(img0, for: state, frame: 0)   // stale frame1 정리됨
         ConnectivityManager.shared.sendCharacterImage(img0, for: state, frame: 0)
         if let img1 = displayedImage(for: state, frame: 1) {
