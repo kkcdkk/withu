@@ -178,13 +178,13 @@ struct BatchCharacterGenView: View {
                     // 기준 모습 승인 단계 — 사진과 버튼이 바로 보이게 이 섹션만 표시
                     idleApprovalSection
                 } else {
-                    stateListSection
-                    motionSection
-                    nameSection
-                    identitySection
-                    referenceSection
-                    optionsSection
-                    startSection
+                    stateListSection        // 만들고 싶은 상태
+                    motionSection           // 움직이는 캐릭터
+                    nameSection             // 캐릭터 이름
+                    optionsSection          // 스타일
+                    identitySection         // 캐릭터 프롬프트
+                    referenceSection        // 참고 사진
+                    startSection            // 만들기
                     if isGenerating || !results.isEmpty || !errors.isEmpty || !loadingFrame0.isEmpty {
                         resultsSection
                     }
@@ -365,9 +365,6 @@ struct BatchCharacterGenView: View {
         } header: {
             Text("캐릭터 이름")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
-                .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -566,7 +563,7 @@ struct BatchCharacterGenView: View {
                     stateReferencePickerItems.removeValue(forKey: state)
                 }
                 .font(.pretendard(11, relativeTo: .caption2))
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
                 .disabled(isGenerating)
             }
             Spacer(minLength: 0)
@@ -628,6 +625,7 @@ struct BatchCharacterGenView: View {
                 }
                 .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
+                .buttonStyle(.bordered)
             }
             if referenceImage != nil {
                 VStack(alignment: .leading, spacing: 4) {
@@ -1806,7 +1804,7 @@ struct BatchCharacterGenView: View {
                                     revisionRefItem = nil
                                 }
                                 .font(.pretendard(11, relativeTo: .caption2))
-                                .buttonStyle(.borderless)
+                                .buttonStyle(.bordered)
                             }
                             Spacer()
                         }

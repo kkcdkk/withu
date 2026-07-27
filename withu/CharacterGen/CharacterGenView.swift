@@ -148,12 +148,11 @@ struct CharacterGenView: View {
                 if singleFormOnly {
                     // '하나씩 만들기' 하위 화면 — 단건 생성 폼 전체
                     // 순서·형식 모두 '여러 모습 만들기'와 동일하게 유지할 것.
-                    stateSection            // 만들고 싶은 상태
-                    motionSection           // 움직이는 캐릭터
+                    stateSection            // 만들고 싶은 상태 (+ 움직임)
                     nameSection             // 캐릭터 이름
+                    optionsSection          // 스타일
                     promptSection           // 캐릭터 프롬프트
                     referenceSection        // 참고 사진
-                    optionsSection          // 스타일
                     generateButtonSection   // 만들기
                     resultSection
                     refinementSection
@@ -354,6 +353,20 @@ struct CharacterGenView: View {
             }
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
+            // 단건은 상태가 하나뿐이라 움직임 토글을 같은 카드 안에 둔다.
+            if targetState.usesGeneratedMotion {
+                Divider()
+                HStack(spacing: 6) {
+                    Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
+                        .disabled(isGenerating || isProcessing)
+                    Button { showMotionInfo = true } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.pretendard(12, relativeTo: .caption))
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                }
+            }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -364,50 +377,14 @@ struct CharacterGenView: View {
             Text("만들고 싶은 상태")
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
-            // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시. (배치와 동일)
-            if !targetState.usesGeneratedMotion {
-                Text("\(GenerationQuota.cost(forQuality: quality))캔디 소모")
-                    .font(.pretendard(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
-            }
+            Text("\((generateAnimated && targetState.usesGeneratedMotion) ? GenerationQuota.cost(forQuality: quality) * 2 : GenerationQuota.cost(forQuality: quality))캔디 소모")
+                .font(.pretendard(12, relativeTo: .caption))
+                .foregroundStyle(.secondary)
         }
-    }
-
-    /// 움직이는 캐릭터 — '여러 모습 만들기' 와 같은 형식(별도 섹션 + 도움말 + 캔디 소모).
-    @ViewBuilder
-    private var motionSection: some View {
-        if targetState.usesGeneratedMotion {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
-                    .disabled(isGenerating || isProcessing)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .plainCard()
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
-            } header: {
-                HStack(spacing: 6) {
-                    Text("움직이는 캐릭터")
-                        .font(.pretendardBold(16, relativeTo: .callout))
-                    Button { showMotionInfo = true } label: {
-                        Image(systemName: "questionmark.circle")
-                            .font(.pretendard(12, relativeTo: .caption))
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
-                }
-            } footer: {
-                Text("\(generateAnimated ? GenerationQuota.cost(forQuality: quality) * 2 : GenerationQuota.cost(forQuality: quality))캔디 소모")
-                    .font(.pretendard(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
-            }
-            .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
-                Button("확인", role: .cancel) {}
-            } message: {
-                Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
-            }
+        .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
         }
     }
 
@@ -432,9 +409,6 @@ struct CharacterGenView: View {
         } header: {
             Text("캐릭터 이름")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
-                .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -653,6 +627,7 @@ struct CharacterGenView: View {
                 }
                 .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
+                .buttonStyle(.bordered)
             }
             if referenceImage != nil {
                 VStack(alignment: .leading, spacing: 4) {
