@@ -58,6 +58,23 @@ enum CharacterProfileStore {
         return profile
     }
 
+    /// 적용한 캐릭터에 이름이 있으면 '내 캐릭터' 이름으로도 반영한다.
+    /// (만들 때 지은 이름 ↔ 내 캐릭터 설정 이름 연동 — '적용' 시점에만 동기화)
+    static func syncNameFromApplied(_ state: CharacterState) {
+        guard let name = CharacterImageStore.appliedCharacterName(for: state) else { return }
+        syncName(name)
+    }
+
+    /// 이름을 직접 알고 있을 때 (배치처럼 활성 소스 맵을 안 거치는 경로).
+    static func syncName(_ raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        var p = load()
+        guard p.name != name else { return }
+        p.name = name
+        save(p)
+    }
+
     static func save(_ profile: CharacterProfile) {
         guard let defaults,
               let data = try? JSONEncoder().encode(profile) else { return }

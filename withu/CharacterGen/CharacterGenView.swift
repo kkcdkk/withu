@@ -1552,6 +1552,8 @@ struct CharacterGenView: View {
             }
         }
         if ok {
+            // 만들 때 지은 이름을 '내 캐릭터' 이름으로 반영 (적용 시점에만).
+            CharacterProfileStore.syncNameFromApplied(state)
             ConnectivityManager.shared.sendCharacterImage(image, for: state, frame: 0)
             // frame 1 — 현재 displayTransparent 모드 존중 (transparent cache 있으면 그걸 우선)
             if let frame2 {

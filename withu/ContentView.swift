@@ -570,7 +570,7 @@ struct ContentView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .pixelCardSurface(fill: .withuPinkSoft)
+            .pixelCardSurface(fill: .withuSage)   // 워치 카드 상단 바와 같은 세이지
         }
         .buttonStyle(.plain)
     }

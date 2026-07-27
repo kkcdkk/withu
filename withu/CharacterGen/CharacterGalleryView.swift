@@ -49,8 +49,10 @@ struct CharacterGalleryView: View {
     /// 캐릭터별('한번에 만들기') 그룹 — batchId 로 묶음.
     @State private var characters: [(batchId: String, createdAt: Date, items: [GalleryItem])] = []
     @State private var toastText: String?
-    /// 캐릭터별에서 길게 눌러 삭제 대기 중인 그룹 (batchId 로 묶인 모습 전부)
-    @State private var pendingDeleteCharacter: (batchId: String, name: String?, items: [GalleryItem])?
+    /// 캐릭터별 선택 모드 — 꾹 눌러 진입, 고른 캐릭터를 상단 '삭제' 로 지운다.
+    @State private var isCharacterSelectionMode: Bool = false
+    @State private var selectedCharacterIDs: Set<String> = []
+    @State private var showCharacterDeleteConfirm: Bool = false
 
     private var totalCount: Int {
         grouped.values.reduce(0) { $0 + $1.count } + legacy.count
@@ -88,21 +90,36 @@ struct CharacterGalleryView: View {
         .onReceive(NotificationCenter.default.publisher(for: .gallerySyncDidImport)) { _ in
             refresh()
         }
-        .confirmationDialog(
-            pendingDeleteCharacter.map { "'\($0.name ?? String(localized: "이름 없는 캐릭터"))' 를 삭제할까요?" } ?? "",
-            isPresented: Binding(
-                get: { pendingDeleteCharacter != nil },
-                set: { if !$0 { pendingDeleteCharacter = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("\(pendingDeleteCharacter?.items.count ?? 0)개 모습 모두 삭제", role: .destructive) {
-                if let g = pendingDeleteCharacter { deleteCharacter(g) }
-                pendingDeleteCharacter = nil
+        // 선택 모드일 때만 상단에 삭제/취소 — 고른 뒤 경고 확인까지 거쳐야 지워진다.
+        .toolbar {
+            if mode == .byCharacter && isCharacterSelectionMode {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("취소") {
+                        isCharacterSelectionMode = false
+                        selectedCharacterIDs = []
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .destructive) {
+                        showCharacterDeleteConfirm = true
+                    } label: {
+                        Label("삭제", systemImage: "trash")
+                    }
+                    .disabled(selectedCharacterIDs.isEmpty)
+                }
             }
-            Button("취소", role: .cancel) { pendingDeleteCharacter = nil }
+        }
+        .alert("\(selectedCharacterIDs.count)명의 캐릭터를 지울까요?",
+               isPresented: $showCharacterDeleteConfirm) {
+            Button("삭제", role: .destructive) { deleteSelectedCharacters() }
+            Button("취소", role: .cancel) {}
         } message: {
-            Text("이 캐릭터로 만든 모습이 모두 지워져요. 되돌릴 수 없어요.")
+            Text("고른 캐릭터로 만든 모습이 모두 지워져요. 되돌릴 수 없어요.")
+        }
+        // 상태별로 돌아가면 선택 모드 해제
+        .onChange(of: mode) { _, _ in
+            isCharacterSelectionMode = false
+            selectedCharacterIDs = []
         }
         .overlay(alignment: .bottom) {
             if let toast = toastText {
@@ -205,14 +222,32 @@ struct CharacterGalleryView: View {
             }
         }
         .buttonStyle(.plain)
-        // 상태별 폴더와 같은 방식 — 길게 누르면 삭제 (확인 후 그 캐릭터의 모습 전부 삭제).
-        .contextMenu {
-            Button(role: .destructive) {
-                pendingDeleteCharacter = (group.batchId, charName(group), group.items)
-            } label: { Label("이 캐릭터 삭제", systemImage: "trash") }
+        // 꾹 누르면 '선택' — 바로 지우지 않는다. 고른 뒤 상단 '삭제' → 경고 확인까지 거쳐야 삭제.
+        .disabled(isCharacterSelectionMode)
+        .overlay(alignment: .topTrailing) {
+            if isCharacterSelectionMode {
+                Image(systemName: selectedCharacterIDs.contains(group.batchId)
+                      ? "checkmark.circle.fill" : "circle")
+                    .font(.pretendard(20, relativeTo: .title3))
+                    .foregroundStyle(selectedCharacterIDs.contains(group.batchId)
+                                     ? Color.withuSage : Color.secondary)
+                    .padding(6)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard isCharacterSelectionMode else { return }
+            if selectedCharacterIDs.contains(group.batchId) {
+                selectedCharacterIDs.remove(group.batchId)
+            } else {
+                selectedCharacterIDs.insert(group.batchId)
+            }
         }
         .onLongPressGesture {
-            pendingDeleteCharacter = (group.batchId, charName(group), group.items)
+            if !isCharacterSelectionMode {
+                isCharacterSelectionMode = true
+                selectedCharacterIDs = [group.batchId]
+            }
         }
     }
 
@@ -228,14 +263,18 @@ struct CharacterGalleryView: View {
         return rep.flatMap { CharacterImageStore.loadGalleryImage(id: $0.id) }
     }
 
-    /// 캐릭터별에서 한 캐릭터(batchId 그룹)의 모습을 전부 삭제.
-    private func deleteCharacter(_ group: (batchId: String, name: String?, items: [GalleryItem])) {
+    /// 선택한 캐릭터들(batchId 그룹)의 모습을 전부 삭제.
+    private func deleteSelectedCharacters() {
         var removed = 0
-        for item in group.items where CharacterImageStore.deleteGalleryItem(item.id) {
-            removed += 1
+        for group in characters where selectedCharacterIDs.contains(group.batchId) {
+            for item in group.items where CharacterImageStore.deleteGalleryItem(item.id) {
+                removed += 1
+            }
+            // 이름 맵에서도 정리 — 빈 이름으로 덮으면 키가 지워진다.
+            CharacterImageStore.setCharacterName("", for: group.batchId)
         }
-        // 이름 맵에서도 정리 — 빈 이름으로 덮으면 키가 지워진다.
-        CharacterImageStore.setCharacterName("", for: group.batchId)
+        isCharacterSelectionMode = false
+        selectedCharacterIDs = []
         refresh()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         toastText = String(localized: "\(removed)개를 지웠어요")
@@ -251,6 +290,7 @@ struct CharacterGalleryView: View {
         for item in items {
             guard let state = CharacterState(rawValue: item.sourceState) else { continue }
             if CharacterImageStore.applyGalleryItem(item.id, to: state) {
+                CharacterProfileStore.syncNameFromApplied(state)
                 if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
                     ConnectivityManager.shared.sendCharacterImage(img, for: state, frame: 0)
                 }
@@ -1079,6 +1119,7 @@ struct GalleryGrid<Header: View>: View {
 
     private func apply(_ item: GalleryItem, to state: CharacterState) {
         let ok = CharacterImageStore.applyGalleryItem(item.id, to: state)
+        if ok { CharacterProfileStore.syncNameFromApplied(state) }
         if ok {
             WidgetCenter.shared.reloadAllTimelines()
             if let img = CharacterImageStore.loadGalleryImage(id: item.id) {

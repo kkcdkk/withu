@@ -1155,6 +1155,8 @@ struct BatchCharacterGenView: View {
     @MainActor
     private func applyOne(_ state: CharacterState) {
         guard let img0 = displayedImage(for: state, frame: 0) else { return }
+        // 만들 때 지은 이름을 '내 캐릭터' 이름으로 반영 (적용 시점에만).
+        CharacterProfileStore.syncName(characterName)
         CharacterImageStore.saveActiveSlotOnly(img0, for: state, frame: 0)   // stale frame1 정리됨
         ConnectivityManager.shared.sendCharacterImage(img0, for: state, frame: 0)
         if let img1 = displayedImage(for: state, frame: 1) {
