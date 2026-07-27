@@ -22,11 +22,11 @@ enum CharacterStateResolver {
         workouts: [WorkoutSummary],
         todaySteps: Double? = nil,            // 현재 정책에서 무시
         weather: WeatherSnapshot? = nil,
-        inSleepSchedule: Bool = false,
+        inSleepSchedule: Bool = false,       // 현재 정책에서 무시 (수면 일정 자동 인식 제거)
         hasSleepSchedule: Bool = false,
         isFocusActive: Bool = false,
-        isGenericFocusActive: Bool = false,
-        sleepWindowFallback: Bool = false,
+        isGenericFocusActive: Bool = false,  // 현재 정책에서 무시
+        sleepWindowFallback: Bool = false,   // 현재 정책에서 무시 — 시그니처 호환용
         isLikelyInWorkout: Bool = false,
         recentStepsPerMinute: Double = 0,
         phoneWorkoutState: CharacterState? = nil,
@@ -66,41 +66,21 @@ enum CharacterStateResolver {
 
         let sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
         let sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
-        // '설정 시간 기준'의 수면 시간창 안이면 폰 모션으로 수면을 덮지 않는다.
-        let inManualSleepWindow = profile.isManualSleepOnly
-            && isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin)
+        // 수면 시간창 안이면 폰 모션(걷기 등)으로 수면을 덮지 않는다.
+        let inManualSleepWindow = isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin)
 
         if let phoneWorkoutState, !isFocusActive, !inSleepSchedule, !inManualSleepWindow {
             return phoneWorkoutState
         }
 
-        // 2) 수면 — 두 갈래 (프로필의 manualSleepOnly = 기준 칩 선택):
-        //    · '수면 모드 기준'(manualSleepOnly=false): 실제 수면 신호만 재운다.
-        //        (1순위) iOS Sleep Focus 필터 OR HealthKit inBed → 확정 수면.
-        //        (2순위) 아무 집중 모드(INFocusStatusCenter) + 수면 시간대 —
-        //                예약 수면 모드가 잠긴 폰에서 필터 인텐트를 못 깨운 경우의 보조 신호.
-        //        → Sleep Focus 를 꺼두면 밤이어도 깨어 있다 (사용자가 고른 '수면 모드 기준' 의도 그대로).
-        //    · '설정 시간 기준'(manualSleepOnly=true): caller 가 Focus/inBed 신호를 모두
-        //        false 로 넘기므로 위 1·2순위는 안 걸리고, 아래 3순위 시간창만으로 재운다.
-        if isFocusActive || inSleepSchedule {
+        // 2) 수면 — **설정한 시간창이 기준**.
+        //    iOS 수면 일정/예약 집중 모드 자동 인식은 신호가 자주 유실돼(잠긴 폰에서 필터
+        //    intent 미호출, INFocusStatusCenter 오보) 밤새 안 자는 문제가 반복돼 걷어냈다.
+        //    수동으로 켠 수면 모드(필터 신호)만 추가로 인정 — 시간창 밖 낮잠도 잡힌다.
+        if isFocusActive {
             return .sleeping
         }
-        if isGenericFocusActive,
-           isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
-            return .sleeping
-        }
-        // 3순위 — '설정 시간 기준' 전용: 시간창 자체가 수면 신호.
-        // '수면 모드 기준'은 실제 수면 신호(위 1·2순위)만 따르고 시간창으로는 안 잔다.
-        if profile.isManualSleepOnly,
-           isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
-            return .sleeping
-        }
-        // 3.5순위 — '수면 모드 기준'인데 iOS Focus 를 아예 감지할 수 없는 환경
-        //   (Focus 상태 공유 꺼짐/권한 없음 + 예약 활성화 때 필터 intent 유실).
-        //   신호가 하나도 없다고 밤새 깨어 있는 것보다, 설정한 시간창을 믿는 게 낫다.
-        //   (사용자가 방금 수면 모드를 끈 경우는 caller 가 false 로 넘겨 폴백 안 함)
-        if sleepWindowFallback,
-           isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
+        if isInRange(nowMin: nowMin, start: sleepStartMin, end: sleepEndMin) {
             return .sleeping
         }
 

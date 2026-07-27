@@ -26,8 +26,6 @@ struct CharacterProfileView: View {
     /// '최근 수면 시간에 맞추기' 진행/결과 표시
     @State private var isAligningSleep: Bool = false
     @State private var sleepAlignMessage: String?
-    /// 기준 칩에서 '수면 모드 기준' 선택 시 수면 일정 안내 팝업.
-    @State private var showSleepBasisTip: Bool = false
 
     /// 미리보기 배경/캐릭터 — 지금 적용 중인 state (없으면 느긋).
     // 히어로 아바타 상태 — 프로필(수면/식사 시간) 변경 시 즉시 갱신되게 @State 로.
@@ -46,12 +44,6 @@ struct CharacterProfileView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                     sleepStatusRow
-                    Toggle("잠든 시간 자동으로 알아채기", isOn: autoDetectBinding)
-                    // 자동 감지인데 수면 Focus 필터를 아직 연결 안 했으면 안내 —
-                    // 필터가 한 번이라도 신호를 주면(lastPerformAt 설정) 카드는 사라진다.
-                    if !profile.isManualSleepOnly, focus.focusFilterLastPerformAt == nil {
-                        sleepFilterSetupCard
-                    }
                     // '수면 모드 기준'(자동 감지)에선 이 시간이 판정 기준이 아니라 회색+비활성.
                     DatePicker("잠드는 시간", selection: sleepStartBinding,
                                displayedComponents: .hourAndMinute)
@@ -150,23 +142,6 @@ struct CharacterProfileView: View {
                         .font(.pretendard(11, relativeTo: .caption2))
                 }
 
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                    DisclosureGroup("캐릭터 외형 한 줄 (고급)") {
-                        TextField("예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터",
-                                  text: $profile.aiPrompt, axis: .vertical)
-                            .lineLimit(2...5)
-                        Text("캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.")
-                            .font(.pretendard(11, relativeTo: .caption2))
-                            .foregroundStyle(.secondary)
-                    }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .plainCard()
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .listRowBackground(Color.clear)
-                }
             }
             .scrollContentBackground(.hidden)
         }
@@ -308,70 +283,7 @@ struct CharacterProfileView: View {
             Text(isSleepingNow ? "자는 중" : "깨어 있음")
                 .font(.pretendard(16, relativeTo: .callout))
             Spacer()
-            Menu {
-                Picker("수면 기준", selection: sleepBasisBinding) {
-                    Label("수면 모드 기준", systemImage: "moon.circle.fill").tag(false)
-                    Label("설정 시간 기준", systemImage: "clock.fill").tag(true)
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: sleepBasisIcon)
-                        .font(.pretendard(11, relativeTo: .caption2))
-                    Text(sleepBasisLabel)
-                        .font(.pretendard(12, relativeTo: .caption))
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.pretendard(9))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.secondary.opacity(0.12), in: Capsule())
-                .foregroundStyle(.secondary)
-            }
         }
-        .alert("수면 모드 기준으로 자요", isPresented: $showSleepBasisTip) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text("수면 모드가 켜지면 자고, 꺼지면 일어나요. 아이폰 건강 앱에서 수면 일정을 만들어두면 수면 모드가 매일 자동으로 켜지고 꺼져서, 캐릭터도 규칙적으로 자고 일어나요.")
-        }
-    }
-
-    /// 수면 Focus 필터 연결 안내 — 자동 감지인데 필터 미연결일 때만.
-    /// 필터를 연결하면 iOS 가 수면 on/off 를 즉시 push → 첫 토글에 바로 반영.
-    /// (미연결이면 폴링 폴백이라 반영이 한 박자 늦음 — '두 번 껐다 켜야 잠드는' 증상.)
-    private var sleepFilterSetupCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("수면 필터를 연결하면 더 정확해요", systemImage: "moon.zzz.fill")
-                .font(.pretendard(16, relativeTo: .callout))
-                .foregroundStyle(Color.withuPinkText)
-            Text("연결하지 않으면 수면 모드를 켜도 반영이 한 박자 늦어요. 한 번만 연결하면 켜자마자 잠들어요.")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
-            Text("설정 → 집중 모드 → 수면 → 아래 '필터 추가' → Withy → '캐릭터를 자게 하기' 켜기")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
-            Button {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                Label("설정 앱 열기", systemImage: "gear")
-                    .font(.pretendard(12, relativeTo: .caption))
-            }
-            .buttonStyle(.borderless)
-            .padding(.top, 2)
-        }
-        .padding(.vertical, 4)
-    }
-
-    /// 기준 칩 선택 — 설정 시간 기준(true) = manualSleepOnly. 수면 모드 선택 시 안내 팝업.
-    private var sleepBasisBinding: Binding<Bool> {
-        Binding(
-            get: { profile.isManualSleepOnly },
-            set: { manual in
-                profile.manualSleepOnly = manual
-                if !manual { showSleepBasisTip = true }
-            }
-        )
     }
 
     /// 지금 자는 중인지 (resolver 의 수면 분기와 동일).
@@ -388,15 +300,6 @@ struct CharacterProfileView: View {
     }
 
     /// 기준 칩 라벨 — 사용자가 고른 값 그대로 표시 (살아있는 신호로 추론하지 않는다).
-    private var sleepBasisLabel: String {
-        profile.isManualSleepOnly
-            ? String(localized: "설정 시간 기준")
-            : String(localized: "수면 모드 기준")
-    }
-
-    private var sleepBasisIcon: String {
-        profile.isManualSleepOnly ? "clock.fill" : "moon.circle.fill"
-    }
 
     /// 최근 7일 실제 수면 기록(워치 asleep 포함)의 평균 취침/기상을 설정 시간에 반영.
     /// 워치 수면 추적은 inBed 예측 신호가 없어 설정 시간이 사실상 기준 —
@@ -429,27 +332,11 @@ struct CharacterProfileView: View {
         return s < e ? (nowMin >= s && nowMin < e) : (nowMin >= s || nowMin < e)
     }
 
-    /// 토글 켜짐 = 자동 감지 사용 = manualSleepOnly false.
-    private var autoDetectBinding: Binding<Bool> {
-        Binding(
-            get: { !profile.isManualSleepOnly },
-            set: { profile.manualSleepOnly = !$0 }
-        )
-    }
-
-    /// '수면 모드 기준'(자동 감지)에선 잠드는/일어나는 시간이 판정 기준이 아니라 회색+비활성.
-    private var sleepTimesDisabled: Bool { !profile.isManualSleepOnly }
+    /// 이제는 항상 설정 시간이 기준이라 시간 선택을 막지 않는다.
+    private var sleepTimesDisabled: Bool { false }
 
     private var sleepFooterText: String {
-        if profile.isManualSleepOnly {
-            return String(localized: "자동으로 알아채기를 껐어요. 위에서 정한 시간만 기준으로 해요.")
-        }
-        // 수면 모드 신호가 하나도 연결 안 돼 있으면 — 왜 '설정 시간'으로만 자는지 + 켜는 법 안내.
-        // (INFocusStatusCenter 권한은 더 이상 수면 판정에 안 쓰므로 조건에서 제외)
-        if focus.focusFilterLastPerformAt == nil && !health.hasSleepSchedule {
-            return String(localized: "수면 모드와 연결하려면: 아이폰 설정 > 집중 모드 > 수면 > 필터 추가 > Withy 를 켜 주세요. (건강 앱에서 수면 일정을 쓰고 있다면 자동으로 따라가요.)")
-        }
-        return String(localized: "먼저 아이폰의 수면·집중 모드를 따르고, 없으면 위에서 정한 시간을 사용해요. 수면 집중 모드가 켜져 있으면 캐릭터가 잠에 들어요.")
+        String(localized: "여기서 정한 시간에 자고 일어나요. 수면 모드를 직접 켜면 그때도 자는 모습이 돼요.")
     }
 
     // MARK: - DatePicker bindings (hour/minute ↔ Date)
