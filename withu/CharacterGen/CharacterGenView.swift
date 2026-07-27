@@ -139,11 +139,14 @@ struct CharacterGenView: View {
     @State private var showMotionInfo: Bool = false
     /// 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택)
     @State private var characterName: String = ""
+    /// 생성 완료 시 스크롤할 결과 섹션 앵커
+    private static let resultAnchor = "withu.result.anchor"
 
     var body: some View {
         ZStack {
             backgroundGradient(for: targetState, topTint: .withuPinkSoft).ignoresSafeArea()
                 .animation(.snappy, value: targetState)
+            ScrollViewReader { proxy in
             Form {
                 if singleFormOnly {
                     // '하나씩 만들기' 하위 화면 — 단건 생성 폼 전체
@@ -168,6 +171,12 @@ struct CharacterGenView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            // 만들기가 끝나면 결과가 바로 보이게 이동 (스크롤을 손으로 안 내려도 되게).
+            .onChange(of: isGenerating) { was, now in
+                guard was, !now, resultImage != nil else { return }
+                withAnimation { proxy.scrollTo(Self.resultAnchor, anchor: .top) }
+            }
+            }
         }
         .navigationDestination(item: $scopeDestination) { scope in
             switch scope {
@@ -699,11 +708,38 @@ struct CharacterGenView: View {
     }
 
 
+    /// 생성 중 결과 자리 — 이전 사진 대신 '만드는 중'. (배치의 상태별 placeholder 와 같은 역할)
+    private var generatingPlaceholder: some View {
+        VStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.12))
+                .frame(height: 220)
+                .overlay {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("만드는 중…")
+                            .font(.pretendard(13, relativeTo: .footnote))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            Text("다 되면 여기에 새 캐릭터가 나와요.")
+                .font(.pretendard(12, relativeTo: .caption))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     @ViewBuilder
     private var resultSection: some View {
-        if resultImage != nil {
-            Section(header: Text("만들어진 모습").font(.pretendardBold(16, relativeTo: .callout))) {
+        // 생성 중에도 섹션을 띄운다 — 이전 결과가 그대로 남아 새로 만든 것으로 착각하던 문제.
+        if resultImage != nil || isGenerating {
+            Section(header: Text("만들어진 모습")
+                .font(.pretendardBold(16, relativeTo: .callout))
+                .id(Self.resultAnchor)) {
                 VStack(alignment: .leading, spacing: 12) {
+                if isGenerating {
+                    generatingPlaceholder
+                } else {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
                     VStack(alignment: .leading, spacing: 2) {
@@ -780,18 +816,31 @@ struct CharacterGenView: View {
                     }
                 }
                 if let f0 {
-                    Button {
-                        applyCurrentSelection()
-                    } label: {
-                        Label("'\(targetState.koreanShortLabel)' 자리에 적용하기", systemImage: "square.and.arrow.down")
+                    // 적용(초록 CTA) + 사진 앱 저장(아이콘) 을 한 줄에 — 저장이 '적용의 부속'처럼
+                    // 보이던 것 정리. 적용 버튼에서는 저장 아이콘을 뺀다.
+                    HStack(spacing: 10) {
+                        Button {
+                            applyCurrentSelection()
+                        } label: {
+                            Text("'\(targetState.koreanShortLabel)' 자리에 적용하기")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(WithuCTAButtonStyle())
+                        .disabled(isProcessingTransparent)
+
+                        Button {
+                            let img = (f1 != nil ? currentDisplay(frame: singleDetailFrame) : f0) ?? f0
+                            Task { await saveToPhotos(img) }
+                        } label: {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.pretendard(16, relativeTo: .callout))
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.secondary)
+                        .accessibilityLabel("사진 앱에 저장")
                     }
-                    .buttonStyle(WithuCTAButtonStyle())
-                    .disabled(isProcessingTransparent)
-                    Button("사진 앱에 저장") {
-                        let img = (f1 != nil ? currentDisplay(frame: singleDetailFrame) : f0) ?? f0
-                        Task { await saveToPhotos(img) }
-                    }
-                    .tint(.secondary)
+                }
                 }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
