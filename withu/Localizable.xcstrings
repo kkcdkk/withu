@@ -8340,6 +8340,16 @@
           }
         }
       }
+    },
+    "다시 시도해 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please try again."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

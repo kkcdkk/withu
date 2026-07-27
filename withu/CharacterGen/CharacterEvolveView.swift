@@ -23,6 +23,8 @@ struct CharacterEvolveView: View {
     @State private var generationStartedAt: Date?
     @State private var resultImage: UIImage?
     @State private var lastError: String?
+    /// 직전 만들기가 실패했는지 — 실패면 결과 자리에 이전 그림 대신 이유를 띄운다.
+    @State private var lastAttemptFailed: Bool = false
     @State private var revisedPrompt: String?
     /// 마지막으로 서버에 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
     @State private var lastSentPrompt: String?
@@ -325,15 +327,41 @@ struct CharacterEvolveView: View {
             .frame(maxWidth: .infinity)
     }
 
+    /// 실패한 결과 자리 — 이전 그림이 새 결과처럼 보이지 않게 이유를 여기 띄운다.
+    private func failedPlaceholder(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.12))
+                .frame(height: 220)
+                .overlay {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.pretendard(22, relativeTo: .title3))
+                            .foregroundStyle(.orange)
+                        Text("만들지 못했어요")
+                            .font(.pretendard(13, relativeTo: .footnote))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            Text(message)
+                .font(.pretendard(13, relativeTo: .footnote))
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     @ViewBuilder
     private var resultSection: some View {
-        if resultImage != nil || isGenerating {
+        if resultImage != nil || isGenerating || lastAttemptFailed {
             Section(header: Text("진화한 모습")
                 .font(.pretendardBold(16, relativeTo: .callout))
                 .id(Self.resultAnchor)) {
                 VStack(alignment: .leading, spacing: 12) {
                     if isGenerating {
                         generatingPlaceholder
+                    } else if lastAttemptFailed {
+                        failedPlaceholder(lastError ?? String(localized: "다시 시도해 주세요."))
                     } else if let img = resultImage {
                         if galleryId != nil {
                             Label("캐릭터 갤러리에 저장됨", systemImage: "checkmark.circle")
@@ -374,7 +402,8 @@ struct CharacterEvolveView: View {
                 .listRowBackground(Color.clear)
             }
         }
-        if let err = lastError {
+        // 생성 실패는 결과 자리에 띄운다 — 여기 배너는 그 외(저장 실패 등)만.
+        if let err = lastError, !lastAttemptFailed {
             Section {
                 WarningBanner(text: err)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -423,6 +452,7 @@ struct CharacterEvolveView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
+        lastAttemptFailed = false
         sessionId = UUID().uuidString      // 새 결과 = 새 캐릭터(갤러리 묶음)
         CharacterImageStore.setCharacterName(characterName, for: sessionId)
 
@@ -450,7 +480,10 @@ struct CharacterEvolveView: View {
 
         let prevResult = resultImage
         await send(reference: referenceB64)
-        guard resultImage !== prevResult, let img = resultImage else { return }
+        guard resultImage !== prevResult, let img = resultImage else {
+            lastAttemptFailed = true
+            return
+        }
         GenerationQuota.record(cost)
         // 결과 유실 방지 — 갤러리에 자동 저장 (활성 슬롯은 '적용' 눌러야 반영).
         let item = CharacterImageStore.save(img, for: targetState, frame: 0,

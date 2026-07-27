@@ -79,6 +79,8 @@ struct CharacterGenView: View {
     /// 마지막 성공 생성에 실제로 보낸 프롬프트 — 갤러리 '만든 기록' 저장용.
     @State private var lastSentPrompt: String?
     @State private var lastError: String?
+    /// 직전 만들기/다듬기가 실패했는지 — 실패면 결과 자리에 이전 그림 대신 이유를 띄운다.
+    @State private var lastAttemptFailed: Bool = false
     @State private var showAppliedAlert: Bool = false
     @State private var showSavedAlert: Bool = false
     @State private var generationStartedAt: Date?
@@ -749,16 +751,43 @@ struct CharacterGenView: View {
             .frame(maxWidth: .infinity)
     }
 
+    /// 실패한 결과 자리 — 이전 결과 그림이 새로 만든 것처럼 보이지 않게 이유를 여기 띄운다.
+    /// (안전 정책에 걸린 경우처럼 결과가 아예 안 나온 상황)
+    private func failedPlaceholder(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.12))
+                .frame(height: 220)
+                .overlay {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.pretendard(22, relativeTo: .title3))
+                            .foregroundStyle(.orange)
+                        Text("만들지 못했어요")
+                            .font(.pretendard(13, relativeTo: .footnote))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            Text(message)
+                .font(.pretendard(13, relativeTo: .footnote))
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     @ViewBuilder
     private var resultSection: some View {
         // 생성 중에도 섹션을 띄운다 — 이전 결과가 그대로 남아 새로 만든 것으로 착각하던 문제.
-        if resultImage != nil || isGenerating {
+        if resultImage != nil || isGenerating || lastAttemptFailed {
             Section(header: Text("만들어진 모습")
                 .font(.pretendardBold(16, relativeTo: .callout))
                 .id(Self.resultAnchor)) {
                 VStack(alignment: .leading, spacing: 12) {
                 if isGenerating {
                     generatingPlaceholder
+                } else if lastAttemptFailed {
+                    failedPlaceholder(lastError ?? String(localized: "다시 시도해 주세요."))
                 } else {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
@@ -864,7 +893,8 @@ struct CharacterGenView: View {
                 .listRowBackground(Color.clear)
             }
         }
-        if let err = lastError {
+        // 생성 실패는 결과 자리에 띄운다 — 여기 배너는 그 외(저장 실패 등)만.
+        if let err = lastError, !lastAttemptFailed {
             Section {
                 WarningBanner(text: err)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -1226,6 +1256,7 @@ struct CharacterGenView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
+        lastAttemptFailed = false
         resultFrame2 = nil
         singleDetailFrame = 0
         currentSessionId = UUID().uuidString   // 새 원본 → 새 수정 체인
@@ -1271,6 +1302,7 @@ struct CharacterGenView: View {
                    userInput: raw.text, inputField: raw.field,
                    kind: referenceImage != nil ? "photo" : nil)
         let frame0Succeeded = resultImage !== prevResult
+        lastAttemptFailed = !frame0Succeeded
         // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
         let freeSession = lastFreeConsumed
         if frame0Succeeded, !freeSession { GenerationQuota.record(cost) }
@@ -1319,6 +1351,7 @@ struct CharacterGenView: View {
         isGenerating = true
         generationStartedAt = .now
         lastError = nil
+        lastAttemptFailed = false
         // 선택한 프레임의 투명 캐시만 무효화 (다른 프레임은 보존).
         if frame == 1 { transparentResultFrame2 = nil } else { transparentResult = nil }
         defer {
@@ -1335,6 +1368,7 @@ struct CharacterGenView: View {
                    matchReference: frame == 1 ? (lastFrame0FullRes ?? resultImage) : nil,
                    userInput: refinementPrompt, inputField: "다듬기")
         let succeeded = (frame == 1 ? resultFrame2 : resultImage) !== prevSlot
+        lastAttemptFailed = !succeeded
         if succeeded {
             if !lastFreeConsumed {   // 서버가 무료로 소진한 다듬기는 미차감
                 GenerationQuota.record(GenerationQuota.cost(forQuality: quality))
