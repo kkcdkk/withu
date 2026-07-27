@@ -106,10 +106,10 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
     /// 명사구만 true — '자고 있어요' · '산책 중' 같은 동사구는 '코코의 산책 중' 처럼 어색해진다.
     var captionAllowsNamePrefix: Bool {
         switch self {
-        case .idle, .energetic, .cloudy,
-             .walkingCloudy, .walkingSnowy,
+        case .idle, .energetic, .cloudy, .rainyShelter,
+             .walkingCloudy, .walkingRainy, .walkingSnowy,
              .runningSunny, .runningCloudy, .runningSnowy,
-             .cyclingSunny, .cyclingCloudy, .cyclingSnowy:
+             .cyclingSunny, .cyclingCloudy, .cyclingRainy, .cyclingSnowy:
             return true
         default:
             return false
@@ -128,11 +128,11 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .eating:         return String(localized: "맛있게 식사 중")
         case .beach:          return String(localized: "해변에서 일광욕")
         case .cloudy:         return String(localized: "구름 낀 하루")
-        case .rainyShelter:   return String(localized: "우산 쓰고 비 구경")
-        case .snowPlay:       return String(localized: "눈 속에서 신나게")
+        case .rainyShelter:   return String(localized: "비 구경")
+        case .snowPlay:       return String(localized: "눈 놀이 중")
         case .walkingSunny:   return String(localized: "햇살 받으며 산책")
         case .walkingCloudy:  return String(localized: "흐린 날 산책")
-        case .walkingRainy:   return String(localized: "비 오는데 산책")
+        case .walkingRainy:   return String(localized: "우중 산책")
         case .walkingSnowy:   return String(localized: "눈길 산책")
         case .runningSunny:   return String(localized: "햇살 아래 달리기")
         case .runningCloudy:  return String(localized: "흐린 날 달리기")
@@ -140,7 +140,7 @@ enum CharacterState: String, Codable, Hashable, CaseIterable {
         case .runningSnowy:   return String(localized: "눈 속 달리기")
         case .cyclingSunny:   return String(localized: "햇살 자전거")
         case .cyclingCloudy:  return String(localized: "흐린 날 자전거")
-        case .cyclingRainy:   return String(localized: "비 오는데 자전거")
+        case .cyclingRainy:   return String(localized: "우중 자전거")
         case .cyclingSnowy:   return String(localized: "눈 속 자전거")
         }
     }
