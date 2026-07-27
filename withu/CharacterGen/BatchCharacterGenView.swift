@@ -51,6 +51,8 @@ struct BatchCharacterGenView: View {
     @State private var albumPickerForState: CharacterState?
     @State private var albumPickerItem: PhotosPickerItem?
     /// 움직임 설명 '?' 팝오버.
+    /// '기본'은 끌 수 없다는 안내
+    @State private var showIdleLockedInfo: Bool = false
     @State private var showMotionInfo: Bool = false
     /// "항목별 입력" 도우미 — 채우면 캐릭터 프롬프트(baseIdentity)에 자동 합쳐짐. (하나씩 만들기와 동일)
     @State private var subjectField: String = ""
@@ -464,6 +466,11 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .alert("'기본'은 항상 만들어요", isPresented: $showIdleLockedInfo) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("'기본' 모습을 먼저 만들고 그걸 기준으로 나머지를 그려요. 그래서 끌 수 없어요.")
+        }
     }
 
     /// 선택된 상태 중 2프레임 움직임이 가능한 것들 — 움직임 섹션 노출 여부·캔디 소모 위치 판단.
@@ -494,17 +501,30 @@ struct BatchCharacterGenView: View {
             .disabled(isGenerating)
         } label: {
             HStack(spacing: 8) {
-                Toggle("", isOn: Binding(
-                    get: { state == .idle || selectedStates.contains(state) },
-                    set: { on in
-                        // '기본'은 나머지 모습의 기준(앵커)이라 끌 수 없다.
-                        guard state != .idle else { return }
-                        if on { selectedStates.insert(state) } else { selectedStates.remove(state) }
+                if state == .idle {
+                    // '기본'은 나머지 모습의 기준(앵커)이라 끌 수 없다.
+                    // 그냥 비활성 토글로 두면 탭이 DisclosureGroup 으로 흘러가 행이 펼쳐진다 —
+                    // Button 으로 탭을 가로채 이유를 알려준다.
+                    Button {
+                        showIdleLockedInfo = true
+                    } label: {
+                        Toggle("", isOn: .constant(true))
+                            .labelsHidden()
+                            .allowsHitTesting(false)
                     }
-                ))
-                .labelsHidden()
-                .fixedSize()
-                .disabled(isGenerating || state == .idle)
+                    .buttonStyle(.borderless)
+                    .fixedSize()
+                } else {
+                    Toggle("", isOn: Binding(
+                        get: { selectedStates.contains(state) },
+                        set: { on in
+                            if on { selectedStates.insert(state) } else { selectedStates.remove(state) }
+                        }
+                    ))
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(isGenerating)
+                }
 
                 Text(state.koreanShortLabel)
                     .strikethrough(state != .idle && !selectedStates.contains(state))
