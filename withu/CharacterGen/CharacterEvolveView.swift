@@ -417,24 +417,9 @@ struct CharacterEvolveView: View {
         return (String(name[..<range.lowerBound]), n)
     }
 
-    /// 진화 '선물' 축 — 매번 다른 걸 하나 뽑아 결과가 굳지 않게 (가챠).
-    /// 정체성(종·얼굴·색·화풍)은 건드리지 않는, 덧붙이는 성격의 변화만 둔다.
-    private static let evolutionGifts: [String] = [
-        "a subtle glow or aura tracing its outline",
-        "new markings or patterns across its body that echo its original colors",
-        "a cloak or cape that suits the world it lives in",
-        "small crystal, leaf, or feather growths along its back or shoulders",
-        "a badge, emblem, or small crown it clearly earned",
-        "longer, more expressive hair, fur, or tail",
-        "a trusty hand-held tool it holds with pride",
-        "a tiny companion creature or floating spirit at its side",
-        "layered armor pieces on the shoulders or arms, light and elegant",
-        "a scarf or sash that moves as if caught in the wind"
-    ]
-
     /// 서버로 보낼 프롬프트 — 사용자 입력 없이 우리가 조립한다(가챠).
     /// 정체성은 지키고, 더 강하고 성숙하게, 옷은 더 멋지게, 선정적이지 않게.
-    private func composedPrompt(gift: String) -> String {
+    private func composedPrompt() -> String {
         let name = characterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let named = name.isEmpty ? "" : " The character's name is \(name)."
         return """
@@ -447,10 +432,13 @@ struct CharacterEvolveView: View {
         the same character, grown up.
 
         EVOLVE (must visibly change): make it stronger and more mature — a confident, capable presence. \
-        Sharper silhouette, better proportions, richer detail and shading. If it wears clothing, upgrade \
-        the outfit into a cooler, better-crafted version of the same idea: finer fabric, layered details, \
-        fitting accessories or emblems. Then add ONE surprising but fitting new trait the viewer would \
-        not have predicted: \(gift).
+        The FACE should read as seasoned and self-assured: a steadier gaze, calm composure, the quiet \
+        strength of someone who has been through a lot. Grown up, not aged; still the same cute face, \
+        now with depth behind it. Sharper silhouette, better proportions, richer detail and shading. \
+        If it wears clothing, upgrade the outfit into a cooler, better-crafted version of the same idea: \
+        finer fabric, layered details, fitting accessories or emblems. Add ONE new trait the viewer \
+        would not have predicted — your choice, as long as it grows naturally out of what the character \
+        already is.
 
         RULES: keep it wholesome — no revealing clothing, no suggestive posing or body emphasis; this is \
         a cute character, not a pin-up. Do not change the species. Do not make it grotesque, gory, or \
@@ -498,9 +486,7 @@ struct CharacterEvolveView: View {
         }
 
         let prevResult = resultImage
-        // 가챠 — 이번 진화에서 덧붙일 '선물'을 무작위로 하나.
-        let gift = Self.evolutionGifts.randomElement() ?? Self.evolutionGifts[0]
-        await send(reference: referenceB64, gift: gift)
+        await send(reference: referenceB64)
         guard resultImage !== prevResult, let img = resultImage else {
             lastAttemptFailed = true
             return
@@ -514,9 +500,9 @@ struct CharacterEvolveView: View {
         galleryId = item?.id
     }
 
-    private func send(reference: String, gift: String) async {
+    private func send(reference: String) async {
         // kind 를 넘겨 계정 무료 1회('처음 만드는 화면' 전용)를 소진하지 않게 한다.
-        let finalPrompt = "\(composedPrompt(gift: gift)) Only the character on a transparent background — no background fill, no shadows, no extra elements."
+        let finalPrompt = "\(composedPrompt()) Only the character on a transparent background — no background fill, no shadows, no extra elements."
         do {
             let req = GenerateImageRequest(
                 prompt: finalPrompt,
