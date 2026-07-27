@@ -529,9 +529,30 @@ struct CharacterGenView: View {
     /// 마지막 단계 — 설명·참고·스타일을 다 정한 뒤 누르는 만들기 버튼.
     private var generateButtonSection: some View {
         let cost = GenerationQuota.cost(forQuality: quality)
+        // 이번 만들기에 드는 캔디 (움직이는 캐릭터면 2장이라 2배)
+        let need = (generateAnimated && targetState.usesGeneratedMotion) ? cost * 2 : cost
+        // 구조·문구를 '여러 모습 만들기'(startSection)와 동일하게 유지할 것.
         return Section {
+            Button {
+                pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
+            } label: {
+                if isGenerating {
+                    generatingLabel
+                } else {
+                    Text("만들기 시작")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(WithuCTAButtonStyle())
+            // 참고 사진이 있으면 설명 없이도 생성 가능 (composedPrompt 가 참고사진 템플릿으로 대체)
+            .disabled(isGenerating
+                      || (prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && referenceImage == nil)
+                      || (remainingGenerations < need && !creationIsFree))
+
             if isGenerating {
-                generatingLabel
+                Text("너무 오래 떠나 있으면 결과가 사라질 수 있으니, 화면에 머무르는 것을 권장해요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.orange)
                 Button(role: .destructive) {
                     generateTask?.cancel()
                     generateTask = nil
@@ -541,48 +562,36 @@ struct CharacterGenView: View {
                 } label: {
                     Label("그만두기", systemImage: "stop.circle.fill")
                 }
-            } else if remainingGenerations < cost && !creationIsFree {
+                .tint(.secondary)
+            } else if remainingGenerations < need && !creationIsFree {
+                Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.orange)
                 Button {
                     showPaywall = true
                 } label: {
-                    Label("더 만들기 (충전)", systemImage: "sparkles")
+                    Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
+                .tint(.withuPink)
+            } else if creationIsFree {
+                Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(Color.withuPinkText)
+            } else if referenceImage != nil && hasFreeCreation {
+                Text("사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.secondary)
             } else {
-                // 움직임 토글은 '상태 선택'으로 옮김 (여러 상태 만들기와 형식 통일).
-                Button {
-                    pendingAction = .newGeneration   // 캔디 안내 팝업 → 확인 시 생성
-                } label: {
-                    Text("이 모습으로 만들기")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(WithuCTAButtonStyle())
-                // 참고 사진이 있으면 설명 없이도 생성 가능 (composedPrompt 가 참고사진 템플릿으로 대체)
-                .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && referenceImage == nil)
+                Text("보유 캔디 \(remainingGenerations)개 · \(need)캔디 소모")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.secondary)
             }
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                if isGenerating {
-                    Text("너무 오래 떠나 있으면 결과가 사라질 수 있으니, 화면에 머무르는 것을 권장해요.")
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("보통 20~30초 정도 걸려요.")
-                        .foregroundStyle(.secondary)
-                }
-                if creationIsFree {
-                    Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
-                        .foregroundStyle(Color.withuPinkText)
-                } else if referenceImage != nil && hasFreeCreation {
-                    Text("사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요.")
-                        .foregroundStyle(.secondary)
-                } else if remainingGenerations < cost {
-                    Text("캔디가 부족해요. 충전하면 계속 만들 수 있어요.")
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("보유 캔디 \(remainingGenerations)개 · 이번 만들기 \((generateAnimated && targetState.usesGeneratedMotion) ? cost * 2 : cost)캔디")
-                        .foregroundStyle(.secondary)
-                }
+            if !isGenerating {
+                Text("보통 20~30초 정도 걸려요.")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
             }
-            .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -592,12 +601,12 @@ struct CharacterGenView: View {
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 let elapsed = Int(ctx.date.timeIntervalSince(start))
                 HStack {
-                    ProgressView()
+                    ProgressView().tint(.white)   // CTA 버튼 안이라 흰색
                     Text("그리는 중… \(elapsed)초")
                 }
             }
         } else {
-            HStack { ProgressView(); Text("그리는 중…") }
+            HStack { ProgressView().tint(.white); Text("그리는 중…") }
         }
     }
 
