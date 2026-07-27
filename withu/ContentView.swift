@@ -431,9 +431,10 @@ struct ContentView: View {
         .pixelCardSurface()
     }
 
-    /// 카드 상단 갈색(먹빛) 바 — 크림 제목 + (선택) 우측 요소.
+    /// 카드 상단 바 — 크림 제목 + (선택) 우측 요소. fill 로 바 색 지정(기본 갈색).
     @ViewBuilder
     private func cardHeaderBar<Trailing: View>(title: LocalizedStringKey,
+                                               fill: Color = .withuPixelOutline,
                                                @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack {
             Text(title)
@@ -444,7 +445,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color.withuPixelOutline)
+        .background(fill)
     }
 
     /// 단색 도트 아이콘 버전 (활동분·kcal·수면).
@@ -581,7 +582,7 @@ struct ContentView: View {
 
     private var watchStatusCard: some View {
         VStack(spacing: 0) {
-            cardHeaderBar(title: "Apple Watch") {
+            cardHeaderBar(title: "Apple Watch", fill: .withuSage) {
                 HStack(spacing: 8) {
                     if let last = connectivity.lastSentAt {
                         Text(last.formatted(date: .omitted, time: .shortened))
