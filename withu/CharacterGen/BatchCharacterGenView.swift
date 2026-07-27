@@ -17,10 +17,6 @@ struct BatchCharacterGenView: View {
     /// 내 캐릭터 설명(정체성). 저장된 묘사(aiPrompt)로 시작 — 단건 생성과 공유, 비어 있으면 빈 칸.
     @State private var baseIdentity: String = CharacterProfileStore.load().aiPrompt
 
-    @State private var stateHints: [CharacterState: String] = Dictionary(
-        uniqueKeysWithValues: CharacterState.userFacing.map { ($0, $0.generationHint) }
-    )
-
     /// 만들 상태. '기본'(idle)은 나머지의 기준 이미지라 항상 포함된다.
     @State private var selectedStates: Set<CharacterState> = Set(CharacterState.userFacing)
 
@@ -45,10 +41,7 @@ struct BatchCharacterGenView: View {
     @State private var referenceImage: UIImage?
 
     /// state 별 개별 참고 이미지. 있으면 전체 reference 보다 우선.
-    @State private var stateReferenceImages: [CharacterState: UIImage] = [:]
-    @State private var stateReferencePickerItems: [CharacterState: PhotosPickerItem] = [:]
     /// 상태 사진 자리를 눌러 '앨범' 선택 시 뜨는 시스템 사진 피커 — 어느 상태용인지.
-    @State private var albumPickerForState: CharacterState?
     @State private var albumPickerItem: PhotosPickerItem?
     /// 움직임 설명 '?' 팝오버.
     /// '기본'은 끌 수 없다는 안내
@@ -162,13 +155,7 @@ struct BatchCharacterGenView: View {
 
     private enum GalleryRefTarget: Identifiable {
         case global
-        case state(CharacterState)
-        var id: String {
-            switch self {
-            case .global: return "global"
-            case .state(let s): return s.rawValue
-            }
-        }
+        var id: String { "global" }
     }
 
     // MARK: - Body
@@ -260,16 +247,10 @@ struct BatchCharacterGenView: View {
                            onDone: { cropped in target.onDone(cropped); cropTarget = nil },
                            onCancel: { cropTarget = nil })
         }
-        .sheet(item: $galleryRefTarget) { target in
+        .sheet(item: $galleryRefTarget) { _ in
             GalleryReferencePicker { img in
-                switch target {
-                case .global:
-                    referenceImage = img
-                    photoPickerItem = nil
-                case .state(let state):
-                    stateReferenceImages[state] = img
-                    stateReferencePickerItems.removeValue(forKey: state)
-                }
+                referenceImage = img
+                photoPickerItem = nil
             }
         }
         .alert("다 만들었어요", isPresented: $showFinishedAlert) {
@@ -306,18 +287,6 @@ struct BatchCharacterGenView: View {
         .onChange(of: subjectField) { _, _ in composeFromHelper() }
         .onChange(of: looksField) { _, _ in composeFromHelper() }
         .onChange(of: colorField) { _, _ in composeFromHelper() }
-        // 상태 사진 자리 → '앨범' 선택 시 뜨는 시스템 사진 피커.
-        .photosPicker(isPresented: Binding(
-            get: { albumPickerForState != nil },
-            set: { if !$0 { albumPickerForState = nil } }
-        ), selection: $albumPickerItem, matching: .images)
-        .onChange(of: albumPickerItem) { _, item in
-            guard let state = albumPickerForState, let item else { return }
-            stateReferencePickerItems[state] = item
-            Task { await loadStateReference(state, item: item) }
-            albumPickerItem = nil
-            albumPickerForState = nil
-        }
         .sheet(item: Binding(
             get: { selectedResult.map { ResultSelection(state: $0.state, image: $0.image) } },
             set: { _ in selectedResult = nil }
@@ -480,70 +449,48 @@ struct BatchCharacterGenView: View {
 
     @ViewBuilder
     private func stateRow(_ state: CharacterState) -> some View {
-        DisclosureGroup {
-            // 사진이 먼저, 이어서 프롬프트 — 한 행으로 묶어 사이에 구분선이 안 생기게.
-            VStack(alignment: .leading, spacing: 12) {
-                statePhoto(state)
-                TextEditor(text: Binding(
-                    get: { stateHints[state] ?? state.generationHint },
-                    set: { stateHints[state] = $0 }
+        HStack(spacing: 8) {
+            if state == .idle {
+                // '기본'은 나머지 모습의 기준(앵커)이라 끌 수 없다.
+                // 비활성 토글은 탭을 안 먹어서, Button 으로 가로채 이유를 알려준다.
+                Button {
+                    showIdleLockedInfo = true
+                } label: {
+                    Toggle("", isOn: .constant(true))
+                        .labelsHidden()
+                        .allowsHitTesting(false)
+                }
+                .buttonStyle(.borderless)
+                .fixedSize()
+            } else {
+                Toggle("", isOn: Binding(
+                    get: { selectedStates.contains(state) },
+                    set: { on in
+                        if on { selectedStates.insert(state) } else { selectedStates.remove(state) }
+                    }
                 ))
-                .frame(minHeight: 60)
-                .font(.pretendard(13, relativeTo: .footnote))
+                .labelsHidden()
+                .fixedSize()
                 .disabled(isGenerating)
             }
-            .padding(.vertical, 4)
 
-            Button("기본값으로 되돌리기") {
-                stateHints[state] = state.generationHint
+            Text(state.koreanShortLabel)
+                .strikethrough(state != .idle && !selectedStates.contains(state))
+
+            if state == .idle {
+                Text("기준")
+                    .font(.pretendard(11, relativeTo: .caption2))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color.withuSage.opacity(0.22), in: Capsule())
+                    .foregroundStyle(Color.withuPinkText)
             }
-            .font(.pretendard(13, relativeTo: .footnote))
-            .disabled(isGenerating)
-        } label: {
-            HStack(spacing: 8) {
-                if state == .idle {
-                    // '기본'은 나머지 모습의 기준(앵커)이라 끌 수 없다.
-                    // 그냥 비활성 토글로 두면 탭이 DisclosureGroup 으로 흘러가 행이 펼쳐진다 —
-                    // Button 으로 탭을 가로채 이유를 알려준다.
-                    Button {
-                        showIdleLockedInfo = true
-                    } label: {
-                        Toggle("", isOn: .constant(true))
-                            .labelsHidden()
-                            .allowsHitTesting(false)
-                    }
-                    .buttonStyle(.borderless)
-                    .fixedSize()
-                } else {
-                    Toggle("", isOn: Binding(
-                        get: { selectedStates.contains(state) },
-                        set: { on in
-                            if on { selectedStates.insert(state) } else { selectedStates.remove(state) }
-                        }
-                    ))
-                    .labelsHidden()
-                    .fixedSize()
-                    .disabled(isGenerating)
-                }
 
-                Text(state.koreanShortLabel)
-                    .strikethrough(state != .idle && !selectedStates.contains(state))
-
-                if state == .idle {
-                    Text("기준")
-                        .font(.pretendard(11, relativeTo: .caption2))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.withuSage.opacity(0.22), in: Capsule())
-                        .foregroundStyle(Color.withuPinkText)
-                }
-
-                // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시. (설명 '?'는 섹션 헤더에)
-                if state.usesGeneratedMotion {
-                    motionPill(state)
-                }
-                Spacer()
-                resultBadge(state)
+            // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시. (설명 '?'는 섹션 헤더에)
+            if state.usesGeneratedMotion {
+                motionPill(state)
             }
+            Spacer()
+            resultBadge(state)
         }
     }
 
@@ -563,45 +510,6 @@ struct BatchCharacterGenView: View {
         }
         .buttonStyle(.borderless)
         .disabled(isGenerating)
-    }
-
-    /// 상태 사진 자리 — 누르면 앨범/내 캐릭터 선택. 넣은 사진이 있으면 썸네일 + 빼기.
-    @ViewBuilder
-    private func statePhoto(_ state: CharacterState) -> some View {
-        HStack(spacing: 10) {
-            Menu {
-                Button { albumPickerForState = state } label: {
-                    Label("앨범에서 선택", systemImage: "photo.on.rectangle")
-                }
-                Button { galleryRefTarget = .state(state) } label: {
-                    Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
-                }
-            } label: {
-                if let ref = stateReferenceImages[state] {
-                    Image(uiImage: ref).resizable().scaledToFill()
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                } else {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.secondary.opacity(0.15))
-                        .frame(width: 56, height: 56)
-                        .overlay(Image(systemName: "photo.badge.plus")
-                            .foregroundStyle(.secondary))
-                }
-            }
-            .disabled(isGenerating)
-
-            if stateReferenceImages[state] != nil {
-                Button("사진 빼기", role: .destructive) {
-                    stateReferenceImages.removeValue(forKey: state)
-                    stateReferencePickerItems.removeValue(forKey: state)
-                }
-                .font(.pretendard(11, relativeTo: .caption2))
-                .buttonStyle(.bordered)
-                .disabled(isGenerating)
-            }
-            Spacer(minLength: 0)
-        }
     }
 
     @ViewBuilder
@@ -975,7 +883,7 @@ struct BatchCharacterGenView: View {
 
     /// 전체 참고 사진 또는 상태별 참고 사진이 하나라도 있는지.
     private var hasAnyReferenceImage: Bool {
-        referenceImage != nil || !stateReferenceImages.isEmpty
+        referenceImage != nil
     }
 
     private var startSection: some View {
@@ -1386,19 +1294,10 @@ struct BatchCharacterGenView: View {
 
     // MARK: - Actions
 
-    /// state 의 reference base64 결정. state 별 > 공통 > nil.
+    /// 사용자가 넣은 '참고 사진'(전체) base64. idle 앵커는 제외.
     /// startBatch / retryOne 양쪽에서 사용.
-    /// 사용자가 직접 넣은 참고사진만 (상태별 → 전역). idle 앵커는 제외.
     private func resolveUserReference(for state: CharacterState) -> String? {
-        if let img = stateReferenceImages[state], let data = img.pngData() {
-            return data.base64EncodedString()
-        }
-        return referenceImage?.pngData()?.base64EncodedString()
-    }
-
-    /// 나머지 상태용: 그 상태에 '명시적으로' 첨부한 사진만 (전역 사진 X). 없으면 nil → 호출부가 idle 앵커 사용.
-    private func perStateReferenceB64(for state: CharacterState) -> String? {
-        stateReferenceImages[state]?.pngData()?.base64EncodedString()
+        referenceImage?.pngData()?.base64EncodedString()
     }
 
     /// 승인된 idle 앵커 base64 — 나머지 상태의 일관성 기준. 앱 재시작 후엔 디스크에서 복구.
@@ -1409,13 +1308,13 @@ struct BatchCharacterGenView: View {
 
     /// 참고사진 '그대로 둘 것' — 사용자 참고사진이 실제로 쓰일 때만(idle 앵커엔 미적용).
     private func userRefKeep(for state: CharacterState) -> String {
-        guard stateReferenceImages[state] != nil || referenceImage != nil else { return "" }
+        guard referenceImage != nil else { return "" }
         return referenceKeep.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// 참고사진 '바꿀 것' — 모든 상태의 포즈에 더해 적용. 사용자 참고사진 쓸 때만.
     private func userRefChange(for state: CharacterState) -> String {
-        guard stateReferenceImages[state] != nil || referenceImage != nil else { return "" }
+        guard referenceImage != nil else { return "" }
         return referenceChange.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -1495,12 +1394,10 @@ struct BatchCharacterGenView: View {
                 wantsFrame1: false, frame1Prompt: nil))
         }
         // 나머지 선택 상태 (idle 제외) — 승인한 idle 앵커가 기준.
-        // (전역 첨부사진·keep/change 는 idle 만들 때만 반영됨. 그 상태에 명시적으로 붙인
-        //  사진이 있으면 그 상태만 예외로 그 사진을 참고.)
+        // (전역 첨부사진·keep/change 는 idle 만들 때만 반영됨.)
         let rest = CharacterState.allCases.filter { selectedStates.contains($0) && $0 != .idle }
         for state in rest {
-            let perStatePhoto = perStateReferenceB64(for: state)
-            let refB64 = perStatePhoto ?? anchorB64
+            let refB64 = anchorB64
             // 미세 모션 상태는 2프레임 생성 안 함 — 절차적 모션으로 애니메이션(색·이목구비 드리프트 방지)
             let animated = animatedStates.contains(state) && state.usesGeneratedMotion
             specs.append(BackgroundGenJobSpec(
@@ -1509,8 +1406,8 @@ struct BatchCharacterGenView: View {
                 referenceB64: refB64, frame0Reference: nil,
                 wantsFrame1: animated,
                 frame1Prompt: animated ? buildPrompt(for: state, consistencyPrefix: true, frame: 1) : nil,
-                // 앵커 기반이면 idle 색에 통일. 상태별 명시 사진을 쓴 상태는 그 사진 색 존중.
-                matchIdleColor: perStatePhoto == nil))
+                // 앵커 기반이라 idle 색에 통일.
+                matchIdleColor: true))
         }
         // 만들 게 없음 (idle 만 선택 + 움직임 없음) — 즉시 완료 처리.
         guard !specs.isEmpty else {
@@ -1607,7 +1504,7 @@ struct BatchCharacterGenView: View {
             remainingGenerations = GenerationQuota.remainingToday()
         }
         errors.removeValue(forKey: .idle)
-        let pose = stateHints[.idle] ?? CharacterState.idle.generationHint
+        let pose = CharacterState.idle.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = desc.isEmpty ? pose : "\(desc), \(pose)"
         let prompt = "\(base). User modification: \(trimmed). Transparent background — only the character, no background fill, no shadows."
@@ -1655,7 +1552,7 @@ struct BatchCharacterGenView: View {
     private func retryOne(_ state: CharacterState) async {
         // 이전 에러 표시 제거 + 진행 표시 시작
         errors.removeValue(forKey: state)
-        // idle: 전역 첨부사진 + keep/change. 나머지: 승인한 idle 앵커 기준(상태별 명시 사진만 예외).
+        // idle: 전역 첨부사진 + keep/change. 나머지: 승인한 idle 앵커 기준.
         let refB64: String?
         let keep: String, change: String
         let alignIdle: Bool
@@ -1664,10 +1561,9 @@ struct BatchCharacterGenView: View {
             keep = userRefKeep(for: .idle); change = userRefChange(for: .idle)
             alignIdle = false
         } else {
-            let perStatePhoto = perStateReferenceB64(for: state)
-            refB64 = perStatePhoto ?? anchorReferenceB64()
+            refB64 = anchorReferenceB64()
             keep = ""; change = ""
-            alignIdle = perStatePhoto == nil   // 앵커 기반이면 idle 색에 통일
+            alignIdle = true   // 앵커 기반이라 idle 색에 통일
         }
         let spec = BackgroundGenJobSpec(
             state: state, frame: 0,
@@ -1700,7 +1596,7 @@ struct BatchCharacterGenView: View {
     /// frame == 0: 기본. frame == 1: 애니메이션용 (frame 0 을 reference 로 chain + 다른 포즈).
     private func buildPrompt(for state: CharacterState, consistencyPrefix: Bool,
                              keepNote: String = "", changeNote: String = "", frame: Int = 0) -> String {
-        let pose = stateHints[state] ?? state.generationHint
+        let pose = state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let keepClause = keepNote.isEmpty ? "" : " Keep especially: \(keepNote)."
         // '바꿀 것'은 상태별 포즈에 '추가'로 적용 (포즈는 상태마다 다르므로 대체가 아니라 더함).
@@ -2056,7 +1952,7 @@ struct BatchCharacterGenView: View {
         }
         let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
             ?? anchor?.pngData()?.base64EncodedString()
-        let pose = stateHints[state] ?? state.generationHint
+        let pose = state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let basePrompt = desc.isEmpty ? pose : "\(desc), \(pose)"
         var modifiedPrompt = "\(basePrompt). User modification: \(trimmed)"
@@ -2218,20 +2114,6 @@ struct BatchCharacterGenView: View {
             }
         } catch {
             // 조용히 무시
-        }
-    }
-
-    /// state 별 참고 이미지를 PhotosPickerItem 에서 로드해 dict 에 저장.
-    private func loadStateReference(_ state: CharacterState, item: PhotosPickerItem) async {
-        do {
-            if let data = try await item.loadTransferable(type: Data.self),
-               let img = UIImage(data: data) {
-                cropTarget = CropTarget(image: img) { cropped in
-                    stateReferenceImages[state] = cropped
-                }
-            }
-        } catch {
-            // 조용히 무시 — 사용자가 다시 선택하면 됨
         }
     }
 
