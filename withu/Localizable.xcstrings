@@ -63,6 +63,7 @@
       }
     },
     "'%@' 배경으로 적용하기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -92,6 +93,16 @@
         }
       }
     },
+    "'기본' 상태는 생략할 수 없어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "'Default' can't be skipped"
+          }
+        }
+      }
+    },
     "'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요." : {
       "localizations" : {
         "en" : {
@@ -106,6 +117,7 @@
 
     },
     "'기본'은 항상 만들어요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -246,6 +258,7 @@
       }
     },
     "%@ 배경을 적용했어요. 그 날씨일 때 홈 화면·위젯·워치에 보여요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -296,6 +309,7 @@
       }
     },
     "%@ 캐릭터" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1011,9 +1025,6 @@
     "Pixel" : {
 
     },
-    "soft" : {
-
-    },
     "Soft" : {
 
     },
@@ -1177,9 +1188,6 @@
         }
       }
     },
-    "갤러리와 홈 화면에서 이 이름으로 보여요." : {
-
-    },
     "거부됨" : {
       "localizations" : {
         "en" : {
@@ -1318,6 +1326,7 @@
       }
     },
     "결과" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1441,6 +1450,7 @@
 
     },
     "고른 캐릭터의 생김새를 이어받아 진화한 모습을 그려요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1650,6 +1660,7 @@
       }
     },
     "기본값으로 되돌리기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1832,6 +1843,7 @@
       }
     },
     "날씨 배경 만들기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2457,6 +2469,16 @@
         }
       }
     },
+    "다시 시도해 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please try again."
+          }
+        }
+      }
+    },
     "닫기" : {
       "localizations" : {
         "en" : {
@@ -2478,6 +2500,7 @@
       }
     },
     "닫으면 방금 입력한 다듬기 문구·사진이 지워져요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2486,6 +2509,9 @@
           }
         }
       }
+    },
+    "닫으면 방금 입력한 다듬기 문구가 지워져요." : {
+
     },
     "닫으면 방금 입력한 수정 문구·사진이 지워져요." : {
       "extractionState" : "stale",
@@ -3358,6 +3384,7 @@
       }
     },
     "배경 만들기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3595,6 +3622,7 @@
       }
     },
     "보통 20~30초 정도 걸려요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4119,6 +4147,7 @@
       }
     },
     "생성 중…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4139,6 +4168,7 @@
       }
     },
     "생성한 그림" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4285,6 +4315,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Refines from the selected version."
+          }
+        }
+      }
+    },
+    "선택한 캐릭터의 진화한 모습을 생성해요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates an evolved version of the character you picked"
           }
         }
       }
@@ -4753,6 +4793,7 @@
 
     },
     "실제로 사용한 설명 보기" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4956,6 +4997,16 @@
         }
       }
     },
+    "약 20~30초 소요돼요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes about 20–30 seconds."
+          }
+        }
+      }
+    },
     "어떤 모습으로 진화할지 적어 주세요" : {
       "localizations" : {
         "en" : {
@@ -5049,7 +5100,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5059,7 +5110,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5100,6 +5151,7 @@
       }
     },
     "연속 이미지" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5442,6 +5494,16 @@
         }
       }
     },
+    "움직임" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
+          }
+        }
+      }
+    },
     "움직이게 만들기" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5500,16 +5562,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
-    "움직임" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
           }
         }
       }
@@ -6003,12 +6055,6 @@
         }
       }
     },
-    "이 캐릭터의 이름" : {
-
-    },
-    "이 캐릭터의 이름 (선택)" : {
-
-    },
     "이대로 다듬기" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6044,6 +6090,17 @@
         }
       }
     },
+    "이름" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
     "이름 · 수면 · 식사 시간" : {
       "localizations" : {
         "en" : {
@@ -6054,8 +6111,28 @@
         }
       }
     },
+    "이름 (선택)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        }
+      }
+    },
     "이름 바꾸기" : {
 
+    },
+    "이름 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rename"
+          }
+        }
+      }
     },
     "이름 없는 캐릭터" : {
 
@@ -6797,6 +6874,7 @@
 
     },
     "지금 적용된 배경" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7421,6 +7499,7 @@
 
     },
     "캐릭터는 빼고 풍경만 그려요. 「밤하늘」, 「비 오는 도시 골목」처럼 자유롭게 적어주세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7871,7 +7950,18 @@
         }
       }
     },
+    "프레임 순서 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swap frame order"
+          }
+        }
+      }
+    },
     "프롬프트 복사" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8190,6 +8280,7 @@
       }
     },
     "홈 화면에서 보이는 모습" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8317,86 +8408,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "White background"
-          }
-        }
-      }
-    },
-    "이름 변경" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rename"
-          }
-        }
-      }
-    },
-    "이름" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name"
-          }
-        }
-      }
-    },
-    "다시 시도해 주세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please try again."
-          }
-        }
-      }
-    },
-    "약 20~30초 소요돼요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Takes about 20–30 seconds."
-          }
-        }
-      }
-    },
-    "이름 (선택)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name (optional)"
-          }
-        }
-      }
-    },
-    "선택한 캐릭터의 진화한 모습을 생성해요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Creates an evolved version of the character you picked"
-          }
-        }
-      }
-    },
-    "프레임 순서 바꾸기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Swap frame order"
-          }
-        }
-      }
-    },
-    "'기본' 상태는 생략할 수 없어요" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "'Default' can't be skipped"
           }
         }
       }

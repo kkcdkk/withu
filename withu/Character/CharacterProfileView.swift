@@ -32,6 +32,13 @@ struct CharacterProfileView: View {
     // (예전: computed 라 SharedAppState 가 30초 sync 전엔 옛 상태를 읽어 아바타가 안 바뀜.)
     @State private var heroState: CharacterState = SharedAppState.loadMessage()?.state ?? .idle
 
+    /// 상태별 폴더 이동 대상 — NavigationLink 다중 배치 버그 회피용.
+    private struct StateRoute: Identifiable, Hashable {
+        let state: CharacterState
+        var id: String { state.rawValue }
+    }
+    @State private var stateRoute: StateRoute?
+
     var body: some View {
         ZStack {
             backgroundGradient(for: heroState).ignoresSafeArea()
@@ -145,6 +152,9 @@ struct CharacterProfileView: View {
             }
             .scrollContentBackground(.hidden)
         }
+        .navigationDestination(item: $stateRoute) { route in
+            StateFolderView(state: route.state)
+        }
         .navigationTitle("내 캐릭터 설정")
         .navigationBarTitleDisplayMode(.inline)
         // 필터 연결 여부(focusFilterLastPerformAt)를 최신값으로 — 안내 카드 노출 판정.
@@ -244,24 +254,32 @@ struct CharacterProfileView: View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
             ForEach(CharacterState.userFacing, id: \.self) { state in
-                NavigationLink {
-                    StateFolderView(state: state)
+                // ⚠️ 한 행(카드) 안에 NavigationLink 를 여러 개 두면 SwiftUI 가 목적지를 잘못
+                //    짚는다(뒤로 나올 때 다른 상태의 폴더가 뜸). 상태 기반 이동으로 분리.
+                Button {
+                    stateRoute = StateRoute(state: state)
                 } label: {
                     HStack(spacing: 12) {
                         KoreanStateChip(state: state, size: 44)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(state.koreanShortLabel)
                                 .font(.pretendard(16, relativeTo: .callout))
+                                .foregroundStyle(.primary)
                             Text(CharacterImageStore.hasImage(for: state)
                                  ? String(localized: "내 캐릭터가 적용됐어요")
                                  : String(localized: "아직 기본 모습이에요"))
                                 .font(.pretendard(11, relativeTo: .caption2))
                                 .foregroundStyle(.secondary)
                         }
-                        Spacer()
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
                     .padding(.vertical, 2)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -397,7 +415,10 @@ struct CharacterProfileView: View {
             },
             set: { new in
                 let c = hourMinute(from: new)
-                profile.nightFallbackStartMinute = c.h * 60 + c.m
+                let m = c.h * 60 + c.m
+                // 표시값 그대로 다시 써 넣는 경우(미설정 → 기본값)는 무시 — 헛된 '변경' 표시 방지.
+                guard m != profile.effectiveNightFallbackStart else { return }
+                profile.nightFallbackStartMinute = m
             }
         )
     }
@@ -410,7 +431,9 @@ struct CharacterProfileView: View {
             },
             set: { new in
                 let c = hourMinute(from: new)
-                profile.nightFallbackEndMinute = c.h * 60 + c.m
+                let m = c.h * 60 + c.m
+                guard m != profile.effectiveNightFallbackEnd else { return }
+                profile.nightFallbackEndMinute = m
             }
         )
     }

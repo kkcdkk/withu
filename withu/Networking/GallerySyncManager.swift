@@ -31,6 +31,9 @@ actor GallerySyncManager {
     private static let itemOwnerKey = "withu.gallery.itemOwner.v1"
     /// 이 기기에서 로그인한 적 있는 계정 집합 — 태그 없는(legacy) 항목의 입양 판단용.
     private static let knownAccountsKey = "withu.gallery.knownAccounts.v1"
+    /// 로그인하지 않은 채 만든 항목 id — 다음 로그인 때 그 계정이 넘겨받아 업로드한다.
+    /// (넘겨받는 즉시 비우므로, 이후 다른 계정이 로그인해도 예전 것을 가져가지 않는다.)
+    private static let unownedCreationsKey = "withu.gallery.unownedCreations.v1"
 
     /// 중복 실행 방지 — 실행 중 재요청은 rerun 플래그로 모아서 끝난 뒤 한 번만 다시.
     private var isSyncing = false
@@ -118,10 +121,41 @@ actor GallerySyncManager {
             .set(Array(set), forKey: Self.knownAccountsKey)
     }
 
-    /// 새 갤러리 항목을 현재 로그인 계정으로 태깅 (비로그인 상태면 태그 없음 → 입양 규칙 적용).
+    /// 새 갤러리 항목을 현재 로그인 계정으로 태깅.
+    /// 비로그인 상태면 '주인 없는 생성분'으로 적어 두고, 다음 로그인 때 그 계정이 넘겨받는다.
     func tagItem(_ id: String) {
-        guard let account = KeychainStore.appleUserId() else { return }
+        guard let account = KeychainStore.appleUserId() else {
+            addUnownedCreation(id)
+            return
+        }
         setOwner(account, for: id)
+    }
+
+    // MARK: - 비로그인 생성분 (다음 로그인 때 인수)
+
+    private var unownedCreations: [String] {
+        UserDefaults(suiteName: SharedAppState.groupID)?
+            .stringArray(forKey: Self.unownedCreationsKey) ?? []
+    }
+
+    private func setUnownedCreations(_ ids: [String]) {
+        UserDefaults(suiteName: SharedAppState.groupID)?
+            .set(ids, forKey: Self.unownedCreationsKey)
+    }
+
+    private func addUnownedCreation(_ id: String) {
+        var ids = unownedCreations
+        guard !ids.contains(id) else { return }
+        ids.append(id)
+        setUnownedCreations(ids)
+    }
+
+    /// 로그인 계정이 비로그인 생성분을 넘겨받는다 — 목록은 즉시 비운다.
+    private func claimUnownedCreations(_ account: String) {
+        let ids = unownedCreations
+        guard !ids.isEmpty else { return }
+        for id in ids { setOwner(account, for: id) }
+        setUnownedCreations([])
     }
 
     // MARK: - Reconcile
@@ -164,7 +198,11 @@ actor GallerySyncManager {
 
         // 계정 태깅 준비 — 세션 토큰만 있고 appleUserId 가 없으면(비정상) 업로드는 건너뛴다.
         let account = KeychainStore.appleUserId()
-        if let account { registerKnownAccount(account) }
+        if let account {
+            registerKnownAccount(account)
+            // 로그인 없이 만든 항목을 이 계정이 넘겨받음 → 아래 루프에서 한꺼번에 업로드된다.
+            claimUnownedCreations(account)
+        }
         // 태그 없는(legacy — 기능 도입 전/비로그인 생성) 항목 입양 조건:
         // 이 기기가 지금 계정만 본 경우에만. 다른 계정을 본 적 있으면 그 계정 것일 수 있어 업로드 금지.
         let adoptAllowed = account.map { knownAccounts == [$0] } ?? false
