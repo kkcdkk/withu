@@ -735,23 +735,18 @@ struct CharacterGenView: View {
 
     /// 생성 중 결과 자리 — 이전 사진 대신 '만드는 중'. (배치의 상태별 placeholder 와 같은 역할)
     private var generatingPlaceholder: some View {
-        VStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.secondary.opacity(0.12))
-                .frame(height: 220)
-                .overlay {
-                    VStack(spacing: 8) {
-                        ProgressView()
-                        Text("만드는 중…")
-                            .font(.pretendard(13, relativeTo: .footnote))
-                            .foregroundStyle(.secondary)
-                    }
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color.secondary.opacity(0.12))
+            .frame(height: 220)
+            .overlay {
+                VStack(spacing: 8) {
+                    ProgressView()
+                    Text("만드는 중…")
+                        .font(.pretendard(13, relativeTo: .footnote))
+                        .foregroundStyle(.secondary)
                 }
-            Text("다 되면 여기에 새 캐릭터가 나와요.")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
