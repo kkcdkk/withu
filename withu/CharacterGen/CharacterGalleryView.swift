@@ -243,18 +243,23 @@ struct CharacterGalleryView: View {
                 selectedCharacterIDs.insert(group.batchId)
             }
         }
-        .onLongPressGesture {
-            if !isCharacterSelectionMode {
+        // NavigationLink 가 탭 제스처를 먼저 먹어서 onLongPressGesture 가 안 걸린다 —
+        // simultaneousGesture 로 링크와 나란히 인식시켜야 꾹 누르기가 동작.
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                guard !isCharacterSelectionMode else { return }
                 isCharacterSelectionMode = true
                 selectedCharacterIDs = [group.batchId]
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
-        }
+        )
     }
 
     /// 캐릭터 상세(모습 그리드) 상단 — '모두 적용' 버튼.
     /// 확인 알럿을 이 뷰에 붙여야 (랜딩이 아니라) 푸시된 상세 화면에서 뜬다.
     private func characterDetailHeader(_ group: (batchId: String, createdAt: Date, items: [GalleryItem])) -> some View {
-        CharacterApplyHeader(items: group.items, apply: applyCharacter)
+        CharacterApplyHeader(batchId: group.batchId, items: group.items,
+                             apply: applyCharacter, onRename: refresh)
     }
 
     /// 대표 썸네일 — idle 있으면 idle, 없으면 첫 항목.
@@ -521,24 +526,65 @@ struct StateFolderView: View {
 
 /// 캐릭터 상세 상단의 '모두 적용' 버튼 — 확인 알럿을 자기 자신에 붙여 푸시된 화면에서 뜨게 한다.
 private struct CharacterApplyHeader: View {
+    let batchId: String
     let items: [GalleryItem]
     let apply: ([GalleryItem]) -> Void
+    /// 이름을 바꾼 뒤 목록을 새로 읽게 하는 콜백.
+    let onRename: () -> Void
     @State private var confirm = false
+    @State private var showRename = false
+    @State private var nameDraft = ""
+
+    /// 이 캐릭터가 지금 어느 자리엔가 적용 중인지 — 그렇다면 '내 캐릭터' 이름과도 연동한다.
+    private var isApplied: Bool {
+        items.contains { !CharacterImageStore.statesUsingGalleryItem($0.id).isEmpty }
+    }
 
     var body: some View {
-        Button {
-            confirm = true
-        } label: {
-            Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
-                .frame(maxWidth: .infinity)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Text(CharacterImageStore.characterName(for: batchId) ?? String(localized: "이름 없는 캐릭터"))
+                    .font(.pretendard(16, relativeTo: .callout))
+                    .foregroundStyle(CharacterImageStore.characterName(for: batchId) == nil ? .secondary : .primary)
+                Spacer(minLength: 8)
+                Button {
+                    nameDraft = CharacterImageStore.characterName(for: batchId) ?? ""
+                    showRename = true
+                } label: {
+                    Label("이름 바꾸기", systemImage: "pencil")
+                        .font(.pretendard(13, relativeTo: .footnote))
+                }
+                .buttonStyle(.borderless)
+            }
+
+            Button {
+                confirm = true
+            } label: {
+                Label("이 캐릭터로 모두 적용", systemImage: "square.and.arrow.down.on.square.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WithuCTAButtonStyle())
         }
-        .buttonStyle(WithuCTAButtonStyle())
         .padding(.bottom, 4)
         .alert("이 캐릭터로 모두 적용할까요?", isPresented: $confirm) {
             Button("모두 적용") { apply(items) }
             Button("취소", role: .cancel) {}
         } message: {
             Text("\(items.count)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
+        }
+        .alert("캐릭터 이름", isPresented: $showRename) {
+            TextField("이 캐릭터의 이름", text: $nameDraft)
+            Button("저장") {
+                CharacterImageStore.setCharacterName(nameDraft, for: batchId)
+                // 지금 적용 중인 캐릭터면 '내 캐릭터 설정'의 이름과도 연동.
+                if isApplied { CharacterProfileStore.syncName(nameDraft) }
+                onRename()
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text(isApplied
+                 ? String(localized: "지금 적용 중인 캐릭터예요. 바꾸면 '내 캐릭터 설정'의 이름도 같이 바뀌어요.")
+                 : String(localized: "갤러리와 홈 화면에서 이 이름으로 보여요."))
         }
     }
 }

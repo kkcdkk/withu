@@ -428,15 +428,16 @@ struct ContentView: View {
 
                 if !activityMessage.text.isEmpty {
                     HStack(spacing: 6) {
+                        Text(activityMessage.text)
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        // 아이콘은 문구 뒤에 — 앞에 있으면 문장 시작이 가려 보인다.
                         if let asset = activityMessage.asset {
                             Image(asset)
                                 .resizable().interpolation(.none).scaledToFit()
                                 .frame(width: 18, height: 18)
                         }
-                        Text(activityMessage.text)
-                            .font(.pretendard(11, relativeTo: .caption2))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, 14)
                 }
