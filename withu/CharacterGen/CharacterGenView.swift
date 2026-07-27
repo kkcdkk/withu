@@ -135,6 +135,8 @@ struct CharacterGenView: View {
         var id: String { rawValue }
     }
     @State private var scopeDestination: GenScope?
+    /// '움직이는 캐릭터' 도움말 알럿 (배치와 동일)
+    @State private var showMotionInfo: Bool = false
     /// 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택)
     @State private var characterName: String = ""
 
@@ -145,10 +147,13 @@ struct CharacterGenView: View {
             Form {
                 if singleFormOnly {
                     // '하나씩 만들기' 하위 화면 — 단건 생성 폼 전체
-                    stateSection
-                    promptSection       // 1. 캐릭터 설명
-                    referenceSection    // 2. 참고 사진
-                    optionsSection      // 3. 스타일
+                    // 순서·형식 모두 '여러 모습 만들기'와 동일하게 유지할 것.
+                    stateSection            // 만들고 싶은 상태
+                    motionSection           // 움직이는 캐릭터
+                    nameSection             // 캐릭터 이름
+                    promptSection           // 캐릭터 프롬프트
+                    referenceSection        // 참고 사진
+                    optionsSection          // 스타일
                     generateButtonSection   // 만들기
                     resultSection
                     refinementSection
@@ -349,11 +354,6 @@ struct CharacterGenView: View {
             }
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
-            // 움직임 지원 상태면 여기서 움직이는 이미지로 만들지 선택.
-            if targetState.usesGeneratedMotion {
-                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
-                    .disabled(isGenerating || isProcessing)
-            }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -361,8 +361,80 @@ struct CharacterGenView: View {
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
-            Text("상태 선택")
+            Text("만들고 싶은 상태")
                 .font(.pretendardBold(16, relativeTo: .callout))
+        } footer: {
+            // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시. (배치와 동일)
+            if !targetState.usesGeneratedMotion {
+                Text("\(GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// 움직이는 캐릭터 — '여러 모습 만들기' 와 같은 형식(별도 섹션 + 도움말 + 캔디 소모).
+    @ViewBuilder
+    private var motionSection: some View {
+        if targetState.usesGeneratedMotion {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
+                    .disabled(isGenerating || isProcessing)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .plainCard()
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .listRowBackground(Color.clear)
+            } header: {
+                HStack(spacing: 6) {
+                    Text("움직이는 캐릭터")
+                        .font(.pretendardBold(16, relativeTo: .callout))
+                    Button { showMotionInfo = true } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.pretendard(12, relativeTo: .caption))
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                }
+            } footer: {
+                Text("\(generateAnimated ? GenerationQuota.cost(forQuality: quality) * 2 : GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            }
+            .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text("2장으로 구성해서 메인 화면에서 움직이는 캐릭터를 만들어요.")
+            }
+        }
+    }
+
+    /// 캐릭터 이름 — '여러 모습 만들기' 와 같은 위치·형식.
+    private var nameSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+            TextField("이 캐릭터의 이름 (선택)", text: $characterName)
+                .font(.pretendard(16, relativeTo: .callout))
+                .disabled(isGenerating)
+                .submitLabel(.done)
+                .onChange(of: characterName) { _, new in
+                    // 생성 후 이름을 바꿔도 이미 저장된 캐릭터에 반영 (같은 currentSessionId).
+                    CharacterImageStore.setCharacterName(new, for: currentSessionId)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .plainCard()
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .listRowBackground(Color.clear)
+        } header: {
+            Text("캐릭터 이름")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        } footer: {
+            Text("갤러리 '캐릭터별'에서 이 이름으로 보여요.")
+                .font(.pretendard(12, relativeTo: .caption))
         }
     }
 
@@ -646,7 +718,7 @@ struct CharacterGenView: View {
     @ViewBuilder
     private var resultSection: some View {
         if resultImage != nil {
-            Section(header: Text("결과").font(.pretendardBold(16, relativeTo: .callout))) {
+            Section(header: Text("만들어진 모습").font(.pretendardBold(16, relativeTo: .callout))) {
                 VStack(alignment: .leading, spacing: 12) {
                 // 다듬은 버전인지 표시 — 원본과 헷갈리지 않게.
                 if versions.indices.contains(selectedVersion), versions[selectedVersion].isRefined {
@@ -736,20 +808,6 @@ struct CharacterGenView: View {
                         Task { await saveToPhotos(img) }
                     }
                     .tint(.secondary)
-
-                    Divider()
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("이 캐릭터의 이름 (선택)")
-                            .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                        TextField("이름", text: $characterName)
-                            .font(.pretendard(16, relativeTo: .callout))
-                            .submitLabel(.done)
-                            .onChange(of: characterName) { _, new in
-                                CharacterImageStore.setCharacterName(new, for: currentSessionId)
-                            }
-                        Text("갤러리 '캐릭터별'에 이 이름으로 보여요.")
-                            .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.tertiary)
-                    }
                 }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1140,7 +1198,8 @@ struct CharacterGenView: View {
         resultFrame2 = nil
         singleDetailFrame = 0
         currentSessionId = UUID().uuidString   // 새 원본 → 새 수정 체인
-        characterName = ""                     // 새 캐릭터 → 이름 초기화
+        // 이름은 생성 '전'에 입력받으므로 지우지 않고 새 세션으로 옮겨 저장 (배치와 동일).
+        CharacterImageStore.setCharacterName(characterName, for: currentSessionId)
 
         // 새 생성 — 이전 투명(배경 제거) 캐시 무효화. 안 그러면 '배경 빼기' 보기에 옛 이미지가 남음.
         transparentResult = nil
