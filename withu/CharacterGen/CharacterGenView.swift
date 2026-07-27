@@ -128,6 +128,13 @@ struct CharacterGenView: View {
     /// 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용.
     /// 갤러리 '캐릭터별' batchId 로도 재사용 — 한 세션의 결과가 한 캐릭터로 묶임.
     @State private var currentSessionId: String = UUID().uuidString
+    /// '생성 방식' 이동 대상 — NavigationLink 를 한 행에 2개 두면 SwiftUI 가 목적지를
+    /// 잘못 짚어서(단건에서 나올 때 배치가 뜸) 상태 기반 이동으로 분리했다.
+    private enum GenScope: String, Identifiable, Hashable {
+        case batch, single
+        var id: String { rawValue }
+    }
+    @State private var scopeDestination: GenScope?
     /// 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택)
     @State private var characterName: String = ""
 
@@ -157,6 +164,12 @@ struct CharacterGenView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+        }
+        .navigationDestination(item: $scopeDestination) { scope in
+            switch scope {
+            case .batch:  BatchCharacterGenView()
+            case .single: CharacterGenView(singleFormOnly: true)
+            }
         }
         .navigationTitle(singleFormOnly ? "하나씩 만들기" : "캐릭터 만들기")
         .toolbar {
@@ -243,29 +256,21 @@ struct CharacterGenView: View {
     /// '여러 상태 한 번에' → 배치 화면, '하나씩' → 단건 생성 폼 화면.
     private var scopeSection: some View {
         Section {
+            // ⚠️ NavigationLink 를 한 행(카드 VStack) 안에 2개 넣으면 SwiftUI 가 목적지를
+            //    잘못 짚는다(단건에서 나올 때 배치가 뜨는 버그). 상태 기반 이동으로 분리.
             VStack(alignment: .leading, spacing: 12) {
-            NavigationLink {
-                BatchCharacterGenView()
+            Button {
+                scopeDestination = .batch
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("여러 상태 한 번에 만들기")
-                        .font(.pretendard(16, relativeTo: .callout))
-                    Text("모든 상태의 모습을 한번에 만들어요")
-                        .font(.pretendard(11, relativeTo: .caption2))
-                        .foregroundStyle(.secondary)
-                }
+                scopeRow(title: "여러 상태 한 번에 만들기", subtitle: "모든 상태의 모습을 한번에 만들어요")
             }
-            NavigationLink {
-                CharacterGenView(singleFormOnly: true)
+            .buttonStyle(.plain)
+            Button {
+                scopeDestination = .single
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("하나씩 만들기")
-                        .font(.pretendard(16, relativeTo: .callout))
-                    Text("원하는 상태 하나만 만들어요")
-                        .font(.pretendard(11, relativeTo: .caption2))
-                        .foregroundStyle(.secondary)
-                }
+                scopeRow(title: "하나씩 만들기", subtitle: "원하는 상태 하나만 만들어요")
             }
+            .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -276,6 +281,25 @@ struct CharacterGenView: View {
             Text("생성 방식")
                 .font(.pretendardBold(16, relativeTo: .callout))
         }
+    }
+
+    /// 생성 방식 행 — 제목 + 부제 + 오른쪽 chevron (NavigationLink 와 같은 모양).
+    private func scopeRow(title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.pretendard(16, relativeTo: .callout))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.pretendard(11, relativeTo: .caption2))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
     }
 
     private var modeSection: some View {
