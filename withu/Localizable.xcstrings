@@ -8421,6 +8421,16 @@
           }
         }
       }
+    },
+    "진화 %lld단계" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolution stage %lld"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

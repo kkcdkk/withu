@@ -10,7 +10,9 @@ import SwiftUI
 
 struct GalleryReferencePicker: View {
     /// 선택된 갤러리 이미지 (원본 로드본).
-    var onPick: (UIImage) -> Void
+    var onPick: (UIImage) -> Void = { _ in }
+    /// 이미지와 함께 어느 항목인지도 필요할 때 (이름·batchId 활용). 있으면 onPick 대신 호출.
+    var onPickItem: ((GalleryItem, UIImage) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var items: [GalleryItem] = []
@@ -59,7 +61,7 @@ struct GalleryReferencePicker: View {
     private func cell(for item: GalleryItem) -> some View {
         if let img = CharacterImageStore.loadGalleryImage(id: item.id) {
             Button {
-                onPick(img)
+                if let onPickItem { onPickItem(item, img) } else { onPick(img) }
                 dismiss()
             } label: {
                 VStack(spacing: 4) {

@@ -16,7 +16,8 @@ struct CharacterEvolveView: View {
 
     @State private var targetState: CharacterState = .idle
     @State private var characterName: String = ""
-    @State private var evolvePrompt: String = ""
+    /// 고른 원본의 진화 단계 — 이름 뒤 '진화 N단계' 를 읽어서 다음 단계를 정한다.
+    @State private var sourceStage: Int = 0
 
     @State private var isGenerating: Bool = false
     @State private var generateTask: Task<Void, Never>?
@@ -44,9 +45,16 @@ struct CharacterEvolveView: View {
 
     private static let resultAnchor = "withu.evolve.result"
 
-    private var canGenerate: Bool {
-        sourceImage != nil
-            && !evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var canGenerate: Bool { sourceImage != nil }
+
+    /// 이번에 만들 진화 단계 (원본이 '진화 2단계'면 3).
+    private var nextStage: Int { sourceStage + 1 }
+
+    /// 결과에 붙일 이름 — '(이름)-진화 N단계'.
+    private var evolvedName: String {
+        let base = characterName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return base.isEmpty ? String(localized: "진화 \(nextStage)단계")
+                            : "\(base)-진화 \(nextStage)단계"
     }
 
     var body: some View {
@@ -58,7 +66,6 @@ struct CharacterEvolveView: View {
                     sourceSection
                     stateSection
                     nameSection
-                    promptSection
                     generateButtonSection
                     resultSection
                 }
@@ -76,7 +83,10 @@ struct CharacterEvolveView: View {
         .scrollDismissesKeyboard(.interactively)
         .onAppear { remainingGenerations = GenerationQuota.remainingToday() }
         .sheet(isPresented: $showGalleryPicker) {
-            GalleryReferencePicker { img in sourceImage = img }
+            GalleryReferencePicker(onPickItem: { item, img in
+                sourceImage = img
+                applySource(item)
+            })
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(onClose: {
@@ -183,9 +193,10 @@ struct CharacterEvolveView: View {
                     .font(.pretendard(16, relativeTo: .callout))
                     .disabled(isGenerating)
                     .submitLabel(.done)
-                    .onChange(of: characterName) { _, new in
-                        CharacterImageStore.setCharacterName(new, for: sessionId)
-                    }
+                // 갤러리에 저장될 이름 — 원본 이름을 이어받아 단계를 붙인다.
+                Text(evolvedName)
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -198,38 +209,7 @@ struct CharacterEvolveView: View {
         }
     }
 
-    /// 4. 원하는 진화의 모습
-    private var promptSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                TextEditor(text: $evolvePrompt)
-                    .frame(minHeight: 80)
-                    .font(.pretendard(16, relativeTo: .callout))
-                    .overlay(alignment: .topLeading) {
-                        if evolvePrompt.isEmpty {
-                            Text("어떤 모습으로 진화할지 적어 주세요")
-                                .font(.pretendard(16, relativeTo: .callout))
-                                .foregroundStyle(.tertiary)
-                                .padding(.top, 8)
-                                .padding(.leading, 5)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                    .pixelInputField()
-                    .disabled(isGenerating)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .plainCard()
-            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-            .listRowBackground(Color.clear)
-        } header: {
-            Text("원하는 진화의 모습")
-                .font(.pretendardBold(16, relativeTo: .callout))
-        }
-    }
-
-    /// 5. 만들기 — '하나씩 만들기'의 만들기 섹션과 같은 구조·문구.
+    /// 4. 만들기 — '하나씩 만들기'의 만들기 섹션과 같은 구조·문구.
     private var generateButtonSection: some View {
         Section {
             Button {
@@ -271,10 +251,6 @@ struct CharacterEvolveView: View {
             } else if sourceImage == nil {
                 // 왜 못 누르는지 알려준다 — 버튼만 비활성이면 이유를 모름.
                 Text("진화시킬 캐릭터를 골라 주세요.")
-                    .font(.pretendard(13, relativeTo: .footnote))
-                    .foregroundStyle(.orange)
-            } else if !canGenerate {
-                Text("원하는 진화의 모습을 적어 주세요.")
                     .font(.pretendard(13, relativeTo: .footnote))
                     .foregroundStyle(.orange)
             } else {
@@ -418,16 +394,68 @@ struct CharacterEvolveView: View {
 
     // MARK: - Actions
 
-    /// 서버로 보낼 프롬프트 = 이름 + 진화 모습 + 기존 캐릭터(참고 이미지) + 상태 포즈.
-    private var composedPrompt: String {
+    /// 고른 원본에서 이름과 진화 단계를 이어받는다.
+    /// '위디-진화 2단계' 를 고르면 base='위디', stage=2 → 결과는 '위디-진화 3단계'.
+    private func applySource(_ item: GalleryItem) {
+        guard let batchId = item.batchId,
+              let full = CharacterImageStore.characterName(for: batchId), !full.isEmpty else {
+            characterName = ""
+            sourceStage = 0
+            return
+        }
+        let (base, stage) = Self.splitStage(full)
+        characterName = base
+        sourceStage = stage
+    }
+
+    /// '이름-진화 N단계' → (이름, N). 형식이 아니면 (원문, 0).
+    static func splitStage(_ name: String) -> (base: String, stage: Int) {
+        guard let range = name.range(of: "-진화 ", options: .backwards),
+              name.hasSuffix("단계") else { return (name, 0) }
+        let digits = name[range.upperBound...].dropLast(2)
+        guard let n = Int(digits), n > 0 else { return (name, 0) }
+        return (String(name[..<range.lowerBound]), n)
+    }
+
+    /// 진화 '선물' 축 — 매번 다른 걸 하나 뽑아 결과가 굳지 않게 (가챠).
+    /// 정체성(종·얼굴·색·화풍)은 건드리지 않는, 덧붙이는 성격의 변화만 둔다.
+    private static let evolutionGifts: [String] = [
+        "a subtle glow or aura tracing its outline",
+        "new markings or patterns across its body that echo its original colors",
+        "a cloak or cape that suits the world it lives in",
+        "small crystal, leaf, or feather growths along its back or shoulders",
+        "a badge, emblem, or small crown it clearly earned",
+        "longer, more expressive hair, fur, or tail",
+        "a trusty hand-held tool it holds with pride",
+        "a tiny companion creature or floating spirit at its side",
+        "layered armor pieces on the shoulders or arms, light and elegant",
+        "a scarf or sash that moves as if caught in the wind"
+    ]
+
+    /// 서버로 보낼 프롬프트 — 사용자 입력 없이 우리가 조립한다(가챠).
+    /// 정체성은 지키고, 더 강하고 성숙하게, 옷은 더 멋지게, 선정적이지 않게.
+    private func composedPrompt(gift: String) -> String {
         let name = characterName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let evolve = evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let named = name.isEmpty ? "" : " The character's name is \(name)."
-        return "Use the reference image. Draw an EVOLVED form of that exact character —"
-            + " keep it clearly recognizable as the same character: same art style, color palette,"
-            + " line thickness, and core design motifs.\(named)"
-            + " Show the evolution: \(evolve)."
-            + " Pose and scene: \(targetState.generationHint)."
+        return """
+        Use the reference image. Draw the SAME character in an EVOLVED, more advanced form \
+        (evolution stage \(nextStage) — the higher the stage, the grander the presence).\(named)
+
+        KEEP (identity, non-negotiable): the same species and body plan, the same face structure and \
+        expression style, the same core color palette, the same art style, line thickness, and the \
+        signature design motifs. Someone who knows the original must recognize this at a glance as \
+        the same character, grown up.
+
+        EVOLVE (must visibly change): make it stronger and more mature — a confident, capable presence. \
+        Sharper silhouette, better proportions, richer detail and shading. If it wears clothing, upgrade \
+        the outfit into a cooler, better-crafted version of the same idea: finer fabric, layered details, \
+        fitting accessories or emblems. Then add ONE surprising but fitting new trait the viewer would \
+        not have predicted: \(gift).
+
+        RULES: keep it wholesome — no revealing clothing, no suggestive posing or body emphasis; this is \
+        a cute character, not a pin-up. Do not change the species. Do not make it grotesque, gory, or \
+        frightening. Cute-cool, not edgy. Pose and scene: \(targetState.generationHint).
+        """
     }
 
     private func generate() async {
@@ -445,7 +473,7 @@ struct CharacterEvolveView: View {
         lastError = nil
         lastAttemptFailed = false
         sessionId = UUID().uuidString      // 새 결과 = 새 캐릭터(갤러리 묶음)
-        CharacterImageStore.setCharacterName(characterName, for: sessionId)
+        CharacterImageStore.setCharacterName(evolvedName, for: sessionId)
 
         // 백그라운드 진입해도 잠시 살아남게 — 만료 핸들러 필수(없으면 iOS 가 강제 종료).
         var bgTask: UIBackgroundTaskIdentifier = .invalid
@@ -470,7 +498,9 @@ struct CharacterEvolveView: View {
         }
 
         let prevResult = resultImage
-        await send(reference: referenceB64)
+        // 가챠 — 이번 진화에서 덧붙일 '선물'을 무작위로 하나.
+        let gift = Self.evolutionGifts.randomElement() ?? Self.evolutionGifts[0]
+        await send(reference: referenceB64, gift: gift)
         guard resultImage !== prevResult, let img = resultImage else {
             lastAttemptFailed = true
             return
@@ -480,13 +510,13 @@ struct CharacterEvolveView: View {
         let item = CharacterImageStore.save(img, for: targetState, frame: 0,
                                             applyToActiveSlot: false,
                                             batchId: sessionId, prompt: lastSentPrompt,
-                                            userInput: evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines))
+                                            userInput: nil)
         galleryId = item?.id
     }
 
-    private func send(reference: String) async {
+    private func send(reference: String, gift: String) async {
         // kind 를 넘겨 계정 무료 1회('처음 만드는 화면' 전용)를 소진하지 않게 한다.
-        let finalPrompt = "\(composedPrompt) Only the character on a transparent background — no background fill, no shadows, no extra elements."
+        let finalPrompt = "\(composedPrompt(gift: gift)) Only the character on a transparent background — no background fill, no shadows, no extra elements."
         do {
             let req = GenerateImageRequest(
                 prompt: finalPrompt,
@@ -499,7 +529,7 @@ struct CharacterEvolveView: View {
                 style: "auto",
                 kind: "evolve",
                 model: "gpt-image-2",
-                userInput: evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines),
+                userInput: "진화 \(nextStage)단계",
                 inputField: "진화"
             )
             let resp = try await APIClient.shared.generateImage(req, sessionId: sessionId,
@@ -529,7 +559,7 @@ struct CharacterEvolveView: View {
         } else {
             ok = CharacterImageStore.save(image, for: targetState, frame: 0,
                                           prompt: lastSentPrompt,
-                                          userInput: evolvePrompt.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
+                                          userInput: nil) != nil
         }
         if ok {
             CharacterProfileStore.syncNameFromApplied(targetState)
