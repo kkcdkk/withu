@@ -8097,6 +8097,166 @@
           }
         }
       }
+    },
+    "'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The 'Default' state is created first, and the rest are drawn based on that result."
+          }
+        }
+      }
+    },
+    "'기본'은 항상 만들어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "'Default' is always created"
+          }
+        }
+      }
+    },
+    "고른 캐릭터의 생김새를 이어받아 진화한 모습을 그려요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draws an evolved form that inherits the look of the character you picked."
+          }
+        }
+      }
+    },
+    "다 되면 여기에 진화한 캐릭터가 나와요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your evolved character will appear here when it's ready."
+          }
+        }
+      }
+    },
+    "다른 캐릭터로 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick another character"
+          }
+        }
+      }
+    },
+    "만든 캐릭터를 진화시켜요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve a character you made"
+          }
+        }
+      }
+    },
+    "어떤 모습으로 진화할지 적어 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe how it should evolve"
+          }
+        }
+      }
+    },
+    "원하는 진화의 모습" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How it should evolve"
+          }
+        }
+      }
+    },
+    "원하는 진화의 모습을 적어 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe how you want it to evolve."
+          }
+        }
+      }
+    },
+    "이번 진화에 캔디 %lld개를 써요. 성공했을 때만 차감돼요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This evolution uses %lld candy. It's only deducted when it succeeds."
+          }
+        }
+      }
+    },
+    "진화시킬 캐릭터" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Character to evolve"
+          }
+        }
+      }
+    },
+    "진화시킬 캐릭터를 골라 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a character to evolve."
+          }
+        }
+      }
+    },
+    "진화시키기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve"
+          }
+        }
+      }
+    },
+    "진화한 모습" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolved look"
+          }
+        }
+      }
+    },
+    "캐릭터 진화시키기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolve Character"
+          }
+        }
+      }
+    },
+    "현재 캐릭터의 상태" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current state"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

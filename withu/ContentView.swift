@@ -547,6 +547,9 @@ struct ContentView: View {
                 gridAction(title: "캐릭터 갤러리",
                            subtitle: "만든 캐릭터를 모아봐요",
                            asset: "menu_gallery") { CharacterGalleryView() }
+                gridAction(title: "캐릭터 진화시키기",
+                           subtitle: "만든 캐릭터를 진화시켜요",
+                           asset: "menu_evolve") { CharacterEvolveView() }
                 gridAction(title: "내 캐릭터 설정하기",
                            subtitle: "이름 · 수면 · 식사 시간",
                            asset: "menu_settings") { CharacterProfileView() }

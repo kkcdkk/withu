@@ -469,7 +469,7 @@ struct BatchCharacterGenView: View {
         .alert("'기본'은 항상 만들어요", isPresented: $showIdleLockedInfo) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text("'기본' 모습을 먼저 만들고 그걸 기준으로 나머지를 그려요. 그래서 끌 수 없어요.")
+            Text("'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요.")
         }
     }
 
