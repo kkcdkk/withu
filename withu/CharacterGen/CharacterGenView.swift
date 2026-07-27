@@ -556,6 +556,12 @@ struct CharacterGenView: View {
                     Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
                 .tint(.withuPink)
+            } else if prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        && referenceImage == nil {
+                // 왜 못 누르는지 알려준다 — 버튼만 비활성이면 이유를 모름. (배치와 동일)
+                Text("캐릭터 프롬프트를 적거나 참고 사진을 넣어 주세요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.orange)
             } else if creationIsFree {
                 Text("첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.")
                     .font(.pretendard(13, relativeTo: .footnote))

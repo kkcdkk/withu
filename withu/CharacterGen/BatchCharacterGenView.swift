@@ -948,6 +948,11 @@ struct BatchCharacterGenView: View {
         }
     }
 
+    /// 전체 참고 사진 또는 상태별 참고 사진이 하나라도 있는지.
+    private var hasAnyReferenceImage: Bool {
+        referenceImage != nil || !stateReferenceImages.isEmpty
+    }
+
     private var startSection: some View {
         let need = requiredCount * GenerationQuota.cost(forQuality: quality)
         return Section {
@@ -964,8 +969,11 @@ struct BatchCharacterGenView: View {
                 }
             }
             .buttonStyle(WithuCTAButtonStyle())
+            // 참고 사진이 있으면 설명 없이도 만들 수 있다 (하나씩 만들기와 동일 규칙).
+            // 프롬프트 조립도 빈 설명을 이미 처리함 — desc.isEmpty 면 상태 포즈만 사용.
             .disabled(isGenerating || selectedStates.isEmpty
-                      || baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      || (baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                          && !hasAnyReferenceImage)
                       || remainingGenerations < need)
 
             if isGenerating {
@@ -991,6 +999,12 @@ struct BatchCharacterGenView: View {
                     Label("더 만들기 (구독·충전)", systemImage: "sparkles")
                 }
                 .tint(.withuPink)
+            } else if baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        && !hasAnyReferenceImage {
+                // 왜 못 누르는지 알려준다 — 버튼만 비활성이면 이유를 모름.
+                Text("캐릭터 프롬프트를 적거나 참고 사진을 넣어 주세요.")
+                    .font(.pretendard(13, relativeTo: .footnote))
+                    .foregroundStyle(.orange)
             } else {
                 Text("보유 캔디 \(remainingGenerations)개 · \(need)캔디 소모")
                     .font(.pretendard(13, relativeTo: .footnote))
