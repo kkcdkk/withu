@@ -101,11 +101,6 @@ struct BatchCharacterGenView: View {
     @State private var detailFrame: Int = 0   // 상세 시트에서 보고 있는 프레임(0=기본, 1=움직임)
     @State private var revisionText: String = ""
     @State private var isRevising: Bool = false
-    @State private var revisionRefItem: PhotosPickerItem?
-    @State private var revisionRefImage: UIImage?
-    /// 상세 시트 수정 참고사진 — 사진 자리를 눌러 앨범/내 캐릭터 선택.
-    @State private var showRevisionAlbumPicker: Bool = false
-    @State private var showRevisionGallery: Bool = false
     /// 입력한 수정 문구/사진이 있는데 상세 시트를 닫으려 할 때 확인.
     @State private var showReviseDiscardConfirm: Bool = false
     /// '바꾸기' 실패 사유 — 상세 시트에 표시(예전엔 조용히 실패해 '반영 안 됨'으로 보였음).
@@ -320,7 +315,7 @@ struct BatchCharacterGenView: View {
     private var nameSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
-            TextField("이 캐릭터의 이름 (선택)", text: $characterName)
+            TextField("이름 (선택)", text: $characterName)
                 .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
                 .submitLabel(.done)
@@ -827,8 +822,19 @@ struct BatchCharacterGenView: View {
     /// label: 첫 다듬기 = "다듬기", 이력에서 이어갈 땐 = "이어서 다듬기".
     private func idleRefineGroup(label: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField("수정사항을 입력해 주세요", text: $idleRevisionText, axis: .vertical)
-                .font(.pretendard(16, relativeTo: .callout)).disabled(isGenerating)
+            TextEditor(text: $idleRevisionText)
+                .frame(minHeight: 80)
+                .font(.pretendard(16, relativeTo: .callout))
+                .disabled(isGenerating)
+                .overlay(alignment: .topLeading) {
+                    if idleRevisionText.isEmpty {
+                        Text("수정사항을 입력해 주세요")
+                            .font(.pretendard(16, relativeTo: .callout))
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 8).padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .pixelInputField()
             PixelActionButton(
                 title: label,
@@ -1623,10 +1629,9 @@ struct BatchCharacterGenView: View {
         return prompt
     }
 
-    /// 상세 시트에 저장(생성) 안 한 수정 입력이 있는지 — 문구 또는 첨부 사진.
+    /// 상세 시트에 저장(생성) 안 한 수정 입력이 있는지.
     private var reviseHasChanges: Bool {
         !revisionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || revisionRefImage != nil
     }
 
     /// 결과 카드 탭 시 열리는 sheet — 프레임 페이지(좌우 스와이프) + 저장 / 수정
@@ -1711,46 +1716,23 @@ struct BatchCharacterGenView: View {
                         .padding(.horizontal)
                     }
 
+                    // 다듬기 — 하나씩 만들기의 다듬기와 같은 형식(넓은 입력칸 + 우하단 픽셀 버튼).
                     VStack(alignment: .leading, spacing: 10) {
                         Text("다듬기")
                             .font(.pretendard(15, relativeTo: .subheadline)).foregroundStyle(.primary)
-                        // 프롬프트 입력 위, 사진 아래 (다른 다듬기와 형식 통일).
-                        TextField("수정사항을 입력해 주세요", text: $revisionText, axis: .vertical)
-                            .font(.pretendard(13, relativeTo: .footnote))
+                        TextEditor(text: $revisionText)
+                            .frame(minHeight: 80)
+                            .font(.pretendard(16, relativeTo: .callout))
+                            .overlay(alignment: .topLeading) {
+                                if revisionText.isEmpty {
+                                    Text("수정사항을 입력해 주세요")
+                                        .font(.pretendard(16, relativeTo: .callout))
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.top, 8).padding(.leading, 5)
+                                        .allowsHitTesting(false)
+                                }
+                            }
                             .pixelInputField()
-                            .lineLimit(2...4)
-                        HStack(spacing: 10) {
-                            Menu {
-                                Button { showRevisionAlbumPicker = true } label: {
-                                    Label("앨범에서 선택", systemImage: "photo.on.rectangle")
-                                }
-                                Button { showRevisionGallery = true } label: {
-                                    Label("내 캐릭터에서 선택", systemImage: "square.grid.2x2")
-                                }
-                            } label: {
-                                if let ref = revisionRefImage {
-                                    Image(uiImage: ref).resizable().scaledToFill()
-                                        .frame(width: 56, height: 56)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(.secondary.opacity(0.15))
-                                        .frame(width: 56, height: 56)
-                                        .overlay(Image(systemName: "photo.badge.plus")
-                                            .foregroundStyle(.secondary))
-                                }
-                            }
-                            if revisionRefImage != nil {
-                                Button("사진 빼기", role: .destructive) {
-                                    revisionRefImage = nil
-                                    revisionRefItem = nil
-                                }
-                                .font(.pretendard(11, relativeTo: .caption2))
-                                .buttonStyle(.bordered)
-                            }
-                            Spacer()
-                        }
-                        // 다듬기 버튼 — 다른 다듬기와 같은 우하단 네모 픽셀 버튼.
                         PixelActionButton(
                             title: "다듬기",
                             note: String(localized: "캔디 \(GenerationQuota.cost(forQuality: quality))개"),
@@ -1763,14 +1745,6 @@ struct BatchCharacterGenView: View {
                     .padding(14)
                     .plainFrostedCard()
                     .padding(.horizontal)
-                    .onChange(of: revisionRefItem) { _, item in
-                        Task { await loadRevisionRef(item) }
-                    }
-                    .photosPicker(isPresented: $showRevisionAlbumPicker,
-                                  selection: $revisionRefItem, matching: .images)
-                    .sheet(isPresented: $showRevisionGallery) {
-                        GalleryReferencePicker { img in revisionRefImage = img }
-                    }
 
                     // 저장은 아이보리 픽셀 아이콘 버튼 — 하나씩 만들기 결과와 같은 형식.
                     HStack {
@@ -1810,7 +1784,7 @@ struct BatchCharacterGenView: View {
                 Button("닫기", role: .destructive) { selectedResult = nil }
                 Button("계속 편집", role: .cancel) {}
             } message: {
-                Text("닫으면 방금 입력한 다듬기 문구·사진이 지워져요.")
+                Text("닫으면 방금 입력한 다듬기 문구가 지워져요.")
             }
             // 캔디 소모 확인 — 시트 위에 떠야 해서 시트 로컬 alert.
             .alert("캔디를 사용해요", isPresented: $pendingReviseConfirm) {
@@ -1950,8 +1924,7 @@ struct BatchCharacterGenView: View {
             anchor = frame == 1 ? (results[state] ?? resultsFrame1[state])
                                 : (frame0FullRes[state] ?? genManager.loadFrame0FullRes(state) ?? results[state])
         }
-        let refB64 = revisionRefImage?.pngData()?.base64EncodedString()
-            ?? anchor?.pngData()?.base64EncodedString()
+        let refB64 = anchor?.pngData()?.base64EncodedString()
         let pose = state.generationHint
         let desc = baseIdentity.trimmingCharacters(in: .whitespacesAndNewlines)
         let basePrompt = desc.isEmpty ? pose : "\(desc), \(pose)"
@@ -2007,8 +1980,6 @@ struct BatchCharacterGenView: View {
                 GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 캔디 차감
                 remainingGenerations = GenerationQuota.remainingToday()
                 revisionText = ""
-                revisionRefImage = nil
-                revisionRefItem = nil
             } else {
                 revisionError = String(localized: "이미지를 받지 못했어요. 다시 시도해 주세요.")
             }
@@ -2096,24 +2067,6 @@ struct BatchCharacterGenView: View {
         // 기준 모습을 이미 다듬었으면 무료 1회는 쓴 것 — 재진입해도 '무료'로 잘못 뜨지 않게 복원.
         if let idle = revisedDone[.idle] {
             idleRevisionsUsed = max(idleRevisionsUsed, idle.versions.count - 1)
-        }
-    }
-
-    /// 수정 sheet 의 참고 이미지 로드
-    private func loadRevisionRef(_ item: PhotosPickerItem?) async {
-        guard let item else {
-            revisionRefImage = nil
-            return
-        }
-        do {
-            if let data = try await item.loadTransferable(type: Data.self),
-               let img = UIImage(data: data) {
-                cropTarget = CropTarget(image: img) { cropped in
-                    revisionRefImage = cropped
-                }
-            }
-        } catch {
-            // 조용히 무시
         }
     }
 

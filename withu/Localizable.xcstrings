@@ -8350,6 +8350,46 @@
           }
         }
       }
+    },
+    "약 20~30초 소요돼요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes about 20–30 seconds."
+          }
+        }
+      }
+    },
+    "이름 (선택)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name (optional)"
+          }
+        }
+      }
+    },
+    "선택한 캐릭터의 진화한 모습을 생성해요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates an evolved version of the character you picked"
+          }
+        }
+      }
+    },
+    "프레임 순서 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swap frame order"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

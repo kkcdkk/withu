@@ -147,7 +147,7 @@ struct CharacterEvolveView: View {
             Text("진화시킬 캐릭터")
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
-            Text("고른 캐릭터의 생김새를 이어받아 진화한 모습을 그려요.")
+            Text("선택한 캐릭터의 진화한 모습을 생성해요")
                 .font(.pretendard(12, relativeTo: .caption))
                 .foregroundStyle(.secondary)
         }
@@ -173,10 +173,6 @@ struct CharacterEvolveView: View {
         } header: {
             Text("현재 캐릭터의 상태")
                 .font(.pretendardBold(16, relativeTo: .callout))
-        } footer: {
-            Text("\(cost)캔디 소모")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -184,7 +180,7 @@ struct CharacterEvolveView: View {
     private var nameSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
-                TextField("이 캐릭터의 이름 (선택)", text: $characterName)
+                TextField("이름 (선택)", text: $characterName)
                     .font(.pretendard(16, relativeTo: .callout))
                     .disabled(isGenerating)
                     .submitLabel(.done)
@@ -288,11 +284,14 @@ struct CharacterEvolveView: View {
                     .foregroundStyle(.secondary)
             }
         } footer: {
-            if !isGenerating {
-                Text("보통 20~30초 정도 걸려요.")
-                    .font(.pretendard(12, relativeTo: .caption))
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                if !isGenerating {
+                    Text("약 20~30초 소요돼요.")
+                }
+                Text("\(cost)캔디 소모")
             }
+            .font(.pretendard(12, relativeTo: .caption))
+            .foregroundStyle(.secondary)
         }
     }
 

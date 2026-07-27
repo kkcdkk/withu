@@ -422,7 +422,7 @@ struct CharacterGenView: View {
     private var nameSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
-            TextField("이 캐릭터의 이름 (선택)", text: $characterName)
+            TextField("이름 (선택)", text: $characterName)
                 .font(.pretendard(16, relativeTo: .callout))
                 .disabled(isGenerating)
                 .submitLabel(.done)
@@ -598,7 +598,7 @@ struct CharacterGenView: View {
             }
         } footer: {
             if !isGenerating {
-                Text("보통 20~30초 정도 걸려요.")
+                Text("약 20~30초 소요돼요.")
                     .font(.pretendard(12, relativeTo: .caption))
                     .foregroundStyle(.secondary)
             }

@@ -885,11 +885,16 @@ struct GalleryGrid<Header: View>: View {
 
                         // [미리보기] — 이미지만 크게, 글자 겹침 없음
                         if let f1 = CharacterImageStore.loadGalleryFrame1(id: item.id) {
-                            HStack(alignment: .top, spacing: 12) {
+                            HStack(alignment: .center, spacing: 8) {
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(img, cutout: bgCutout)).resizable().scaledToFit()
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     Text("1번째").font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
+                                }
+                                // 두 장 사이의 ↔ — 누르면 1번째/2번째 순서가 바뀐다.
+                                PixelIconButton(systemImage: "arrow.left.arrow.right",
+                                                accessibilityTitle: "프레임 순서 바꾸기") {
+                                    swapFrames(item)
                                 }
                                 VStack(spacing: 4) {
                                     Image(uiImage: detailDisplay(f1, cutout: bgCutoutF1)).resizable().scaledToFit()
@@ -906,18 +911,10 @@ struct GalleryGrid<Header: View>: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
 
-                        // 캡션 — 제목·시간은 이미지 밖 한 줄로 (겹침 제거)
-                        HStack(spacing: 6) {
-                            Text("\(stateKoreanLabel(item.sourceState)) 캐릭터")
-                                .font(.pretendard(16, relativeTo: .callout))
-                            Text("·").foregroundStyle(.tertiary)
-                            Text(item.createdAt, format: .relative(presentation: .named))
-                                .font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                            if item.hasFrame1 ?? false {
-                                Text("·").foregroundStyle(.tertiary)
-                                Text("연속 이미지").font(.pretendard(12, relativeTo: .caption)).foregroundStyle(.secondary)
-                            }
-                        }
+                        // 캡션 — 언제 만든 건지만 (상태·연속 이미지는 그림에서 이미 보임)
+                        Text(item.createdAt, format: .relative(presentation: .named))
+                            .font(.pretendard(12, relativeTo: .caption))
+                            .foregroundStyle(.secondary)
 
                         // [상태/주 액션]
                         if !activeStates.isEmpty {
@@ -969,12 +966,11 @@ struct GalleryGrid<Header: View>: View {
                                 }
                             } label: {
                                 Text("다른 자리에 적용하기")
-                                    .font(.pretendard(16, relativeTo: .callout))
+                                    .font(.galmuri(16, relativeTo: .callout))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(Color.withuCTAGreen.opacity(0.14),
-                                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                    .foregroundStyle(Color.withuCTAGreen)
+                                    .foregroundStyle(Color.withuPixelOutline)
+                                    .pixelCardSurface(fill: .withuCardFill)
                             }
                             .padding(.horizontal)
                         }
@@ -1009,19 +1005,6 @@ struct GalleryGrid<Header: View>: View {
                             if item.hasFrame1 ?? false {
                                 Divider()
                                 HStack(spacing: 12) {
-                                    Button {
-                                        if CharacterImageStore.swapGalleryFrames(item.id) {
-                                            for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
-                                                apply(item, to: state)
-                                            }
-                                            frameSwapTick += 1
-                                            onChange()
-                                        }
-                                    } label: {
-                                        Text("프레임 바꾸기")
-                                    }
-                                    .buttonStyle(.bordered).tint(.secondary).controlSize(.small)
-                                    Spacer()
                                     if let st = activeStates.first {
                                         Toggle("움직임", isOn: Binding(
                                             get: { !CharacterImageStore.isAnimationDisabled(for: st) },
@@ -1044,22 +1027,27 @@ struct GalleryGrid<Header: View>: View {
                             }
                             // 헤더·입력칸·'이대로 다듬기'를 한 묶음으로 — 버튼이 다듬기에 속해 보이게
                             // 선은 버튼 아래(다음 섹션 Divider 또는 카드 끝)로 둔다.
-                            TextField("바꾸고 싶은 점 (예: 모자를 씌워줘)", text: $refineText, axis: .vertical)
+                            TextEditor(text: $refineText)
+                                .frame(minHeight: 80)
                                 .font(.pretendard(16, relativeTo: .callout))
-                                .pixelInputField()
-                            Button {
-                                showRefineConfirm = true
-                            } label: {
-                                if isRefining {
-                                    HStack { ProgressView(); Text("다듬는 중…") }
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Text("다듬기").frame(maxWidth: .infinity)
+                                .overlay(alignment: .topLeading) {
+                                    if refineText.isEmpty {
+                                        Text("바꾸고 싶은 점 (예: 모자를 씌워줘)")
+                                            .font(.pretendard(16, relativeTo: .callout))
+                                            .foregroundStyle(.tertiary)
+                                            .padding(.top, 8).padding(.leading, 5)
+                                            .allowsHitTesting(false)
+                                    }
                                 }
+                                .pixelInputField()
+                            PixelActionButton(
+                                title: "다듬기",
+                                isBusy: isRefining,
+                                isEnabled: !isMakingMotion
+                                    && !refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ) {
+                                showRefineConfirm = true
                             }
-                            .buttonStyle(.bordered)
-                            .tint(.withuPinkText)
-                            .disabled(isRefining || isMakingMotion || refineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             Text("다듬은 이력에서 골라 적용할 수 있어요.")
                                 .font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
                             // 저장된 다듬기 이력이 있으면 다시 열기.
@@ -1294,6 +1282,17 @@ struct GalleryGrid<Header: View>: View {
         onChange()
         withAnimation { toastText = String(localized: "저장했어요") }
         hideToastAfter(1.6)
+    }
+
+    /// 연속 이미지의 1번째/2번째 순서 바꾸기 — 적용 중인 자리에도 즉시 반영.
+    private func swapFrames(_ item: GalleryItem) {
+        guard CharacterImageStore.swapGalleryFrames(item.id) else { return }
+        for state in CharacterImageStore.statesUsingGalleryItem(item.id) {
+            apply(item, to: state)
+        }
+        frameSwapTick += 1
+        onChange()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     /// 이미 만든 캐릭터 다듬기 — 갤러리 이미지를 참고로 한 번 더 생성.
