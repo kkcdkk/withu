@@ -430,7 +430,7 @@ struct BatchCharacterGenView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .alert("'기본'은 항상 만들어요", isPresented: $showIdleLockedInfo) {
+        .alert("'기본' 상태는 생략할 수 없어요", isPresented: $showIdleLockedInfo) {
             Button("확인", role: .cancel) {}
         } message: {
             Text("'기본' 상태를 먼저 생성하고 해당 결과물을 기준으로 나머지를 그려요.")

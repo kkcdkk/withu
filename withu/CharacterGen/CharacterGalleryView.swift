@@ -125,7 +125,7 @@ struct CharacterGalleryView: View {
             }
         }
         .alert("이름 변경", isPresented: $showCharacterRename) {
-            TextField("이름", text: $renameDraft)
+            TextField("이름 (선택)", text: $renameDraft)
             Button("저장") { renameSelectedCharacter() }
             Button("취소", role: .cancel) {}
         }
@@ -605,7 +605,7 @@ private struct CharacterApplyHeader: View {
             Text("\(items.count)개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.")
         }
         .alert("캐릭터 이름", isPresented: $showRename) {
-            TextField("이름", text: $nameDraft)
+            TextField("이름 (선택)", text: $nameDraft)
             Button("저장") {
                 CharacterImageStore.setCharacterName(nameDraft, for: batchId)
                 // 지금 적용 중인 캐릭터면 '내 캐릭터 설정'의 이름과도 연동.
