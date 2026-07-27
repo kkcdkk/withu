@@ -137,6 +137,8 @@ struct CharacterGenView: View {
     @State private var scopeDestination: GenScope?
     /// '움직이는 캐릭터' 도움말 알럿 (배치와 동일)
     @State private var showMotionInfo: Bool = false
+    /// 무료 만들기 대상자 환영 팝업 (진입 시 1회, 캔디도 함께 지급)
+    @State private var showWelcomeGift: Bool = false
     /// 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택)
     @State private var characterName: String = ""
     /// 생성 완료 시 스크롤할 결과 섹션 앵커
@@ -192,6 +194,16 @@ struct CharacterGenView: View {
         .onAppear {
             remainingGenerations = GenerationQuota.remainingToday()
             restoreVersionChain()
+            // 무료 만들기 대상자면 환영 캔디 1개 (1회만) + 안내 팝업.
+            if hasFreeCreation, GenerationQuota.grantWelcomeCandyIfNeeded() {
+                remainingGenerations = GenerationQuota.remainingToday()
+                showWelcomeGift = true
+            }
+        }
+        .alert("첫 만들기 선물이 도착했어요", isPresented: $showWelcomeGift) {
+            Button("좋아요", role: .cancel) {}
+        } message: {
+            Text("첫 만들기 1번은 무료예요. 캔디 \(GenerationQuota.welcomeCandyAmount)개도 넣어 뒀어요 — 마음껏 만들어 보세요!")
         }
         // 서버 무료/잔액 스냅샷 최신화 — '첫 만들기 무료' 배지가 옛 캐시로 잘못 뜨는 것 방지.
         .task { await AuthManager.shared.refreshEntitlement() }
@@ -332,6 +344,9 @@ struct CharacterGenView: View {
                         }
                     }
                 }
+                // Form 한 행에 버튼이 여러 개면 행 아무 데나 눌러도 전부 실행된다 —
+                // borderless 로 각 버튼이 자기 탭만 받게 해야 모드 전환이 정상 동작.
+                .buttonStyle(.borderless)
                 .disabled(isGenerating || isProcessing)
             }
             }
@@ -363,7 +378,8 @@ struct CharacterGenView: View {
             .pickerStyle(.menu)
             .disabled(isGenerating || isProcessing)
             // 단건은 상태가 하나뿐이라 움직임 토글을 같은 카드 안에 둔다.
-            if targetState.usesGeneratedMotion {
+            // '내 이미지로 만들기'는 사진 1장을 다듬는 방식이라 움직임을 지원하지 않는다.
+            if mode == .aiGenerate, targetState.usesGeneratedMotion {
                 Divider()
                 HStack(spacing: 6) {
                     Toggle("움직이는 캐릭터로 만들기", isOn: $generateAnimated)
@@ -386,9 +402,12 @@ struct CharacterGenView: View {
             Text("만들고 싶은 상태")
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
-            Text("\((generateAnimated && targetState.usesGeneratedMotion) ? GenerationQuota.cost(forQuality: quality) * 2 : GenerationQuota.cost(forQuality: quality))캔디 소모")
-                .font(.pretendard(12, relativeTo: .caption))
-                .foregroundStyle(.secondary)
+            // '내 이미지로 만들기'는 기기 안에서 처리 — 캔디를 쓰지 않으므로 표시하지 않는다.
+            if mode == .aiGenerate {
+                Text("\((generateAnimated && targetState.usesGeneratedMotion) ? GenerationQuota.cost(forQuality: quality) * 2 : GenerationQuota.cost(forQuality: quality))캔디 소모")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            }
         }
         .alert("움직이는 캐릭터", isPresented: $showMotionInfo) {
             Button("확인", role: .cancel) {}

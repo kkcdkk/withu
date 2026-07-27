@@ -56,13 +56,43 @@ final class NotificationManager {
 
     /// 오늘 걸음이 목표를 넘었으면 축하 알림 (당일 1회만).
     /// 이미 오늘 보냈으면 무시.
+    // MARK: - 캐릭터 호칭
+
+    /// 알림에서 '캐릭터' 대신 쓸 이름 — '내 캐릭터 설정'의 이름 기준.
+    /// 기본값("내 캐릭터")이면 이름을 안 지은 것으로 보고 nil.
+    private var characterName: String? {
+        let n = CharacterProfileStore.load().name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (n.isEmpty || n == "내 캐릭터") ? nil : n
+    }
+
+    /// 이름 끝 받침 유무에 따라 조사를 붙인다.
+    ///   받침 있음: 하늘 → 하늘이가 / 하늘이도
+    ///   받침 없음: 코코 → 코코가 / 코코도
+    /// 이름이 없으면 "캐릭터가" / "캐릭터도".
+    private func subject(_ particle: NameParticle) -> String {
+        guard let name = characterName else {
+            return particle == .subject ? String(localized: "캐릭터가") : String(localized: "캐릭터도")
+        }
+        let hasFinalConsonant: Bool = {
+            guard let u = name.unicodeScalars.last?.value,
+                  (0xAC00...0xD7A3).contains(u) else { return false }   // 한글 음절만 판정
+            return (u - 0xAC00) % 28 != 0
+        }()
+        switch particle {
+        case .subject: return name + (hasFinalConsonant ? "이가" : "가")
+        case .also:    return name + (hasFinalConsonant ? "이도" : "도")
+        }
+    }
+
+    private enum NameParticle { case subject, also }
+
     func scheduleStepGoalIfNeeded(steps: Double) async {
         guard steps >= stepGoal else { return }
         guard !alreadySentToday(key: ID.stepGoal) else { return }
 
         let content = UNMutableNotificationContent()
         content.title = String(localized: "🎉 \(Int(stepGoal))보 달성!")
-        content.body = String(localized: "오늘 \(Int(steps))보 걸었어요. 캐릭터도 신났어요 ✨")
+        content.body = String(localized: "오늘 \(Int(steps))보 걸었어요. \(subject(.also)) 신났어요 ✨")
         content.sound = .default
 
         await schedule(id: ID.stepGoal, content: content, in: 1)
@@ -74,7 +104,7 @@ final class NotificationManager {
     func scheduleBedtimeReminder(hour: Int = 22, minute: Int = 30) async {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "💤 잘 시간이에요")
-        content.body = String(localized: "오늘도 수고했어요. 캐릭터가 같이 잘 준비 중이에요.")
+        content.body = String(localized: "오늘도 수고했어요. \(subject(.subject)) 같이 잘 준비 중이에요.")
         content.sound = .default
 
         var components = DateComponents()
@@ -100,7 +130,7 @@ final class NotificationManager {
 
         let content = UNMutableNotificationContent()
         content.title = String(localized: "\(w.activity.displayName) 끝!")
-        content.body = String(localized: "\(formatDuration(w.duration)) 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요.")
+        content.body = String(localized: "\(formatDuration(w.duration)) 동안 잘 움직였어요. \(subject(.also)) 함께 뛰었어요.")
         content.sound = .default
 
         await schedule(id: ID.workoutEnded, content: content, in: 1)

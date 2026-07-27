@@ -96,6 +96,21 @@ enum GenerationQuota {
     }
 
     /// 횟수 팩 구매 시 크레딧 적립.
+    /// 무료 만들기 대상자에게 주는 환영 캔디 — 계정/기기당 1회만.
+    /// (만들기 화면 진입 시 지급. 재진입으로 반복 지급되지 않게 플래그로 잠근다)
+    private static let welcomeCandyKey = "withu.welcomeCandyGiven.v1"
+    static let welcomeCandyAmount = 1
+
+    /// 아직 안 받았으면 지급하고 true. 이미 받았으면 false.
+    @discardableResult
+    static func grantWelcomeCandyIfNeeded() -> Bool {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        guard !(defaults?.bool(forKey: welcomeCandyKey) ?? false) else { return false }
+        defaults?.set(true, forKey: welcomeCandyKey)
+        addCredits(welcomeCandyAmount)
+        return true
+    }
+
     static func addCredits(_ n: Int) {
         guard let d = defaults, n > 0 else { return }
         d.set(credits() + n, forKey: creditsKey)

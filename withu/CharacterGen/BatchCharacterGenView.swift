@@ -21,6 +21,7 @@ struct BatchCharacterGenView: View {
         uniqueKeysWithValues: CharacterState.userFacing.map { ($0, $0.generationHint) }
     )
 
+    /// 만들 상태. '기본'(idle)은 나머지의 기준 이미지라 항상 포함된다.
     @State private var selectedStates: Set<CharacterState> = Set(CharacterState.userFacing)
 
     @State private var quality: String = "low"
@@ -439,7 +440,7 @@ struct BatchCharacterGenView: View {
                 Button("모두 켜기") { selectedStates = Set(CharacterState.userFacing) }
                     .buttonStyle(.borderless)
                 Spacer()
-                Button("모두 끄기", role: .destructive) { selectedStates = [] }
+                Button("모두 끄기", role: .destructive) { selectedStates = [.idle] }
                     .buttonStyle(.borderless)
             }
             .disabled(isGenerating)
@@ -450,9 +451,12 @@ struct BatchCharacterGenView: View {
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
-            Text("만들고 싶은 상태 (\(selectedStates.count)개)")
+            Text("만들고 싶은 상태 (\(selectedStates.union([.idle]).count)개)")
                 .font(.pretendardBold(16, relativeTo: .callout))
         } footer: {
+            Text("'기본'은 나머지 모습의 기준이 되는 그림이라 항상 만들어요.")
+                .font(.pretendard(12, relativeTo: .caption))
+                .foregroundStyle(.secondary)
             // 움직임 섹션이 보일 땐 캔디 소모를 거기(아래)로 옮김 — 없을 때만 여기 표시.
             if animatableSelected.isEmpty {
                 Text("\(requiredCount * GenerationQuota.cost(forQuality: quality))캔디 소모")
@@ -491,17 +495,27 @@ struct BatchCharacterGenView: View {
         } label: {
             HStack(spacing: 8) {
                 Toggle("", isOn: Binding(
-                    get: { selectedStates.contains(state) },
+                    get: { state == .idle || selectedStates.contains(state) },
                     set: { on in
+                        // '기본'은 나머지 모습의 기준(앵커)이라 끌 수 없다.
+                        guard state != .idle else { return }
                         if on { selectedStates.insert(state) } else { selectedStates.remove(state) }
                     }
                 ))
                 .labelsHidden()
                 .fixedSize()
-                .disabled(isGenerating)
+                .disabled(isGenerating || state == .idle)
 
                 Text(state.koreanShortLabel)
-                    .strikethrough(!selectedStates.contains(state))
+                    .strikethrough(state != .idle && !selectedStates.contains(state))
+
+                if state == .idle {
+                    Text("기준")
+                        .font(.pretendard(11, relativeTo: .caption2))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.withuSage.opacity(0.22), in: Capsule())
+                        .foregroundStyle(Color.withuPinkText)
+                }
 
                 // 움직임 지원 상태 — 행에서 한눈에. 연한 초록 pill 로 켜짐 표시. (설명 '?'는 섹션 헤더에)
                 if state.usesGeneratedMotion {
