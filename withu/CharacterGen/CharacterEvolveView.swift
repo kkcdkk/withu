@@ -418,24 +418,27 @@ struct CharacterEvolveView: View {
     }
 
     /// 서버로 보낼 프롬프트 — 사용자 입력 없이 우리가 조립한다(가챠).
-    /// 정체성은 지키고, 더 강하고 성숙하게, 옷은 더 멋지게, 선정적이지 않게.
+    /// 핵심: KEEP 은 '알아볼 수 있는 최소한'만. 체형까지 잠그면 모델이 바꿀 게 옷밖에 안 남아
+    /// 액세서리만 갈아끼운 결과가 나온다. 변형 폭은 단계와 무관하게 일정하게 유지한다.
     private func composedPrompt() -> String {
         let name = characterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let named = name.isEmpty ? "" : " The character's name is \(name)."
         return """
-        Use the reference image. Draw the SAME character in an EVOLVED form \
-        (stage \(nextStage) — the higher the stage, the grander the presence).\(named)
+        Use the reference image. Draw the SAME character in its EVOLVED form.\(named)
 
-        KEEP: same species and body plan, same face structure and expression style, same color \
-        palette, same art style and line thickness, same signature motifs. It must read at a \
-        glance as the same character, grown up.
+        KEEP (so it is still recognizable): the same species, the same face — eyes, mouth, \
+        expression style — the same color palette, the same art style and line thickness, and the \
+        signature motifs that define it.
 
-        EVOLVE: stronger and more mature — a confident, capable presence. The face reads seasoned \
-        and self-assured: steadier gaze, calm composure. Grown up, not aged; the same cute face \
-        with depth behind it. Sharper silhouette, better proportions, richer detail and shading. \
-        If it wears clothing, upgrade the outfit into a cooler, better-crafted version of the same \
-        idea. Add ONE new trait the viewer would not have predicted, growing naturally out of what \
-        it already is.
+        EVOLVE (the BODY must change, not just the outfit): a taller, stronger, more grown build \
+        with a sharper silhouette and a confident stance. Let something new physically grow on it \
+        that suits its species — for example longer mane or fur, a fuller tail, horns, wings, or \
+        markings across the body. The face reads seasoned and self-assured: a steadier gaze, calm \
+        composure — grown up, not aged. Then, and only then, upgrade any clothing into a cooler, \
+        better-crafted version of the same idea.
+
+        FAILURE: changing only clothing, gear or props while the body stays identical to the \
+        reference. The evolved form must be obviously different in build and presence at a glance.
 
         RULES: wholesome only — no revealing clothing, no suggestive posing; a cute character, not \
         a pin-up. Do not change the species. Not grotesque, gory, or frightening. Cute-cool, not \
