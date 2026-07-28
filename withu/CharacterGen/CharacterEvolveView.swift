@@ -423,26 +423,23 @@ struct CharacterEvolveView: View {
         let name = characterName.trimmingCharacters(in: .whitespacesAndNewlines)
         let named = name.isEmpty ? "" : " The character's name is \(name)."
         return """
-        Use the reference image. Draw the SAME character in an EVOLVED, more advanced form \
-        (evolution stage \(nextStage) — the higher the stage, the grander the presence).\(named)
+        Use the reference image. Draw the SAME character in an EVOLVED form \
+        (stage \(nextStage) — the higher the stage, the grander the presence).\(named)
 
-        KEEP (identity, non-negotiable): the same species and body plan, the same face structure and \
-        expression style, the same core color palette, the same art style, line thickness, and the \
-        signature design motifs. Someone who knows the original must recognize this at a glance as \
-        the same character, grown up.
+        KEEP: same species and body plan, same face structure and expression style, same color \
+        palette, same art style and line thickness, same signature motifs. It must read at a \
+        glance as the same character, grown up.
 
-        EVOLVE (must visibly change): make it stronger and more mature — a confident, capable presence. \
-        The FACE should read as seasoned and self-assured: a steadier gaze, calm composure, the quiet \
-        strength of someone who has been through a lot. Grown up, not aged; still the same cute face, \
-        now with depth behind it. Sharper silhouette, better proportions, richer detail and shading. \
-        If it wears clothing, upgrade the outfit into a cooler, better-crafted version of the same idea: \
-        finer fabric, layered details, fitting accessories or emblems. Add ONE new trait the viewer \
-        would not have predicted — your choice, as long as it grows naturally out of what the character \
-        already is.
+        EVOLVE: stronger and more mature — a confident, capable presence. The face reads seasoned \
+        and self-assured: steadier gaze, calm composure. Grown up, not aged; the same cute face \
+        with depth behind it. Sharper silhouette, better proportions, richer detail and shading. \
+        If it wears clothing, upgrade the outfit into a cooler, better-crafted version of the same \
+        idea. Add ONE new trait the viewer would not have predicted, growing naturally out of what \
+        it already is.
 
-        RULES: keep it wholesome — no revealing clothing, no suggestive posing or body emphasis; this is \
-        a cute character, not a pin-up. Do not change the species. Do not make it grotesque, gory, or \
-        frightening. Cute-cool, not edgy. Pose and scene: \(targetState.generationHint).
+        RULES: wholesome only — no revealing clothing, no suggestive posing; a cute character, not \
+        a pin-up. Do not change the species. Not grotesque, gory, or frightening. Cute-cool, not \
+        edgy. Pose and scene: \(targetState.generationHint).
         """
     }
 
