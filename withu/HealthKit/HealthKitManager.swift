@@ -101,6 +101,18 @@ final class HealthKitManager {
 
     private init() {}
 
+    /// 소스별 합계 중 **가장 큰 소스 하나**만 채택.
+    /// 아이폰과 애플워치가 같은 걸음을 각각 기록하기 때문에, 전체 합(cumulativeSum)을 그대로
+    /// 쓰면 두 배 가까이 부풀려진다 (걸음수 과다 · 페이스가 달리기로 오인되는 원인).
+    private static func dominantSourceSum(_ stats: HKStatistics?, unit: HKUnit) -> Double {
+        guard let stats else { return 0 }
+        if let sources = stats.sources, !sources.isEmpty {
+            let best = sources.compactMap { stats.sumQuantity(for: $0)?.doubleValue(for: unit) }.max()
+            if let best { return best }
+        }
+        return stats.sumQuantity()?.doubleValue(for: unit) ?? 0
+    }
+
     // MARK: - 권한
 
     private var readTypes: Set<HKObjectType> {
@@ -393,9 +405,9 @@ final class HealthKitManager {
                     let q = HKStatisticsQuery(
                         quantityType: stepType,
                         quantitySamplePredicate: stepPredicate,
-                        options: .cumulativeSum
+                        options: [.cumulativeSum, .separateBySource]
                     ) { _, stats, _ in
-                        cont.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                        cont.resume(returning: Self.dominantSourceSum(stats, unit: .count()))
                     }
                     store.execute(q)
                 }
@@ -564,7 +576,7 @@ final class HealthKitManager {
             let q = HKStatisticsQuery(
                 quantityType: stepType,
                 quantitySamplePredicate: predicate,
-                options: .cumulativeSum
+                options: [.cumulativeSum, .separateBySource]
             ) { _, stats, error in
                 // "No data available" 는 진짜 에러가 아니라 0건 의미라서 0으로 처리
                 if let err = error as NSError?,
@@ -577,8 +589,7 @@ final class HealthKitManager {
                     continuation.resume(throwing: HealthError.query(error))
                     return
                 }
-                let sum = stats?.sumQuantity()?.doubleValue(for: .count()) ?? 0
-                continuation.resume(returning: sum)
+                continuation.resume(returning: Self.dominantSourceSum(stats, unit: .count()))
             }
             store.execute(q)
         }
@@ -617,7 +628,7 @@ final class HealthKitManager {
             let q = HKStatisticsQuery(
                 quantityType: qType,
                 quantitySamplePredicate: predicate,
-                options: .cumulativeSum
+                options: [.cumulativeSum, .separateBySource]
             ) { _, stats, error in
                 if let err = error as NSError?,
                    err.domain == HKErrorDomain,
@@ -627,8 +638,7 @@ final class HealthKitManager {
                 if let error {
                     continuation.resume(throwing: HealthError.query(error)); return
                 }
-                let sum = stats?.sumQuantity()?.doubleValue(for: unit) ?? 0
-                continuation.resume(returning: sum)
+                continuation.resume(returning: Self.dominantSourceSum(stats, unit: unit))
             }
             store.execute(q)
         }

@@ -9,7 +9,10 @@ import HealthKit
 /// HealthKit + 날씨 데이터를 보고 현재 캐릭터 상태를 정해주는 순수 함수 모음.
 /// 시간/데이터/날씨를 인자로 받으면 같은 결과를 내는 deterministic 한 로직.
 enum CharacterStateResolver {
-    private static let recentWorkoutWindow: TimeInterval = 60 * 60  // 1시간
+    /// 운동이 끝난 뒤에도 그 모습을 유지하는 여운 시간.
+    /// '운동 끝!' 알림이 종료 10분 안에 나가므로 같은 10분으로 맞춘다 —
+    /// 예전 1시간은 알림이 온 뒤에도 한참 '산책 중'으로 남아 어긋나 보였다.
+    private static let recentWorkoutWindow: TimeInterval = 10 * 60  // 10분
     private static let energeticStepThreshold: Double = 8000
     private static let sleepHours: Set<Int> = Set(0..<7).union([22, 23])
 
