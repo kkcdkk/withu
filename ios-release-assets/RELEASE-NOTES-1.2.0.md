@@ -1,4 +1,4 @@
-# 1.1.2 업데이트 내역 (App Store "이번 버전의 새로운 기능")
+# 1.2.0 업데이트 내역 (App Store "이번 버전의 새로운 기능")
 
 ## 한국어
 
@@ -11,6 +11,7 @@
 • 만들기 화면을 정리했어요 — 만드는 중 표시, 실패했을 때 이유 안내
 • 수면은 설정한 시간을 기준으로 인식해요
 • 첫 만들기는 무료, 시작할 때 캔디도 넣어 뒀어요
+홈 화면 위젯이 보이지 않던 문제, 걸음 수가 실제보다 많게 잡히던 문제,
 그 밖에 화면 전환·뒤로가기·갤러리 표시 오류를 고쳤어요.
 ```
 
@@ -25,13 +26,14 @@
 • A cleaner creation flow — clear progress while it's drawing, and a reason when it fails
 • Sleep is now recognized from the hours you set
 • Your first creation is free, with candy waiting when you start
-We also fixed navigation, swipe-back, and gallery status issues.
+We also fixed the Home Screen widget not appearing, step counts reading higher
+than they should, and navigation, swipe-back, and gallery status issues.
 ```
 
 ---
 
 ### 참고
 
-- 스크린샷: `screenshots-1284x2778/01~10.png` (07 = 캐릭터 진화시키기, 01·10 = 새 홈 4분할 반영)
+- 스크린샷: `screenshots-1284x2778/01~11.png` (App Store 는 10장까지 — 한 장 골라 빼야 함) (07 = 캐릭터 진화시키기, 01·10 = 새 홈 4분할 반영)
 - 앱스토어 "이번 버전의 새로운 기능"(What's New) 칸에 그대로 붙여 넣으면 된다. 4000자 제한.
 - 영문 스크린샷은 아직 없음 — 현재 10장은 한국어 UI 캡처.
