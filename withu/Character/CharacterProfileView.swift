@@ -283,6 +283,7 @@ struct CharacterProfileView: View {
                 showResetConfirm = true
             } label: {
                 Label("기본으로 되돌리기", systemImage: "arrow.counterclockwise")
+                    .font(.pretendard(13, relativeTo: .footnote))
             }
             .buttonStyle(.borderless)
             }
