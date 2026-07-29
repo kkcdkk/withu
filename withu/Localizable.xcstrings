@@ -113,9 +113,6 @@
         }
       }
     },
-    "'기본'은 나머지 모습의 기준이 되는 그림이라 항상 만들어요." : {
-
-    },
     "'기본'은 항상 만들어요" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -828,6 +825,7 @@
       }
     },
     "2번째 장면을 만들어 캐릭터가 움직이게 해요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -844,6 +842,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Creates a second frame so your character moves. Uses %lld candy."
+          }
+        }
+      }
+    },
+    "2번째 장면을 만들어 홈 화면에서 캐릭터가 움직이도록 합니다" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creates a second frame so your character moves on the Home screen"
           }
         }
       }
@@ -2328,6 +2337,7 @@
       }
     },
     "다듬은 이력에서 골라 적용할 수 있어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2673,6 +2683,7 @@
       }
     },
     "드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2946,6 +2957,7 @@
 
     },
     "만든 캐릭터를 모아봐요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2956,6 +2968,7 @@
       }
     },
     "만든 캐릭터를 진화시켜요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3063,6 +3076,7 @@
       }
     },
     "먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3084,6 +3098,7 @@
       }
     },
     "모두 기기 안에서 처리하고 비용은 들지 않아요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4043,6 +4058,7 @@
       }
     },
     "상태마다 어떤 캐릭터가 보일지 정할 수 있어요. 탭하면 그 상태의 갤러리 폴더가 열려요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4310,6 +4326,7 @@
       }
     },
     "선택한 버전을 기준으로 다듬어요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5008,6 +5025,7 @@
       }
     },
     "어떤 모습으로 진화할지 적어 주세요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5046,9 +5064,6 @@
           }
         }
       }
-    },
-    "여기서 정한 시간에 자고 일어나요. 수면 모드를 직접 켜면 그때도 자는 모습이 돼요." : {
-
     },
     "여러 모습 만들기" : {
       "localizations" : {
@@ -5475,6 +5490,7 @@
       }
     },
     "운동(산책·달리기 등)은 워치 기준으로 알아채요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5536,6 +5552,7 @@
       }
     },
     "움직이는 캐릭터로 만든 경우, 캐릭터를 움직일지 정해요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5667,6 +5684,7 @@
       }
     },
     "워치가 없으면 아이폰을 지니고 있을 때의 움직임으로 운동을 알아채요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5771,6 +5789,7 @@
       }
     },
     "원하는 진화의 모습" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5781,6 +5800,7 @@
       }
     },
     "원하는 진화의 모습을 적어 주세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6102,6 +6122,7 @@
       }
     },
     "이름 · 수면 · 식사 시간" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6939,6 +6960,16 @@
         }
       }
     },
+    "진화 %lld단계" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evolution stage %lld"
+          }
+        }
+      }
+    },
     "진화시키기" : {
       "localizations" : {
         "en" : {
@@ -7626,6 +7657,7 @@
       }
     },
     "캐릭터와 함께 사진 찍어요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7829,6 +7861,7 @@
       }
     },
     "탭하면 캐릭터 추가 · 드래그로 이동 · 두 손가락으로 크기 · 길게 눌러 삭제" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7839,6 +7872,7 @@
       }
     },
     "탭해서 고른 버전이 적용 대상이 돼요. '원본'을 고르면 다듬기 전으로 돌아가요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8033,6 +8067,7 @@
       }
     },
     "함께할 캐릭터를 만들어요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8412,22 +8447,42 @@
         }
       }
     },
-    "2번째 장면을 만들어 홈 화면에서 캐릭터가 움직이도록 합니다" : {
+    "기본으로 되돌리기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Creates a second frame so your character moves on the Home screen"
+            "value" : "Reset to default"
           }
         }
       }
     },
-    "진화 %lld단계" : {
+    "기본으로 되돌릴까요?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Evolution stage %lld"
+            "value" : "Reset to default?"
+          }
+        }
+      }
+    },
+    "되돌리기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        }
+      }
+    },
+    "모든 상태가 기본 그림으로 돌아가요. 만든 캐릭터는 갤러리에 그대로 남아 있어 다시 적용할 수 있어요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every state goes back to the default art. The characters you made stay in your gallery, so you can apply them again."
           }
         }
       }

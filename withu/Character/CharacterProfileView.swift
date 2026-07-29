@@ -38,6 +38,8 @@ struct CharacterProfileView: View {
         var id: String { state.rawValue }
     }
     @State private var stateRoute: StateRoute?
+    /// '기본으로 되돌리기' 확인 팝업
+    @State private var showResetConfirm: Bool = false
 
     var body: some View {
         ZStack {
@@ -276,6 +278,13 @@ struct CharacterProfileView: View {
                 }
                 .buttonStyle(.plain)
             }
+            Divider()
+            Button(role: .destructive) {
+                showResetConfirm = true
+            } label: {
+                Label("기본으로 되돌리기", systemImage: "arrow.counterclockwise")
+            }
+            .buttonStyle(.borderless)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -286,6 +295,22 @@ struct CharacterProfileView: View {
             Text("상태별 캐릭터")
                 .font(.pretendardBold(16, relativeTo: .callout))
         }
+        .alert("기본으로 되돌릴까요?", isPresented: $showResetConfirm) {
+            Button("되돌리기", role: .destructive) { resetToBundled() }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("모든 상태가 기본 그림으로 돌아가요. 만든 캐릭터는 갤러리에 그대로 남아 있어 다시 적용할 수 있어요.")
+        }
+    }
+
+    /// 적용된 캐릭터를 모두 내리고 기본 그림으로 — 갤러리는 건드리지 않는다.
+    private func resetToBundled() {
+        CharacterImageStore.resetActiveToBundled()
+        CharacterProfileStore.syncNameFromApplied(heroState)
+        ConnectivityManager.shared.sendAllToWatch()
+        WidgetCenter.shared.reloadAllTimelines()
+        heroState = SharedAppState.loadMessage()?.state ?? .idle
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     // MARK: - Sleep source indicator + toggle

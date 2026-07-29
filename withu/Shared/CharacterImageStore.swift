@@ -610,6 +610,20 @@ enum CharacterImageStore {
         return true
     }
 
+    /// 적용된 캐릭터를 모두 내려 기본 그림으로 되돌린다 — 활성 슬롯(+움직임 프레임)과
+    /// '적용 중' 매핑만 지운다. **갤러리는 그대로 둔다** (다시 적용할 수 있어야 하므로).
+    static func resetActiveToBundled() {
+        for state in CharacterState.allCases {
+            clearActive(state)
+            if let f1 = activeFileURL(for: state, frame: 1) {
+                try? FileManager.default.removeItem(at: f1)
+            }
+        }
+        UserDefaults(suiteName: SharedAppState.groupID)?.removeObject(forKey: activeSourceMapKey)
+        evictImageCache()
+        NotificationCenter.default.post(name: .characterImageChanged, object: nil)
+    }
+
     /// 계정 삭제 시 로컬 이미지 전체 초기화 — 활성 슬롯/갤러리/배경/데코 폴더 + 활성 매핑 + 캐시.
     static func wipeAll() {
         for folder in [activeFolder, galleryFolder, backgroundsFolder, decorationsFolder] {
