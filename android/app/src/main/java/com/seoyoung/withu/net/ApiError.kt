@@ -34,7 +34,8 @@ fun Throwable.koreanized(): String {
         is ApiError.Server -> when {
             status == 429 -> ctx.getString(R.string.err_too_many_requests)
             status >= 500 -> ctx.getString(R.string.err_server_trouble)
-            status == 422 -> ctx.getString(R.string.err_unsafe_prompt)
+            // 422 — 서버(OpenAI Moderation)가 준 안내 문구를 그대로 노출. 비어 있을 때만 폴백.
+            status == 422 -> detail.trim().ifEmpty { ctx.getString(R.string.err_unsafe_prompt) }
             else -> ctx.getString(R.string.err_server_generic, status)
         }
         is ApiError.Decoding -> ctx.getString(R.string.err_decoding)

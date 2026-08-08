@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.WbCloudy
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,10 +59,12 @@ import com.seoyoung.withu.notify.NotificationHelper
 import com.seoyoung.withu.ui.StatusKind
 import com.seoyoung.withu.ui.StatusPill
 import com.seoyoung.withu.ui.WithuCTAButton
+import com.seoyoung.withu.ui.pixelCardSurface
 import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuPink
 import com.seoyoung.withu.ui.theme.withuPinkBackground
 import com.seoyoung.withu.ui.theme.withuPinkText
+import com.seoyoung.withu.ui.theme.withuSage
 import com.seoyoung.withu.weather.WeatherManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -235,7 +236,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         OnboardingStep.WELCOME -> WelcomeContent()
                         OnboardingStep.HEALTH -> PermissionPage(
                             icon = Icons.Filled.MonitorHeart,
-                            tint = WithuColors.systemMint,
+                            tint = withuSage(),
                             title = stringResource(R.string.onboarding_health_title),
                             body = stringResource(R.string.onboarding_health_body),
                             details = listOf(
@@ -248,7 +249,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         )
                         OnboardingStep.LOCATION -> PermissionPage(
                             icon = Icons.Filled.WbCloudy,
-                            tint = WithuColors.systemCyan,
+                            tint = withuSage(),
                             title = stringResource(R.string.onboarding_location_title),
                             body = stringResource(R.string.onboarding_location_body),
                             details = listOf(
@@ -273,7 +274,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         )
                         OnboardingStep.FOCUS -> PermissionPage(
                             icon = Icons.Filled.Bedtime,
-                            tint = WithuColors.systemIndigo,
+                            tint = withuSage(),
                             title = stringResource(R.string.onboarding_focus_title),
                             body = stringResource(R.string.onboarding_focus_body),
                             details = listOf(
@@ -412,13 +413,13 @@ private fun WelcomeContent() {
         )
         Spacer(Modifier.height(14.dp))
         FeatureRow(
-            icon = Icons.Filled.MonitorHeart, tint = WithuColors.systemMint,
+            icon = Icons.Filled.MonitorHeart, tint = withuSage(),
             title = stringResource(R.string.onboarding_feature2_title),
             desc = stringResource(R.string.onboarding_feature2_desc),
         )
         Spacer(Modifier.height(14.dp))
         FeatureRow(
-            icon = Icons.Filled.Widgets, tint = WithuColors.systemCyan,
+            icon = Icons.Filled.Widgets, tint = withuSage(),
             title = stringResource(R.string.onboarding_feature3_title),
             desc = stringResource(R.string.onboarding_feature3_desc),
         )
@@ -441,7 +442,7 @@ private fun FeatureRow(icon: ImageVector, tint: Color, title: String, desc: Stri
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             Text(
                 desc,
                 style = MaterialTheme.typography.bodySmall,
@@ -479,7 +480,7 @@ private fun PermissionPage(
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(10.dp))
@@ -571,7 +572,7 @@ private fun DoneContent(
         Text(
             stringResource(R.string.onboarding_done_title),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(6.dp))
         Text(
@@ -580,20 +581,18 @@ private fun DoneContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth(),
+        // iOS OnboardingView.swift:301 — 권한 요약도 픽셀 카드 표면
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .pixelCardSurface()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(
-                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SummaryRow(stringResource(R.string.onboarding_summary_health), healthResult)
-                SummaryRow(stringResource(R.string.onboarding_summary_weather), locationResult)
-                SummaryRow(stringResource(R.string.onboarding_summary_notification), notificationResult)
-                SummaryRow(stringResource(R.string.onboarding_summary_sleep), focusResult)
-            }
+            SummaryRow(stringResource(R.string.onboarding_summary_health), healthResult)
+            SummaryRow(stringResource(R.string.onboarding_summary_weather), locationResult)
+            SummaryRow(stringResource(R.string.onboarding_summary_notification), notificationResult)
+            SummaryRow(stringResource(R.string.onboarding_summary_sleep), focusResult)
         }
         Spacer(Modifier.height(14.dp))
         Text(

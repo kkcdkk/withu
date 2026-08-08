@@ -96,7 +96,7 @@ fun SquareCropView(source: Bitmap, onDone: (Bitmap) -> Unit, onCancel: () -> Uni
                 Text(
                     text = stringResource(R.string.common_select),
                     color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier
                         .clip(CircleShape)

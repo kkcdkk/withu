@@ -32,6 +32,7 @@ object CharacterImageStore {
     private const val ANIMATION_ENABLED_KEY = "withu.animationEnabled.v1"
     private const val ANIMATION_DISABLED_STATES_KEY = "withu.animationDisabledStates.v1"
     private const val ACTIVE_SOURCE_MAP_KEY = "withu.activeSourceMap.v1"
+    private const val CHARACTER_NAMES_KEY = "withu.characterNames.v1"
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false; explicitNulls = false }
 
@@ -222,7 +223,9 @@ object CharacterImageStore {
         // 2) 갤러리 — frame 별 분기
         return if (frame == 0) {
             val item = addToGalleryInternal(image, state, batchId, prompt)
-            if (item != null) setActiveSource(state, item.id)
+            // 활성 슬롯에 실제로 적용했을 때만 활성 source 갱신 — 갤러리 전용 저장(생성 결과
+            // 자동 보관 등)이 map 을 오염시키면 '적용된 그림' 추적이 엉뚱한 항목을 가리킨다.
+            if (item != null && applyToActiveSlot) setActiveSource(state, item.id)
             item
         } else {
             attachFrame1ToLatestGalleryItem(image, state)
@@ -250,14 +253,24 @@ object CharacterImageStore {
 
     /** frame 1 을 같은 state 의 가장 최근 갤러리 항목에 추가. 없으면 null. */
     private fun attachFrame1ToLatestGalleryItem(image: Bitmap, sourceState: CharacterState): GalleryItem? {
-        val all = loadGalleryMetadata().toMutableList()   // createdAt desc 정렬됨
-        val idx = all.indexOfFirst { it.sourceState == sourceState.raw }
-        if (idx < 0) return null
-        val item = all[idx]
-        if (!writePngAtomic(image, galleryFrame1File(item.id))) return null
-        all[idx] = item.copy(hasFrame1 = true)
+        // createdAt desc 정렬 → 첫 매치가 가장 최근 항목.
+        val item = loadGalleryMetadata().firstOrNull { it.sourceState == sourceState.raw } ?: return null
+        if (!attachGalleryFrame1(item.id, image)) return null
+        return item.copy(hasFrame1 = true)
+    }
+
+    /**
+     * 지정한 갤러리 항목에 frame 1 을 붙임 (id 지정 — 단건 생성 결과 자동 저장이 쓴다).
+     * '가장 최근 항목' 추정이 아니라 정확히 그 항목에 붙는다는 점만 위 함수와 다르다.
+     */
+    fun attachGalleryFrame1(id: String, image: Bitmap): Boolean {
+        val all = loadGalleryMetadata().toMutableList()
+        val idx = all.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        if (!writePngAtomic(image, galleryFrame1File(id))) return false
+        all[idx] = all[idx].copy(hasFrame1 = true)
         saveGalleryMetadata(all)
-        return all[idx]
+        return true
     }
 
     // MARK: - 갤러리 조회/조작
@@ -316,6 +329,35 @@ object CharacterImageStore {
                 items = items.sortedBy { rank(it.sourceState) },
             )
         }.sortedByDescending { it.createdAt }
+    }
+
+    // MARK: - 캐릭터 이름 (batchId → 사용자가 지은 이름)
+
+    /**
+     * batchId 로 묶인 한 캐릭터에 사용자가 붙인 이름. 갤러리 '캐릭터별' 표시용.
+     * GalleryItem 스키마를 건드리지 않으려고 별도 맵으로 보관 — 생성 후에도 갱신 가능.
+     */
+    private val nameMapSerializer = MapSerializer(String.serializer(), String.serializer())
+
+    private fun loadCharacterNames(): Map<String, String> {
+        val raw = SharedAppState.prefs().getString(CHARACTER_NAMES_KEY, null) ?: return emptyMap()
+        return runCatching { json.decodeFromString(nameMapSerializer, raw) }.getOrDefault(emptyMap())
+    }
+
+    /** batchId 의 이름. 없거나 공백이면 null. */
+    fun characterName(batchId: String): String? {
+        val n = loadCharacterNames()[batchId]?.trim()
+        return if (n.isNullOrEmpty()) null else n
+    }
+
+    /** batchId 에 이름 지정. 공백이면 제거. */
+    fun setCharacterName(name: String, batchId: String) {
+        val map = loadCharacterNames().toMutableMap()
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) map.remove(batchId) else map[batchId] = trimmed
+        SharedAppState.prefs().edit()
+            .putString(CHARACTER_NAMES_KEY, json.encodeToString(nameMapSerializer, map))
+            .apply()
     }
 
     fun loadGalleryImage(id: String): Bitmap? = decodePng(galleryFile(id))

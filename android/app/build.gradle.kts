@@ -88,6 +88,10 @@ dependencies {
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.androidx.exifinterface)
     implementation(libs.play.services.location)
+    // Google 로그인 (Credential Manager + Google ID) — iOS Sign in with Apple 대응
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.google.identity.googleid)
     // 폰→워치 상태·이미지 push (Data Layer) — iOS ConnectivityManager 대응
     implementation(libs.play.services.wearable)
     implementation(libs.okhttp)

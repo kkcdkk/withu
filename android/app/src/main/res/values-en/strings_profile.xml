@@ -52,4 +52,11 @@
     <string name="profile_advanced_label">Character appearance in one line (advanced)</string>
     <string name="profile_advanced_placeholder">e.g. a pink bunny, a roly-poly character with big eyes</string>
     <string name="profile_advanced_hint">This sentence is auto-filled when creating your character. Writing in English gives better results.</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="profile_discard_title">You have unsaved changes</string>
+    <string name="profile_discard_message">If you leave, the changes you just made will be discarded.</string>
+    <string name="profile_discard_save_exit">Save and leave</string>
+    <string name="profile_discard_exit">Leave without saving</string>
+    <string name="profile_discard_keep">Keep editing</string>
 </resources>

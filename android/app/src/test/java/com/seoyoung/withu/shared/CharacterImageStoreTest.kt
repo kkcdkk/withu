@@ -114,6 +114,61 @@ class CharacterImageStoreTest {
         assertTrue(CharacterImageStore.hasImage(state))
     }
 
+    // MARK: - 캐릭터 이름 (withu.characterNames.v1)
+
+    @Test
+    fun `setCharacterName 은 저장하고 characterName 으로 다시 읽힌다`() {
+        CharacterImageStore.setCharacterName("초록이", "batch-name-1")
+        assertEquals("초록이", CharacterImageStore.characterName("batch-name-1"))
+    }
+
+    @Test
+    fun `이름은 앞뒤 공백을 다듬어 저장한다`() {
+        CharacterImageStore.setCharacterName("  초록이 ", "batch-name-2")
+        assertEquals("초록이", CharacterImageStore.characterName("batch-name-2"))
+    }
+
+    @Test
+    fun `공백만 넣으면 이름을 지운다`() {
+        CharacterImageStore.setCharacterName("초록이", "batch-name-3")
+        CharacterImageStore.setCharacterName("   ", "batch-name-3")
+        assertNull(CharacterImageStore.characterName("batch-name-3"))
+    }
+
+    @Test
+    fun `이름을 붙인 적 없는 batchId 는 null`() {
+        assertNull(CharacterImageStore.characterName("batch-name-none"))
+    }
+
+    @Test
+    fun `이름은 batchId 별로 따로 보관된다`() {
+        CharacterImageStore.setCharacterName("가", "batch-name-a")
+        CharacterImageStore.setCharacterName("나", "batch-name-b")
+        CharacterImageStore.setCharacterName("", "batch-name-a")
+        assertNull(CharacterImageStore.characterName("batch-name-a"))
+        assertEquals("나", CharacterImageStore.characterName("batch-name-b"))
+    }
+
+    // MARK: - attachGalleryFrame1 (단건 결과 자동 저장이 쓰는 id 지정 경로)
+
+    @Test
+    fun `attachGalleryFrame1 은 지정한 항목에 f1 을 붙인다`() {
+        val older = CharacterImageStore.save(bitmap(), state, applyToActiveSlot = false)!!
+        CharacterImageStore.save(bitmap(Color.GREEN), state, applyToActiveSlot = false)
+        // '가장 최근'이 아니라 지정한 id 에 붙어야 함
+        assertTrue(CharacterImageStore.attachGalleryFrame1(older.id, bitmap(Color.BLUE)))
+        assertNotNull(CharacterImageStore.loadGalleryFrame1(older.id))
+        assertEquals(true, CharacterImageStore.loadGalleryMetadata().first { it.id == older.id }.hasFrame1)
+    }
+
+    @Test
+    fun `갤러리 전용 저장은 활성 매핑을 오염시키지 않는다`() {
+        CharacterImageStore.save(bitmap(), state)   // 적용까지 한 항목
+        val applied = CharacterImageStore.currentGalleryItemId(state)
+        CharacterImageStore.save(bitmap(Color.GREEN), state, applyToActiveSlot = false)
+        assertEquals(applied, CharacterImageStore.currentGalleryItemId(state))
+    }
+
     // MARK: - 그룹핑 정렬
 
     @Test

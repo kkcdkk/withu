@@ -586,7 +586,7 @@ private fun PermissionDeniedView(onOpenSettings: () -> Unit, onPickAlbum: () -> 
         Text(
             text = stringResource(R.string.camera_permission_title),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(8.dp))
         Text(
@@ -609,7 +609,7 @@ private fun PermissionDeniedView(onOpenSettings: () -> Unit, onPickAlbum: () -> 
             Spacer(Modifier.size(8.dp))
             Text(
                 text = stringResource(R.string.camera_permission_open_settings),
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -617,7 +617,7 @@ private fun PermissionDeniedView(onOpenSettings: () -> Unit, onPickAlbum: () -> 
             Text(
                 text = stringResource(R.string.camera_permission_album_link),
                 color = withuPinkText(),
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
             )
         }
         Spacer(Modifier.height(40.dp))

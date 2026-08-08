@@ -35,18 +35,23 @@ import com.seoyoung.withu.ui.theme.WithuTheme
  */
 class MainActivity : ComponentActivity() {
 
-    // 알림 탭 딥링크(EXTRA_OPEN_BATCH) — cold/warm start 모두 compose 로 전달.
+    // 알림 탭 딥링크(EXTRA_OPEN_BATCH / EXTRA_OPEN_SINGLE) — cold/warm start 모두 compose 로 전달.
     private val openBatchFromNotification = mutableStateOf(false)
+    private val openSingleFromNotification = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         openBatchFromNotification.value =
             intent?.getBooleanExtra(NotificationHelper.EXTRA_OPEN_BATCH, false) == true
+        openSingleFromNotification.value =
+            intent?.getBooleanExtra(NotificationHelper.EXTRA_OPEN_SINGLE, false) == true
         setContent {
             WithuTheme {
                 WithuApp(
                     openBatchFromNotification = openBatchFromNotification.value,
                     onConsumedBatch = { openBatchFromNotification.value = false },
+                    openSingleFromNotification = openSingleFromNotification.value,
+                    onConsumedSingle = { openSingleFromNotification.value = false },
                 )
             }
         }
@@ -58,6 +63,9 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_BATCH, false)) {
             openBatchFromNotification.value = true
+        }
+        if (intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_SINGLE, false)) {
+            openSingleFromNotification.value = true
         }
     }
 }
@@ -71,6 +79,8 @@ class MainActivity : ComponentActivity() {
 private fun WithuApp(
     openBatchFromNotification: Boolean,
     onConsumedBatch: () -> Unit,
+    openSingleFromNotification: Boolean,
+    onConsumedSingle: () -> Unit,
 ) {
     var onboarded by remember { mutableStateOf(AppPrefs.onboarded) }
 
@@ -87,6 +97,8 @@ private fun WithuApp(
     WithuNav(
         openBatchFromNotification = openBatchFromNotification,
         onConsumedBatch = onConsumedBatch,
+        openSingleFromNotification = openSingleFromNotification,
+        onConsumedSingle = onConsumedSingle,
         onReonboard = {
             // '처음 안내 다시 보기' — onboarded=false 처리는 호출측(I) 책임 (§2-12).
             AppPrefs.onboarded = false
@@ -99,6 +111,8 @@ private fun WithuApp(
 private fun WithuNav(
     openBatchFromNotification: Boolean,
     onConsumedBatch: () -> Unit,
+    openSingleFromNotification: Boolean,
+    onConsumedSingle: () -> Unit,
     onReonboard: () -> Unit,
 ) {
     val nav = rememberNavController()
@@ -107,6 +121,13 @@ private fun WithuNav(
     // 여기선 다음 재탭이 다시 트리거되도록 플래그만 리셋한다.
     LaunchedEffect(openBatchFromNotification) {
         if (openBatchFromNotification) onConsumedBatch()
+    }
+
+    // 단건 생성 완료 알림 딥링크 — 여기서 직접 '하나씩 만들기'로 이동한다 (화면 소유는 nav graph).
+    LaunchedEffect(openSingleFromNotification) {
+        if (!openSingleFromNotification) return@LaunchedEffect
+        nav.navigate("gen/single") { launchSingleTop = true }
+        onConsumedSingle()
     }
 
     NavHost(navController = nav, startDestination = "home") {
@@ -152,7 +173,11 @@ private fun WithuNav(
             BatchGroupScreen(batchId = "")
         }
         composable("profile") {
-            ProfileScreen(onOpenStateFolder = { nav.navigate("gallery/state/${it.raw}") })
+            ProfileScreen(
+                onOpenStateFolder = { nav.navigate("gallery/state/${it.raw}") },
+                // 저장 안 한 변경이 있으면 ProfileScreen 이 확인 팝업으로 가로챈 뒤 여기로 온다.
+                onBack = { nav.popBackStack() },
+            )
         }
         composable("camera") {
             CameraScreen()

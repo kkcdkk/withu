@@ -1,7 +1,9 @@
 package com.seoyoung.withu.net
 
 import com.seoyoung.withu.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -20,6 +22,10 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
     private const val BASE_URL = "https://withu-api.ysy1398.workers.dev"
 
+    /** preflight 재시도 — iOS APIClient.preflight 와 동일 (2회 시도 · 0.7초 간격). */
+    private const val PREFLIGHT_ATTEMPTS = 2
+    private const val PREFLIGHT_RETRY_DELAY_MS = 700L
+
     // encodeDefaults: steps/width/height/quality/style/model 기본값도 서버로 전송 (iOS 파리티).
     // explicitNulls=false: null 필드는 본문에서 생략 (iOS JSONEncoder 의 nil 생략과 동일).
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
@@ -31,13 +37,14 @@ object ApiClient {
         .build()
 
     /**
-     * preflight 전용 5초 클라이언트 — 본 세션은 30분 timeout 이라 연결이 끊겼을 때
+     * preflight 전용 8초 클라이언트 — 본 세션은 30분 timeout 이라 연결이 끊겼을 때
      * 한참 매달림. generate 직전 이걸로 즉시 실패 판정 (iOS ephemeral 세션 대응).
+     * 5초는 화면 재진입 직후 등 일시적 지연에서 오탐이 나서 8초로 완화 (iOS 파리티).
      */
     private val preflightClient = client.newBuilder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(5, TimeUnit.SECONDS)
-        .callTimeout(5, TimeUnit.SECONDS)
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .callTimeout(8, TimeUnit.SECONDS)
         .build()
 
     private val jsonMediaType = "application/json".toMediaType()
@@ -98,18 +105,27 @@ object ApiClient {
         }
     }
 
-    /** 빠른 reachability 체크 — /health, 5초. 2xx 아니면 ApiError throw. */
+    /**
+     * 빠른 reachability 체크 — /health, 8초 × 2회 (실패 후 0.7초 대기). 2xx 아니면 ApiError throw.
+     * 1회 시도는 화면 재진입 직후의 일시적 실패에서 "연결이 어려워요" 오탐이 났다 (iOS 파리티).
+     */
     suspend fun preflightPing(): Unit = withContext(Dispatchers.IO) {
-        try {
-            val req = Request.Builder().url("$BASE_URL/health").build()
-            preflightClient.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) throw ApiError.InvalidResponse()
+        var last: Exception = ApiError.InvalidResponse()
+        repeat(PREFLIGHT_ATTEMPTS) { attempt ->
+            try {
+                val req = Request.Builder().url("$BASE_URL/health").build()
+                preflightClient.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) throw ApiError.InvalidResponse()
+                }
+                return@withContext
+            } catch (e: CancellationException) {
+                throw e   // 취소는 재시도 대상이 아니다 — 호출부가 취소를 따로 처리한다
+            } catch (e: Exception) {
+                last = e
+                if (attempt < PREFLIGHT_ATTEMPTS - 1) delay(PREFLIGHT_RETRY_DELAY_MS)
             }
-        } catch (e: ApiError) {
-            throw e
-        } catch (e: Exception) {
-            throw ApiError.Transport(e)
         }
+        throw if (last is ApiError) last else ApiError.Transport(last)
     }
 
     /** /health — 기본 세션으로 Bool 반환 (실패는 false). */
@@ -118,6 +134,34 @@ object ApiClient {
             val req = Request.Builder().url("$BASE_URL/health").build()
             client.newCall(req).execute().use { it.isSuccessful }
         }.getOrDefault(false)
+    }
+
+    /**
+     * Google 로그인 핸드셰이크 — POST /auth/google { id_token } → 세션 토큰 + entitlement.
+     * (iOS /auth/apple 대응. 서버가 계정 키를 "google:<sub>" 로 네임스페이스.)
+     */
+    suspend fun authGoogle(idToken: String): AuthResponse = withContext(Dispatchers.IO) {
+        val bodyJson = json.encodeToString(AuthGoogleRequest.serializer(), AuthGoogleRequest(idToken))
+        try {
+            val req = Request.Builder()
+                .url("$BASE_URL/auth/google")
+                .post(bodyJson.toRequestBody(jsonMediaType))
+                .header("Content-Type", "application/json")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                val text = resp.body?.string() ?: ""
+                if (!resp.isSuccessful) throw ApiError.Server(resp.code, detailOf(text))
+                try {
+                    json.decodeFromString<AuthResponse>(text)
+                } catch (e: Exception) {
+                    throw ApiError.Decoding(e.message ?: "unknown")
+                }
+            }
+        } catch (e: ApiError) {
+            throw e
+        } catch (e: Exception) {
+            throw ApiError.Transport(e)
+        }
     }
 
     /**

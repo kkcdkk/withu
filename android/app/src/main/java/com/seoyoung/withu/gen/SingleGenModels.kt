@@ -33,6 +33,8 @@ class ResultVersion(
     /** frame1 앵커용 원본(1024px). */
     val fullRes: Bitmap?,
     val isRefined: Boolean,
+    /** 자동 저장된 갤러리 항목 id — '적용' 시 이 항목을 재사용해 중복 저장을 막음. */
+    val galleryId: String? = null,
 ) {
     val id: String = UUID.randomUUID().toString()
 }

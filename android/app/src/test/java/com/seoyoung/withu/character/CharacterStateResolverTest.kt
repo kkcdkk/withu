@@ -174,6 +174,64 @@ class CharacterStateResolverTest {
         )
     }
 
+    // MARK: - '설정 시간 기준' 수면 시간창은 모션이 못 덮는다 (B-3)
+
+    @Test
+    fun `설정 시간 기준 수면창 안에서는 폰 모션이 수면을 못 덮는다`() {
+        assertEquals(
+            CharacterState.SLEEPING,
+            CharacterStateResolver.resolve(
+                now = at(3, 0),
+                phoneWorkoutState = CharacterState.WALKING,
+            ),
+        )
+    }
+
+    @Test
+    fun `설정 시간 기준 수면창 안에서는 걸음 cadence 도 수면을 못 덮는다`() {
+        assertEquals(
+            CharacterState.SLEEPING,
+            CharacterStateResolver.resolve(now = at(3, 0), recentStepsPerMinute = 160.0),
+        )
+    }
+
+    @Test
+    fun `수면 모드 기준이면 수면창 안이어도 폰 모션이 반영된다`() {
+        // 시간창은 '설정 시간 기준' 전용 신호 — 게이트가 안 걸린다.
+        assertEquals(
+            CharacterState.WALKING,
+            CharacterStateResolver.resolve(
+                now = at(3, 0),
+                phoneWorkoutState = CharacterState.WALKING,
+                profile = focusProfile,
+            ),
+        )
+    }
+
+    @Test
+    fun `수면창 밖이면 설정 시간 기준이어도 폰 모션이 반영된다`() {
+        assertEquals(
+            CharacterState.WALKING,
+            CharacterStateResolver.resolve(
+                now = at(14, 0),
+                phoneWorkoutState = CharacterState.WALKING,
+            ),
+        )
+    }
+
+    @Test
+    fun `워치 HR 운동 신호는 수면창 안에서도 우선한다`() {
+        // '명시적 운동 시작' 신호라 가드 대상이 아니다 (iOS 정책 동일).
+        assertEquals(
+            CharacterState.RUNNING,
+            CharacterStateResolver.resolve(
+                now = at(3, 0),
+                isLikelyInWorkout = true,
+                recentStepsPerMinute = 160.0,
+            ),
+        )
+    }
+
     // MARK: - isNowInSleepWindow (프로필 화면 공유 판정)
 
     @Test

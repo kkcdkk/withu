@@ -17,6 +17,11 @@
     <string name="batch_ref_remove_state">이 상태 사진 빼기</string>
     <string name="batch_elapsed">%1$d초</string>
 
+    <!-- 캐릭터 이름 섹션 (선택) — 갤러리 '캐릭터별' 표시 이름 -->
+    <string name="batch_name_header">캐릭터 이름</string>
+    <string name="batch_name_placeholder">이 캐릭터의 이름 (선택)</string>
+    <string name="batch_name_footer">갤러리 \'캐릭터별\'에서 이 이름으로 보여요.</string>
+
     <!-- 캐릭터 프롬프트 섹션 -->
     <string name="batch_identity_header">캐릭터 프롬프트</string>
     <string name="batch_identity_footer">모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"</string>
@@ -54,11 +59,12 @@
     <!-- 기준 모습 승인 -->
     <string name="batch_approval_header">기준 모습 확인</string>
     <string name="batch_approve">이 모습으로 나머지 만들기</string>
-    <string name="batch_revise">수정해서 생성하기</string>
-    <string name="batch_revising">만드는 중…</string>
+    <!-- iOS idleRefineGroup — 첫 다듬기 라벨. 이력에서 이어갈 땐 batch_revise_continue. -->
+    <string name="batch_revise">다듬기</string>
+    <string name="batch_revising">다듬는 중…</string>
     <string name="batch_revision_placeholder">수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)</string>
     <string name="batch_back_to_prompt">프롬프트 수정해서 다시</string>
-    <string name="batch_approval_footer">"먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행\n· 만들어진 사진에서 수정하려면 '수정해서 생성하기' 항목에서 수정사항을 입력해 보세요.\n· 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'"</string>
+    <string name="batch_approval_footer">"먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행\n· 만들어진 사진에서 수정하려면 '다듬기' 항목에서 수정사항을 입력해 보세요.\n· 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'"</string>
 
     <!-- 결과 섹션 -->
     <string name="batch_results_header">만들어진 모습</string>
@@ -90,15 +96,29 @@
     <string name="batch_ref_add">사진 넣기</string>
     <string name="batch_ref_change">변경</string>
     <string name="batch_ref_remove_small">제거</string>
-    <string name="batch_revise_cta">바꾸기</string>
+    <string name="batch_revise_cta">다듬기</string>
+
+    <!-- 다듬기 버전 이력 (적용 전 보관) — iOS revisionCompareView/revisionStrip -->
+    <string name="batch_revision_history_title">다듬기 이력</string>
+    <string name="batch_revise_continue">이어서 다듬기</string>
+    <string name="batch_revision_original">원본</string>
+    <string name="batch_revision_n">다듬음 %1$d</string>
+    <string name="batch_revision_base_hint">선택한 버전을 기준으로 다듬어요.</string>
+    <string name="batch_revision_accept">적용</string>
+    <string name="batch_revision_reject">취소</string>
+    <string name="batch_revised_badge">다듬음</string>
 
     <!-- 캔디 소모 확인 팝업 — 만들기/나머지/수정 모두 공용 (단건 생성과 동일한 안내를 배치에도). -->
     <string name="batch_candy_title">캔디를 사용해요</string>
     <string name="batch_candy_confirm_make">만들기</string>
-    <string name="batch_candy_confirm_revise">바꾸기</string>
+    <string name="batch_candy_confirm_revise">다듬기</string>
     <string name="batch_candy_body_start">이번 만들기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
     <string name="batch_candy_body_rest">나머지 모습에 캔디 약 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
-    <string name="batch_candy_body_revise">이번 수정에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="batch_candy_body_revise">이번 다듬기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <!-- 기준 모습 다듬기 — 1번째는 무료, 2번째부터 캔디 차감 (iOS idleRevisionCost). -->
+    <string name="batch_candy_body_revise_free">이번 다듬기는 무료예요.</string>
+    <string name="batch_revise_cost_free">무료</string>
+    <string name="batch_revise_cost_candy">캔디 %1$d개</string>
 
     <!-- 알럿/에러 -->
     <string name="batch_done_title">다 만들었어요</string>
@@ -113,4 +133,9 @@
     <string name="batch_photos_saved_one">사진 앱에 저장됐어요.</string>
     <string name="batch_photos_saved_n">%1$d장 사진 앱에 저장됐어요.</string>
     <string name="batch_photos_save_failed">저장하지 못했어요. 다시 시도해 주세요.</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="batch_discard_title">입력한 다듬기 내용이 있어요</string>
+    <string name="batch_discard_message">닫으면 방금 입력한 다듬기 문구·사진이 지워져요.</string>
+    <string name="batch_discard_keep">계속 편집</string>
 </resources>

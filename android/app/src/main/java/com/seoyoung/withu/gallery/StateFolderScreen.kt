@@ -45,6 +45,7 @@ import com.seoyoung.withu.shared.CharacterImageStore
 import com.seoyoung.withu.shared.GalleryItem
 import com.seoyoung.withu.ui.FrostedCard
 import com.seoyoung.withu.ui.WithuPinkButton
+import com.seoyoung.withu.ui.WithuTopBarTitle
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -90,7 +91,7 @@ fun StateFolderScreen(
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text(state.koreanShortLabel, fontWeight = FontWeight.SemiBold) },
+                    title = { WithuTopBarTitle(state.koreanShortLabel) },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = Color.Transparent,
                     ),
@@ -140,7 +141,7 @@ fun StateFolderScreen(
                     Text(
                         stringResource(R.string.gallery_state_empty_title, state.koreanShortLabel),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
                     Text(
@@ -178,7 +179,7 @@ private fun StateMiniHero(state: CharacterState, count: Int) {
                 Text(
                     state.caption,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     subtitle,

@@ -1,9 +1,9 @@
 package com.seoyoung.withu.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
@@ -32,10 +34,10 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -51,13 +53,14 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.seoyoung.withu.R
@@ -74,19 +77,23 @@ import com.seoyoung.withu.sync.SyncCoordinator
 import com.seoyoung.withu.ui.FormSection
 import com.seoyoung.withu.ui.FrostedCard
 import com.seoyoung.withu.ui.KoreanStateChip
+import com.seoyoung.withu.ui.PixelToggle
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.pixelInputField
 import com.seoyoung.withu.ui.rememberBackgroundGradient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.seoyoung.withu.ui.withuInputColors
 import java.time.LocalDateTime
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 내 캐릭터 설정 — iOS CharacterProfileView.swift 포팅 (스펙 05).
  *
- * 값 변경 시 자동 저장 (별도 저장 버튼 없음) — iOS `onChange(of: profile)` 대응으로
- * snapshotFlow 가 profile 변경을 관찰해 save + 위젯 갱신(syncNow)까지 처리한다.
+ * 자동 저장이 아니라 **명시적 '저장'** — 편집은 초안(profile/animationEnabled)에만 담기고,
+ * 반영(저장 + 상태 재판정 + 위젯 갱신)은 save() 에서만 일어난다 (iOS CharacterProfileView:214-223).
+ * 저장 안 한 채 나가려 하면 확인 팝업 — Android 는 시스템 뒤로가기도 있어 BackHandler 로도 가로챈다.
  * '자는 중' 판정은 resolver 의 수면 분기와 어긋나면 안 되므로 수면 창 포함 판정은
  * CharacterStateResolver.isNowInSleepWindow 를 공유한다 (스펙 05 §3-2 주의사항).
  */
@@ -94,44 +101,69 @@ import java.util.Locale
 /** 시간 피커가 편집 중인 필드 — iOS 의 DatePicker 바인딩 6개 대응. */
 private enum class TimeField { SLEEP_START, SLEEP_END, LUNCH, DINNER, NIGHT_START, NIGHT_END }
 
+/**
+ * 저장 안 된 변경이 있는지 — 초안이 마지막 저장 스냅샷과 다르면 true (iOS `hasChanges`).
+ * CharacterProfile 은 data class 라 `!=` 비교가 그대로 동작한다.
+ */
+internal fun profileHasChanges(
+    draft: CharacterProfile,
+    saved: CharacterProfile,
+    animationEnabled: Boolean,
+    savedAnimationEnabled: Boolean,
+): Boolean = draft != saved || animationEnabled != savedAnimationEnabled
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
+fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
-    // 프로필 — 초기 로드는 IO 에서, 이후 변경분만 자동 저장 (drop(1) 로 초기값 저장 방지).
+    // 프로필 — 초안(profile)과 마지막 저장 스냅샷(savedProfile)을 나눠 들고 hasChanges 를 판정.
     var profile by remember { mutableStateOf(CharacterProfile()) }
+    var savedProfile by remember { mutableStateOf(CharacterProfile()) }
     var profileLoaded by remember { mutableStateOf(false) }
-    // 히어로 = 지금 적용 중인 상태 — iOS heroState. 프로필 변경 후에도 최신 반영해야 함
+    // 히어로 = 지금 적용 중인 상태 — iOS heroState. 저장 후에 최신 반영해야 함
     // (예전 버그: produceState 가 키 없이 한 번만 읽어 시간 바꿔도 아바타가 안 바뀜).
     var heroState by remember { mutableStateOf(CharacterState.IDLE) }
     LaunchedEffect(Unit) {
-        profile = withContext(Dispatchers.IO) { CharacterProfileStore.load() }
+        val loaded = withContext(Dispatchers.IO) { CharacterProfileStore.load() }
+        profile = loaded
+        savedProfile = loaded
         profileLoaded = true
         heroState = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
-        snapshotFlow { profile }
-            .drop(1)   // 방금 대입한 초기값
-            .collect { p ->
-                // iOS onChange(of: profile): save + WidgetCenter reload.
-                // syncNow 가 저장된 프로필로 상태를 다시 resolve 하고 위젯 갱신까지 담당.
-                withContext(Dispatchers.IO) { CharacterProfileStore.save(p) }
-                SyncCoordinator.syncNow()
-                // 저장·재판정 후 아바타(heroState)도 최신 상태로 갱신.
-                heroState = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
-            }
     }
 
     // 애니메이션 토글 — 프로필이 아닌 이미지 스토어에 저장 (위젯도 읽어야 해서 분리, iOS 파리티).
+    // 이것도 초안 — 저장 전에는 스토어에 안 쓴다.
     var animationEnabled by remember { mutableStateOf(true) }
+    var savedAnimationEnabled by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
-        animationEnabled = withContext(Dispatchers.IO) { CharacterImageStore.isAnimationEnabled() }
-        snapshotFlow { animationEnabled }
-            .drop(1)
-            .collect { on ->
-                withContext(Dispatchers.IO) { CharacterImageStore.setAnimationEnabled(on) }
-                SyncCoordinator.refreshWidgets()
-            }
+        val on = withContext(Dispatchers.IO) { CharacterImageStore.isAnimationEnabled() }
+        animationEnabled = on
+        savedAnimationEnabled = on
     }
+
+    val hasChanges = profileLoaded &&
+        profileHasChanges(profile, savedProfile, animationEnabled, savedAnimationEnabled)
+    // 저장 안 한 채 나가려 할 때 확인 팝업
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+
+    /** 초안을 실제로 반영 — 저장 + 상태 재판정 + 위젯 갱신 + 스냅샷 갱신 (iOS save()). */
+    suspend fun save() {
+        val p = profile
+        val anim = animationEnabled
+        withContext(Dispatchers.IO) {
+            CharacterProfileStore.save(p)
+            CharacterImageStore.setAnimationEnabled(anim)
+        }
+        // syncNow 가 저장된 프로필로 상태를 다시 resolve 하고 위젯 갱신까지 담당.
+        SyncCoordinator.syncNow()
+        heroState = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
+        savedProfile = p
+        savedAnimationEnabled = anim
+    }
+
+    // 시스템 뒤로가기도 가로챈다 — 변경이 있으면 pop 대신 확인 팝업 (iOS 커스텀 뒤로 버튼 대응).
+    BackHandler(enabled = hasChanges) { showDiscardConfirm = true }
 
     // 상태별 '내 캐릭터 적용됨' 여부 — 이미지 변경 이벤트에 반응해 다시 읽는다.
     var appliedStates by remember { mutableStateOf<Set<CharacterState>>(emptySet()) }
@@ -183,7 +215,28 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.profile_nav_title)) },
+                    title = { WithuTopBarTitle(stringResource(R.string.profile_nav_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            if (hasChanges) showDiscardConfirm = true else onBack()
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.common_close),
+                            )
+                        }
+                    },
+                    // 수정이 생기면 상단에 '저장' 버튼 등장 (iOS toolbar topBarTrailing).
+                    actions = {
+                        if (hasChanges) {
+                            TextButton(onClick = { scope.launch { save() } }) {
+                                Text(
+                                    stringResource(R.string.common_save),
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 )
             },
@@ -360,7 +413,7 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                                 Text(
                                     state.koreanShortLabel,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Bold,
                                 )
                                 Text(
                                     stringResource(
@@ -401,6 +454,46 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
         }
     }
 
+    // 저장 안 하고 나가려 할 때 확인 — iOS confirmationDialog 3버튼 근사.
+    // (Compose AlertDialog 은 confirm/dismiss 2슬롯뿐이라 '저장 안 하고 나가기'는 본문 안 버튼으로.)
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text(stringResource(R.string.profile_discard_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.profile_discard_message))
+                    TextButton(
+                        onClick = {
+                            showDiscardConfirm = false
+                            onBack()
+                        },
+                        modifier = Modifier.align(Alignment.Start),
+                    ) {
+                        Text(
+                            stringResource(R.string.profile_discard_exit),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardConfirm = false
+                    scope.launch {
+                        save()
+                        onBack()
+                    }
+                }) { Text(stringResource(R.string.profile_discard_save_exit)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) {
+                    Text(stringResource(R.string.profile_discard_keep))
+                }
+            },
+        )
+    }
+
     // 이름 편집 알럿
     if (showNameEdit) {
         AlertDialog(
@@ -414,7 +507,8 @@ fun ProfileScreen(onOpenStateFolder: (CharacterState) -> Unit) {
                         onValueChange = { nameDraft = it },
                         placeholder = { Text(stringResource(R.string.profile_name_placeholder)) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        colors = withuInputColors(),
+                        modifier = Modifier.fillMaxWidth().pixelInputField(),
                     )
                 }
             },
@@ -486,7 +580,7 @@ private fun HeroCard(heroState: CharacterState, name: String, onClick: () -> Uni
                     Text(
                         name.ifEmpty { stringResource(R.string.profile_default_name) },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Icon(
                         Icons.Filled.Edit,
@@ -535,7 +629,7 @@ private fun SleepStatusRow(
         Text(
             stringResource(if (sleeping) R.string.profile_sleeping else R.string.profile_awake),
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.weight(1f))
         Box {
@@ -558,7 +652,7 @@ private fun SleepStatusRow(
                 Text(
                     stringResource(basisLabelRes),
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Icon(
@@ -701,11 +795,17 @@ private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean
     Row(
         Modifier
             .fillMaxWidth()
+            // iOS PixelToggleStyle 은 contentShape(Rectangle) + onTapGesture 로 행 전체가 탭 영역
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Switch,
+            )
             .padding(vertical = 2.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        PixelToggle(checked = checked, onCheckedChange = null)
     }
 }
 
@@ -770,7 +870,8 @@ private fun AdvancedPromptSection(value: String, onValueChange: (String) -> Unit
                     placeholder = { Text(stringResource(R.string.profile_advanced_placeholder)) },
                     minLines = 2,
                     maxLines = 5,
-                    modifier = Modifier.fillMaxWidth(),
+                    colors = withuInputColors(),
+                    modifier = Modifier.fillMaxWidth().pixelInputField(),
                 )
                 Text(
                     stringResource(R.string.profile_advanced_hint),

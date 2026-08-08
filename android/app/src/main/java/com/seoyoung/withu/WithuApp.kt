@@ -3,6 +3,7 @@ package com.seoyoung.withu
 import android.app.Application
 import android.content.Context
 import com.seoyoung.withu.bggen.BackgroundGenQueue
+import com.seoyoung.withu.gen.SingleGenQueue
 import com.seoyoung.withu.notify.NotificationHelper
 import com.seoyoung.withu.sync.BackgroundRefreshWorker
 
@@ -22,6 +23,8 @@ class WithuApp : Application() {
         //  3) BackgroundRefreshWorker.schedule() — 15분 주기 상태/위젯 갱신 (§4 Phase I-5)
         runCatching { NotificationHelper.ensureChannels() }
         runCatching { BackgroundGenQueue.resumeIfNeeded() }
+        // 2-b) SingleGenQueue.resumeIfNeeded() — 프로세스 사망 후 단건 생성 재개
+        runCatching { SingleGenQueue.resumeIfNeeded() }
         runCatching { BackgroundRefreshWorker.schedule() }
         // 4) 폰 모션 감지 시작 — 권한 있으면 워치 없이 산책/달리기/자전거 반영 (권한 없으면 no-op)
         runCatching { com.seoyoung.withu.health.MotionActivityManager.start(this) }

@@ -64,4 +64,11 @@
     <string name="profile_advanced_label">캐릭터 외형 한 줄 (고급)</string>
     <string name="profile_advanced_placeholder">예: 분홍 토끼, 큰 눈에 둥글둥글한 캐릭터</string>
     <string name="profile_advanced_hint">캐릭터를 만들 때 이 문장이 자동으로 채워져요. 영어로 적으면 더 잘 그려져요.</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="profile_discard_title">저장하지 않은 변경사항이 있어요</string>
+    <string name="profile_discard_message">나가면 방금 바꾼 내용이 지워져요.</string>
+    <string name="profile_discard_save_exit">저장하고 나가기</string>
+    <string name="profile_discard_exit">저장 안 하고 나가기</string>
+    <string name="profile_discard_keep">계속 편집</string>
 </resources>

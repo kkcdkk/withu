@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -21,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.seoyoung.withu.R
 import com.seoyoung.withu.ui.WithuCTAButton
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.pixelCardSurface
 import com.seoyoung.withu.ui.theme.withuPinkText
 
 /**
@@ -48,7 +48,7 @@ fun HelpGuideSheet(onDone: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.help_nav_title)) },
+                title = { WithuTopBarTitle(stringResource(R.string.help_nav_title)) },
                 actions = {
                     TextButton(onClick = onDone) { Text(stringResource(R.string.common_close)) }
                 },
@@ -110,30 +110,28 @@ fun HelpGuideSheet(onDone: () -> Unit) {
 
 @Composable
 private fun StepCard(icon: ImageVector, title: String, body: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+    // iOS HelpGuideView.swift:72 — 스텝 카드는 픽셀 카드 표면 (크림 + 먹빛 계단 테두리)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .pixelCardSurface()
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top,
     ) {
-        Row(
-            Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = withuPinkText(),
-                modifier = Modifier.size(32.dp),
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = withuPinkText(),
+            modifier = Modifier.size(32.dp),
+        )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(
+                body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(
-                    body,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

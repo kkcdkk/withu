@@ -109,7 +109,7 @@ iOS 앱의 **파리티 포트** — Kotlin + Compose(M3), 같은 Cloudflare Work
 ```bash
 ./build.sh :app:assembleDebug        # Claude 의 기본 검증 루트
 ./build.sh test                      # JVM 유닛테스트 (Robolectric)
-./build.sh test --tests "*CharacterStateResolverTest"   # 단일 테스트
+./build.sh :app:testDebugUnitTest --tests "*CharacterStateResolverTest"   # 단일 테스트 (집계 태스크 :app:test 는 --tests 를 못 받는다)
 ```
 `gradlew` 를 직접 호출하지 말 것 — JAVA_HOME 이 안 잡혀 실패한다. 항상 `./build.sh` 경유.
 

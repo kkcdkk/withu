@@ -37,6 +37,9 @@ object NotificationHelper {
     /** 알림 탭 → MainActivity 로 배치 화면 열기 요청 extra (Phase I 가 소비). */
     const val EXTRA_OPEN_BATCH = "withu.openBatch"
 
+    /** 알림 탭 → MainActivity 로 '하나씩 만들기' 화면 열기 요청 extra. */
+    const val EXTRA_OPEN_SINGLE = "withu.openSingle"
+
     const val CHANNEL_REMINDER = "reminder"
     const val CHANNEL_GEN_DONE = "gen_done"
     const val CHANNEL_GEN_PROGRESS = "gen_progress"
@@ -48,6 +51,9 @@ object NotificationHelper {
     private const val NOTIF_ID_STEP_GOAL = 1004
     private const val NOTIF_ID_WORKOUT_ENDED = 1005
     internal const val NOTIF_ID_GEN_PROGRESS = 1006
+    // 단건 생성은 배치와 동시에 돌 수 있어 id 를 분리한다 (같은 id 면 서로의 알림을 덮어씀).
+    internal const val NOTIF_ID_SINGLE_PROGRESS = 1007
+    private const val NOTIF_ID_SINGLE_DONE = 1008
 
     /** 걸음 수 목표 (이 값 이상이면 하루 1회 축하) — iOS stepGoal 동일. */
     private const val STEP_GOAL = 8000.0
@@ -248,24 +254,79 @@ object NotificationHelper {
         }
     }
 
+    /** 단건 Worker 의 FGS(dataSync) 진행 알림 — GenSingleWorker.getForegroundInfo 가 사용. */
+    fun singleGenProgressForegroundInfo(context: Context): ForegroundInfo {
+        val notification = NotificationCompat.Builder(context, CHANNEL_GEN_PROGRESS)
+            .setSmallIcon(R.drawable.ic_stat_withu)
+            .setContentTitle(context.getString(R.string.notify_gen_progress))
+            .setOngoing(true)
+            .setContentIntent(openAppIntent(openSingle = true))
+            .build()
+        return if (Build.VERSION.SDK_INT >= 29) {
+            ForegroundInfo(
+                NOTIF_ID_SINGLE_PROGRESS, notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            ForegroundInfo(NOTIF_ID_SINGLE_PROGRESS, notification)
+        }
+    }
+
+    /**
+     * 단건 생성 완료/실패 알림 — 화면을 떠난 사이 끝났을 때만 (SingleGenQueue.finishRun 판단).
+     * 탭 → MainActivity + EXTRA_OPEN_SINGLE ('하나씩 만들기' 딥링크).
+     */
+    fun notifySingleGenFinished(success: Boolean, detail: String?) {
+        val title = if (success) {
+            ctx.getString(R.string.gen_notify_done_title)
+        } else {
+            ctx.getString(R.string.gen_notify_failed_title)
+        }
+        val fallback = if (success) {
+            ctx.getString(R.string.gen_notify_done_body)
+        } else {
+            ctx.getString(R.string.gen_notify_failed_body)
+        }
+        post(
+            id = NOTIF_ID_SINGLE_DONE,
+            channel = CHANNEL_GEN_DONE,
+            title = title,
+            // 실패는 사유(서버 안내 등)를 그대로 보여주는 편이 다음 행동에 도움이 된다.
+            body = if (!success && !detail.isNullOrBlank()) detail else fallback,
+            openSingle = true,
+        )
+    }
+
     // MARK: - 내부
 
     private fun markerPrefs() = ctx.getSharedPreferences(MARKER_PREFS, Context.MODE_PRIVATE)
 
-    private fun openAppIntent(openBatch: Boolean = false): PendingIntent {
+    private fun openAppIntent(openBatch: Boolean = false, openSingle: Boolean = false): PendingIntent {
         val intent = Intent(ctx, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             if (openBatch) putExtra(EXTRA_OPEN_BATCH, true)
+            if (openSingle) putExtra(EXTRA_OPEN_SINGLE, true)
         }
         return PendingIntent.getActivity(
             ctx,
-            if (openBatch) 1 else 0,
+            when {
+                openSingle -> 2
+                openBatch -> 1
+                else -> 0
+            },
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
 
-    private fun post(id: Int, channel: String, title: String, body: String, openBatch: Boolean = false) {
+    private fun post(
+        id: Int,
+        channel: String,
+        title: String,
+        body: String,
+        openBatch: Boolean = false,
+        openSingle: Boolean = false,
+    ) {
         if (!hasPermission()) return
         val notification = NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_stat_withu)
@@ -273,7 +334,7 @@ object NotificationHelper {
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
-            .setContentIntent(openAppIntent(openBatch))
+            .setContentIntent(openAppIntent(openBatch, openSingle))
             .build()
         // POST_NOTIFICATIONS 미허용 등 — 알림 실패가 생성 플로우를 깨지 않게 삼킴
         runCatching { NotificationManagerCompat.from(ctx).notify(id, notification) }

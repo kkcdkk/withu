@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,12 +47,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.seoyoung.withu.R
@@ -61,18 +61,15 @@ import com.seoyoung.withu.shared.CharacterImageStore
 import com.seoyoung.withu.shared.GalleryCharacterGroup
 import com.seoyoung.withu.shared.GalleryItem
 import com.seoyoung.withu.shared.SharedAppState
-import com.seoyoung.withu.sync.SyncCoordinator
-import com.seoyoung.withu.ui.CapsuleToast
 import com.seoyoung.withu.ui.FrostedCard
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.plainCard
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import com.seoyoung.withu.ui.theme.WithuColors
 import com.seoyoung.withu.ui.theme.withuPink
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -90,6 +87,7 @@ private data class LandingData(
     val applied: Set<CharacterState>,
     val legacy: List<GalleryItem>,
     val characters: List<GalleryCharacterGroup>,
+    val characterNames: Map<String, String>,     // batchId → 사용자가 지은 이름 (없으면 키 자체가 없음)
 ) {
     val totalCount: Int get() = counts.values.sum() + legacy.size
 }
@@ -101,26 +99,11 @@ fun GalleryLandingScreen(
     onOpenBatchGroup: (String) -> Unit,
     onOpenLegacy: () -> Unit,
 ) {
-    val haptics = LocalHapticFeedback.current
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var mode by remember { mutableStateOf(GalleryMode.BY_STATE) }
     // onAppear + 하위 화면 변경 콜백 대응 — 값 증가 시 재조회 (스펙 04 §3.1)
     var refreshTick by remember { mutableIntStateOf(0) }
-    var pendingApplyAll by remember { mutableStateOf<GalleryCharacterGroup?>(null) }
-    var toastText by remember { mutableStateOf<String?>(null) }
-    var toastJob by remember { mutableStateOf<Job?>(null) }
-
-    fun showToast(text: String, seconds: Double) {
-        toastJob?.cancel()
-        toastText = text
-        toastJob = scope.launch {
-            delay((seconds * 1000).toLong())
-            toastText = null
-        }
-    }
 
     // landing 배경 = 현재 적용 중인 캐릭터 state 의 그라데이션
     val backgroundState = remember(refreshTick) {
@@ -135,12 +118,21 @@ fun GalleryLandingScreen(
                 grouped.byState[st]?.firstOrNull()?.let { st to it.id }
             }.toMap()
             val applied = CharacterState.userFacing.filter { CharacterImageStore.hasImage(it) }.toSet()
+            val allGroups = CharacterImageStore.loadGalleryByCharacter()
+            val names = allGroups.mapNotNull { g ->
+                CharacterImageStore.characterName(g.batchId)?.let { g.batchId to it }
+            }.toMap()
             LandingData(
                 counts = counts,
                 firstIds = firstIds,
                 applied = applied,
                 legacy = grouped.legacy,
-                characters = CharacterImageStore.loadGalleryByCharacter(),
+                // 캐릭터별엔 '이름을 붙인 캐릭터' 또는 '상태 2개 이상(여러 모습 만들기)'만 노출 —
+                // 이름 없는 단건이 목록을 어지럽히지 않게 (iOS refresh() 필터).
+                characters = allGroups.filter { g ->
+                    names.containsKey(g.batchId) || g.items.map { it.sourceState }.toSet().size > 1
+                },
+                characterNames = names,
             )
         }
     }
@@ -166,9 +158,7 @@ fun GalleryLandingScreen(
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = {
-                        Text(stringResource(R.string.gallery_title), fontWeight = FontWeight.SemiBold)
-                    },
+                    title = { WithuTopBarTitle(stringResource(R.string.gallery_title)) },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = Color.Transparent,
                     ),
@@ -200,7 +190,7 @@ fun GalleryLandingScreen(
                             Text(
                                 stringResource(R.string.gallery_section_state_folders),
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
@@ -226,16 +216,24 @@ fun GalleryLandingScreen(
                         }
                     }
                 } else if (d != null) {
-                    // mode == 캐릭터별
+                    // mode == 캐릭터별 — 2열 썸네일 그리드.
+                    // LazyColumn 안에 LazyVerticalGrid 를 중첩하면 높이가 무한대로 잡혀 크래시 —
+                    // 2개씩 chunk 해서 Row 로 그린다 (홀수면 마지막 칸은 Spacer 로 자리만 채움).
                     if (d.characters.isEmpty()) {
                         item { ByCharacterEmpty() }
                     } else {
-                        items(d.characters, key = { it.batchId }) { group ->
-                            CharacterCard(
-                                group = group,
-                                onOpen = { onOpenBatchGroup(group.batchId) },
-                                onApplyAll = { pendingApplyAll = group },
-                            )
+                        items(d.characters.chunked(2), key = { it.first().batchId }) { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                row.forEach { group ->
+                                    CharacterTile(
+                                        group = group,
+                                        name = d.characterNames[group.batchId],
+                                        onOpen = { onOpenBatchGroup(group.batchId) },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -246,39 +244,6 @@ fun GalleryLandingScreen(
         if (data?.totalCount == 0 && mode == GalleryMode.BY_STATE) {
             EmptyStateOverlay(Modifier.align(Alignment.Center))
         }
-
-        CapsuleToast(
-            text = toastText,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 40.dp),
-        )
-    }
-
-    // '이 캐릭터로 모두 적용' 확인 — 여러 자리를 한 번에 덮으므로 반드시 확인 (스펙 04 §3.1)
-    pendingApplyAll?.let { group ->
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { pendingApplyAll = null },
-            title = { Text(stringResource(R.string.gallery_apply_all_confirm_title)) },
-            text = { Text(stringResource(R.string.gallery_apply_all_confirm_body, group.items.size)) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    pendingApplyAll = null
-                    scope.launch {
-                        val applied = applyCharacter(group)
-                        SyncCoordinator.refreshWidgets()
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        refreshTick++
-                        showToast(context.getString(R.string.gallery_apply_all_toast, applied), 1.6)
-                    }
-                }) { Text(stringResource(R.string.gallery_apply_all_button)) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { pendingApplyAll = null }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
     }
 }
 
@@ -302,7 +267,7 @@ private fun ModePicker(mode: GalleryMode, onSelect: (GalleryMode) -> Unit) {
                 text = label,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Light,
                 color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .weight(1f)
@@ -355,7 +320,7 @@ private fun FolderRow(
                 Text(
                     state.koreanShortLabel,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     subtitle,
@@ -456,7 +421,7 @@ private fun LegacyRow(count: Int, onClick: () -> Unit) {
                 Text(
                     stringResource(R.string.gallery_legacy_title),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     stringResource(R.string.gallery_legacy_subtitle, count),
@@ -473,13 +438,18 @@ private fun LegacyRow(count: Int, onClick: () -> Unit) {
     }
 }
 
-// MARK: - 캐릭터별 카드
+// MARK: - 캐릭터별 타일 (2열 그리드 한 칸)
 
+/**
+ * 캐릭터 타일 — 정사각 카드 + 대표 썸네일, 카드 아래 이름 1줄 (iOS characterTile).
+ * '이 캐릭터로 모두 적용'은 랜딩이 아니라 탭해서 들어간 상세(BatchGroupScreen) 상단에 있다.
+ */
 @Composable
-private fun CharacterCard(
+private fun CharacterTile(
     group: GalleryCharacterGroup,
+    name: String?,
     onOpen: () -> Unit,
-    onApplyAll: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 대표 썸네일 — idle 항목 우선, 없으면 첫 항목
     val repId = remember(group) {
@@ -488,66 +458,45 @@ private fun CharacterCard(
     val bmp by produceState<Bitmap?>(initialValue = null, repId) {
         value = withContext(Dispatchers.IO) { CharacterImageStore.loadGalleryImage(repId) }
     }
-    FrostedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable(onClick = onOpen),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val b = bmp
-                    if (b != null) {
-                        Image(
-                            bitmap = b.asImageBitmap(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(4.dp),
-                        )
-                    } else {
-                        Icon(
-                            Icons.Filled.GridView,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.size(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.gallery_character_card_title, group.items.size),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        relativeTime(group.createdAt),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .plainCard(cornerRadius = 16.dp)
+                .clickable(onClick = onOpen),
+            contentAlignment = Alignment.Center,
+        ) {
+            val b = bmp
+            if (b != null) {
+                Image(
+                    bitmap = b.asImageBitmap(),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(14.dp),
+                )
+            } else {
+                Icon(
+                    Icons.Filled.GridView,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(34.dp),
                 )
             }
-            androidx.compose.material3.OutlinedButton(
-                onClick = onApplyAll,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.gallery_apply_all))
-            }
         }
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = name ?: stringResource(R.string.gallery_unnamed_character),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (name == null) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -562,16 +511,14 @@ private fun ByCharacterEmpty() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("🎨", fontSize = 44.sp)
+        CharacterImage(
+            state = CharacterState.IDLE,
+            modifier = Modifier.size(64.dp),
+            maxPixelSize = 192,
+        )
         Text(
             stringResource(R.string.gallery_by_character_empty),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            stringResource(R.string.gallery_by_character_empty2),
-            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -585,19 +532,12 @@ private fun EmptyStateOverlay(modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(withuPink().copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("🎨", fontSize = 44.sp)
-        }
+        // 빈 상태 아이콘 — 캐릭터별 탭·참고사진 피커와 같은 처리 (이모지 제거, iOS 커밋 75d00d1 방향)
+        CharacterImage(state = CharacterState.IDLE, modifier = Modifier.size(64.dp))
         Text(
             stringResource(R.string.gallery_empty_title),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Text(
@@ -629,10 +569,11 @@ private fun sortedFolders(d: LandingData): List<CharacterState> {
 /**
  * '이 캐릭터로 모두 적용' (스펙 04 §3.3) — 각 item 의 sourceState 자리에 적용.
  * 매핑 실패 항목은 skip. 반환 = 실제 적용 성공 개수.
+ * 호출 지점은 캐릭터 상세(BatchGroupScreen) 상단 헤더 — 같은 패키지에서 재사용한다.
  */
-private suspend fun applyCharacter(group: GalleryCharacterGroup): Int = withContext(Dispatchers.IO) {
+internal suspend fun applyCharacter(items: List<GalleryItem>): Int = withContext(Dispatchers.IO) {
     var applied = 0
-    for (item in group.items) {
+    for (item in items) {
         val state = CharacterState.fromRaw(item.sourceState) ?: continue
         if (CharacterImageStore.applyGalleryItem(item.id, state)) {
             // 워치 전송 지점 — iOS: ConnectivityManager.sendCharacterImage. Wear OS 후속.

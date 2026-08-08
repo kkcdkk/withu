@@ -11,29 +11,26 @@ import com.seoyoung.withu.WithuApp
 import com.seoyoung.withu.camera.PhotoSaver
 import com.seoyoung.withu.character.CharacterProfileStore
 import com.seoyoung.withu.character.CharacterState
-import com.seoyoung.withu.net.ApiClient
-import com.seoyoung.withu.net.ApiError
 import com.seoyoung.withu.net.Entitlement
-import com.seoyoung.withu.net.GenerateImageRequest
 import com.seoyoung.withu.net.koreanized
 import com.seoyoung.withu.quota.GenerationQuota
 import com.seoyoung.withu.shared.CharacterImageStore
 import com.seoyoung.withu.sync.SyncCoordinator
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
-import kotlin.coroutines.coroutineContext
 
 /**
  * 단건 생성 상태/로직 — iOS CharacterGenView.swift 의 @State + 액션 포팅 (스펙 02 §3).
  *
+ * ⚠️ 생성 자체는 여기서 돌지 않는다 — `SingleGenQueue`(WorkManager + FGS)가 주인이고
+ * 이 클래스는 잡 스냅샷을 화면 상태로 비추기만 한다. 화면을 나가거나 프로세스가 정리돼도
+ * 생성이 이어지고, 결과는 갤러리 자동 저장 + 다듬기 이력을 거쳐 복원 경로로 돌아온다.
+ *
  * 캔디 규칙 (변경 금지 — 커밋 fd98948 교훈):
  *  - 잔액의 권위는 로컬(GenerationQuota). 서버는 차감하지 않음.
- *  - record() 는 반드시 '성공 판정' 후에만 — 성공 = 결과 슬롯의 Bitmap 인스턴스(!==)가 바뀜.
+ *  - record() 는 반드시 '성공 판정' 후에만 — 이제 `SingleGenQueue.handleSuccessLocked` 한 곳뿐.
  *  - 서버가 free_consumed=true 를 준 세션(프레임 2장 포함)은 전부 미차감.
  */
 class SingleGenViewModel : ViewModel() {
@@ -76,12 +73,19 @@ class SingleGenViewModel : ViewModel() {
     var isProcessing by mutableStateOf(false)
         private set
 
-    // 생성 진행
-    var isGenerating by mutableStateOf(false)
-        private set
-    var generationStartedAt by mutableStateOf<Long?>(null)   // epoch millis
-        private set
-    private var generateJob: Job? = null
+    // 생성 진행 — 실행 주체는 SingleGenQueue(WorkManager FGS). 여기는 표시용 미러.
+    /** 큐에 올리기 직전(참고사진 base64 인코딩 등)의 짧은 준비 구간. */
+    private var preparing by mutableStateOf(false)
+    /** 워커 큐의 현재 단건 잡 — 진행/결과/실패의 단일 출처. */
+    private var queueJob by mutableStateOf<SingleGenJob?>(null)
+    /** 준비 구간의 경과 타이머 기준 (잡이 올라가면 job.queuedAt 이 이어받는다). */
+    private var localStartedAt by mutableStateOf<Long?>(null)
+
+    val isGenerating: Boolean get() = preparing || queueJob?.isActive == true
+
+    /** 경과 초 표시 기준 (epoch millis). */
+    val generationStartedAt: Long?
+        get() = if (isGenerating) (queueJob?.queuedAt ?: localStartedAt) else null
 
     // 결과
     var resultImage by mutableStateOf<Bitmap?>(null)
@@ -121,11 +125,30 @@ class SingleGenViewModel : ViewModel() {
     val hasFreeCreation: Boolean
         get() = (entitlement?.freeSingleRemaining ?: 0) > 0
 
-    /** 직전 send() 를 서버가 무료로 소진했는지 (응답 free_consumed). */
-    private var lastFreeConsumed: Boolean = false
+    /**
+     * 이번 '만들기'가 실제로 무료인지 — 무료가 남아 있고 '사진 없이 프롬프트로만' 만들 때만.
+     * 사진을 넣으면 무료를 안 쓰고 캔디로 (공짜 사진→캐릭터 남용 방지).
+     */
+    val creationIsFree: Boolean
+        get() = hasFreeCreation && referenceImage == null
 
-    /** 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용. */
+    /** 이번 확인 팝업의 동작이 무료인지 — 만들기는 사진 없을 때만, 다듬기는 무료 남았으면. */
+    val pendingActionIsFree: Boolean
+        get() = when (pendingAction) {
+            is PendingAction.NewGeneration -> creationIsFree
+            is PendingAction.Refine -> hasFreeCreation
+            null -> false
+        }
+
+    /**
+     * 생성 모니터링용 수정 체인 id — 새 원본 생성마다 갱신, 다듬기는 같은 값을 재사용.
+     * 갤러리 '캐릭터별' batchId 로도 재사용 — 한 세션의 결과가 한 캐릭터로 묶임.
+     */
     private var currentSessionId: String = UUID.randomUUID().toString()
+
+    /** 결과에 붙일 이름 — 채우면 갤러리 '캐릭터별'에 이 이름으로 표시. (선택) */
+    var characterName by mutableStateOf("")
+        private set
 
     /**
      * 성공/실패 햅틱 원샷 이벤트 — iOS UINotificationFeedbackGenerator(.success/.error) 대응.
@@ -147,6 +170,54 @@ class SingleGenViewModel : ViewModel() {
     var cropTarget by mutableStateOf<CropRequest?>(null)
 
     private fun str(resId: Int): String = WithuApp.context.getString(resId)
+
+    init {
+        // 진행 중인 잡 관찰 — 화면을 나갔다 와도, 프로세스가 죽었다 살아나도 여기로 이어진다.
+        viewModelScope.launch {
+            SingleGenQueue.state.collect { onQueueSnapshot(it) }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // 화면이 사라졌으니 완료는 알림으로 (SingleGenQueue.finishRun 판단).
+        SingleGenQueue.setScreenVisible(false)
+    }
+
+    /**
+     * 큐 스냅샷 → 화면 상태. 끝난 잡은 여기서 한 번만 반영하고 비운다.
+     * 결과는 (워커가 이미 저장해 둔) 갤러리 + 다듬기 이력에서 되읽는다 — 앱이 죽었다 살아나도 같은 경로.
+     */
+    private suspend fun onQueueSnapshot(snapshot: SingleGenSnapshot) {
+        snapshot.entitlement?.let { entitlement = it }
+        val job = snapshot.job
+        queueJob = job
+        if (job == null) {
+            refreshQuota()
+            return
+        }
+        preparing = false
+        if (job.isActive) {
+            refreshQuota()
+            return
+        }
+        // 끝난 잡 — 결과/실패 반영
+        localStartedAt = null
+        if (job.paymentRequired) showPaywall = true
+        if (job.isDone) {
+            // 부분 실패(움직임 프레임만 실패)면 사유를 남기고, 아니면 초기화.
+            lastError = job.errorMessage
+            job.revisedPrompt?.let { revisedPrompt = it }
+            applyChainFromDisk(guard = false)
+        } else {
+            job.errorMessage?.let { lastError = it }
+        }
+        // 다듬기 입력칸은 성공/실패 상관없이 비운다 (기존 동작).
+        if (job.isRefine) refinementPrompt = ""
+        queueJob = null
+        withContext(Dispatchers.IO) { SingleGenQueue.clearFinished(job.id) }
+        refreshQuota()
+    }
 
     // MARK: - 파생 값
 
@@ -245,6 +316,13 @@ class SingleGenViewModel : ViewModel() {
         refinementPrompt = ""
     }
 
+    /** 결과 카드의 이름칸 — 입력 즉시 현재 세션(batchId)에 반영 (생성 후 수정도 바로 저장). */
+    fun updateCharacterName(v: String) {
+        characterName = v
+        val batchId = currentSessionId
+        viewModelScope.launch(Dispatchers.IO) { CharacterImageStore.setCharacterName(v, batchId) }
+    }
+
     fun updateSubjectField(v: String) { subjectField = v; composeFromHelper() }
     fun updateLooksField(v: String) { looksField = v; composeFromHelper() }
     fun updateColorField(v: String) { colorField = v; composeFromHelper() }
@@ -318,23 +396,24 @@ class SingleGenViewModel : ViewModel() {
         pendingAction = null
     }
 
-    /** 팝업 확인 — 생성은 취소 가능하도록 Job 보관, 다듬기는 iOS 처럼 미보관. */
+    /** 팝업 확인 — 실제 실행은 WorkManager(SingleGenQueue) 로 넘긴다. */
     fun confirmPendingAction() {
         when (val action = pendingAction) {
-            is PendingAction.NewGeneration -> generateJob = viewModelScope.launch { generate() }
-            is PendingAction.Refine -> viewModelScope.launch { refine(action.frame) }
+            is PendingAction.NewGeneration -> startGeneration()
+            is PendingAction.Refine -> startRefine(action.frame)
             null -> Unit
         }
         pendingAction = null
     }
 
-    /** '그만두기' — Job 취소 + 상태 원복. 차감 없음 (record 는 성공 후에만). */
+    /** '그만두기' — Worker 취소 + 잡 폐기. 차감 없음 (record 는 성공 후에만). */
     fun cancelGeneration() {
-        generateJob?.cancel()
-        generateJob = null
-        isGenerating = false
-        generationStartedAt = null
+        preparing = false
+        localStartedAt = null
+        queueJob = null
         lastError = str(R.string.gen_err_cancelled)
+        // 취소 정리는 파일 IO 를 동반 — 메인 스레드에서 돌리지 않는다.
+        viewModelScope.launch(Dispatchers.IO) { SingleGenQueue.cancel() }
     }
 
     fun onPaywallClosed() {
@@ -344,69 +423,73 @@ class SingleGenViewModel : ViewModel() {
 
     // MARK: - 생성/다듬기
 
-    private suspend fun generate() {
+    /**
+     * 만들기 — 큐(Worker)에 넘긴다. 화면을 나가도 계속되고 결과는 갤러리 경유로 돌아온다.
+     * 캔디 가드만 여기서, 실제 차감은 워커의 성공 판정 뒤에.
+     */
+    private fun startGeneration() {
         val cost = unitCost
-        // 가드 — 무료 1회 또는 로컬 캔디.
-        if (!hasFreeCreation && !GenerationQuota.canGenerate(cost)) {
+        // 가드 — 무료 1회(사진 없을 때만) 또는 로컬 캔디.
+        if (!creationIsFree && !GenerationQuota.canGenerate(cost)) {
             lastError = str(R.string.gen_err_no_candy)
             return
         }
-        isGenerating = true
-        generationStartedAt = System.currentTimeMillis()
+        val state = targetState
+        val reference = referenceImage
+        val animated = generateAnimated && state.usesGeneratedMotion
+        val basePrompt = composedPrompt()
+        val (rawText, rawField) = rawUserInput()
+        val sessionId = UUID.randomUUID().toString()   // 새 원본 → 새 수정 체인
+        val finalPrompt = withTransparentBackground(basePrompt)
+
         lastError = null
         resultFrame2 = null
         singleDetailFrame = 0
-        currentSessionId = UUID.randomUUID().toString()   // 새 원본 → 새 수정 체인
-        try {
-            // 사전 reachability 체크 — 30분 timeout 세션에 매달리지 않도록 (iOS preflightPing 동일).
-            try {
-                ApiClient.preflightPing()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                lastError = str(R.string.gen_err_offline)
-                return
-            }
+        currentSessionId = sessionId
+        characterName = ""                             // 새 캐릭터 → 이름 초기화
+        lastSentPrompt = finalPrompt                   // 갤러리 '만든 기록' 저장용
+        preparing = true
+        localStartedAt = System.currentTimeMillis()
+
+        viewModelScope.launch {
             saveDescription()
-            val referenceB64 = referenceImage?.let {
+            val referenceB64 = reference?.let {
                 withContext(Dispatchers.Default) { ImageProcessing.toBase64Png(it) }
             }
-            // 성공 판정 = 결과 슬롯 '인스턴스'가 바뀌었는지 — 실패 시 이전 런 이미지가 남아
-            // frame1 생성/캔디 차감으로 새는 것 방지 (값 비교 금지, iOS !== 동일 의미론).
-            val prevResult = resultImage
-            val (rawText, rawField) = rawUserInput()
-            send(composedPrompt(), referenceB64, frame = 0, userInput = rawText, inputField = rawField)
-            val frame0Succeeded = resultImage !== prevResult
-            // 서버가 이번 생성을 계정 무료 1회로 소진했으면 세션 전체(프레임 2장까지) 미차감.
-            val freeSession = lastFreeConsumed
-            if (frame0Succeeded && !freeSession) GenerationQuota.record(cost)
-            // 연속 이미지 — frame0 성공 시 그 원본(1024)을 reference 로 frame1 추가.
-            if (generateAnimated && targetState.usesGeneratedMotion && frame0Succeeded) {
-                val f0Full = lastFrame0FullRes ?: resultImage
-                if (f0Full != null) {
-                    val f0Ref = withContext(Dispatchers.Default) { ImageProcessing.toBase64Png(f0Full) }
-                    val animPrompt = composedPrompt() + "." + animationFrame2Instruction(targetState)
-                    send(animPrompt, f0Ref, frame = 1, matchReference = f0Full, inputField = "움직임 프레임")
-                    if (resultFrame2 != null && !freeSession) GenerationQuota.record(cost)
-                }
+            withContext(Dispatchers.IO) {
+                SingleGenQueue.start(
+                    SingleGenSpec(
+                        state = state,
+                        sessionId = sessionId,
+                        quality = quality,
+                        artStyle = artStyle,
+                        isRefine = false,
+                        frame = 0,
+                        prompt = finalPrompt,
+                        referenceBase64 = referenceB64,
+                        // 사진 첨부 생성은 kind=photo → 서버가 무료 1회를 소진하지 않음(캔디로 차감).
+                        serverKind = if (reference != null) "photo" else null,
+                        userInput = rawText,
+                        inputField = rawField,
+                        // 연속 이미지 — frame0 성공 시 그 원본(1024)을 reference 로 워커가 이어서 만든다.
+                        wantsFrame1 = animated,
+                        frame1Prompt = if (animated) {
+                            withTransparentBackground(
+                                basePrompt + "." + animationFrame2Instruction(state),
+                            )
+                        } else {
+                            null
+                        },
+                        galleryPrompt = finalPrompt,
+                    ),
+                )
             }
-            if (frame0Succeeded) {
-                // 새 결과 = 이력 리셋. [0] = 원본.
-                resultImage?.let { img ->
-                    versions = listOf(ResultVersion(img, resultFrame2, lastFrame0FullRes, isRefined = false))
-                    selectedVersion = 0
-                }
-            }
-        } finally {
-            isGenerating = false
-            generationStartedAt = null
-            generateJob = null
-            refreshQuota()
+            preparing = false
         }
     }
 
     /** 보고 있는 프레임만 다듬기. frame1 은 frame0 을 앵커로 둬 캐릭터/크기 일관성 유지. */
-    private suspend fun refine(frame: Int) {
+    private fun startRefine(frame: Int) {
         val cost = unitCost
         if (!hasFreeCreation && !GenerationQuota.canGenerate(cost)) {
             lastError = str(R.string.gen_err_no_candy)
@@ -418,136 +501,61 @@ class SingleGenViewModel : ViewModel() {
             return
         }
         // reference(앵커): frame1 다듬기 → frame0, frame0 다듬기 → 자기 자신.
-        val anchor = if (frame == 1) (resultImage ?: currentSlot) else currentSlot
-        isGenerating = true
-        generationStartedAt = System.currentTimeMillis()
+        val reference = if (frame == 1) (resultImage ?: currentSlot) else currentSlot
+        val state = targetState
+        val sessionId = currentSessionId
+        val userText = refinementPrompt
+        var refinePrompt = refinementPrompt
+        if (frame == 1) {
+            refinePrompt += ". Animation frame 2 (for a 2-frame swap loop): " +
+                "${state.animationFrame2Hint}. CRITICAL: keep the character at the EXACT " +
+                "same size, scale, and centered position as the reference image; only the pose changes."
+        }
+        val finalPrompt = withTransparentBackground(refinePrompt)
+        // 갤러리 '만든 기록' — frame0 을 새로 그릴 때만 갱신 (움직임 프레임 다듬기는 원본 기록 유지).
+        val galleryPrompt = if (frame == 0) finalPrompt else lastSentPrompt
+        if (frame == 0) lastSentPrompt = finalPrompt
+        // 이번에 안 바뀌는 프레임은 워커가 결과를 합칠 때 그대로 쓴다.
+        val baseFrame0 = resultImage
+        val baseFrame1 = resultFrame2
+        val matchAnchor = lastFrame0FullRes ?: resultImage
+
         lastError = null
-        try {
-            val referenceB64 = withContext(Dispatchers.Default) { ImageProcessing.toBase64Png(anchor) }
-            var refinePrompt = refinementPrompt
-            if (frame == 1) {
-                refinePrompt += ". Animation frame 2 (for a 2-frame swap loop): " +
-                    "${targetState.animationFrame2Hint}. CRITICAL: keep the character at the EXACT " +
-                    "same size, scale, and centered position as the reference image; only the pose changes."
+        preparing = true
+        localStartedAt = System.currentTimeMillis()
+
+        viewModelScope.launch {
+            val referenceB64 = withContext(Dispatchers.Default) {
+                ImageProcessing.toBase64Png(reference)
             }
-            val prevSlot = if (frame == 1) resultFrame2 else resultImage
-            send(
-                refinePrompt, referenceB64, frame,
-                matchReference = if (frame == 1) (lastFrame0FullRes ?: resultImage) else null,
-                userInput = refinementPrompt, inputField = "다듬기",
-            )
-            val succeeded = (if (frame == 1) resultFrame2 else resultImage) !== prevSlot
-            if (succeeded) {
-                // 서버가 무료로 소진한 다듬기는 미차감.
-                if (!lastFreeConsumed) GenerationQuota.record(cost)
-                // 다듬은 버전을 이력에 추가하고 선택 — 이전 버전으로 언제든 복귀 가능.
-                resultImage?.let { img ->
-                    val appended = versions + ResultVersion(img, resultFrame2, lastFrame0FullRes, isRefined = true)
-                    // 8개 초과 시 index 1 제거 — 원본([0])은 항상 보존, 오래된 다듬기부터 정리.
-                    versions = if (appended.size > 8) {
-                        appended.toMutableList().also { it.removeAt(1) }
-                    } else {
-                        appended
-                    }
-                    selectedVersion = versions.size - 1
-                }
+            withContext(Dispatchers.IO) {
+                SingleGenQueue.start(
+                    SingleGenSpec(
+                        state = state,
+                        sessionId = sessionId,
+                        quality = quality,
+                        artStyle = artStyle,
+                        isRefine = true,
+                        frame = frame,
+                        prompt = finalPrompt,
+                        referenceBase64 = referenceB64,
+                        userInput = userText,
+                        inputField = "다듬기",
+                        galleryPrompt = galleryPrompt,
+                        baseFrame0 = baseFrame0,
+                        baseFrame1 = baseFrame1,
+                        anchor = matchAnchor,
+                    ),
+                )
             }
-            refinementPrompt = ""
-            // '배경 빼기' 보기 중 stale 방지 재처리 — Android 는 raw 자체가 투명이라
-            // bestEffortTransparent 가 no-op(동일 인스턴스)으로 계약돼 있어 실질 no-op (파리티 유지).
-        } finally {
-            isGenerating = false
-            generationStartedAt = null
-            refreshQuota()
+            preparing = false
         }
     }
 
-    /**
-     * 서버 전송 + 응답 후처리 — 크로마키 투명화 → (frame1) 참조 정규화 → 128px 다운샘플
-     * → (frame1) 색 매칭. 실패 시 결과 슬롯을 건드리지 않아 caller 의 !== 판정이 실패로 남는다.
-     */
-    private suspend fun send(
-        prompt: String,
-        reference: String?,
-        frame: Int = 0,
-        matchReference: Bitmap? = null,
-        userInput: String? = null,
-        inputField: String? = null,
-    ) {
-        // 격자(체커보드) 방지 — 일부 모델이 "투명"을 격자로 그림 → 배경 지시 명시 (iOS 원문).
-        val finalPrompt = "$prompt. Only the character on a transparent background — " +
+    /** 격자(체커보드) 방지 — 일부 모델이 "투명"을 격자로 그림 → 배경 지시 명시 (iOS 원문). */
+    private fun withTransparentBackground(prompt: String): String =
+        "$prompt. Only the character on a transparent background — " +
             "no background fill, no shadows, no extra elements."
-        try {
-            val req = GenerateImageRequest(
-                prompt = finalPrompt,
-                referenceImageBase64 = reference,
-                steps = 30,
-                width = 1024,
-                height = 1024,
-                quality = quality,
-                artStyle = artStyle,
-                style = "auto",
-                model = "gpt-image-2",
-                userInput = userInput?.trim(),
-                inputField = inputField,
-            )
-            // frame 0 만 수정 체인(session)에 넣는다 — frame 1(자동 애니메이션)은 수정 횟수에서 제외.
-            val resp = ApiClient.generateImage(
-                req,
-                sessionId = if (frame == 0) currentSessionId else null,
-                state = targetState.raw,
-            )
-            coroutineContext.ensureActive()   // '그만두기' 후엔 결과 반영 없이 종료
-            val processedPair = withContext(Dispatchers.Default) {
-                val rawImg = ImageProcessing.fromBase64(resp.imageBase64) ?: return@withContext null
-                // gpt-image-2 는 마젠타 단색 배경으로 옴 → 크로마키 투명화 (이미 투명이면 no-op).
-                val img = ImageProcessing.chromaKeyRemoved(rawImg)
-                // frame1 은 1번째 기준 크기·위치 정규화.
-                val processed = if (frame == 1 && matchReference != null) {
-                    ImageProcessing.matchedToReference(img, matchReference)
-                } else {
-                    img
-                }
-                // 128px 다운샘플 — 메인 200/워치 64/위젯 60 커버 + 디스크 절약.
-                var small = ImageProcessing.downsampled(processed, 128)
-                // frame1 색 드리프트 제거 — frame0 색에 맞춤.
-                if (frame == 1 && matchReference != null) {
-                    val refSmall = ImageProcessing.downsampled(matchReference, 128)
-                    small = ImageProcessing.colorMatched(small, refSmall)
-                }
-                small to processed
-            }
-            if (processedPair == null) {
-                lastError = str(R.string.gen_err_image_load)
-                return
-            }
-            val (small, processed) = processedPair
-            if (frame == 0) {
-                resultImage = small
-                lastFrame0FullRes = processed   // frame1 정규화 reference (1024 투명)
-                revisedPrompt = resp.revisedPrompt
-                lastSentPrompt = finalPrompt    // 갤러리 '만든 기록' 저장용
-            } else {
-                resultFrame2 = small
-            }
-            lastFreeConsumed = resp.freeConsumed ?: false
-            resp.entitlement?.let { applyEntitlement(it) }
-        } catch (e: CancellationException) {
-            throw e   // 취소는 상위(취소 버튼)가 처리 — koreanized 로 삼키지 말 것
-        } catch (e: ApiError.PaymentRequired) {
-            e.balance?.let { applyEntitlement(it) }
-            showPaywall = true
-        } catch (e: Exception) {
-            lastError = e.koreanized()
-        }
-    }
-
-    /** 서버 잔액 반영 — syncCreditsUp 은 '증가분만' 가산 (로컬 차감을 덮어쓰지 않음). */
-    private fun applyEntitlement(ent: Entitlement) {
-        entitlement = ent
-        GenerationQuota.syncCreditsUp(ent.credits)
-        refreshQuota()
-    }
 
     /** 캐릭터 설명을 프로필에 저장 — 다음에 열어도 유지, 배치 생성도 같은 설명 공유. */
     private suspend fun saveDescription() = withContext(Dispatchers.IO) {
@@ -568,6 +576,56 @@ class SingleGenViewModel : ViewModel() {
         lastFrame0FullRes = v.fullRes
         if (v.frame2 == null) singleDetailFrame = 0
         // 투명 캐시는 버전별로 안 들고 있음 — Android 는 raw 자체가 투명이라 재계산 불필요.
+        viewModelScope.launch { saveVersionChain() }
+    }
+
+    /** 다듬기 이력(버전 체인)을 디스크에 저장 — 화면을 나갔다 와도 복원되게. */
+    private suspend fun saveVersionChain() {
+        if (mode != GenerationMode.AI_GENERATE || versions.isEmpty()) return
+        val stateRaw = targetState.raw
+        val selected = selectedVersion
+        val chain = versions.map { Triple(it.galleryId, it.isRefined, it.frame2 != null) }
+        withContext(Dispatchers.IO) { RefineHistoryStore.save(stateRaw, selected, chain) }
+    }
+
+    /**
+     * 저장된 다듬기 이력 복원 — 진입 시 결과가 없을 때만. 이미지는 갤러리에서 다시 읽는다.
+     * 저장된 stateRaw 로 상태 선택도 되돌린다 (iOS restoreVersionChain 동일).
+     */
+    fun restoreVersionChain() {
+        if (mode != GenerationMode.AI_GENERATE || versions.isNotEmpty() || resultImage != null) return
+        viewModelScope.launch { applyChainFromDisk(guard = true) }
+    }
+
+    /**
+     * 디스크의 이력(galleryId 체인)을 화면 상태로 — 진입 복원과 워커 결과 수신이 같은 경로를 쓴다.
+     * 결과 이미지는 워커가 이미 갤러리에 저장했으므로 여기서 다시 읽기만 하면 된다.
+     *
+     * @param guard true = 로드하는 사이에 새 결과가 생겼으면 덮어쓰지 않음 (진입 복원용)
+     */
+    private suspend fun applyChainFromDisk(guard: Boolean) {
+        val r = withContext(Dispatchers.IO) { RefineHistoryStore.load() } ?: return
+        if (guard && (versions.isNotEmpty() || resultImage != null)) return
+        CharacterState.fromRaw(r.stateRaw)?.let { targetState = it }
+        versions = r.versions.map {
+            ResultVersion(it.small, it.frame2, it.small, it.isRefined, it.galleryId)
+        }
+        selectedVersion = r.selected
+        val v = versions[r.selected]
+        resultImage = v.small
+        resultFrame2 = v.frame2
+        // frame1 정규화 앵커는 워커가 남긴 frame0 원본(1024)이 있으면 그걸 쓴다 (없으면 128 폴백).
+        lastFrame0FullRes = withContext(Dispatchers.IO) { SingleGenQueue.loadAnchorFullRes() } ?: v.small
+        if (v.frame2 == null) singleDetailFrame = 0
+        // 이름/세션도 복원 — 저장된 갤러리 항목의 batchId 를 이어받아 같은 캐릭터로 유지.
+        val gid = versions.firstNotNullOfOrNull { it.galleryId } ?: return
+        val restored = withContext(Dispatchers.IO) {
+            val bid = CharacterImageStore.loadGalleryMetadata()
+                .firstOrNull { it.id == gid }?.batchId ?: return@withContext null
+            bid to (CharacterImageStore.characterName(bid) ?: "")
+        } ?: return
+        currentSessionId = restored.first
+        characterName = restored.second
     }
 
     // MARK: - 적용 / 사진 저장
@@ -586,12 +644,31 @@ class SingleGenViewModel : ViewModel() {
 
     private suspend fun applyImage(image: Bitmap) {
         val frame1 = currentDisplay(1)   // 현재 displayTransparent 모드 존중 (iOS 동일)
+        val state = targetState
+        val p = lastSentPrompt
+        val transparent = displayTransparent
+        // 이미 자동 저장된 결과면 그 갤러리 항목을 재사용 — '적용'이 같은 결과를 또 저장하지 않게.
+        val autoSavedId = if (mode == GenerationMode.AI_GENERATE) {
+            versions.getOrNull(selectedVersion)?.galleryId
+        } else {
+            null
+        }
         val ok = withContext(Dispatchers.IO) {
-            val saved = CharacterImageStore.save(image, targetState, frame = 0, prompt = lastSentPrompt) != null
-            if (saved && frame1 != null) {
-                CharacterImageStore.save(frame1, targetState, frame = 1)
+            if (autoSavedId != null && CharacterImageStore.applyGalleryItem(autoSavedId, state)) {
+                // 갤러리 원본은 투명 raw — '흰 배경' 표시 중이면 활성 슬롯만 합성본으로 덮어씀
+                // (갤러리는 raw 유지). frame0 저장이 옛 f1 을 지우므로 frame1 은 그 뒤에 쓴다.
+                if (!transparent) {
+                    CharacterImageStore.saveActiveSlotOnly(image, state, frame = 0)
+                    if (frame1 != null) CharacterImageStore.saveActiveSlotOnly(frame1, state, frame = 1)
+                }
+                true
+            } else {
+                val saved = CharacterImageStore.save(image, state, frame = 0, prompt = p) != null
+                if (saved && frame1 != null) {
+                    CharacterImageStore.save(frame1, state, frame = 1)
+                }
+                saved
             }
-            saved
         }
         if (ok) {
             // iOS WidgetCenter.reloadAllTimelines() 대응 (워치 전송은 SCOPE 제외 — 호출부 없음).

@@ -13,9 +13,8 @@
     <string name="gallery_legacy_title">Other</string>
     <string name="gallery_legacy_subtitle">%1$d · made earlier</string>
     <string name="gallery_legacy_header">Previously made characters</string>
-    <string name="gallery_by_character_empty">Characters made with \'Create several states\'\nare grouped here.</string>
-    <string name="gallery_by_character_empty2">Characters you create one at a time show up under \'By state\'.</string>
-    <string name="gallery_character_card_title">Character · %1$d looks</string>
+    <string name="gallery_by_character_empty">Characters you make are grouped here by name.</string>
+    <string name="gallery_unnamed_character">Unnamed character</string>
     <string name="gallery_batch_group_title">This character</string>
     <string name="gallery_apply_all">Apply this character everywhere</string>
     <string name="gallery_apply_all_confirm_title">Apply this character everywhere?</string>
@@ -67,13 +66,29 @@
     <string name="gallery_bg_saved_toast">Saved</string>
     <string name="gallery_refine_label">Refine</string>
     <string name="gallery_refine_placeholder">What to change (e.g. add a hat)</string>
-    <string name="gallery_refine_button">Refine this</string>
+    <string name="gallery_refine_button">Refine</string>
     <string name="gallery_refine_running">Refining…</string>
-    <string name="gallery_refine_footer">Each refine uses %1$d candy. The result is saved to your gallery as a new item.</string>
+    <string name="gallery_refine_footer">Pick from your refine history and apply.</string>
     <string name="gallery_refine_confirm_title">Uses candies</string>
     <string name="gallery_refine_confirm_body">This refinement uses %1$d candies. You\'re only charged when it succeeds.</string>
     <string name="gallery_refine_confirm_button">Refine</string>
     <string name="gallery_no_candy_toast">Not enough candy. You can top up in Settings.</string>
     <string name="gallery_no_image_toast">Didn\'t receive the image</string>
     <string name="gallery_refine_success_toast">Refined character saved to your gallery</string>
+
+    <!-- 다듬기 이력 (버전 비교) -->
+    <string name="gallery_refine_history_title">Refine history</string>
+    <string name="gallery_refine_history_open">View refine history</string>
+    <string name="gallery_refine_continue">Continue refining</string>
+    <string name="gallery_refine_version_original">Original</string>
+    <string name="gallery_refine_version_n">Refined %1$d</string>
+    <string name="gallery_refine_base_hint">Refines from the selected version.</string>
+    <string name="gallery_refine_adopt">Apply</string>
+    <string name="gallery_refine_adopted_toast">Switched to the refined character</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="gallery_discard_title">You have unsaved changes</string>
+    <string name="gallery_discard_message">If you close, the background and refine changes you just made will be discarded.</string>
+    <string name="gallery_discard_close">Close</string>
+    <string name="gallery_discard_keep">Keep editing</string>
 </resources>

@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 폰 모션 활동 분류 (phoneWorkoutState) -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <!-- 배치 생성 백그라운드 실행 (WorkManager setForeground dataSync) -->
+    <!-- 배치/단건 생성 백그라운드 실행 (WorkManager setForeground dataSync) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- 사진 저장 — API 28 만 WRITE 필요 (PhotoSaver.needsLegacyWritePermission) -->
@@ -84,7 +84,8 @@
             </intent-filter>
         </receiver>
 
-        <!-- 배치 생성 Worker 의 FGS(dataSync) — WorkManager 기본 서비스에 타입 병합 -->
+        <!-- 배치(GenBatchWorker)·단건(GenSingleWorker) 생성 Worker 의 FGS(dataSync)
+             — 둘 다 WorkManager 의 이 서비스를 공유하므로 타입 선언은 여기 한 번. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

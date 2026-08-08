@@ -11,6 +11,7 @@ import com.seoyoung.withu.R
 import com.seoyoung.withu.WithuApp
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.gen.ImageProcessing
+import com.seoyoung.withu.net.ApiErrorDetail
 import com.seoyoung.withu.net.GenerateImageRequest
 import com.seoyoung.withu.net.GenerateImageResponse
 import com.seoyoung.withu.net.koreanized
@@ -202,7 +203,9 @@ object BackgroundGenQueue {
                         job = job.copy(paymentRequired = true)
                         ctx.getString(R.string.bggen_err_payment)
                     }
-                    httpCode == 422 -> ctx.getString(R.string.err_unsafe_prompt)
+                    // 422 — 서버 안내 문구를 그대로 (없을 때만 폴백). ApiError.koreanized 와 동일 규칙.
+                    httpCode == 422 ->
+                        detailOf(body).ifEmpty { ctx.getString(R.string.err_unsafe_prompt) }
                     else -> ctx.getString(R.string.err_server_generic, httpCode)
                 }
             }
@@ -356,6 +359,15 @@ object BackgroundGenQueue {
                 appendJobLocked(spec, job.quality, job.artStyle, job.batchId)
             }
         }
+    }
+
+    /** 오류 응답 본문의 detail 추출 — ApiClient.detailOf 와 동형 (파싱 실패/본문 없음 → 빈 문자열). */
+    private fun detailOf(body: ByteArray?): String {
+        if (body == null || body.isEmpty()) return ""
+        val text = body.decodeToString()
+        return runCatching { json.decodeFromString(ApiErrorDetail.serializer(), text).detail }
+            .getOrElse { text.take(300) }
+            .trim()
     }
 
     private fun decodeSuccess(body: ByteArray?): GenerateImageResponse? {

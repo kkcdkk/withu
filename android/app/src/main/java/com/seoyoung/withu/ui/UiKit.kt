@@ -1,9 +1,13 @@
 package com.seoyoung.withu.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,9 +21,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,7 +41,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,42 +57,115 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.seoyoung.withu.character.CharacterImage
 import com.seoyoung.withu.character.CharacterState
+import com.seoyoung.withu.ui.theme.DungGeunMo
+import com.seoyoung.withu.ui.theme.Pretendard
 import com.seoyoung.withu.ui.theme.WithuColors
-import com.seoyoung.withu.ui.theme.withuCTAGreen
-import com.seoyoung.withu.ui.theme.withuGreen
+import com.seoyoung.withu.ui.theme.withuCardFill
 import com.seoyoung.withu.ui.theme.withuPink
 import com.seoyoung.withu.ui.theme.withuPinkText
+import com.seoyoung.withu.ui.theme.withuPixelOutline
+import com.seoyoung.withu.ui.theme.withuSage
+import com.seoyoung.withu.ui.theme.withuWarmBackground
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
  * 공용 디자인 컴포넌트 — iOS VibeKit.swift 대응 (00-PLAN §2-10).
- * 규칙: frosted 카드 · state.tint 그라데이션 배경 · semibold 상한 · 평서형 한국어.
- * frosted = 배경 블러 대신 반투명 표면 + 얇은 보더로 근사 (Compose 블러 비용 큼).
+ * 규칙: 크림 카드 + 먹빛 테두리 · state.tint 그라데이션 배경 · 평서형 한국어.
+ * 2026-07 레트로 픽셀 개편: 반투명 frosted 표면 → pixelCardSurface/plainCard 로 교체.
+ * Pretendard 는 Light/Bold 두 웨이트뿐 — SemiBold/Medium 사용 금지 (합성 웨이트로 흐려진다).
  */
 
 enum class StatusKind { OK, WARNING, OFF }
 
-/** 모든 카드 표면의 단일 recipe. 솔리드 색·그림자 금지 — 반투명 표면 근사. */
+/**
+ * 상단바 타이틀 — 전 화면 공통 DungGeunMo 17sp.
+ * iOS 는 `UINavigationBar.appearance()` 로 전역 지정(withuApp.swift:21-36)이라
+ * Android 는 이 헬퍼를 모든 TopAppBar 의 title 에 써서 같은 효과를 낸다.
+ * 픽셀 폰트는 웨이트가 하나뿐이므로 fontWeight 는 주지 않는다.
+ */
+@Composable
+fun WithuTopBarTitle(text: String) {
+    Text(
+        text = text,
+        fontFamily = DungGeunMo,
+        fontSize = 17.sp,
+    )
+}
+
+/**
+ * 카드 표면만 (padding 은 호출부 소관) — 따뜻한 크림 + 먹빛 픽셀 계단 테두리.
+ * iOS VibeKit.swift `pixelCardSurface(fill:lineWidth:)` 대응. 홈 카드용.
+ */
+@Composable
+fun Modifier.pixelCardSurface(
+    fill: Color = withuCardFill(),
+    lineWidth: Dp = 2.dp,
+    pixel: Dp = 5.dp,
+): Modifier {
+    val shape = remember(pixel) { PixelBorderShape(pixel) }
+    val outline = withuPixelOutline()
+    return this
+        .clip(shape)
+        .background(fill, shape)
+        .border(lineWidth, outline, shape)
+}
+
+/**
+ * 하위 화면 카드 — 픽셀 계단 대신 깔끔한 둥근 사각 + 먹빛 테두리.
+ * iOS VibeKit.swift `plainCard(fill:lineWidth:)` 대응.
+ */
+@Composable
+fun Modifier.plainCard(
+    fill: Color = withuCardFill(),
+    lineWidth: Dp = 2.dp,
+    cornerRadius: Dp = 14.dp,
+): Modifier {
+    val shape = RoundedCornerShape(cornerRadius)
+    val outline = withuPixelOutline()
+    return this
+        .clip(shape)
+        .background(fill, shape)
+        .border(lineWidth, outline, shape)
+}
+
+/**
+ * 텍스트 입력칸을 카드(크림) 배경과 구분 — 흰빛 배경 + 얇은 먹빛 테두리.
+ * iOS VibeKit.swift `pixelInputField()` 대응 (padding 8 포함).
+ */
+@Composable
+fun Modifier.pixelInputField(): Modifier {
+    val shape = RoundedCornerShape(8.dp)
+    val outline = withuPixelOutline()
+    return this
+        .background(Color.White.copy(alpha = 0.6f), shape)
+        .border(1.5.dp, outline.copy(alpha = 0.45f), shape)
+        .padding(8.dp)
+}
+
+/** 모든 카드 표면의 단일 recipe — 하위 화면 카드(plainCard) + 안쪽 padding 14. */
 @Composable
 fun FrostedCard(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 14.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), shape)
+            .plainCard(cornerRadius = cornerRadius)
             .padding(14.dp),
         content = content,
     )
@@ -100,8 +184,10 @@ fun FormSection(
         if (header != null) {
             Text(
                 text = header,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                // Form 섹션 헤더 = Pretendard Bold 16sp (iOS ContentView Section(header:))
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
             )
@@ -110,6 +196,7 @@ fun FormSection(
         if (footer != null) {
             Text(
                 text = footer,
+                // footer = Pretendard Light 11sp — labelSmall 이 이미 그 값 (Type.kt)
                 style = MaterialTheme.typography.labelSmall,
                 color = footerColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
@@ -133,8 +220,10 @@ fun SectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            // SectionHeader 컴포넌트 = Pretendard Bold 14sp (iOS VibeKit SectionHeader)
+            style = MaterialTheme.typography.titleSmall,
+            fontFamily = Pretendard,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
@@ -165,13 +254,10 @@ fun ActionLinkRow(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(14.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), shape)
+            .plainCard()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(14.dp)
             .alpha(if (dimmed) 0.55f else 1f),
@@ -189,14 +275,19 @@ fun ActionLinkRow(
         Column(Modifier.weight(1f)) {
             Text(
                 text = title,
+                // ActionLinkRow 제목 = Pretendard Light 16sp (iOS VibeKit.swift:447)
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontFamily = Pretendard,
+                fontWeight = FontWeight.Light,
+                fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
+                    // ActionLinkRow 부제 = Pretendard Light 12sp (iOS VibeKit.swift:452)
                     style = MaterialTheme.typography.labelSmall,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -237,15 +328,18 @@ fun StatusPill(kind: StatusKind, text: String) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         Text(
             text = text,
+            // StatusPill 텍스트 = 12sp (labelSmall 11 은 상태 표시로 너무 작다)
             style = MaterialTheme.typography.labelSmall,
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 /**
- * CTA 공용 버튼 — 진한 그린 배경 + 흰 글자 (iOS WithuCTAButtonStyle 대응).
- * 누르는 동안 어두워지고 살짝 축소돼 '눌림'이 확실히 보인다. 비활성 opacity 0.45.
+ * CTA 공용 버튼 — 세이지 채움 + 픽셀 계단 테두리 + 둥근모꼴 흰 글자
+ * (iOS VibeKit.swift WithuCTAButtonStyle 대응).
+ * 누르는 동안 어두워지고(검정 0.18) 살짝 축소돼(0.97) '눌림'이 확실히 보인다.
  */
 @Composable
 fun WithuCTAButton(
@@ -258,11 +352,14 @@ fun WithuCTAButton(
     PressableFilledButton(
         text = text,
         onClick = onClick,
-        background = withuCTAGreen(),
-        cornerRadius = 12.dp,
+        background = withuSage(),
+        shape = remember { PixelBorderShape(5.dp) },
         modifier = modifier,
         enabled = enabled,
         loading = loading,
+        border = BorderStroke(2.5.dp, withuPixelOutline()),
+        // 초록 버튼 글씨 = 둥근모꼴 16 (iOS VibeKit.swift:230)
+        textStyle = TextStyle(fontFamily = DungGeunMo, fontSize = 16.sp),
     )
 }
 
@@ -279,7 +376,7 @@ fun WithuPinkButton(
         text = text,
         onClick = onClick,
         background = withuPinkText(),
-        cornerRadius = 14.dp,
+        shape = RoundedCornerShape(14.dp),
         modifier = modifier,
         enabled = enabled,
         loading = false,
@@ -291,17 +388,23 @@ private fun PressableFilledButton(
     text: String,
     onClick: () -> Unit,
     background: Color,
-    cornerRadius: Dp,
+    shape: Shape,
     modifier: Modifier,
     enabled: Boolean,
     loading: Boolean,
+    border: BorderStroke? = null,
+    textStyle: TextStyle? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "ctaScale")
-    val shape = RoundedCornerShape(cornerRadius)
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = tween(durationMillis = 120, easing = FastOutLinearInEasing),
+        label = "ctaScale",
+    )
     // 비활성은 투명도(alpha)로 흐리게 하면 배경색이라 흰색처럼 사라져 버튼이 안 보임 →
     // 표준 Material 비활성색(회색 컨테이너 + 회색 글자)으로 '눌리지 않지만 보이게'.
+    // (iOS 는 opacity 0.45 — 의도된 파리티 이탈.)
     val isDisabled = !enabled || loading
     val bg = if (isDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f) else background
     val fg = if (isDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else Color.White
@@ -310,7 +413,8 @@ private fun PressableFilledButton(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
             .background(bg)
-            .background(if (pressed) Color.Black.copy(alpha = 0.22f) else Color.Transparent)
+            .background(if (pressed) Color.Black.copy(alpha = 0.18f) else Color.Transparent)
+            .then(if (border != null) Modifier.border(border, shape) else Modifier)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -326,27 +430,110 @@ private fun PressableFilledButton(
                 strokeWidth = 2.dp,
                 color = fg,
             )
+        } else if (textStyle != null) {
+            Text(text = text, style = textStyle, color = fg)
         } else {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = fg,
             )
         }
     }
 }
 
+/**
+ * 레트로 픽셀 토글 — 계단 트랙 + 사각 노브 (iOS VibeKit.swift PixelToggleStyle 대응).
+ * 트랙 42×24 PixelBorderShape(3), OFF=크림 / ON=세이지, 노브 12×12 정사각(원형 아님).
+ *
+ * 접근성: M3 Switch 와 같은 구성 — `toggleable(role = Role.Switch)` 로 TalkBack 이 스위치로 읽고,
+ * `minimumInteractiveComponentSize()` 로 보이는 트랙(42×24)은 그대로 둔 채 터치 타깃만 48dp 로 넓힌다.
+ * `onCheckedChange = null` 이면 토글 자체는 탭을 받지 않는다 —
+ * iOS PixelToggleStyle 처럼 **행 전체**가 탭 영역인 경우(바깥 Row 가 toggleable) 이 형태를 쓴다.
+ */
+@Composable
+fun PixelToggle(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    contentDescription: String? = null,
+) {
+    val shape = remember { PixelBorderShape(3.dp) }
+    val outline = withuPixelOutline()
+    val knobFill = withuCardFill()
+    val interaction = remember { MutableInteractionSource() }
+    // 이동 거리 = 트랙 42 - 안쪽 여백 4*2 - 노브 12 = 22
+    val knobOffset by animateDpAsState(
+        targetValue = if (checked) 22.dp else 0.dp,
+        animationSpec = tween(durationMillis = 160),
+        label = "pixelToggleKnob",
+    )
+    val label = contentDescription
+    Box(
+        modifier = modifier
+            .then(if (label != null) Modifier.semantics { this.contentDescription = label } else Modifier)
+            .then(if (onCheckedChange != null) Modifier.minimumInteractiveComponentSize() else Modifier)
+            .then(
+                if (onCheckedChange != null) {
+                    Modifier.toggleable(
+                        value = checked,
+                        onValueChange = onCheckedChange,
+                        enabled = enabled,
+                        role = Role.Switch,
+                        interactionSource = interaction,
+                        indication = null,
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .wrapContentSize(Alignment.Center)
+            .requiredSize(width = 42.dp, height = 24.dp)
+            .alpha(if (enabled) 1f else 0.45f)
+            .background(if (checked) withuSage() else knobFill, shape)
+            .border(2.dp, outline, shape)
+            .padding(4.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            Modifier
+                .offset(x = knobOffset)
+                .size(12.dp)
+                .background(knobFill)
+                .border(2.dp, outline),
+        )
+    }
+}
+
+/**
+ * 입력칸 공용 색 — OutlinedTextField 자체 테두리/컨테이너를 죽인다.
+ * 외형은 바깥의 Modifier.pixelInputField() 가 그린다 (흰 60% + radius 8 + 갈색 45% 1.5dp).
+ */
+@Composable
+fun withuInputColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Color.Transparent,
+    unfocusedBorderColor = Color.Transparent,
+    disabledBorderColor = Color.Transparent,
+    errorBorderColor = Color.Transparent,
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
+    disabledContainerColor = Color.Transparent,
+    errorContainerColor = Color.Transparent,
+)
+
 /** 아이콘 새로고침 버튼 — 실행 중엔 미니 스피너. 최소 0.5초 스피너로 '눌렸다' 피드백. */
 @Composable
 fun RefreshIconButton(
     action: suspend () -> Unit,
     modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     var isRunning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     if (isRunning) {
-        CircularProgressIndicator(modifier = modifier.size(16.dp), strokeWidth = 2.dp)
+        CircularProgressIndicator(modifier = modifier.size(16.dp), strokeWidth = 2.dp, color = tint)
     } else {
         IconButton(
             onClick = {
@@ -364,7 +551,7 @@ fun RefreshIconButton(
             Icon(
                 Icons.Filled.Refresh,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = tint,
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -417,6 +604,7 @@ fun RefreshRowButton(
 fun HelperFooter(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
+        // HelperFooter = Pretendard Light 11sp — labelSmall 이 이미 그 값 (Type.kt)
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.padding(horizontal = 4.dp),
@@ -442,7 +630,9 @@ fun WarningBanner(text: String, modifier: Modifier = Modifier) {
         )
         Text(
             text = text,
+            // 경고 배너 본문 = 15sp (bodySmall 12 는 오류 안내로 너무 작다)
             style = MaterialTheme.typography.bodySmall,
+            fontSize = 15.sp,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
@@ -490,7 +680,7 @@ fun CandyBadge(candy: Int, onClick: () -> Unit) {
         Text(
             text = "🍬 $candy",
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -516,19 +706,20 @@ fun KoreanStateChip(state: CharacterState, size: Dp = 44.dp, modifier: Modifier 
 }
 
 /**
- * 서브 화면 공통 배경 그라데이션 — 브랜드 그린 기조 + 상태 무드는 옅게 (iOS backgroundGradient).
- * top → bottom: withuGreen 0.14 → state.tint 0.04 → 시스템 배경.
+ * 화면 공통 배경 그라데이션 — 따뜻한 베이지 기조 + 상태 무드는 옅게 (iOS VibeKit backgroundGradient).
+ * top → bottom: topTint(기본 withuWarmBackground) → state.tint 0.05 → withuCardFill.
+ * topTint 로 화면별 상단 색을 바꾼다 (만들기 플로우 = withuPinkSoft).
  */
 @Composable
-fun rememberBackgroundGradient(state: CharacterState): Brush {
-    val green = withuGreen()
-    val background = MaterialTheme.colorScheme.background
-    return remember(state, green, background) {
+fun rememberBackgroundGradient(state: CharacterState, topTint: Color? = null): Brush {
+    val top = topTint ?: withuWarmBackground()
+    val bottom = withuCardFill()
+    return remember(state, top, bottom) {
         Brush.verticalGradient(
             listOf(
-                green.copy(alpha = 0.14f),
-                state.tint.copy(alpha = 0.04f),
-                background,
+                top,
+                state.tint.copy(alpha = 0.05f),
+                bottom,
             ),
         )
     }

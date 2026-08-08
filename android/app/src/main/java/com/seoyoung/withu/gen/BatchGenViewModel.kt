@@ -17,6 +17,7 @@ import com.seoyoung.withu.bggen.BgGenStatus
 import com.seoyoung.withu.camera.PhotoSaver
 import com.seoyoung.withu.character.CharacterProfileStore
 import com.seoyoung.withu.character.CharacterState
+import com.seoyoung.withu.gallery.appendRefineVersion
 import com.seoyoung.withu.net.ApiClient
 import com.seoyoung.withu.net.ApiError
 import com.seoyoung.withu.net.GenerateImageRequest
@@ -54,6 +55,41 @@ sealed class PendingBatchAction {
     data object ReviseIdle : PendingBatchAction()
 }
 
+/**
+ * 기준 모습(idle) 다듬기 무료 정책 — iOS BatchCharacterGenView 의 idleRevisionCost/복원 규칙을 순수 함수로.
+ * 화면/뷰모델 밖에서 테스트할 수 있게 분리했다.
+ */
+object IdleRevisionPolicy {
+    /** 1번째 다듬기는 무료(0), 2번째부터 캔디 차감 (iOS idleRevisionCost). */
+    fun cost(used: Int, unitCost: Int): Int = if (used == 0) 0 else unitCost
+
+    /**
+     * 재진입 복원 — 저장된 이력의 버전 개수로 이미 쓴 횟수를 보수적으로 유도 (iOS restorePendingRevisions).
+     * versions[0] 은 다듬기 전 원본이므로 다듬은 횟수 = versions.size - 1.
+     * 안 하면 화면을 나갔다 올 때마다 '무료'가 다시 떠 무료를 무한히 쓸 수 있다.
+     */
+    fun restoredUsed(current: Int, versionCount: Int): Int = maxOf(current, versionCount - 1)
+}
+
+/**
+ * 다듬기 완료 후 '적용' 전까지 보관하는 버전 이력 (iOS BatchCharacterGenView.BatchRevision).
+ * versions[0] = 다듬기 전 원본, 이후 = 다듬은 버전. 하나씩 만들기·갤러리와 같은 이력 모델.
+ *
+ * - `versions`     128 썸네일 — 스트립/그리드 표시 + 적용 시 갤러리 저장본
+ * - `fullVersions` 대응 1024 원본 — 이어서 다듬을 때의 참조(화질 유지) + 적용 시 frame0FullRes
+ */
+data class BatchRevision(
+    val frame: Int,
+    val versions: List<Bitmap>,
+    val fullVersions: List<Bitmap>,
+    val selected: Int,
+    /** 갤러리 '만든 기록' 저장용 — 마지막으로 보낸 프롬프트. */
+    val prompt: String,
+) {
+    val current: Bitmap get() = versions[selected.coerceIn(0, versions.size - 1)]
+    val currentFull: Bitmap get() = fullVersions[selected.coerceIn(0, fullVersions.size - 1)]
+}
+
 class BatchGenViewModel : ViewModel() {
 
     // MARK: - 입력 상태
@@ -86,11 +122,32 @@ class BatchGenViewModel : ViewModel() {
     var referenceKeep by mutableStateOf("")
     var referenceChange by mutableStateOf("")
 
+    /**
+     * 이 캐릭터에 붙일 이름 — 갤러리 '캐릭터별'에 표시 (선택). iOS characterName.
+     * 생성 후에 고쳐도 같은 batchSessionId 에 즉시 반영된다.
+     */
+    var characterName by mutableStateOf("")
+        private set
+
+    fun updateCharacterName(value: String) {
+        characterName = value
+        val bid = batchSessionId
+        viewModelScope.launch(Dispatchers.IO) { CharacterImageStore.setCharacterName(value, bid) }
+    }
+
     // MARK: - 승인 게이트
 
     var awaitingIdleApproval by mutableStateOf(false)
         private set
     var idleRevisionText by mutableStateOf("")
+
+    /** 기준 모습 확인 화면에서 이미 쓴 다듬기 횟수 — 1번은 무료, 2번째부터 캔디 차감 (iOS idleRevisionsUsed). */
+    var idleRevisionsUsed by mutableStateOf(0)
+        private set
+
+    /** 이번 기준 모습 다듬기 비용 — 0 이면 무료 (iOS idleRevisionCost). */
+    val idleRevisionCost: Int
+        get() = IdleRevisionPolicy.cost(idleRevisionsUsed, GenerationQuota.cost(quality))
 
     /**
      * 승인된 idle 앵커/원본(1024). results 는 128 썸네일이라 reference 품질이 떨어짐 —
@@ -176,6 +233,12 @@ class BatchGenViewModel : ViewModel() {
      */
     val revisingFrame = mutableStateMapOf<CharacterState, Int>()
 
+    /**
+     * 다듬기 완료 후 '적용' 전까지의 버전 이력 (state → 체인). 상세 시트에선 스트립(원본/다듬음 N),
+     * 결과 카드엔 '다듬음' 배지로 보인다. 적용/취소 전까지 results 는 건드리지 않는다 (iOS revisedDone).
+     */
+    val revisedDone = mutableStateMapOf<CharacterState, BatchRevision>()
+
     // 흰배경 합성 캐시 — 같은 raw 비트맵의 합성을 매 프레임 반복하지 않기 위함 (메모리 전용).
     private val whiteCache = HashMap<Bitmap, Bitmap>()
 
@@ -218,7 +281,10 @@ class BatchGenViewModel : ViewModel() {
                 val rest = maxOf(1, requiredCount - 1)
                 str(R.string.batch_candy_body_rest, rest * unit)
             }
-            PendingBatchAction.ReviseIdle -> str(R.string.batch_candy_body_revise, unit)
+            // 첫 다듬기는 무료 — 캔디 안내 대신 무료 안내 (iOS pendingActionMessage).
+            PendingBatchAction.ReviseIdle ->
+                if (idleRevisionCost == 0) str(R.string.batch_candy_body_revise_free)
+                else str(R.string.batch_candy_body_revise, idleRevisionCost)
         }
     }
 
@@ -375,6 +441,10 @@ class BatchGenViewModel : ViewModel() {
         viewModelScope.launch {
             isGenerating = true
             batchSessionId = UUID.randomUUID().toString()   // 새 세션 — 서버가 free_batch 로 묶음
+            // 갤러리 '캐릭터별' 이름 — 새 세션에 옮겨 붙인다 (iOS startBatch:1384).
+            withContext(Dispatchers.IO) {
+                CharacterImageStore.setCharacterName(characterName, batchSessionId)
+            }
             saveDescription()                               // 설명을 프로필에 저장 — 단건 생성과 공유
             results.clear()
             resultsFrame1.clear()
@@ -387,6 +457,10 @@ class BatchGenViewModel : ViewModel() {
             inProgressStates = emptySet()
             stateStartedAt.clear()
             revisingFrame.clear()
+            // 다듬기 이력 초기화는 '새 캐릭터로 덮어쓸 때'뿐 — 화면 재진입으론 지우지 않는다 (iOS:1401-1402).
+            revisedDone.clear()
+            idleRevisionsUsed = 0                       // 새 캐릭터 — 무료 1회 다시 (iOS:1400)
+            withContext(Dispatchers.IO) { PendingRevisionStore.clearAll() }
             idleAnchor = null
             idleFullRes = null
             awaitingIdleApproval = false
@@ -511,20 +585,16 @@ class BatchGenViewModel : ViewModel() {
                     // gpt-image-2 마젠타 배경 → 크로마키 투명화 (투명 결과엔 no-op)
                     val flat = withContext(Dispatchers.Default) { ImageProcessing.chromaKeyRemoved(raw) }
                     val small = withContext(Dispatchers.Default) { ImageProcessing.downsampled(flat, 128) }
-                    results[CharacterState.IDLE] = small
-                    idleFullRes = flat
-                    withContext(Dispatchers.IO) {
-                        // iOS 동일: 갤러리 + 활성 슬롯 동시 저장 (applyToActiveSlot 기본 true)
-                        CharacterImageStore.save(
-                            small, CharacterState.IDLE, frame = 0,
-                            batchId = batchSessionId, prompt = prompt,
-                        )
-                    }
+                    // 즉시 덮어쓰지 않고 이력에 이어붙임 — 골라서 '적용'해야 기준 모습이 바뀜 (iOS:1581).
+                    appendRevision(CharacterState.IDLE, frame = 0, small = small, full = flat, prompt = prompt)
                     // 워치 전송(sendCharacterImage)은 SCOPE 제외 — no-op.
                     // entitlement 서버 잔액 동기화는 로그인 제외 범위라 생략 (bggen 큐와 동일 정책).
-                    GenerationQuota.record(GenerationQuota.cost(quality))   // 직접 호출 성공 — 여기서 차감
+                    // 1번째 다듬기는 무료, 2번째부터 차감 (iOS reviseIdle). 성공 판정 뒤라 실패 땐 차감 없음.
+                    if (idleRevisionsUsed > 0) {
+                        GenerationQuota.record(GenerationQuota.cost(quality))   // 직접 호출 성공 — 여기서 차감
+                    }
+                    idleRevisionsUsed += 1
                     idleRevisionText = ""
-                    SyncCoordinator.refreshWidgets()
                 } else {
                     errors[CharacterState.IDLE] = str(R.string.batch_err_no_image)
                 }
@@ -731,8 +801,19 @@ class BatchGenViewModel : ViewModel() {
             // 시트를 닫아도 결과 카드의 '고치는 프레임'에 로딩을 표시 (iOS revisingFrame).
             revisingFrame[state] = frame
             try {
-                // frame1 은 frame0 을 앵커로 두면 캐릭터/크기 일관성이 유지됨 (iOS 동일)
-                val anchor = if (frame == 1) (results[state] ?: resultsFrame1[state]) else results[state]
+                // 다듬기 참고는 1024 원본으로 — 128 썸네일을 반복 참고하면 화질이 계속 떨어진다 (A-3-f).
+                // 이력이 있으면 고른 버전(frame1 은 썸네일뿐이라 current), 없으면 이 상태의 frame0 원본.
+                val chain = revisedDone[state]?.takeIf { it.frame == frame }
+                val anchor = if (chain != null) {
+                    if (frame == 1) chain.current else chain.currentFull
+                } else if (frame == 1) {
+                    // frame1 은 frame0 을 앵커로 두면 캐릭터/크기 일관성이 유지됨 (iOS 동일)
+                    results[state] ?: resultsFrame1[state]
+                } else {
+                    frame0FullRes[state]
+                        ?: withContext(Dispatchers.IO) { BackgroundGenQueue.loadFrame0FullRes(state) }
+                        ?: results[state]
+                }
                 val refBmp = revisionRefImage ?: anchor
                 val refB64 = refBmp?.let { withContext(Dispatchers.Default) { ImageProcessing.toBase64Png(it) } }
                 val pose = stateHints[state] ?: state.generationHint
@@ -769,25 +850,12 @@ class BatchGenViewModel : ViewModel() {
                         }
                         f to s128
                     }
-                    if (frame == 1) {
-                        resultsFrame1[state] = small
-                    } else {
-                        results[state] = small
-                        frame0FullRes[state] = flat
-                        if (state == CharacterState.IDLE) idleFullRes = flat
-                    }
-                    displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
-                    withContext(Dispatchers.IO) {
-                        // 갤러리에만 저장 — 반영은 '적용' 버튼 (바꾼 결과는 아직 적용 전)
-                        CharacterImageStore.save(
-                            small, state, frame = frame, applyToActiveSlot = false,
-                            batchId = batchSessionId, prompt = modifiedPrompt,
-                        )
-                    }
-                    appliedStates = appliedStates - state
+                    // 즉시 덮어쓰지 않고 버전 이력에 이어붙임 — 상세 시트에서 골라 '적용'해야 반영 (iOS:2081).
+                    appendRevision(state, frame = frame, small = small, full = flat, prompt = modifiedPrompt)
                     GenerationQuota.record(cost)   // 바꾸기도 실제 생성 — 직접 호출이라 여기서 차감
                     refreshQuota()
                     revisionText = ""
+                    revisionRefImage = null        // 다음 다듬기가 옛 참고사진을 물고 가지 않게 (iOS:2086)
                 } else {
                     revisionError = str(R.string.batch_err_no_image_retry)
                 }
@@ -810,6 +878,122 @@ class BatchGenViewModel : ViewModel() {
         val state = selectedResult ?: return
         pendingReviseConfirm = false
         reviseOne(state, detailFrame, revisionText)
+    }
+
+    // MARK: - 다듬기 버전 이력 (iOS appendRevision/selectRevisionVersion/acceptRevision/rejectRevision)
+
+    /**
+     * 다듬기 결과를 버전 이력에 이어붙임 — 없으면 [원본, 새버전], 있으면 append. 저장까지.
+     * 상한 8, 초과 시 [0](원본)은 보존하고 가장 오래된 다듬기부터 밀어낸다 (appendRefineVersion 공통 규칙).
+     */
+    private suspend fun appendRevision(
+        state: CharacterState,
+        frame: Int,
+        small: Bitmap,
+        full: Bitmap,
+        prompt: String,
+    ) {
+        val existing = revisedDone[state]?.takeIf { it.frame == frame }
+        val chain = if (existing != null) {
+            val versions = appendRefineVersion(existing.versions, small)
+            val fulls = appendRefineVersion(existing.fullVersions, full)
+            existing.copy(
+                versions = versions,
+                fullVersions = fulls,
+                selected = versions.size - 1,
+                prompt = prompt,
+            )
+        } else {
+            // 이력 시작 — [0] 은 '다듬기 전' 결과. frame1 은 1024 원본이 없어 썸네일을 그대로 둔다.
+            val before = (if (frame == 1) resultsFrame1[state] else results[state]) ?: small
+            val beforeFull = if (frame == 1) before else (frame0FullRes[state] ?: results[state] ?: small)
+            BatchRevision(
+                frame = frame,
+                versions = listOf(before, small),
+                fullVersions = listOf(beforeFull, full),
+                selected = 1,
+                prompt = prompt,
+            )
+        }
+        revisedDone[state] = chain
+        withContext(Dispatchers.IO) { PendingRevisionStore.save(state, chain) }
+    }
+
+    /** 스트립에서 버전 선택 — 고른 버전이 '적용'·'이어서 다듬기'의 기준이 된다. */
+    fun selectRevisionVersion(state: CharacterState, index: Int) {
+        val chain = revisedDone[state] ?: return
+        if (index !in chain.versions.indices) return
+        val next = chain.copy(selected = index)
+        revisedDone[state] = next
+        viewModelScope.launch(Dispatchers.IO) { PendingRevisionStore.save(state, next) }
+    }
+
+    /**
+     * 이력에서 고른 버전으로 적용 — 이때 처음으로 결과를 교체하고 갤러리에 저장한다.
+     * [0](원본)을 고른 채 적용하면 바꿀 게 없어 이력만 정리한다 (iOS acceptRevision).
+     */
+    fun acceptRevision(state: CharacterState) {
+        val rev = revisedDone[state] ?: return
+        viewModelScope.launch {
+            if (rev.selected != 0) {
+                if (rev.frame == 1) {
+                    resultsFrame1[state] = rev.current
+                } else {
+                    results[state] = rev.current
+                    frame0FullRes[state] = rev.currentFull
+                    if (state == CharacterState.IDLE) idleFullRes = rev.currentFull
+                }
+                displayTransparentByState[state] = false   // 새 raw → 흰배경 기준으로 리셋
+                withContext(Dispatchers.IO) {
+                    // 갤러리에만 저장 — 홈/위젯 반영은 아래 applyOne 이 담당.
+                    CharacterImageStore.save(
+                        rev.current, state, frame = rev.frame, applyToActiveSlot = false,
+                        batchId = batchSessionId, prompt = rev.prompt,
+                    )
+                }
+                if (state == CharacterState.IDLE) {
+                    // idle 은 앵커 — 홈/워치 반영은 '나머지 만들기' 단계에서 (iOS:2146-2150).
+                    appliedStates = appliedStates - state
+                } else {
+                    applyOneInternal(state)
+                    SyncCoordinator.refreshWidgets()
+                }
+            }
+            revisedDone.remove(state)
+            withContext(Dispatchers.IO) { PendingRevisionStore.remove(state) }
+            selectedResult = null   // 그리드로 — 바뀐 게 보이게
+        }
+    }
+
+    /** 이력 버리고 원래 결과 유지 (iOS rejectRevision). */
+    fun rejectRevision(state: CharacterState) {
+        revisedDone.remove(state)
+        selectedResult = null
+        viewModelScope.launch(Dispatchers.IO) { PendingRevisionStore.remove(state) }
+    }
+
+    /**
+     * 완전히 나갔다 온 뒤 저장된 다듬기 이력 복원 — 카드 '다듬음'/기준 모습 이력이 다시 뜨게.
+     * 기준 모습을 이미 다듬었으면 무료 1회는 쓴 것 — 재진입해도 '무료'로 잘못 뜨지 않게 같이 복원한다
+     * (iOS restorePendingRevisions). PendingRevisionStore 스키마는 그대로 두고 버전 개수로 유도.
+     */
+    fun restorePendingRevisions() {
+        viewModelScope.launch {
+            val restored = withContext(Dispatchers.IO) { PendingRevisionStore.loadAll() }
+            for (r in restored) {
+                if (revisedDone[r.state] != null) continue
+                revisedDone[r.state] = BatchRevision(
+                    frame = r.frame,
+                    versions = r.versions,
+                    fullVersions = r.fullVersions,
+                    selected = r.selected,
+                    prompt = r.prompt,
+                )
+            }
+            revisedDone[CharacterState.IDLE]?.let {
+                idleRevisionsUsed = IdleRevisionPolicy.restoredUsed(idleRevisionsUsed, it.versions.size)
+            }
+        }
     }
 
     // MARK: - 사진 앱 저장 (권한 게이트는 화면이 담당 — PhotoSaver 계약)

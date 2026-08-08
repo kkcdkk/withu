@@ -29,15 +29,17 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.seoyoung.withu.R
+import com.seoyoung.withu.character.CharacterProfile
+import com.seoyoung.withu.character.CharacterProfileStore
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.health.HealthManager
 import com.seoyoung.withu.shared.AppPrefs
@@ -46,12 +48,16 @@ import com.seoyoung.withu.ui.FormSection
 import com.seoyoung.withu.ui.RefreshRowButton
 import com.seoyoung.withu.ui.StatusKind
 import com.seoyoung.withu.ui.StatusPill
+import com.seoyoung.withu.ui.WithuTopBarTitle
 import com.seoyoung.withu.ui.rememberBackgroundGradient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 private fun stringRes(id: Int): String = stringResource(id)
@@ -63,8 +69,21 @@ private fun stringRes(id: Int, vararg args: Any): String = stringResource(id, *a
 private fun <T> StateFlow<T>.collectAsStateCompat(): State<T> = collectAsState()
 
 /**
+ * '잠 깨는 중' 구간의 끝 = 일어나는 시간 + 60분 (24시 wrap) — iOS ContentView:1307-1308.
+ * 시간 설정이 틀리면 이 구간이 한밤중에 걸려 '잠 깨는 중'이 엉뚱한 때에 뜬다.
+ */
+internal fun wakingWindowEnd(sleepEndHour: Int, sleepEndMinute: Int): Pair<Int, Int> {
+    val total = sleepEndHour * 60 + sleepEndMinute + 60
+    return (total / 60 % 24) to (total % 60)
+}
+
+private fun hhmm(hour: Int, minute: Int): String =
+    String.format(Locale.US, "%02d:%02d", hour, minute)
+
+/**
  * 진단 화면 — iOS AdvancedDiagnosticsView 대응 (스펙 01 §1.4).
  * 수면·집중 모드 섹션(Focus)·워치 행 SCOPE 제외. overrideState 는 SyncCoordinator 공유 홀더.
+ * ('신호 모니터'(withu.focusSignalLog.v1)는 iOS Focus 디버깅 전용이라 이식하지 않는다.)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,11 +99,20 @@ fun DiagnosticsScreen() {
     val hrAvg by HealthManager.recentHRAverage.collectAsStateCompat()
     val override by SyncCoordinator.overrideState.collectAsStateCompat()
 
+    // 수면 시간 설정 섹션용 — 프로필(설정한 시간창)과 지금 판정.
+    // 지금 판정은 override 가 바뀌면 다시 읽는다 (직접 고르기와 화면이 어긋나지 않게).
+    val profile by produceState(CharacterProfile()) {
+        value = withContext(Dispatchers.IO) { CharacterProfileStore.load() }
+    }
+    val nowState by produceState(CharacterState.IDLE, override) {
+        value = withContext(Dispatchers.IO) { SyncCoordinator.currentState() }
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringRes(R.string.diag_title), fontWeight = FontWeight.SemiBold) },
+                title = { WithuTopBarTitle(stringRes(R.string.diag_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -98,6 +126,46 @@ fun DiagnosticsScreen() {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            // 수면 시간 설정 — '잠 깨는 중'이 왜 지금 뜨는지(혹은 안 뜨는지)를 눈으로 확인하는 섹션.
+            FormSection(
+                header = stringRes(R.string.diag_sleepwindow_header),
+                footer = stringRes(R.string.diag_sleepwindow_footer),
+            ) {
+                DiagValueRow(stringRes(R.string.diag_sleep_basis)) {
+                    DiagSecondaryText(
+                        stringRes(
+                            if (profile.isManualSleepOnly) R.string.diag_sleep_basis_manual
+                            else R.string.diag_sleep_basis_focus,
+                        ),
+                    )
+                }
+                DiagDivider()
+                DiagValueRow(stringRes(R.string.diag_sleep_window)) {
+                    DiagSecondaryText(
+                        stringRes(
+                            R.string.diag_time_range,
+                            hhmm(profile.sleepStartHour, profile.sleepStartMinute),
+                            hhmm(profile.sleepEndHour, profile.sleepEndMinute),
+                        ),
+                    )
+                }
+                DiagDivider()
+                DiagValueRow(stringRes(R.string.diag_waking_window)) {
+                    val (wakeEndH, wakeEndM) = wakingWindowEnd(profile.sleepEndHour, profile.sleepEndMinute)
+                    DiagSecondaryText(
+                        stringRes(
+                            R.string.diag_time_range,
+                            hhmm(profile.sleepEndHour, profile.sleepEndMinute),
+                            hhmm(wakeEndH, wakeEndM),
+                        ),
+                    )
+                }
+                DiagDivider()
+                DiagValueRow(stringRes(R.string.diag_now_verdict)) {
+                    DiagSecondaryText(nowState.caption)
+                }
+            }
+
             // 건강 앱 수면 정보
             FormSection(header = stringRes(R.string.diag_sleep_header)) {
                 DiagValueRow(stringRes(R.string.diag_inbed_48h)) {

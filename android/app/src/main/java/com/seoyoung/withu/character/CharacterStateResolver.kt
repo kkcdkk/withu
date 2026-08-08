@@ -71,11 +71,20 @@ object CharacterStateResolver {
             return CharacterState.ENERGETIC
         }
 
+        val nowMin = now.hour * 60 + now.minute
+        val sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
+        val sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
+
+        // '설정 시간 기준'의 수면 시간창 안이면 폰/걸음 모션으로 수면을 덮지 않는다.
+        // (위 1) 워치 HR 추론은 '명시적 운동 시작' 신호라 이 가드 대상이 아니다 — iOS 정책 동일.)
+        val inManualSleepWindow = profile.isManualSleepOnly &&
+            isInRange(nowMin, sleepStartMin, sleepEndMin)
+
         // 1.2) 워치 걸음 cadence 만으로도 걷기/달리기 (Android 보강) — iOS 는 애플워치가 workout
         //      세션을 자동 감지하지만 Samsung/Health Connect 는 일상 산책에 세션을 안 만든다.
         //      심박이 안 오르는(≥95 미달) 평범한 산책이 위 1) HR 추론에 안 잡혀 '기본'에 머무는 문제.
         //      워치가 Health Connect 에 쓰는 걸음 빈도로 직접 판정. 수면/집중 신호 켜져 있으면 무시.
-        if (!isFocusActive && !inSleepSchedule) {
+        if (!isFocusActive && !inSleepSchedule && !inManualSleepWindow) {
             if (recentStepsPerMinute >= 145) return CharacterState.RUNNING
             if (recentStepsPerMinute >= 45) return CharacterState.WALKING
         }
@@ -83,13 +92,9 @@ object CharacterStateResolver {
         // 1.5) 폰 전용 보조 — 활동 분류가 "10분 지속 걷기/달리기/자전거"로 판단하면 반영.
         //      (지속 조건은 caller 가 검사 — 일상 걸음 오탐 방지)
         //      단 수면 신호가 켜져 있으면 무시 — 밤중에 폰 들고 서성이는 정도로 수면을 덮지 않는다.
-        if (phoneWorkoutState != null && !isFocusActive && !inSleepSchedule) {
+        if (phoneWorkoutState != null && !isFocusActive && !inSleepSchedule && !inManualSleepWindow) {
             return phoneWorkoutState
         }
-
-        val nowMin = now.hour * 60 + now.minute
-        val sleepStartMin = profile.sleepStartHour * 60 + profile.sleepStartMinute
-        val sleepEndMin = profile.sleepEndHour * 60 + profile.sleepEndMinute
 
         // 2) 수면 — 프로필의 manualSleepOnly(기준 칩)가 규칙을 가른다 (iOS 파리티):
         //    · '수면 모드 기준'(manualSleepOnly=false): 실제 수면 신호만 재운다.

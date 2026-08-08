@@ -36,7 +36,6 @@
     <string name="gen_ref_change_label">Change</string>
     <string name="gen_ref_change_placeholder">Write what to change</string>
     <string name="gen_ref_change_examples">- Pose: [wanted pose]\n- Action: [action]\n- Angle: [front/side/3/4]\n- Expression: [if needed]\n- Props: [if needed]</string>
-    <string name="gen_ref_footer_none">Add a photo to reference its look. Leave empty to make from text only.</string>
     <string name="gen_ref_footer_has">The character in the photo stays the same; only what you list under \'Change\' changes. Leave empty to use the pose of the chosen state.</string>
 
     <string name="gen_style_header">Style</string>
@@ -50,11 +49,13 @@
     <string name="gen_recharge">Make more (recharge)</string>
     <string name="gen_animate_toggle">Make a moving character</string>
     <string name="gen_cta">Make it like this</string>
-    <string name="gen_footer_generating">If you leave for too long the result may be lost, so staying on this screen is recommended.</string>
+    <!-- ⚠️ iOS 원문에서 의도적으로 갈라진 유일한 문구 (values/strings_gen.xml 주석 참고). -->
+    <string name="gen_footer_generating">We\'ll keep making it even if you close the app or turn off the screen. You\'ll get a notification when it\'s done.</string>
     <string name="gen_footer_waiting">Usually takes about 20–30 seconds.</string>
     <string name="gen_footer_free">Your first make is free! After that each make/refine uses candy.</string>
     <string name="gen_footer_insufficient">Not enough candy. Recharge to keep making.</string>
     <string name="gen_footer_normal">Candy %1$d · this make %2$d candy</string>
+    <string name="gen_footer_photo_costs_candy">Adding a photo uses candy. The free one is for making without a photo.</string>
 
     <string name="gen_candy_title_free">Your first make is free</string>
     <string name="gen_candy_title_normal">Uses candy</string>
@@ -75,11 +76,14 @@
     <string name="gen_revised_disclosure">See the description actually used</string>
     <string name="gen_apply_cta">Apply to \'%1$s\'</string>
     <string name="gen_save_photos">Save to Photos</string>
+    <string name="gen_saved_to_gallery">Saved to character gallery</string>
+    <string name="gen_name_label">Name for this character (optional)</string>
+    <string name="gen_name_placeholder">Name</string>
+    <string name="gen_name_hint">Shows under this name in the gallery\'s \'By character\'.</string>
 
     <string name="gen_refine_header">Keep refining</string>
     <string name="gen_refine_header_motion">Keep refining (motion frame)</string>
-    <string name="gen_refine_button">Refine like this</string>
-    <string name="gen_refine_button_progress">Refining…</string>
+    <string name="gen_refine_button">Refine</string>
     <string name="gen_refine_footer">Adjust little by little from the result above. Each refine uses the same candy as a make (charged only on success).</string>
 
     <string name="gen_history_header">Refine history</string>
@@ -108,4 +112,9 @@
     <string name="gen_err_photo_load">Couldn\'t load the photo.</string>
     <string name="gen_err_save_failed">Couldn\'t save. Please try again.</string>
     <string name="gen_err_cancelled">Stopped image generation.</string>
+
+    <string name="gen_notify_done_title">Your character is ready</string>
+    <string name="gen_notify_done_body">Open it, take a look, and apply it if you like it.</string>
+    <string name="gen_notify_failed_title">Couldn\'t make the character</string>
+    <string name="gen_notify_failed_body">You can try again in the app.</string>
 </resources>

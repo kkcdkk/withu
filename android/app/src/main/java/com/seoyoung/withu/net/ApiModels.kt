@@ -47,6 +47,20 @@ data class Entitlement(
     @SerialName("referral_code") val referralCode: String? = null,
 )
 
+/** POST /auth/google 요청 — Google ID 토큰. */
+@Serializable
+data class AuthGoogleRequest(
+    @SerialName("id_token") val idToken: String,
+)
+
+/** /auth/google 응답 — 세션 토큰 + 최초 entitlement 스냅샷. */
+@Serializable
+data class AuthResponse(
+    @SerialName("session_token") val sessionToken: String,
+    @SerialName("expires_at") val expiresAt: Long = 0,
+    val entitlement: Entitlement? = null,
+)
+
 @Serializable
 data class RedeemRequest(val code: String)
 

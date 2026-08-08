@@ -19,13 +19,13 @@ enum class WorkoutActivity {
 
     val displayName: String
         get() = when (this) {
-            RUNNING -> "달리기 🏃"
-            CYCLING -> "자전거 🚴"
-            WALKING -> "걷기 🚶"
-            HIKING -> "등산 🥾"
-            SWIMMING -> "수영 🏊"
-            YOGA -> "요가 🧘"
-            STRENGTH -> "근력 💪"
+            RUNNING -> "달리기"
+            CYCLING -> "자전거"
+            WALKING -> "걷기"
+            HIKING -> "등산"
+            SWIMMING -> "수영"
+            YOGA -> "요가"
+            STRENGTH -> "근력"
             OTHER -> "운동"
         }
 }

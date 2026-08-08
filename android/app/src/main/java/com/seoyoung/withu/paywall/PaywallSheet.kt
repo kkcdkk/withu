@@ -42,12 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.core.net.toUri
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.seoyoung.withu.R
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.net.ApiClient
@@ -59,9 +59,12 @@ import com.seoyoung.withu.ui.FrostedCard
 import com.seoyoung.withu.ui.HelperFooter
 import com.seoyoung.withu.ui.SectionHeader
 import com.seoyoung.withu.ui.WithuCTAButton
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.pixelInputField
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import com.seoyoung.withu.ui.theme.withuPink
 import com.seoyoung.withu.ui.theme.withuPinkText
+import com.seoyoung.withu.ui.withuInputColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -125,7 +128,7 @@ fun PaywallSheet(onClose: () -> Unit) {
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.paywall_title)) },
+                title = { WithuTopBarTitle(stringResource(R.string.paywall_title)) },
                 actions = {
                     TextButton(onClick = onClose) {
                         Text(stringResource(R.string.common_close))
@@ -157,7 +160,7 @@ fun PaywallSheet(onClose: () -> Unit) {
                     Text(
                         text = stringResource(R.string.paywall_balance, candy),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -296,7 +299,7 @@ fun PaywallSheet(onClose: () -> Unit) {
                     Text(
                         text = stringResource(R.string.paywall_terms),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = linkColor,
                         modifier = Modifier.clickable {
                             context.startActivity(Intent(Intent.ACTION_VIEW, TERMS_URL.toUri()))
@@ -310,7 +313,7 @@ fun PaywallSheet(onClose: () -> Unit) {
                     Text(
                         text = stringResource(R.string.paywall_privacy),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = linkColor,
                         modifier = Modifier.clickable {
                             context.startActivity(Intent(Intent.ACTION_VIEW, PRIVACY_URL.toUri()))
@@ -372,7 +375,7 @@ private fun PackRow(pack: CandyPack, onClick: () -> Unit) {
                 Text(
                     text = pack.name,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
                 if (pack.recommended) {
                     Spacer(Modifier.width(6.dp))
@@ -425,7 +428,8 @@ private fun CodeInputRow(
                 capitalization = KeyboardCapitalization.Characters,
                 autoCorrectEnabled = false,
             ),
-            modifier = Modifier.weight(1f),
+            colors = withuInputColors(),
+            modifier = Modifier.weight(1f).pixelInputField(),
         )
         WithuCTAButton(
             text = stringResource(R.string.paywall_apply),

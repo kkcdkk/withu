@@ -10,13 +10,13 @@
     <string name="home_metric_minutes">활동분</string>
     <string name="home_metric_kcal">kcal</string>
     <string name="home_metric_sleep">수면</string>
-    <string name="home_msg_morning_1">좋은 아침! 오늘도 함께해요 ☀️</string>
-    <string name="home_msg_morning_2">새 하루 시작이에요 🌱</string>
-    <string name="home_msg_morning_3">기지개 펴고 시작해봐요 🧘</string>
-    <string name="home_msg_morning_4">물 한 잔 마시는 거 잊지 마세요 💧</string>
+    <string name="home_msg_morning_1">좋은 아침! 오늘도 함께해요</string>
+    <string name="home_msg_morning_2">새 하루 시작이에요</string>
+    <string name="home_msg_morning_3">기지개 펴고 시작해봐요</string>
+    <string name="home_msg_morning_4">물 한 잔 마시는 거 잊지 마세요</string>
     <string name="home_msg_active">오늘 알찬 하루였네요! 평소보다 많이 움직였어요</string>
-    <string name="home_msg_normal">오늘 %1$d보 걸었어요 🌿</string>
-    <string name="home_msg_lazy">가벼운 산책 어때요 🌿</string>
+    <string name="home_msg_normal">오늘 %1$d보 걸었어요</string>
+    <string name="home_msg_lazy">가벼운 산책 어때요</string>
     <string name="home_btn_gen_title">함께할 캐릭터 생성하기</string>
     <string name="home_btn_gen_sub">함께할 캐릭터를 만들어요</string>
     <string name="home_btn_camera_title">함께 사진 찍기</string>
@@ -66,6 +66,15 @@
     <string name="settings_watch_sync_never">아직 없음</string>
     <string name="settings_watch_sync_now">지금 바로 동기화</string>
     <string name="settings_watch_footer">운동(산책·달리기 등)은 워치가 연결돼 있으면 워치 기준으로 알아채요.</string>
+    <!-- 계정 (Google 로그인) — 캔디·갤러리 계정 백업 -->
+    <string name="settings_account_header">계정</string>
+    <string name="settings_account_login">Google로 로그인</string>
+    <string name="settings_account_status">로그인 상태</string>
+    <string name="settings_account_signed_out">로그아웃됨</string>
+    <string name="settings_account_logout">로그아웃</string>
+    <string name="settings_account_footer">로그인하면 캔디와 만든 캐릭터가 계정에 저장돼, 기기를 바꾸거나 다시 설치해도 유지돼요.</string>
+    <string name="settings_account_login_failed">로그인에 실패했어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="settings_account_login_done">로그인됐어요.</string>
     <string name="settings_notify_header">알림</string>
     <string name="settings_notify_status">권한 상태</string>
     <string name="settings_notify_request">알림 권한 요청</string>
@@ -122,4 +131,15 @@
     <string name="diag_widget_refresh">위젯 지금 새로고침</string>
     <!-- iOS 푸터의 첫 문장만 — 워치 문장 삭제 (스펙 01 §2.5) -->
     <string name="diag_debug_footer">백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요.</string>
+
+    <!-- 진단 '수면 시간 설정' 섹션 (B-4) — '잠 깨는 중'이 언제 뜨는지 눈으로 확인 -->
+    <string name="diag_sleepwindow_header">수면 시간 설정</string>
+    <string name="diag_sleep_basis">수면 기준</string>
+    <string name="diag_sleep_basis_manual">설정 시간 기준</string>
+    <string name="diag_sleep_basis_focus">수면 모드 기준</string>
+    <string name="diag_sleep_window">설정한 수면 시간</string>
+    <string name="diag_waking_window">잠 깨는 중 구간</string>
+    <string name="diag_now_verdict">지금 판정</string>
+    <string name="diag_time_range">%1$s ~ %2$s</string>
+    <string name="diag_sleepwindow_footer">\'잠 깨는 중\'은 일어나는 시간부터 1시간 동안 나와요.</string>
 </resources>

@@ -10,13 +10,13 @@
     <string name="home_metric_minutes">Active min</string>
     <string name="home_metric_kcal">kcal</string>
     <string name="home_metric_sleep">Sleep</string>
-    <string name="home_msg_morning_1">Good morning! Let\'s spend today together ☀️</string>
-    <string name="home_msg_morning_2">A new day begins 🌱</string>
-    <string name="home_msg_morning_3">Stretch and get started 🧘</string>
-    <string name="home_msg_morning_4">Don\'t forget to drink some water 💧</string>
+    <string name="home_msg_morning_1">Good morning! Let\'s spend today together</string>
+    <string name="home_msg_morning_2">A new day begins</string>
+    <string name="home_msg_morning_3">Stretch and get started</string>
+    <string name="home_msg_morning_4">Don\'t forget to drink some water</string>
     <string name="home_msg_active">What a full day! You moved more than usual</string>
-    <string name="home_msg_normal">You walked %1$d steps today 🌿</string>
-    <string name="home_msg_lazy">How about a light walk 🌿</string>
+    <string name="home_msg_normal">You walked %1$d steps today</string>
+    <string name="home_msg_lazy">How about a light walk</string>
     <string name="home_btn_gen_title">Create a character to be with</string>
     <string name="home_btn_gen_sub">Make a companion character</string>
     <string name="home_btn_camera_title">Take a photo together</string>
@@ -52,6 +52,15 @@
     <string name="settings_health_item_steps">Steps</string>
     <string name="settings_health_item_minutes">Active</string>
     <string name="settings_health_item_kcal">Calories</string>
+    <!-- Account (Google sign-in) — candy/gallery backup -->
+    <string name="settings_account_header">Account</string>
+    <string name="settings_account_login">Sign in with Google</string>
+    <string name="settings_account_status">Sign-in status</string>
+    <string name="settings_account_signed_out">Signed out</string>
+    <string name="settings_account_logout">Sign out</string>
+    <string name="settings_account_footer">Sign in and your candy and characters are saved to your account, so they stay even if you switch phones or reinstall.</string>
+    <string name="settings_account_login_failed">Sign-in failed. Please try again in a moment.</string>
+    <string name="settings_account_login_done">Signed in.</string>
     <string name="settings_notify_header">Notifications</string>
     <string name="settings_notify_status">Permission status</string>
     <string name="settings_notify_request">Request notification permission</string>
@@ -105,4 +114,15 @@
     <string name="diag_state_auto">Auto (recommended)</string>
     <string name="diag_widget_refresh">Refresh widget now</string>
     <string name="diag_debug_footer">Background refresh runs automatically every 30 minutes to a few hours.</string>
+
+    <!-- 진단 '수면 시간 설정' 섹션 (B-4) -->
+    <string name="diag_sleepwindow_header">Sleep hours setting</string>
+    <string name="diag_sleep_basis">Sleep basis</string>
+    <string name="diag_sleep_basis_manual">via set times</string>
+    <string name="diag_sleep_basis_focus">via Sleep Focus</string>
+    <string name="diag_sleep_window">Sleep hours you set</string>
+    <string name="diag_waking_window">Waking-up window</string>
+    <string name="diag_now_verdict">Current verdict</string>
+    <string name="diag_time_range">%1$s ~ %2$s</string>
+    <string name="diag_sleepwindow_footer">\"Waking up\" shows for one hour from your wake-up time.</string>
 </resources>

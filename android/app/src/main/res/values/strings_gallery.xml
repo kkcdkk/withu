@@ -13,9 +13,8 @@
     <string name="gallery_legacy_title">기타</string>
     <string name="gallery_legacy_subtitle">%1$d개 · 예전에 만든 캐릭터</string>
     <string name="gallery_legacy_header">예전에 만든 캐릭터</string>
-    <string name="gallery_by_character_empty">\'여러 모습 만들기\'로 만든 캐릭터가\n여기에 묶여요.</string>
-    <string name="gallery_by_character_empty2">하나씩 만든 캐릭터는 \'상태별\'에서 볼 수 있어요.</string>
-    <string name="gallery_character_card_title">캐릭터 · %1$d개 모습</string>
+    <string name="gallery_by_character_empty">만든 캐릭터가 여기에 이름별로 모여요.</string>
+    <string name="gallery_unnamed_character">이름 없는 캐릭터</string>
     <string name="gallery_batch_group_title">이 캐릭터</string>
     <string name="gallery_apply_all">이 캐릭터로 모두 적용</string>
     <string name="gallery_apply_all_confirm_title">이 캐릭터로 모두 적용할까요?</string>
@@ -68,13 +67,30 @@
     <string name="gallery_bg_saved_toast">저장했어요</string>
     <string name="gallery_refine_label">다듬기</string>
     <string name="gallery_refine_placeholder">바꾸고 싶은 점 (예: 모자를 씌워줘)</string>
-    <string name="gallery_refine_button">이대로 다듬기</string>
+    <string name="gallery_refine_button">다듬기</string>
     <string name="gallery_refine_running">다듬는 중…</string>
-    <string name="gallery_refine_footer">다듬을 때마다 캔디 %1$d개를 써요. 결과는 갤러리에 새로 저장돼요.</string>
+    <string name="gallery_refine_footer">다듬은 이력에서 골라 적용할 수 있어요.</string>
     <string name="gallery_refine_confirm_title">캔디를 사용해요</string>
     <string name="gallery_refine_confirm_body">이번 다듬기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
     <string name="gallery_refine_confirm_button">다듬기</string>
     <string name="gallery_no_candy_toast">캔디가 부족해요. 설정에서 충전할 수 있어요.</string>
     <string name="gallery_no_image_toast">이미지를 받지 못했어요</string>
+    <!-- 다듬기 결과가 도착했는데 상세 시트가 이미 닫혀 있을 때의 폴백 저장 토스트 -->
     <string name="gallery_refine_success_toast">다듬은 캐릭터를 갤러리에 저장했어요</string>
+
+    <!-- 다듬기 이력 (버전 비교) -->
+    <string name="gallery_refine_history_title">다듬기 이력</string>
+    <string name="gallery_refine_history_open">다듬기 이력 보기</string>
+    <string name="gallery_refine_continue">이어서 다듬기</string>
+    <string name="gallery_refine_version_original">원본</string>
+    <string name="gallery_refine_version_n">다듬음 %1$d</string>
+    <string name="gallery_refine_base_hint">선택한 버전을 기준으로 다듬어요.</string>
+    <string name="gallery_refine_adopt">적용</string>
+    <string name="gallery_refine_adopted_toast">다듬은 캐릭터로 바꿨어요</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="gallery_discard_title">저장하지 않은 변경이 있어요</string>
+    <string name="gallery_discard_message">닫으면 방금 바꾼 배경·다듬기 내용이 지워져요.</string>
+    <string name="gallery_discard_close">닫기</string>
+    <string name="gallery_discard_keep">계속 편집</string>
 </resources>

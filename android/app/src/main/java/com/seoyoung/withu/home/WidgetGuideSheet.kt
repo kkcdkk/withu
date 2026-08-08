@@ -36,8 +36,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.seoyoung.withu.R
 import com.seoyoung.withu.character.CharacterState
+import com.seoyoung.withu.ui.WithuTopBarTitle
 import com.seoyoung.withu.ui.rememberBackgroundGradient
-import com.seoyoung.withu.ui.theme.WithuColors
+import com.seoyoung.withu.ui.theme.withuSage
 
 /**
  * 위젯 안내 시트 — iOS WidgetGuideView 대응 (스펙 01 §1.3).
@@ -56,7 +57,7 @@ fun WidgetGuideSheet(onClose: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text(stringResource(R.string.widget_guide_title), fontWeight = FontWeight.SemiBold) },
+                    title = { WithuTopBarTitle(stringResource(R.string.widget_guide_title)) },
                     actions = {
                         TextButton(onClick = onClose) { Text(stringResource(R.string.common_close)) }
                     },
@@ -79,7 +80,7 @@ fun WidgetGuideSheet(onClose: () -> Unit) {
             ) {
                 GuideCard(
                     icon = Icons.Filled.Smartphone,
-                    tint = WithuColors.systemCyan,
+                    tint = withuSage(),
                     title = stringResource(R.string.widget_guide_home_title),
                     steps = listOf(
                         stringResource(R.string.widget_guide_step_1),
@@ -116,7 +117,7 @@ private fun GuideCard(icon: ImageVector, tint: Color, title: String, steps: List
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
         }
         Column(
@@ -128,7 +129,7 @@ private fun GuideCard(icon: ImageVector, tint: Color, title: String, steps: List
                     Text(
                         text = stringResource(R.string.widget_guide_step_num, i + 1),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = tint,
                         modifier = Modifier.width(24.dp),
                     )

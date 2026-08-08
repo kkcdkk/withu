@@ -23,6 +23,8 @@ wearTiles = "1.4.1"
 wearProtolayout = "1.2.1"
 wearComplications = "1.2.1"
 guava = "33.3.1-android"
+credentials = "1.3.0"
+googleid = "1.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +49,10 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 # CameraX ProcessCameraProvider.getInstance() 가 반환하는 ListenableFuture 타입 접근용 (guava 스텁 + await 확장)
 androidx-concurrent-futures-ktx = { group = "androidx.concurrent", name = "concurrent-futures-ktx", version = "1.2.0" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+# Google 로그인 (Credential Manager + Google ID token) — iOS Sign in with Apple 대응
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+google-identity-googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

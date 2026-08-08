@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,10 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -36,9 +35,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,14 +51,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
@@ -74,12 +78,19 @@ import com.seoyoung.withu.shared.CharacterImageStore
 import com.seoyoung.withu.shared.StoreEvents
 import com.seoyoung.withu.shared.WeatherBackgroundCondition
 import com.seoyoung.withu.sync.SyncCoordinator
-import com.seoyoung.withu.ui.ActionLinkRow
+import com.seoyoung.withu.ui.PixelIcon
+import com.seoyoung.withu.ui.PixelIconSet
+import com.seoyoung.withu.ui.PixelToggle
 import com.seoyoung.withu.ui.RefreshIconButton
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.pixelCardSurface
 import com.seoyoung.withu.ui.rememberBackgroundGradient
+import com.seoyoung.withu.ui.theme.DungGeunMo
 import com.seoyoung.withu.ui.theme.WithuColors
-import com.seoyoung.withu.ui.theme.withuGreen
-import com.seoyoung.withu.ui.theme.withuHeroPink
+import com.seoyoung.withu.ui.theme.withuCardFill
+import com.seoyoung.withu.ui.theme.withuPinkSoft
+import com.seoyoung.withu.ui.theme.withuPinkText
+import com.seoyoung.withu.ui.theme.withuPixelOutline
 import com.seoyoung.withu.weather.WeatherCondition
 import com.seoyoung.withu.weather.WeatherManager
 import kotlinx.coroutines.delay
@@ -93,10 +104,24 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 
-/** 프로필 브라운 (iOS systemBrown) — Theme 에 없어 홈/설정에서만 쓰는 로컬 상수. */
-private val ProfileBrown = Color(0xFFA2845E)
-
 // 파일-로컬 헬퍼 (모듈 충돌 방지 위해 private) --------------------------------
+
+/**
+ * 손그림 픽셀 PNG — 컬러라 tint 를 씌우면 안 되므로 Icon 이 아니라 Image.
+ * FilterQuality.None = iOS `.interpolation(.none)` (확대해도 도트가 뭉개지지 않음).
+ */
+@Composable
+private fun PixelImage(@DrawableRes resId: Int, size: Dp, modifier: Modifier = Modifier) {
+    Image(
+        bitmap = ImageBitmap.imageResource(resId),
+        contentDescription = null,
+        modifier = modifier.size(size),
+        filterQuality = FilterQuality.None,
+    )
+}
+
+/** 활동 메시지 = 문구 + 옆에 붙는 손그림 아이콘 (iOS ContentView.swift ActivityMessage struct). */
+private data class ActivityMessage(val text: String, @DrawableRes val asset: Int?)
 
 @Composable
 private fun stringRes(id: Int): String = stringResource(id)
@@ -151,7 +176,7 @@ fun HomeScreen(
     // --- 메모리 상태 ---
     var showSettings by remember { mutableStateOf(false) }
     var imageRefreshKey by remember { mutableIntStateOf(0) }
-    var activityMessage by remember { mutableStateOf("") }
+    var activityMessage by remember { mutableStateOf(ActivityMessage("", null)) }
     var showWeather by remember { mutableStateOf(AppPrefs.showWeatherDecoration) }
     // 권한 배너/캐릭터 상태 재계산 트리거 (동기 API·DND·시간 반영)
     var tick by remember { mutableIntStateOf(0) }
@@ -161,10 +186,12 @@ fun HomeScreen(
         SyncCoordinator.currentState()
     }
 
-    // 날씨 데코 조건 (야간 우선) — showWeather 켜졌을 때만 히어로에 오버레이
-    val decoration = remember(weather, profile, tick, showWeather) {
-        if (!showWeather) null else weatherBackgroundCondition(weather, profile)
+    // 날씨 조건 (야간 우선). 헤더 아이콘은 항상 이 값을 쓰고, 캐릭터 옆 데코만 showWeather 로 끈다
+    // (iOS ContentView.swift:347 — showWeather 는 WeatherDecorationView 에만 걸린다).
+    val weatherCondition = remember(weather, profile, tick) {
+        weatherBackgroundCondition(weather, profile)
     }
+    val decoration = if (showWeather) weatherCondition else null
 
     // 진입: 날씨 + 건강 일괄 로드 → 활동 메시지 계산 → sync
     LaunchedEffect(Unit) {
@@ -241,12 +268,7 @@ fun HomeScreen(
         containerColor = Color.Transparent,
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringRes(R.string.home_title),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
+                title = { WithuTopBarTitle(stringRes(R.string.home_title)) },
                 actions = {
                     IconButton(onClick = { showSettings = true }) {
                         Icon(Icons.Filled.Settings, contentDescription = stringRes(R.string.settings_title))
@@ -271,6 +293,7 @@ fun HomeScreen(
             }
             WeatherHeader(
                 condition = weather?.condition,
+                iconCondition = weatherCondition,
                 temperatureC = weather?.temperatureC,
                 isFetching = isFetchingWeather,
                 showWeather = showWeather,
@@ -341,7 +364,7 @@ private fun PermissionBanner(names: List<String>, onClick: () -> Unit) {
             Text(
                 text = stringRes(R.string.home_perm_title, names.joinToString(" · ")),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
@@ -364,6 +387,7 @@ private fun PermissionBanner(names: List<String>, onClick: () -> Unit) {
 @Composable
 private fun WeatherHeader(
     condition: WeatherCondition?,
+    iconCondition: WeatherBackgroundCondition?,
     temperatureC: Double?,
     isFetching: Boolean,
     showWeather: Boolean,
@@ -378,31 +402,42 @@ private fun WeatherHeader(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (condition != null && temperatureC != null) {
+            // 이모지 대신 캐릭터 옆 장식과 같은 픽셀 날씨 PNG (야간 판정 포함).
+            // drawable 이름 해석은 WeatherDecoration.kt 와 같은 규칙 — weather_<raw>.
+            val context = LocalContext.current
+            val assetId = remember(iconCondition) {
+                iconCondition?.let {
+                    context.resources.getIdentifier("weather_${it.raw}", "drawable", context.packageName)
+                } ?: 0
+            }
+            if (assetId != 0) PixelImage(assetId, 20.dp)
             Text(
-                text = "${condition.emoji} ${condition.caption}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                text = condition.caption,
+                fontFamily = DungGeunMo,
+                fontSize = 13.sp,
             )
             Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = "${temperatureC.roundToInt()}°",
-                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = DungGeunMo,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             Text(
                 text = stringRes(R.string.home_weather_loading),
-                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = DungGeunMo,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(Modifier.weight(1f))
         // 접근성 라벨 — iOS labelsHidden Toggle 의 '날씨 표시' 라벨 대응
         val weatherToggleLabel = stringRes(R.string.home_weather_toggle)
-        Switch(
+        PixelToggle(
             checked = showWeather,
             onCheckedChange = onToggleWeather,
-            modifier = Modifier.semantics { contentDescription = weatherToggleLabel },
+            contentDescription = weatherToggleLabel,
         )
         Spacer(Modifier.width(4.dp))
         if (isFetching) {
@@ -428,64 +463,122 @@ private fun MetricsCard(
     minutes: Double?,
     kcal: Double?,
     sleepHours: Double?,
-    activityMessage: String,
+    activityMessage: ActivityMessage,
     onRefresh: suspend () -> Unit,
 ) {
-    val shape = RoundedCornerShape(18.dp)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f), shape)
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    // 갈색 바가 카드 최상단에 딱 붙도록 안쪽 padding 은 바 '아래' 컨텐츠에만
+    // (iOS ContentView.swift:383-431 = VStack(spacing:0) + 바깥 pixelCardSurface).
+    Column(modifier = Modifier.fillMaxWidth().pixelCardSurface()) {
+        CardHeaderBar(title = stringRes(R.string.home_metrics_title)) {
+            // 아이콘은 16dp 그대로, 터치 타깃만 최소 48dp 확보 (M3 접근성 기준)
+            RefreshIconButton(
+                action = onRefresh,
+                modifier = Modifier.minimumInteractiveComponentSize(),
+                tint = withuCardFill(),
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = stringRes(R.string.home_metrics_title),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.weight(1f))
-            RefreshIconButton(action = onRefresh)
-        }
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            MetricItem("👟", steps?.let { it.toInt().toString() } ?: "-", stringRes(R.string.home_metric_steps), Modifier.weight(1f))
-            MetricDivider()
-            MetricItem("🏃", minutes?.let { it.toInt().toString() } ?: "-", stringRes(R.string.home_metric_minutes), Modifier.weight(1f))
-            MetricDivider()
-            MetricItem("🔥", kcal?.let { it.toInt().toString() } ?: "-", stringRes(R.string.home_metric_kcal), Modifier.weight(1f))
-            MetricDivider()
-            MetricItem("💤", sleepHours?.let { "%.1fh".format(it) } ?: "-", stringRes(R.string.home_metric_sleep), Modifier.weight(1f))
-        }
-        if (activityMessage.isNotEmpty()) {
-            Text(
-                text = activityMessage,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp),
-            )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                MetricItem(
+                    value = steps?.let { it.toInt().toString() } ?: "-",
+                    label = stringRes(R.string.home_metric_steps),
+                    dim = (steps ?: 0.0).toInt() == 0,
+                    modifier = Modifier.weight(1f),
+                ) { PixelImage(R.drawable.metric_steps, 20.dp) }
+                MetricDivider()
+                MetricItem(
+                    value = minutes?.let { it.toInt().toString() } ?: "-",
+                    label = stringRes(R.string.home_metric_minutes),
+                    dim = (minutes ?: 0.0).toInt() == 0,
+                    modifier = Modifier.weight(1f),
+                ) { PixelIcon(PixelIconSet.clock, withuPixelOutline(), size = 18.dp) }
+                MetricDivider()
+                MetricItem(
+                    value = kcal?.let { it.toInt().toString() } ?: "-",
+                    label = stringRes(R.string.home_metric_kcal),
+                    dim = (kcal ?: 0.0).toInt() == 0,
+                    modifier = Modifier.weight(1f),
+                ) { PixelIcon(PixelIconSet.flame, withuPixelOutline(), size = 18.dp) }
+                MetricDivider()
+                MetricItem(
+                    value = sleepHours?.let { "%.1fh".format(it) } ?: "-",
+                    label = stringRes(R.string.home_metric_sleep),
+                    dim = sleepHours == null,
+                    modifier = Modifier.weight(1f),
+                ) { PixelIcon(PixelIconSet.moon, withuPixelOutline(), size = 18.dp) }
+            }
+            if (activityMessage.text.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                ) {
+                    if (activityMessage.asset != null) PixelImage(activityMessage.asset, 18.dp)
+                    Text(
+                        text = activityMessage.text,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
     }
 }
 
+/** 카드 상단 갈색 바 — 크림 제목 + (선택) 우측 요소. iOS ContentView.swift:434-448 cardHeaderBar. */
 @Composable
-private fun MetricItem(emoji: String, value: String, label: String, modifier: Modifier = Modifier) {
+private fun CardHeaderBar(title: String, trailing: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(withuPixelOutline())
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            fontFamily = DungGeunMo,
+            fontSize = 12.sp,
+            color = withuCardFill(),
+        )
+        Spacer(Modifier.weight(1f))
+        trailing()
+    }
+}
+
+/** dim = 값이 0/없음 → 흐리고 작게. 의미값은 크고 또렷하게 (iOS ContentView.swift:458-473). */
+@Composable
+private fun MetricItem(
+    value: String,
+    label: String,
+    dim: Boolean,
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(emoji, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.alpha(if (dim) 0.3f else 0.9f)) { icon() }
+        Text(
+            text = value,
+            fontFamily = DungGeunMo,
+            fontSize = if (dim) 15.sp else 19.sp,
+            color = if (dim) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = label,
+            fontFamily = DungGeunMo,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -499,8 +592,12 @@ private fun MetricDivider() {
     )
 }
 
-// MARK: - 액션 버튼 4개
+// MARK: - 액션 버튼 (히어로 1 + 2열 그리드 3)
 
+/**
+ * iOS ContentView.swift:515-580 대응 — 핵심 액션은 연초록 히어로 카드, 보조 3개는 2열 그리드.
+ * LazyColumn/LazyVerticalGrid 중첩(스크롤 충돌)을 피해 Row 2줄로 흘린다 (iOS 도 3개 → 2행).
+ */
 @Composable
 private fun ActionButtons(
     onOpenSingleGen: () -> Unit,
@@ -509,33 +606,100 @@ private fun ActionButtons(
     onOpenProfile: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ActionLinkRow(
-            tint = withuHeroPink(),
-            icon = Icons.Filled.AutoAwesome,
+        HeroActionCard(
+            asset = R.drawable.menu_wand,
             title = stringRes(R.string.home_btn_gen_title),
             subtitle = stringRes(R.string.home_btn_gen_sub),
             onClick = onOpenSingleGen,
         )
-        ActionLinkRow(
-            tint = withuGreen(),
-            icon = Icons.Filled.PhotoCamera,
-            title = stringRes(R.string.home_btn_camera_title),
-            subtitle = stringRes(R.string.home_btn_camera_sub),
-            onClick = onOpenCamera,
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GridActionCard(
+                asset = R.drawable.menu_camera,
+                title = stringRes(R.string.home_btn_camera_title),
+                subtitle = stringRes(R.string.home_btn_camera_sub),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenCamera,
+            )
+            GridActionCard(
+                asset = R.drawable.menu_gallery,
+                title = stringRes(R.string.home_btn_gallery_title),
+                subtitle = stringRes(R.string.home_btn_gallery_sub),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenGallery,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GridActionCard(
+                asset = R.drawable.menu_settings,
+                title = stringRes(R.string.home_btn_profile_title),
+                subtitle = stringRes(R.string.home_btn_profile_sub),
+                modifier = Modifier.weight(1f),
+                onClick = onOpenProfile,
+            )
+            // 3개가 2열이라 마지막 칸은 비움 (iOS LazyVGrid 와 같은 흐름)
+            Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun HeroActionCard(
+    @DrawableRes asset: Int,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pixelCardSurface(fill = withuPinkSoft())
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        PixelImage(asset, 34.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(text = title, fontFamily = DungGeunMo, fontSize = 16.sp)
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = withuPinkText(),
+            modifier = Modifier.size(16.dp),
         )
-        ActionLinkRow(
-            tint = WithuColors.systemMint,
-            icon = Icons.Filled.PhotoLibrary,
-            title = stringRes(R.string.home_btn_gallery_title),
-            subtitle = stringRes(R.string.home_btn_gallery_sub),
-            onClick = onOpenGallery,
-        )
-        ActionLinkRow(
-            tint = ProfileBrown,
-            icon = Icons.Filled.AccountCircle,
-            title = stringRes(R.string.home_btn_profile_title),
-            subtitle = stringRes(R.string.home_btn_profile_sub),
-            onClick = onOpenProfile,
+    }
+}
+
+@Composable
+private fun GridActionCard(
+    @DrawableRes asset: Int,
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .heightIn(min = 96.dp)
+            .pixelCardSurface()
+            .clickable(onClick = onClick)
+            .padding(13.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        PixelImage(asset, 30.dp)
+        Text(text = title, fontFamily = DungGeunMo, fontSize = 13.sp, maxLines = 1)
+        Text(
+            text = subtitle,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
         )
     }
 }
@@ -553,31 +717,40 @@ private fun LastUpdateFooter(tick: Int) {
     }
     Text(
         text = text,
+        // 마지막 갱신 푸터 = Pretendard Light 10sp (iOS ContentView.swift:631)
         style = MaterialTheme.typography.labelSmall,
+        fontSize = 10.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         modifier = Modifier.fillMaxWidth(),
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Light,
     )
 }
 
 // MARK: - 순수 헬퍼 (composable 아님)
 
 /** 활동 메시지 계산 — iOS computeActivityMessage 이식 (진입/새로고침 시점에만 랜덤 확정). */
-private fun computeActivityMessage(context: Context): String {
+private fun computeActivityMessage(context: Context): ActivityMessage {
     val hour = LocalDateTime.now().hour
     val kcal = (HealthManager.todayActiveKcal.value ?: 0.0).toInt()
     val steps = (HealthManager.todaySteps.value ?: 0.0).toInt()
     val minutes = (HealthManager.todayActiveMinutes.value ?: 0.0).toInt()
     if (hour < 11 && kcal < 100) {
-        val ids = listOf(
-            R.string.home_msg_morning_1, R.string.home_msg_morning_2,
-            R.string.home_msg_morning_3, R.string.home_msg_morning_4,
+        val morning = listOf(
+            R.string.home_msg_morning_1 to R.drawable.msg_sun,
+            R.string.home_msg_morning_2 to R.drawable.msg_leaf,
+            R.string.home_msg_morning_3 to R.drawable.msg_stretch,
+            R.string.home_msg_morning_4 to R.drawable.msg_water,
         )
-        return context.getString(ids.random())
+        val (id, asset) = morning.random()
+        return ActivityMessage(context.getString(id), asset)
     }
-    if (kcal >= 400 || minutes >= 60 || steps >= 10000) return context.getString(R.string.home_msg_active)
-    if (kcal >= 150 || steps >= 4000) return context.getString(R.string.home_msg_normal, steps)
-    return context.getString(R.string.home_msg_lazy)
+    if (kcal >= 400 || minutes >= 60 || steps >= 10000) {
+        return ActivityMessage(context.getString(R.string.home_msg_active), R.drawable.msg_stretch)
+    }
+    if (kcal >= 150 || steps >= 4000) {
+        return ActivityMessage(context.getString(R.string.home_msg_normal, steps), R.drawable.msg_leaf)
+    }
+    return ActivityMessage(context.getString(R.string.home_msg_lazy), R.drawable.msg_leaf)
 }
 
 /** 현재 시각 + 날씨 → 배경 condition (야간 우선). iOS weatherBackgroundCondition 이식. */

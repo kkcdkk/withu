@@ -1,7 +1,9 @@
 package com.seoyoung.withu.home
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -46,12 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.health.connect.client.PermissionController
 import com.seoyoung.withu.R
+import com.seoyoung.withu.auth.AuthManager
 import com.seoyoung.withu.health.HealthManager
 import com.seoyoung.withu.notify.NotificationHelper
 import com.seoyoung.withu.paywall.PaywallSheet
@@ -60,6 +62,7 @@ import com.seoyoung.withu.sync.SyncCoordinator
 import com.seoyoung.withu.ui.FormSection
 import com.seoyoung.withu.ui.StatusKind
 import com.seoyoung.withu.ui.StatusPill
+import com.seoyoung.withu.ui.WithuTopBarTitle
 import com.seoyoung.withu.ui.rememberBackgroundGradient
 import com.seoyoung.withu.character.CharacterState
 import kotlinx.coroutines.flow.StateFlow
@@ -119,6 +122,11 @@ private fun SettingsContent(
 
     val isHealthAuthorized by HealthManager.isAuthorized.collectAsStateCompat()
     var candy by remember { mutableIntStateOf(GenerationQuota.displayedCandy()) }
+    // 계정(Google 로그인) 상태
+    val signedIn by AuthManager.signedIn.collectAsStateCompat()
+    val accountEmail by AuthManager.email.collectAsStateCompat()
+    var loginLoading by remember { mutableStateOf(false) }
+    var loginMessage by remember { mutableStateOf("") }
     var healthMessage by remember { mutableStateOf("") }
     var healthLoading by remember { mutableStateOf(false) }
     // 알림 라벨/권한은 동기 조회라 요청 후 재계산 트리거가 필요
@@ -155,7 +163,7 @@ private fun SettingsContent(
         containerColor = Color.Transparent,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringRes(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
+                title = { WithuTopBarTitle(stringRes(R.string.settings_title)) },
                 actions = {
                     TextButton(onClick = onClose) { Text(stringRes(R.string.common_close)) }
                 },
@@ -183,6 +191,57 @@ private fun SettingsContent(
                 footer = stringRes(R.string.settings_candy_footer, candy),
             ) {
                 SettingsButtonRow(title = stringRes(R.string.settings_candy_charge)) { showPaywall = true }
+            }
+
+            // 1.5 계정 (Google 로그인) — 캔디·갤러리 계정 백업
+            FormSection(
+                header = stringRes(R.string.settings_account_header),
+                footer = stringRes(R.string.settings_account_footer),
+            ) {
+                if (signedIn) {
+                    SettingsValueRow(title = stringRes(R.string.settings_account_status)) {
+                        Text(
+                            text = accountEmail ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    SettingsButtonRow(
+                        title = stringRes(R.string.settings_account_logout),
+                        destructive = true,
+                    ) {
+                        AuthManager.signOut()
+                        loginMessage = ""
+                    }
+                } else {
+                    SettingsButtonRow(
+                        title = stringRes(R.string.settings_account_login),
+                        enabled = !loginLoading,
+                    ) {
+                        val activity = context.findActivity() ?: return@SettingsButtonRow
+                        scope.launch {
+                            loginLoading = true
+                            loginMessage = ""
+                            loginMessage = try {
+                                AuthManager.signInWithGoogle(activity)
+                                candy = GenerationQuota.displayedCandy()   // 로그인 캔디 동기화 반영
+                                context.getString(R.string.settings_account_login_done)
+                            } catch (e: Exception) {
+                                context.getString(R.string.settings_account_login_failed)
+                            }
+                            loginLoading = false
+                        }
+                    }
+                }
+                if (loginMessage.isNotEmpty()) {
+                    Text(
+                        text = loginMessage,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                    )
+                }
             }
 
             // 2. 건강 데이터 (푸터 없음 — 단축어 안내 Android 제외)
@@ -475,6 +534,16 @@ private suspend fun reloadHealth(context: Context): String {
     } else {
         context.getString(R.string.settings_health_failed, errors.joinToString(", "))
     }
+}
+
+/** Compose LocalContext → 호스트 Activity (Credential Manager 계정 선택 UI 에 필요). */
+private fun Context.findActivity(): Activity? {
+    var c: Context? = this
+    while (c is ContextWrapper) {
+        if (c is Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
 
 private fun openUrl(context: Context, url: String) {

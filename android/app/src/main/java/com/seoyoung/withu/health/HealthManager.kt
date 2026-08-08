@@ -33,6 +33,14 @@ import java.time.ZoneId
  */
 object HealthManager {
 
+    /** 지난밤 유효 판정 — 마지막 수면 종료가 이 시간보다 오래됐으면 '기록 없음' (iOS 36시간). */
+    private const val LAST_NIGHT_MAX_AGE_HOURS = 36L
+
+    /** 한 밤으로 묶는 창 — 마지막 수면 종료 기준 이 시간 안에 시작한 구간만 (iOS 14시간). */
+    private const val SLEEP_SESSION_WINDOW_HOURS = 14L
+
+    private const val HOUR_MS = 60L * 60L * 1000L
+
     private val _isAuthorized = MutableStateFlow(false)
     val isAuthorized: StateFlow<Boolean> = _isAuthorized
 
@@ -115,7 +123,10 @@ object HealthManager {
 
     // MARK: - 조회 6종 (실패/미설치 → null 유지, no data → 0)
 
-    /** 지난 N일 수면 — asleep 계열만 합산 (AWAKE/침대 밖 stage 제외). */
+    /**
+     * 지난 밤 수면 — asleep 계열만, **마지막 한 밤 분량만** 집계 (AWAKE/침대 밖 stage 제외).
+     * N일치를 전부 합산하면 '오늘 활동'에 며칠치가 얹혀 20시간 같은 값이 나온다 (iOS 가 고친 버그).
+     */
     suspend fun fetchSleep(days: Int = 7) = withContext(Dispatchers.IO) {
         val client = clientOrNull() ?: run { _sleep.value = null; return@withContext }
         runCatching {
@@ -126,32 +137,54 @@ object HealthManager {
                     TimeRangeFilter.between(now.minus(Duration.ofDays(days.toLong())), now),
                 ),
             ).records
-            var totalSeconds = 0.0
-            var sampleCount = 0
-            var lastNight: Long? = null
+            val intervals = mutableListOf<SleepInterval>()
             for (s in sessions) {
                 if (s.stages.isEmpty()) {
                     // stage 없는 세션은 전체를 asleep 으로 간주 (스펙 10 §5 표)
-                    totalSeconds += Duration.between(s.startTime, s.endTime).seconds.toDouble()
-                    sampleCount += 1
+                    intervals += SleepInterval(s.startTime.toEpochMilli(), s.endTime.toEpochMilli())
                 } else {
                     for (st in s.stages) {
                         if (isAsleepStage(st.stage)) {
-                            totalSeconds += Duration.between(st.startTime, st.endTime).seconds.toDouble()
-                            sampleCount += 1
+                            intervals += SleepInterval(
+                                st.startTime.toEpochMilli(),
+                                st.endTime.toEpochMilli(),
+                            )
                         }
                     }
                 }
-                val startMs = s.startTime.toEpochMilli()
-                if (lastNight == null || startMs > lastNight!!) lastNight = startMs
             }
-            _sleep.value = SleepSummary(totalSeconds, sampleCount, lastNight)
-            _lastSleepSessionStart.value = lastNight
+            val summary = lastNightSummary(intervals, now.toEpochMilli())
+            _sleep.value = summary
+            // 진단 표시도 '지난밤 시작'으로 통일 — iOS 는 진단에 sleep.lastNight 를 그대로 쓴다.
+            _lastSleepSessionStart.value = summary.lastNight
         }.onFailure { _sleep.value = null }
     }
 
+    /** 수면 구간 하나 — 세션 전체 또는 asleep stage 하나 (epoch millis). */
+    internal data class SleepInterval(val startMs: Long, val endMs: Long)
+
+    /**
+     * '지난 밤' 한 밤 분량만 집계 — iOS HealthKitManager.fetchSleep(:213-238) 규칙 포팅.
+     *  1) asleep 계열만 (caller 가 이미 걸러 넘긴다 — inBed/AWAKE 제외)
+     *  2) 가장 최근 수면 **종료**가 now 기준 36시간 이내일 때만 유효.
+     *     아니면 (0, 0, null) → 홈이 '-' 로 표시 (오래된 기록을 오늘 수면으로 보여주지 않는다).
+     *  3) 그 종료 시각 기준 14시간 창 안에서 **시작**한 구간만 = 한 밤.
+     *     → 이틀 전 낮잠·전전날 수면이 섞이지 않는다.
+     * lastNight 은 지난밤 구간들의 **가장 이른 시작** (iOS min).
+     */
+    internal fun lastNightSummary(intervals: List<SleepInterval>, nowMs: Long): SleepSummary {
+        val lastEnd = intervals.maxOfOrNull { it.endMs }
+        if (lastEnd == null || nowMs - lastEnd >= LAST_NIGHT_MAX_AGE_HOURS * HOUR_MS) {
+            return SleepSummary(0.0, 0, null)
+        }
+        val windowStart = lastEnd - SLEEP_SESSION_WINDOW_HOURS * HOUR_MS
+        val lastNight = intervals.filter { it.startMs >= windowStart }
+        val totalSeconds = lastNight.sumOf { (it.endMs - it.startMs) / 1000.0 }
+        return SleepSummary(totalSeconds, lastNight.size, lastNight.minOfOrNull { it.startMs })
+    }
+
     /** asleep 계열 stage 판정 — AWAKE / AWAKE_IN_BED / OUT_OF_BED 제외. */
-    private fun isAsleepStage(stage: Int): Boolean = when (stage) {
+    internal fun isAsleepStage(stage: Int): Boolean = when (stage) {
         SleepSessionRecord.STAGE_TYPE_SLEEPING,
         SleepSessionRecord.STAGE_TYPE_LIGHT,
         SleepSessionRecord.STAGE_TYPE_DEEP,

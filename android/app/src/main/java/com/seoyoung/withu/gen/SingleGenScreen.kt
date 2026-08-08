@@ -26,10 +26,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,18 +45,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,6 +67,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -72,23 +76,37 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.seoyoung.withu.R
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.paywall.PaywallSheet
 import com.seoyoung.withu.ui.CandyBadge
 import com.seoyoung.withu.ui.FormSection
+import com.seoyoung.withu.ui.PixelBorderShape
+import com.seoyoung.withu.ui.PixelToggle
 import com.seoyoung.withu.ui.WarningBanner
 import com.seoyoung.withu.ui.WithuCTAButton
+import com.seoyoung.withu.ui.WithuTopBarTitle
+import com.seoyoung.withu.ui.pixelInputField
 import com.seoyoung.withu.ui.rememberBackgroundGradient
+import com.seoyoung.withu.ui.theme.DungGeunMo
 import com.seoyoung.withu.ui.theme.WithuColors
+import com.seoyoung.withu.ui.theme.withuPinkSoft
 import com.seoyoung.withu.ui.theme.withuPinkText
+import com.seoyoung.withu.ui.theme.withuPixelOutline
+import com.seoyoung.withu.ui.theme.withuSage
+import com.seoyoung.withu.ui.withuInputColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -108,7 +126,29 @@ fun SingleGenScreen(onOpenBatch: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     // 화면 진입 시 잔량 갱신 (iOS onAppear — 무료 배지가 옛 캐시로 뜨는 것 방지)
-    LaunchedEffect(Unit) { vm.refreshQuota() }
+    // + 저장된 다듬기 이력 복원 (결과가 없을 때만 — 화면을 나갔다 와도 버전 스트립 유지)
+    LaunchedEffect(Unit) {
+        vm.refreshQuota()
+        vm.restoreVersionChain()
+    }
+
+    // 이 화면이 보이는 동안엔 완료 알림 대신 화면이 바로 결과를 보여준다.
+    // (화면을 벗어나거나 앱이 백그라운드로 가면 SingleGenQueue 가 로컬 알림을 띄운다.)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> SingleGenQueue.setScreenVisible(true)
+                Lifecycle.Event.ON_STOP -> SingleGenQueue.setScreenVisible(false)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            SingleGenQueue.setScreenVisible(false)
+        }
+    }
 
     // 폼 스크롤 시 키보드 해제 (iOS .scrollDismissesKeyboard(.interactively) 대응)
     val scrollState = rememberScrollState()
@@ -152,14 +192,15 @@ fun SingleGenScreen(onOpenBatch: () -> Unit) {
         }
     }
 
-    val gradient = rememberBackgroundGradient(vm.targetState)
+    // 만들기 플로우만 상단이 연초록 (iOS CharacterGenView.swift:136 topTint: .withuPinkSoft)
+    val gradient = rememberBackgroundGradient(vm.targetState, topTint = withuPinkSoft())
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.gen_title)) },
+                    title = { WithuTopBarTitle(stringResource(R.string.gen_title)) },
                     actions = {
                         CandyBadge(candy = vm.displayedCandy) { vm.showPaywall = true }
                         Spacer(Modifier.width(8.dp))
@@ -287,7 +328,7 @@ private fun BatchSection(onOpenBatch: () -> Unit) {
                 Text(
                     text = stringResource(R.string.gen_batch_title),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = stringResource(R.string.gen_batch_subtitle),
@@ -394,9 +435,11 @@ private fun PromptSection(vm: SingleGenViewModel) {
             onValueChange = { vm.prompt = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 100.dp),
+                .heightIn(min = 100.dp)
+                .pixelInputField(),
             placeholder = { Text(stringResource(R.string.gen_prompt_placeholder)) },
             enabled = !vm.isGenerating,
+            colors = withuInputColors(),
         )
         Spacer(Modifier.size(8.dp))
         ExpandableRow(title = stringResource(R.string.gen_helper_disclosure)) {
@@ -451,10 +494,11 @@ private fun HelperFieldRow(
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).pixelInputField(),
             placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall) },
             singleLine = true,
             enabled = enabled,
+            colors = withuInputColors(),
         )
     }
 }
@@ -463,11 +507,8 @@ private fun HelperFieldRow(
 @Composable
 private fun ReferenceSection(vm: SingleGenViewModel, onPickAlbum: () -> Unit) {
     val hasRef = vm.referenceImage != null
-    val footer = if (hasRef) {
-        stringResource(R.string.gen_ref_footer_has)
-    } else {
-        stringResource(R.string.gen_ref_footer_none)
-    }
+    // 참고사진이 없을 때의 footer 는 iOS 개편(d65d99f)에서 삭제됨 — 사진이 있을 때만 안내.
+    val footer = if (hasRef) stringResource(R.string.gen_ref_footer_has) else null
     FormSection(header = stringResource(R.string.gen_ref_header), footer = footer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             val ref = vm.referenceImage
@@ -556,9 +597,10 @@ private fun ReferenceHintField(
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().pixelInputField(),
             placeholder = { Text(placeholder, style = MaterialTheme.typography.bodySmall) },
             enabled = enabled,
+            colors = withuInputColors(),
         )
         Text(
             text = examples,
@@ -623,7 +665,7 @@ private fun GenerateButtonSection(vm: SingleGenViewModel) {
             TextButton(onClick = { vm.cancelGeneration() }) {
                 Text(stringResource(R.string.gen_cancel), color = MaterialTheme.colorScheme.error)
             }
-        } else if (vm.remainingGenerations < unitCost && !vm.hasFreeCreation) {
+        } else if (vm.remainingGenerations < unitCost && !vm.creationIsFree) {
             OutlinedButton(
                 onClick = { vm.showPaywall = true },
                 modifier = Modifier.fillMaxWidth(),
@@ -632,7 +674,15 @@ private fun GenerateButtonSection(vm: SingleGenViewModel) {
             // 2프레임이 의미 있는 상태만 토글 노출
             if (vm.targetState.usesGeneratedMotion) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    // 라벨이 있는 행은 행 전체가 탭 영역 (iOS PixelToggleStyle contentShape)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = vm.generateAnimated,
+                            onValueChange = { vm.generateAnimated = it },
+                            role = Role.Switch,
+                        )
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -640,7 +690,7 @@ private fun GenerateButtonSection(vm: SingleGenViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )
-                    Switch(checked = vm.generateAnimated, onCheckedChange = { vm.generateAnimated = it })
+                    PixelToggle(checked = vm.generateAnimated, onCheckedChange = null)
                 }
                 Spacer(Modifier.size(4.dp))
             }
@@ -662,10 +712,16 @@ private fun GenerateButtonSection(vm: SingleGenViewModel) {
             color = if (vm.isGenerating) WithuColors.systemOrange else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         when {
-            vm.hasFreeCreation -> Text(
+            vm.creationIsFree -> Text(
                 stringResource(R.string.gen_footer_free),
                 style = MaterialTheme.typography.labelSmall,
                 color = withuPinkText(),
+            )
+            // 무료가 남았는데 사진을 넣은 경우 — 왜 무료가 안 되는지 알려줌
+            vm.referenceImage != null && vm.hasFreeCreation -> Text(
+                stringResource(R.string.gen_footer_photo_costs_candy),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             vm.remainingGenerations < unitCost -> Text(
                 stringResource(R.string.gen_footer_insufficient),
@@ -696,8 +752,17 @@ private fun ResultSection(vm: SingleGenViewModel) {
             Text(
                 text = stringResource(R.string.gen_result_refined_badge, vm.selectedVersion),
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = withuPinkText(),
+            )
+            Spacer(Modifier.size(8.dp))
+        }
+        // 결과 유실 방지 — 만들어진 결과는 갤러리에 자동 저장됨을 알림
+        if (current?.galleryId != null) {
+            Text(
+                text = stringResource(R.string.gen_saved_to_gallery),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.size(8.dp))
         }
@@ -802,6 +867,30 @@ private fun ResultSection(vm: SingleGenViewModel) {
             onClick = { vm.saveCurrentResultToPhotos() },
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.gen_save_photos)) }
+
+        // 캐릭터 이름 (선택) — 갤러리 '캐릭터별'에서 이 이름으로 묶여 보임
+        Spacer(Modifier.size(12.dp))
+        HorizontalDivider()
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = stringResource(R.string.gen_name_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = vm.characterName,
+            onValueChange = { vm.updateCharacterName(it) },
+            modifier = Modifier.fillMaxWidth().pixelInputField(),
+            placeholder = { Text(stringResource(R.string.gen_name_placeholder)) },
+            singleLine = true,
+            colors = withuInputColors(),
+        )
+        Text(
+            text = stringResource(R.string.gen_name_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
     vm.lastError?.let {
         Spacer(Modifier.size(12.dp))
@@ -823,27 +912,53 @@ private fun RefinementSection(vm: SingleGenViewModel) {
         OutlinedTextField(
             value = vm.refinementPrompt,
             onValueChange = { vm.refinementPrompt = it },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp).pixelInputField(),
             enabled = !vm.isGenerating,
+            colors = withuInputColors(),
         )
-        Spacer(Modifier.size(8.dp))
-        val enabled = !vm.isGenerating && vm.refinementPrompt.trim().isNotEmpty()
-        if (vm.isGenerating) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    stringResource(R.string.gen_refine_button_progress),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            OutlinedButton(
+        // 입력칸 오른쪽 하단에 작은 네모 버튼 (iOS CharacterGenView.swift:786-805, spacing 10)
+        Spacer(Modifier.size(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            RefineSquareButton(
+                enabled = !vm.isGenerating && vm.refinementPrompt.trim().isNotEmpty(),
+                loading = vm.isGenerating,
                 onClick = { vm.requestRefine() },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.gen_refine_button)) }
+            )
+        }
+    }
+}
+
+/** 다듬기 전용 작은 네모 버튼 — 최소 52×34, 둥근모꼴 13, 세이지 + 픽셀 계단 테두리. */
+@Composable
+private fun RefineSquareButton(enabled: Boolean, loading: Boolean, onClick: () -> Unit) {
+    val shape = remember { PixelBorderShape(5.dp) }
+    Box(
+        modifier = Modifier
+            .alpha(if (enabled || loading) 1f else 0.4f)
+            .sizeIn(minWidth = 52.dp, minHeight = 34.dp)
+            .clip(shape)
+            .background(withuSage())
+            .border(2.5.dp, withuPixelOutline(), shape)
+            .clickable(enabled = enabled && !loading, onClick = onClick)
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = Color.White,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.gen_refine_button),
+                fontFamily = DungGeunMo,
+                fontSize = 13.sp,
+                color = Color.White,
+            )
         }
     }
 }
@@ -890,7 +1005,7 @@ private fun VersionHistorySection(vm: SingleGenViewModel) {
                             stringResource(R.string.gen_history_original)
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Light,
                         color = if (selected) withuPinkText() else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -935,7 +1050,16 @@ private fun ImportResultSection(vm: SingleGenViewModel) {
     if (display != null) {
         FormSection(header = stringResource(R.string.gen_import_result_header)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                // 라벨이 있는 행은 행 전체가 탭 영역 (iOS PixelToggleStyle contentShape)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = vm.removeBackground,
+                        onValueChange = { vm.removeBackground = it },
+                        enabled = !vm.isProcessing,
+                        role = Role.Switch,
+                    )
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -943,9 +1067,9 @@ private fun ImportResultSection(vm: SingleGenViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(
+                PixelToggle(
                     checked = vm.removeBackground,
-                    onCheckedChange = { vm.removeBackground = it },
+                    onCheckedChange = null,
                     enabled = !vm.isProcessing,
                 )
             }
@@ -996,7 +1120,8 @@ private fun CandyDialog(vm: SingleGenViewModel) {
     val action = vm.pendingAction ?: return
     val isRefine = action is PendingAction.Refine
     val cost = if (isRefine) vm.unitCost else vm.newGenerationCost
-    val free = vm.hasFreeCreation
+    // 만들기는 사진 없을 때만 무료, 다듬기는 무료가 남았으면 무료
+    val free = vm.pendingActionIsFree
     AlertDialog(
         onDismissRequest = { vm.dismissPendingAction() },
         title = {
@@ -1108,7 +1233,7 @@ private fun SegmentCell(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Light,
             color = if (selected) {
                 MaterialTheme.colorScheme.onSurface
             } else {

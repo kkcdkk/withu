@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.seoyoung.withu.R
+import com.seoyoung.withu.character.CharacterImage
 import com.seoyoung.withu.character.CharacterState
 import com.seoyoung.withu.shared.CharacterImageStore
 import com.seoyoung.withu.shared.GalleryItem
@@ -65,7 +66,7 @@ fun GalleryReferencePicker(onPick: (Bitmap) -> Unit, onClose: () -> Unit) {
             Text(
                 text = stringResource(R.string.refpicker_title),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onClose) {
@@ -85,12 +86,13 @@ fun GalleryReferencePicker(onPick: (Bitmap) -> Unit, onClose: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(text = "🎨", fontSize = 44.sp)
+                    // 빈 상태 아이콘 — 다른 빈 상태와 통일 (iOS GalleryReferencePicker.swift 커밋 75d00d1)
+                    CharacterImage(state = CharacterState.IDLE, modifier = Modifier.size(56.dp))
                     Spacer(Modifier.size(12.dp))
                     Text(
                         text = stringResource(R.string.refpicker_empty_title),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.size(6.dp))

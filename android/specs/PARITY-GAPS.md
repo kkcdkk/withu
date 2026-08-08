@@ -99,21 +99,28 @@ SCOPE.md 는 Wear OS·잠금화면 위젯을 제외. 아래는 문구/아이콘�
 
 iOS 에 먼저 들어간 7개 개선. Android 는 미구현 — 포트 시 대응 iOS 파일 확인.
 
-### D-1. [gallery] 사진 캐릭터 '움직이는 캐릭터 만들기' · missing-feature
+> **[2026-07-26 이식 반영]** D-2 / D-3 은 이번 2026-07 이식(백로그 A-3-d / A-3-c)에서 **해소됐다.**
+> D-1 은 저장소 헬퍼만 생기고 UI 는 여전히 미구현. D-4 는 그대로 남아 §E N-12 와 동일 항목.
+
+### D-1. [gallery] 사진 캐릭터 '움직이는 캐릭터 만들기' · missing-feature — **부분 해소**
 - 갤러리 상세 시트에서 frame1 없는 항목에 움직임 프레임(frame 1) 생성·부착. kind=refine + 항목 이미지 reference, 캔디 1개(확인 알럿), 성공 시 `attachGalleryFrame1`(파일 + hasFrame1 메타) — 적용 중이던 자리는 활성 슬롯 frame1 도 갱신.
 - iOS: `CharacterGalleryView.swift` `makeMotionFrame` + `CharacterImageStore.swift` `attachGalleryFrame1`
+- **남은 것**: 2026-07 이식에서 `CharacterImageStore.attachGalleryFrame1(id, image)` 는 **public 으로 추가됐다**(`shared/CharacterImageStore.kt:266`). 갤러리 상세 시트의 `makeMotionFrame` **UI·호출 경로는 여전히 없음**.
 
-### D-2. [gallery] 다듬기 전/후 비교 후 선택 · behavior
+### D-2. [gallery] 다듬기 전/후 비교 후 선택 · behavior — ✅ **해소 (2026-07-26)**
 - 갤러리 '다듬기' 성공 시 바로 반영하지 않고 전/후 비교 시트("이전"/"다듬은 결과") → '다듬은 걸로 바꾸기'(원본 교체 + 활성 슬롯 반영) / '이전 그대로'(폐기). 선택 전까지 원본 미변경. 기존 '새 항목 자동 저장' 동작은 제거됨.
 - iOS: `CharacterGalleryView.swift` `refineItem` → `refineCompareSheet` / `adoptRefined`
+- **이식됨**: 백로그 A-3-d 로 버전 이력 스트립 모델까지 포함해 통일. `gallery/GalleryGrid.kt` (`refineCompare`/`adoptRefined`) + 신규 `gallery/GalleryRefineHistoryStore.kt` (`gallery_refine/<itemId>/`).
 
-### D-3. [single-gen] 단건 결과 갤러리 자동저장 · behavior
+### D-3. [single-gen] 단건 결과 갤러리 자동저장 · behavior — ✅ **해소 (2026-07-26)**
 - 단건 생성(CharacterGenView) 결과가 적용 여부와 무관하게 갤러리에 자동 저장되도록 변경.
 - iOS: `CharacterGenView.swift`
+- **이식됨**: 백로그 A-3-c. `gen/SingleGenViewModel.kt` `autoSaveToGallery()` — `generate()`/`refine()` 성공 시점 양쪽에서 호출.
 
 ### D-4. [single-gen] 움직임 프레임(frame1) 로딩 표시 · behavior
 - frame1 생성 중임을 사용자에게 표시 (frame0 완료 후 조용히 이어지던 구간).
 - iOS: `CharacterGenView.swift`
+- **상태**: 미이식 유지. §E **N-12** 와 동일 항목 — 상세 근거는 그쪽 참고.
 
 ### D-5. [crop] 자르기 제스처 버그 수정 · bug ⚠️iOS 전용 여부 확인
 - iOS 크롭 화면 제스처 버그 수정. Android 는 자체 크롭 구현 — 동일 증상 있는지 확인 후 없으면 무시.
@@ -129,7 +136,82 @@ iOS 에 먼저 들어간 7개 개선. Android 는 미구현 — 포트 시 대�
 
 ---
 
+## E. 2026-07 이식 중 새로 확인된 갭 (N-계열)
+
+`13-IOS-2026-07-BACKLOG.md` 를 이식하면서 **백로그에도 이 문서에도 없던** 미이식 동작으로 확인된 것.
+번호는 이식 계획서의 '백로그 누락분' 표 번호를 그대로 쓴다.
+
+### N-7. [batch] 기준모습 첫 다듬기 무료 — 플랫폼별 과금이 갈림 · medium/behavior ✅ 2026-07 이식 완료(사용자 승인)
+- **현상**: iOS 는 배치 기준모습(idle) 다듬기가 **처음 한 번은 무료**다. `idleRevisionsUsed == 0` 이면 `idleRevisionCost = 0` 이고 버튼에 `무료` / `캔디 N개` 를 구분해 표시한다. 재진입 시 `restorePendingRevisions` 가 `idleRevisionsUsed` 를 이력 길이로 되살려 '무료' 오표시를 막는다.
+- Android 는 `idleRevisionsUsed` **개념 자체가 없어** 첫 다듬기부터 **항상 캔디를 차감**한다 → **같은 앱인데 플랫폼별 과금이 다르다.**
+- iOS: `BatchCharacterGenView.swift:68, 828-830, 903-905, 1584-1587, 2174`
+- Android: `gen/BatchGenViewModel.kt` (`idleRevisionsUsed` grep 0건)
+- **fix**: iOS 와 동일하게 `idleRevisionsUsed` 도입 + `PendingRevisionStore` 복원 시 `max(used, versions.size - 1)` 보정.
+- ✅ **이식 완료** — 사용자 승인 후 iOS 와 동일하게 도입. `IdleRevisionPolicy` (순수 함수, `IdleRevisionPolicyTest`)
+  + `BatchGenViewModel.idleRevisionsUsed/idleRevisionCost` + 버튼/팝업 무료 분기.
+  `PendingRevisionStore` 스키마는 그대로 두고 버전 개수로 복원(iOS 와 동일).
+
+### N-11. [single-gen] `generateImportMotionFrame` — 가져온 사진의 움직임 프레임 미생성 · medium/missing-feature
+- **현상**: iOS '내 이미지로 만들기'는 가져온 사진을 reference 로 **움직임 프레임(frame 1) 을 따로 생성**할 수 있다. 캔디 안내 팝업(`PendingAction.importMotion`) → 확인 시 생성.
+- Android `SingleGenViewModel` 의 `PendingAction` 은 **NewGeneration / Refine 2종뿐** — 이 경로가 없다.
+- iOS: `CharacterGenView.swift:94, 99, 197, 405, 996, 1380-1417`
+- Android: `gen/SingleGenViewModel.kt` (`PendingAction`)
+- **fix**: `PendingAction.ImportMotion` 추가 + kind=refine 으로 가져온 이미지를 reference 삼아 frame1 생성 → `attachGalleryFrame1`(이미 존재).
+- **비고**: 2026-07 변경분이 아니라 **그 전부터 있던 파리티 갭**이라 이번 이식 범위 밖으로 뒀다. 기록만.
+
+### N-12. [single-gen] '움직임 프레임 만드는 중' 표시 · low/behavior
+- **§D-4 와 동일 항목** — 중복 관리하지 말 것.
+- 근거 보강: iOS 는 `isGeneratingMotionFrame` 플래그 + 결과 우하단 **40×40 미니 로딩 슬롯**(`motionFrameLoadingSlot`) 으로 "frame0 만 나온 상태를 완성으로 착각"하는 걸 막는다.
+- iOS: `CharacterGenView.swift:76, 668-676, 759-767, 1167-1171`
+- Android: `gen/SingleGenViewModel.kt` / `gen/SingleGenScreen.kt` (해당 상태 없음)
+
+---
+
+## F. iOS·Android 공통 결함 — 고치려면 **양쪽을 같이** 고쳐야 함
+
+Android 가 iOS 를 정확히 이식한 결과, **iOS 의 결함까지 파리티로 물려받은** 것들.
+Android 만 고치면 파리티가 깨지므로 **iOS 를 먼저(또는 동시에) 고치는 게 맞다.**
+
+### F-1. [batch] 기준모습 '이어서 다듬기'가 스트립 선택본이 아니라 원본을 참조 · medium/bug
+- **현상**: 배치 기준모습(idle) 의 `이어서 다듬기` 가 버전 스트립에서 **고른 버전이 아니라 원본**을 reference 로 보낸다. 화면 힌트 `선택한 버전을 기준으로 다듬어요.` 와 어긋난다.
+- iOS: `BatchCharacterGenView.swift:1553-1557` `reviseIdle()` → `let current = idleFullRes ?? results[.idle]` (다듬기 체인을 안 봄)
+- Android: `gen/BatchGenViewModel.kt:536-538` — 동일 (`idleFullRes ?: results[CharacterState.IDLE]`)
+- **정상 동작 대조군**: 결과 상세의 `reviseOne` 은 체인을 본다 (iOS `:2008-2096` — 이력 있으면 `chain.current` / `chain.currentFull`). idle 경로만 누락.
+- **fix**: `reviseIdle` 도 `revisedDone[IDLE]` 체인의 선택 버전(풀해상도)을 앵커로 쓰도록.
+
+### F-2. [single-gen] 화면 복귀 후 첫 다듬기가 128px 썸네일을 참조 · medium/bug
+- **현상**: 다듬기 이력을 복원할 때 `fullRes` 자리에 **128px 썸네일(`small`)** 을 넣는다. 그래서 화면을 나갔다 온 뒤의 첫 다듬기는 썸네일을 reference 로 보낸다 → 반복할수록 화질이 무너진다. 백로그 **A-3-f "다듬기 참조는 128px 썸네일이 아니라 1024 원본"** 과 정면으로 상충.
+- iOS: `CharacterGenView.swift:901-903` `ResultVersion(small: $0.small, frame2: $0.frame2, fullRes: $0.small, …)`
+- Android: `gen/SingleGenViewModel.kt:641-643` `ResultVersion(it.small, it.frame2, it.small, …)` — 동일
+- **원인**: `RefineHistoryStore` 가 **galleryId 체인만** 저장하고 풀해상도를 보관하지 않아, 복원 시 갤러리 저장본(=128)밖에 없다.
+- **fix**: 복원 시 갤러리 풀해상도를 다시 로드하거나(존재한다면), 이력 저장 시 풀해상도도 함께 보관.
+
+### F-3. [home] iOS 홈 배경 그라데이션이 VibeKit 과 불일치 · low/layout — **iOS 쪽만 해당**
+- **현상**: iOS 홈만 아직 옛 그라데이션 `withuGreen 14% → state.tint 4% → systemBackground` 를 쓴다. VibeKit 이 정의한 warm 그라데이션(`withuWarmBackground → tint 5% → withuCardFill`)과 어긋난다.
+- iOS: `ContentView.swift:283-294` (주석은 "VibeKit 과 동일" 이라고 적혀 있지만 실제로는 다름)
+- Android: **통일된 VibeKit 버전을 쓴다** (`ui/UiKit.kt` `rememberBackgroundGradient`) — 즉 Android 가 맞고 iOS 가 잔재.
+- **fix**: iOS `backgroundGradient` 를 VibeKit 값으로 교체. Android 는 변경 불필요.
+
+### F-4. [batch/gallery] 배치로 적용한 캐릭터가 갤러리에서 '적용 중' 배지를 못 받음 · medium/bug
+- **현상**: 배치에서 만들어 '적용'한 캐릭터는 갤러리에서 **'적용 중' 표시가 안 뜬다.** 나아가 그 항목을 갤러리에서 다듬어 '적용'해도 홈/위젯에 반영되지 않는다.
+- **원인**: `applyOne` 이 `saveActiveSlotOnly` 만 호출한다. 이 함수는 주석 그대로 "활성 슬롯 파일만 덮어쓰기 (갤러리 항목/매핑 건드리지 않음)" 라서 `withu.activeSourceMap.v1` 에 **기록이 남지 않는다.** 매핑이 없으니 `statesUsingGalleryItem(id)` 가 빈 배열 → 갤러리 다듬기의 '적용'이 반영할 슬롯을 못 찾는다.
+- iOS: `BatchCharacterGenView.swift:1153-1163` (`applyOne`) / `Shared/CharacterImageStore.swift:236-258, 471-483` (`setActiveSource` 는 **private**, `saveActiveSlotOnly` 는 매핑 무관)
+- Android: `gen/BatchGenViewModel.kt:657-667` (`applyOneInternal`) / `shared/CharacterImageStore.kt:156, 438, 448` — 동일 구조
+- **fix**: `applyOne` 이 그 state 에 대응하는 **갤러리 id 를 알고 `setActiveSource(state, id)` 를 호출**하도록. `setActiveSource` 를 내부 공개로 올리거나, 배치 결과 저장 시점의 갤러리 id 를 `results` 와 함께 들고 다녀야 한다. **iOS·Android 를 같이** 바꿔야 파리티가 유지된다.
+
+---
+
+## G. 릴리스 영향 (2026-07 이식으로 새로 생김)
+
+- **APK 약 +10MB** — `res/font/` 3개(`dunggeunmo.ttf` 7.35MB · `pretendard_light.otf` 1.60MB · `pretendard_bold.otf` 1.58MB). DungGeunMo 가 한글 전체 글립을 담고 있어 대부분을 차지한다. → **서브셋팅 검토 대상.**
+- **폰트 라이선스 재확인 필요** — DungGeunMo · Pretendard 둘 다 무료 배포이지만, **Play 스토어 배포 기준으로 재확인**해야 한다. `release-assets/RELEASE-PLAY.md` 체크리스트 항목으로 넣을 것.
+
+---
+
 ## 병합 메모
 - **A-2** 는 원 리뷰 batch 4개 항목(footer/warning/완료알럿/진행카운터)을 한 원인(resultsFrame1 포함 · requiredCount 오용)으로 묶음 — 한 PR 에서 함께 처리 권장.
 - **C 섹션** 5건은 모두 `strings_onboarding.xml` + 온보딩/도움말 화면 아이콘 교체라 일괄 커밋 가능.
 - **A-3 / A-1 / A-4** 는 서로 다른 메커니즘이지만 공통 테마 '화면 복귀·진입 시 갱신 누락' — lifecycle 리프레시 작업으로 함께 검토하면 효율적.
+- **N-12 는 D-4 와 같은 항목**이다 (§E N-12). 둘 중 하나만 닫으면 다른 쪽도 같이 닫을 것.
+- **F 섹션 4건은 Android 단독 수정 금지** — iOS 를 같이 고쳐야 파리티가 유지된다. F-3 은 iOS 만 고치면 된다.
+- 머리말 집계(high 1 / medium 11 / low 12)는 **A·B·C 섹션 기준**이다. D·E·F 는 별도 관리 단위.
