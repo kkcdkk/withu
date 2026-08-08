@@ -91,6 +91,66 @@ export async function verifyAppleIdentityToken(identityToken, env) {
   return { sub: payload.sub, email: payload.email || null };
 }
 
+// ---- Google ID token 검증 (Android 로그인) ----
+
+const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+// 구글은 iss 를 두 형태로 발급 — 둘 다 허용.
+const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
+
+// 구글 JWKS 를 KV(있으면) 로 1h 캐시. 구글은 키를 자주 로테이트해 Apple(24h)보다 짧게.
+async function fetchGoogleKeys(env) {
+  if (env.RATE_KV) {
+    const cached = await env.RATE_KV.get("google_jwks", "json");
+    if (cached) return cached;
+  }
+  const res = await fetch(GOOGLE_JWKS_URL);
+  if (!res.ok) throw new Error("Google JWKS fetch 실패");
+  const data = await res.json();
+  if (env.RATE_KV) {
+    await env.RATE_KV.put("google_jwks", JSON.stringify(data), { expirationTtl: 60 * 60 });
+  }
+  return data;
+}
+
+/// Google ID token(JWT) 을 검증하고 { sub, email, emailVerified } 반환. 실패 시 throw.
+/// aud 는 Web 클라이언트 ID (env.GOOGLE_CLIENT_ID). Android SDK 가 serverClientId 로 이 값을
+/// 넣어 요청하므로 토큰의 aud 가 이 값과 일치해야 한다.
+export async function verifyGoogleIdToken(idToken, env) {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw new Error("토큰 형식 오류");
+  const header = JSON.parse(b64urlToString(parts[0]));
+  const payload = JSON.parse(b64urlToString(parts[1]));
+
+  // 1) claims 1차 검증
+  const now = Math.floor(Date.now() / 1000);
+  if (!GOOGLE_ISSUERS.includes(payload.iss)) throw new Error("iss 불일치");
+  const expectedAud = env.GOOGLE_CLIENT_ID;
+  if (!expectedAud) throw new Error("GOOGLE_CLIENT_ID 미설정");
+  if (payload.aud !== expectedAud) throw new Error("aud 불일치");
+  if (typeof payload.exp !== "number" || payload.exp < now) throw new Error("토큰 만료");
+  if (!payload.sub) throw new Error("sub 없음");
+
+  // 2) 서명 검증 — kid 매칭되는 구글 공개키 (RS256)
+  const jwks = await fetchGoogleKeys(env);
+  const jwk = (jwks.keys || []).find((k) => k.kid === header.kid && k.alg === "RS256");
+  if (!jwk) throw new Error("서명 키 매칭 실패");
+
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: "RS256", ext: true },
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  const signingInput = new TextEncoder().encode(parts[0] + "." + parts[1]);
+  const signature = b64urlToBytes(parts[2]);
+  const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, signature, signingInput);
+  if (!ok) throw new Error("서명 검증 실패");
+
+  const emailVerified = payload.email_verified === true || payload.email_verified === "true";
+  return { sub: payload.sub, email: payload.email || null, emailVerified };
+}
+
 // ---- sessionToken (withu 자체 HS256 JWT) ----
 
 async function hmacKey(secret) {

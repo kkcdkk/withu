@@ -1,6 +1,5 @@
-import { verifyAppleIdentityToken, signSession, subFromRequest, verifyAppleJws } from "./auth.js";
+import { verifyAppleIdentityToken, verifyGoogleIdToken, signSession, subFromRequest, verifyAppleJws } from "./auth.js";
 import { upsertAccount, getEntitlement, chargeGeneration, refundGeneration, applyPurchase, redeemCode, applyReferral, deleteAccount } from "./db.js";
-import UPNG from "upng-js";
 
 const OPENAI_IMAGE_MODEL = "gpt-image-1.5";
 
@@ -45,13 +44,22 @@ async function checkPromptSafe(prompt, referenceB64, env) {
       const data = await res.json();
       // input 이 배열이면 results 도 항목별 배열 — 하나라도 flagged 면 차단(텍스트/이미지 둘 다 커버).
       if (Array.isArray(data?.results) && data.results.some((r) => r?.flagged)) {
-        return { ok: false, status: 400, reason: "안전 정책에 맞지 않는 요청이에요. 다른 묘사나 사진으로 바꿔서 시도해 주세요." };
+        // 422 = 콘텐츠 정책(가드레일). 클라이언트가 서버 오류와 구분해 사유를 그대로 보여준다.
+        return { ok: false, status: 422, reason: "안전 정책에 맞지 않는 요청이에요. 다른 묘사나 사진으로 바꿔서 시도해 주세요." };
       }
     }
   } catch {
     // fail-open
   }
   return { ok: true };
+}
+
+// OpenAI 이미지 생성이 실패했을 때, '콘텐츠 정책(가드레일)' 거부인지 판별.
+// true 면 서버 오류가 아니라 사용자 입력 문제 — 422 로 내려 사유를 그대로 안내한다.
+function isContentPolicyRejection(payload, message) {
+  const code = `${payload?.error?.code ?? ""} ${payload?.error?.type ?? ""}`;
+  if (/moderation|content_policy|safety/i.test(code)) return true;
+  return /safety system|content policy|moderation_blocked|rejected by the safety/i.test(message ?? "");
 }
 
 // FastAPI server.py 와 parity — art_style 별 다른 [Style guidelines].
@@ -82,6 +90,16 @@ const COMMON_PROMPT = `You are illustrating a single cute mascot character.
 - No realistic humans, no violence, no inappropriate content
 - The image must work as a small icon — keep composition simple
 - Do NOT render any text, letters, words, numbers, captions, watermarks, labels, or signatures anywhere in the image
+
+[Anatomy — IMPORTANT]
+- Keep the character's anatomy natural for its species — the correct number of limbs and features
+- Do NOT add extra arms, legs, or limbs. An animal (e.g. a dog or cat) has exactly four legs and NO extra human-like arms grafted on
+- When a pose needs the character to hold or reach for something, use its natural limbs — never grow additional ones
+
+[Pose fits the character — IMPORTANT]
+- Perform every action/pose the way THIS character's real body would. A four-legged animal (dog, cat, etc.) walks and runs on all four legs, sits/lies down like that animal, and eats from a bowl or with its mouth in a natural animal posture — NOT standing upright like a person
+- EXCEPTION: if the character is naturally bipedal — a cartoon/anime-style mascot, a humanoid, or anything that clearly stands and walks on two legs — keep it upright on two legs for every pose
+- In short: match the pose to the character's natural body plan; do not humanize a four-legged animal and do not put a bipedal character on all fours
 
 [User request]
 `;
@@ -140,6 +158,12 @@ export default {
     if (url.pathname === "/auth/apple") {
       if (request.method !== "POST") return jsonError("Method not allowed", 405);
       return authApple(request, env);
+    }
+
+    // Google 로그인 핸드셰이크 (Android). iOS 는 /auth/apple 그대로.
+    if (url.pathname === "/auth/google") {
+      if (request.method !== "POST") return jsonError("Method not allowed", 405);
+      return authGoogle(request, env);
     }
 
     // Phase 1 — 권리 스냅샷 조회 (앱 시작/포그라운드 동기화)
@@ -212,6 +236,34 @@ async function authApple(request, env) {
   await upsertAccount(env, claims.sub, claims.email);
   const sessionToken = await signSession(claims.sub, env);
   const entitlement = await getEntitlement(env, claims.sub);
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60;
+  return Response.json({ session_token: sessionToken, expires_at: expiresAt, entitlement });
+}
+
+// POST /auth/google { idToken } → { sessionToken, expiresAt, entitlement }
+// iOS Apple 계정과 섞이지 않게 계정 키를 "google:<sub>" 로 네임스페이스한다.
+// (iOS↔Android 계정 연결은 후속 — 지금은 각 플랫폼 독립.)
+async function authGoogle(request, env) {
+  if (!env.DB) return jsonError("서버 계정 기능이 아직 설정되지 않았어요.", 503);
+  if (!env.SESSION_SECRET) return jsonError("SESSION_SECRET 미설정", 503);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError("JSON 형식 오류", 400); }
+  // 클라가 convertToSnakeCase 로 보냄 → id_token.
+  const idToken = body.id_token || body.idToken;
+  if (!idToken) return jsonError("id_token 필요", 400);
+
+  let claims;
+  try {
+    claims = await verifyGoogleIdToken(idToken, env);
+  } catch (e) {
+    return jsonError("Google 토큰 검증 실패: " + e.message, 401);
+  }
+
+  const accountSub = "google:" + claims.sub;
+  await upsertAccount(env, accountSub, claims.email);
+  const sessionToken = await signSession(accountSub, env);
+  const entitlement = await getEntitlement(env, accountSub);
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60;
   return Response.json({ session_token: sessionToken, expires_at: expiresAt, entitlement });
 }
@@ -558,6 +610,11 @@ async function generateImage(request, env, ctx) {
   if (!openAIResponse.ok) {
     const reason = payload?.error?.message ?? text;
     logEvent(env, ctx, { ...meta, status: "error", error: reason });
+    // OpenAI 안전 시스템/콘텐츠 정책 거부는 서버 오류가 아니라 가드레일 —
+    // 사용자에게 '무엇을 바꿔야 하는지' 전달되게 422 + 한국어 안내로 매핑.
+    if (isContentPolicyRejection(payload, reason)) {
+      return jsonError("안전 정책에 맞지 않는 요청이에요. 다른 묘사나 사진으로 바꿔서 시도해 주세요.", 422);
+    }
     return jsonError(reason, openAIResponse.status);
   }
 
@@ -693,21 +750,8 @@ function base64ToBlob(value) {
 // 생성 모니터링 (gen_events 로깅 + /admin 대시보드)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 대시보드 썸네일용 — 마젠타(#FF00FF) 배경·투명 배경을 흰색 불투명으로 평탄화.
-// gpt-image-2 결과가 핫핑크로 보이는 걸 없앤다. 실패(디코드 등)하면 호출부가 원본을 저장.
-function flattenBackgroundToWhite(bytes) {
-  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const img = UPNG.decode(buf);
-  const rgba = new Uint8Array(UPNG.toRGBA8(img)[0]);
-  for (let i = 0; i < rgba.length; i += 4) {
-    const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2], a = rgba[i + 3];
-    // 근사 마젠타(배경) 또는 (거의)투명 픽셀 → 흰색 불투명
-    if ((r > 180 && g < 90 && b > 180) || a < 24) {
-      rgba[i] = 255; rgba[i + 1] = 255; rgba[i + 2] = 255; rgba[i + 3] = 255;
-    }
-  }
-  return new Uint8Array(UPNG.encode([rgba.buffer], img.width, img.height, 0));
-}
+// (참고) 예전엔 여기서 UPNG 로 마젠타→흰색 평탄화를 돌렸으나, 생성마다 픽셀 전수 루프가
+// Worker CPU 한도를 초과("exceeded CPU time limit" 503)시켜 제거 — 표시 시점에 브라우저 canvas 가 처리.
 
 // 이벤트 타입 한 축으로 정규화: batch(헤더) > refine/background(본문 kind) > single
 function eventType(request, input) {
@@ -733,14 +777,13 @@ function logEvent(env, ctx, ev) {
         refineIndex = row?.n ?? 0;
       }
       const b64ToBytes = (b64) => Uint8Array.from(atob(b64.includes(",") ? b64.split(",").at(-1) : b64), (c) => c.charCodeAt(0));
-      // 결과 이미지는 R2 에만 (성공 시). gpt-image-2 는 마젠타(#FF00FF) 배경으로 오므로
-      // 대시보드용으로 마젠타·투명 배경을 흰색으로 평탄화해 저장 (원본 픽셀은 클라가 따로 크로마키).
+      // 결과 이미지는 R2 에만 (성공 시) — 서버가 받은 원본 그대로 (gpt-image-2 는 마젠타 배경).
+      // ⚠️ 여기서 픽셀 평탄화(UPNG 루프)를 돌리면 안 됨 — 생성마다 Worker CPU 를 태워
+      //    "exceeded CPU time limit" 503 을 냈던 원인. 흰색 평탄화는 대시보드 브라우저(canvas)가 표시할 때 처리.
       let imageKey = null;
       if (ev.imageB64 && env.LOG_BUCKET) {
         imageKey = `results/${id}.png`;
-        let bytes = b64ToBytes(ev.imageB64);
-        try { bytes = flattenBackgroundToWhite(bytes); } catch { /* 실패 시 원본(마젠타) 그대로 저장 */ }
-        await env.LOG_BUCKET.put(imageKey, bytes, { httpMetadata: { contentType: "image/png" } });
+        await env.LOG_BUCKET.put(imageKey, b64ToBytes(ev.imageB64), { httpMetadata: { contentType: "image/png" } });
       }
       // 참고사진(첨부)도 R2 에 — refs/<id>.png. had_reference 로 존재 여부를 안다.
       if (ev.referenceB64 && env.LOG_BUCKET) {
@@ -1031,6 +1074,32 @@ async function adminDashboard(request, env) {
   </div>
   ${sessions.length ? cards : `<div class="empty">이 기간에 생성 기록이 없어요.</div>`}
 </main>
+<script>
+// gpt-image-2 결과는 마젠타(#FF00FF) 배경 원본 그대로 저장됨 — 표시할 때 브라우저에서
+// 마젠타·투명 픽셀을 흰색으로 평탄화 (Worker CPU 절약: 수신 시 픽셀 루프 제거).
+// 참고사진(refimg)은 실제 사진이라 건드리지 않음.
+document.addEventListener("load", (e) => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement)) return;
+  if (!img.src.includes("/admin/img/") || img.dataset.flat || img.classList.contains("refimg")) return;
+  img.dataset.flat = "1";
+  try {
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height);
+    const p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      if ((p[i] > 180 && p[i + 1] < 90 && p[i + 2] > 180) || p[i + 3] < 24) {
+        p[i] = p[i + 1] = p[i + 2] = p[i + 3] = 255;
+      }
+    }
+    g.putImageData(d, 0, 0);
+    img.src = c.toDataURL();
+  } catch { /* canvas 실패 시 원본(마젠타) 그대로 표시 */ }
+}, true);
+</script>
 </body></html>`;
 
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
