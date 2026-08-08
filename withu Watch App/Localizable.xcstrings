@@ -2023,6 +2023,9 @@
         }
       }
     },
+    "눈 놀이 중" : {
+
+    },
     "눈 속 달리기" : {
 
     },
@@ -2050,9 +2053,6 @@
           }
         }
       }
-    },
-    "눈 속에서 신나게" : {
-
     },
     "눈 속에서 신나게 ❄️" : {
       "extractionState" : "stale",
@@ -3333,6 +3333,9 @@
         }
       }
     },
+    "비 구경" : {
+
+    },
     "비 맞으며 달리기" : {
 
     },
@@ -3347,9 +3350,6 @@
         }
       }
     },
-    "비 오는데 산책" : {
-
-    },
     "비 오는데 산책 🚶☔" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3360,9 +3360,6 @@
           }
         }
       }
-    },
-    "비 오는데 자전거" : {
-
     },
     "비 오는데 자전거 🚴☔" : {
       "extractionState" : "stale",
@@ -4595,7 +4592,7 @@
         }
       }
     },
-    "연결되었어요" : {
+    "연결됨" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
@@ -4606,7 +4603,7 @@
         }
       }
     },
-    "연결됨" : {
+    "연결되었어요" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
@@ -4869,9 +4866,6 @@
         }
       }
     },
-    "우산 쓰고 비 구경" : {
-
-    },
     "우산 쓰고 비 구경 ☔️" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4882,6 +4876,12 @@
           }
         }
       }
+    },
+    "우중 산책" : {
+
+    },
+    "우중 자전거" : {
+
     },
     "운동" : {
       "extractionState" : "stale",
@@ -4960,6 +4960,17 @@
         }
       }
     },
+    "움직임" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation"
+          }
+        }
+      }
+    },
     "움직이는 캐릭터로 만든 경우, 움직이게 보여줄지 정해요. 끄면 한 장으로만 보이고 배터리가 덜 닳아요." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4989,17 +5000,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on animated characters to create two images per look that move on the main screen. You can also pick just the states to animate below."
-          }
-        }
-      }
-    },
-    "움직임" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Animation"
           }
         }
       }
