@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공통 strings (F1 소유) — 문구는 iOS 원문 그대로. 화면별 strings_*.xml 은 각 S 에이전트 소유. -->
+<resources>
+    <!-- 공통 액션 (common_*) -->
+    <string name="common_close">닫기</string>
+    <string name="common_confirm">확인</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_save">저장</string>
+    <string name="common_delete">삭제</string>
+    <string name="common_select">선택</string>
+
+    <!-- 네트워크 에러 (err_* — ApiError.koreanized 전용, 스펙 11 §2.2 표 전량) -->
+    <string name="err_invalid_response">서버 응답이 이상해요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_too_many_requests">요청이 너무 많아요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_server_trouble">서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_unsafe_prompt">프롬프트가 안전 정책에 걸렸어요. 단어를 살짝 바꿔서 다시 시도해 주세요.</string>
+    <string name="err_server_generic">서버 오류 (%1$d). 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_decoding">결과를 읽을 수 없어요. 다시 시도해 주세요.</string>
+    <string name="err_payment_required">무료 횟수를 다 썼어요. 충전하거나 구독해 주세요.</string>
+    <string name="err_no_internet">인터넷에 연결돼 있지 않아요. Wi-Fi 또는 셀룰러를 확인해 주세요.</string>
+    <string name="err_timed_out">응답이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.</string>
+    <string name="err_cannot_connect">서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인해 주세요.</string>
+    <string name="err_connection_lost">연결이 끊겼어요. 다시 시도해 주세요.</string>
+    <string name="err_cancelled">요청이 취소됐어요.</string>
+    <string name="err_network_generic">네트워크 오류가 발생했어요. 다시 시도해 주세요.</string>
+    <string name="err_generic">오류가 발생했어요. 잠시 후 다시 시도해 주세요.</string>
+
+    <!-- 배치 큐 잡 에러 (bggen_err_* — 스펙 11 §2.3 표 전량) -->
+    <string name="bggen_err_cancelled">취소했어요</string>
+    <string name="bggen_err_prepare">요청을 준비하지 못했어요</string>
+    <string name="bggen_err_no_body_file">요청 파일이 없어요</string>
+    <string name="bggen_err_payment">무료 횟수를 다 썼어요</string>
+    <string name="bggen_err_no_image">이미지를 받지 못했어요</string>
+
+    <!-- 참고사진 고르기 시트 (refpicker_* — 스펙 04 §1.4) -->
+    <string name="refpicker_title">내 캐릭터에서 고르기</string>
+    <string name="refpicker_empty_title">아직 만든 캐릭터가 없어요</string>
+    <string name="refpicker_empty_body">캐릭터를 만들면 여기서 참고사진으로 고를 수 있어요.</string>
+    <string name="refpicker_label_fallback">기타</string>
+
+    <!-- 정사각 자르기 (스펙 04 §1.5 안내) -->
+    <string name="crop_hint">두 손가락으로 확대 · 드래그로 위치를 맞춰요</string>
+
+    <!-- 알림 (notify_* — 채널명은 Android 신규, 본문은 iOS NotificationManager 원문 = 스펙 11 §2.4 / 01 §설정) -->
+    <string name="notify_channel_reminder">리마인더</string>
+    <string name="notify_channel_gen_done">생성 완료</string>
+    <string name="notify_channel_gen_progress">생성 진행</string>
+    <string name="notify_auth_granted">허용됨</string>
+    <string name="notify_auth_denied">거부됨</string>
+    <string name="notify_auth_not_asked">요청 안 함</string>
+    <string name="notify_anchor_title">기준 모습이 준비됐어요</string>
+    <string name="notify_anchor_body">마음에 드는지 확인하고 나머지 모습을 이어서 만들어 보세요.</string>
+    <string name="notify_gen_done_title">캐릭터를 다 만들었어요</string>
+    <string name="notify_gen_done_body">%1$d개 모습이 완성돼 바로 적용됐어요. 열어서 확인해 보세요.</string>
+    <string name="notify_gen_partial_title">캐릭터 생성이 끝났어요</string>
+    <string name="notify_gen_partial_body">%1$d개 완성, %2$d개는 못 만들었어요. 앱에서 다시 시도할 수 있어요.</string>
+    <string name="notify_bedtime_title">💤 잘 시간이에요</string>
+    <string name="notify_bedtime_body">오늘도 수고했어요. 캐릭터가 같이 잘 준비 중이에요.</string>
+    <string name="notify_step_goal_title">🎉 %1$d보 달성!</string>
+    <string name="notify_step_goal_body">오늘 %1$d보 걸었어요. 캐릭터도 신났어요 ✨</string>
+    <string name="notify_workout_ended_title">%1$s 끝!</string>
+    <string name="notify_workout_ended_body">%1$d분 동안 잘 움직였어요. 캐릭터도 함께 뛰었어요.</string>
+    <!-- 배치 FGS 진행 알림 — Android 신규 문구 -->
+    <string name="notify_gen_progress">캐릭터를 만들고 있어요…</string>
+
+    <!-- 페이월 (paywall_* — 스펙 07 §2 표 전량 + Android 신규 '준비 중') -->
+    <string name="paywall_title">더 만들기</string>
+    <string name="paywall_coming_soon">아직 준비 중이에요. 곧 열릴게요!</string>
+    <string name="paywall_balance">보유하고 있는 캔디는 %1$d개예요</string>
+    <string name="paywall_balance_sub">더 만들고 싶다면 캔디를 충전해요.</string>
+    <string name="paywall_section_packs">캔디 충전</string>
+    <string name="paywall_pack_popular">가장 인기</string>
+    <string name="paywall_pack_desc">캔디 %1$d개 · 만료 없이 사용할 수 있어요</string>
+    <string name="paywall_price_pending">준비 중</string>
+    <string name="paywall_section_redeem">할인코드</string>
+    <string name="paywall_code_placeholder">코드 입력</string>
+    <string name="paywall_apply">적용</string>
+    <string name="paywall_test_code_hint">테스트: \'%1$s\' 입력하면 캔디 %2$d개</string>
+    <string name="paywall_test_code_success">🍬 캔디 %1$d개 충전됐어요! (테스트)</string>
+    <string name="paywall_redeem_success">적용됐어요! 잔액에 반영됐어요.</string>
+    <string name="paywall_section_referral">친구 초대</string>
+    <string name="paywall_referral_placeholder">받은 초대 코드</string>
+    <string name="paywall_referral_desc">입력하면 두 사람 모두 캔디 5개를 받아요. 초대 보상은 최대 10명까지예요.</string>
+    <string name="paywall_referral_success">초대 코드가 적용됐어요! 보너스를 받았어요.</string>
+    <string name="paywall_terms">이용약관</string>
+    <string name="paywall_privacy">개인정보처리방침</string>
+    <string name="paywall_footer">충전한 캔디는 만료 없이 계속 쓸 수 있어요.</string>
+
+    <!-- 날씨 에러 (weather_err_* — 스펙 10 §2 표 전량) -->
+    <string name="weather_err_denied">위치 권한이 없어요. 설정에서 켜주세요.</string>
+    <string name="weather_err_no_location">현재 위치를 찾지 못했어요.</string>
+    <string name="weather_err_location_failed">위치 조회 실패: %1$s</string>
+    <string name="weather_err_network">날씨 통신 실패: %1$s</string>
+    <string name="weather_err_decoding">날씨 응답 해석 실패: %1$s</string>
+</resources>

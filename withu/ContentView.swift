@@ -4,49 +4,180 @@
 //
 
 import SwiftUI
+import Combine
 import HealthKit
 import WidgetKit
+import CoreLocation
+import WatchConnectivity
+
+/// 활동 카드 아래 격려 문구 — 이모지 대신 손그림 픽셀 아이콘을 옆에 붙인다.
+struct ActivityMessage: Equatable {
+    let text: String
+    /// Assets 이미지 이름 (msg_sun / msg_leaf / msg_stretch / msg_water). nil 이면 아이콘 없음.
+    let asset: String?
+}
 
 struct ContentView: View {
-    // HealthKit (Step 2)
     @State private var health = HealthKitManager.shared
-    @State private var healthMessage: String = "권한 요청 안 함"
-    @State private var healthLoading: Bool = false
-
-    // 캐릭터 (Step 3)
-    @State private var overrideState: CharacterState? = nil   // 디버그용 강제 변경
-
-    private var characterState: CharacterState {
-        overrideState ?? CharacterStateResolver.resolve(
-            sleep: health.sleep,
-            workouts: health.recentWorkouts,
-            todaySteps: health.todaySteps,
-            weather: weather.snapshot
-        )
-    }
-
     @State private var connectivity = ConnectivityManager.shared
     @State private var notifications = NotificationManager.shared
     @State private var weather = WeatherManager.shared
+    @State private var focus = FocusModeManager.shared
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var overrideState: CharacterState? = nil
+    @State private var showSettings: Bool = false
+    /// 생성 완료 알림 탭 → 배치 화면 push (cold start 는 .task 에서 잡음).
+    @State private var openGenScreenFromNotification: Bool = false
+    @State private var profile: CharacterProfile = CharacterProfileStore.load()
+    /// 캐릭터 이미지 변경 시 ++. CharacterImageView 의 .id 에 들어가 강제 재생성.
+    @State private var imageRefreshKey: Int = 0
+    // 시간 자체를 상태로 — 관찰값이 안 바뀌어도(예: 수면→기상 경계) 화면이 재판정되게.
+    // 30초 타이머 + foreground 진입 때 갱신. resolver 에 now 로 주입.
+    @State private var currentTime: Date = Date()
+    /// 활동 종합 메시지 — task / 새로고침 시 갱신
+    @State private var activityMessage: ActivityMessage = .init(text: "", asset: nil)
+    @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
+    /// 사용법 안내를 봤는지 — 첫 실행 후 1회 자동 표시.
+    @AppStorage("withu.seenGuide.v1") private var seenGuide: Bool = false
+    @State private var showGuide: Bool = false
+    #if DEBUG
+    /// 진단/스크린샷용 런치 인자 (simctl 자동화):
+    ///   --paywall 페이월 · --guide 사용법 · --gallery 갤러리 · --home 홈만
+    /// 어느 것이든 있으면 온보딩/로그인 게이트 우회.
+    @State private var showPaywallDebug: Bool = false
+    @State private var showGalleryDebug: Bool = false
+    @State private var showGenDebug: Bool = false
+    private var debugScreenArg: String? {
+        ["--paywall", "--guide", "--gallery", "--gen", "--home"]
+            .first(where: ProcessInfo.processInfo.arguments.contains)
+    }
+    private var isPaywallDebugRun: Bool { debugScreenArg != nil }
+    #else
+    private var isPaywallDebugRun: Bool { false }
+    #endif
+    /// 캐릭터 옆 날씨 그림(해/달/구름/비/눈) 표시 여부. App Group 저장.
+    @AppStorage("withu.showWeatherDecoration.v1",
+                store: UserDefaults(suiteName: SharedAppState.groupID))
+    private var showWeather: Bool = true
+    @State private var auth = AuthManager.shared
+
+    /// 상태 문구 — 지금 적용된 캐릭터에 이름이 있으면 '(이름)의 ~' 로 보여준다.
+    /// 이름이 없으면 원래 문구 그대로.
+    private var captionWithName: String {
+        let caption = characterState.caption
+        // 동사구 문구('산책 중', '자고 있어요')는 '~의'를 붙이면 어색해서 이름을 안 붙인다.
+        guard characterState.captionAllowsNamePrefix else { return caption }
+        // 1순위: 그 캐릭터를 만들 때 붙인 이름, 2순위: '내 캐릭터 설정'의 이름.
+        // 프로필 기본값("내 캐릭터")은 사용자가 정한 이름이 아니므로 안 쓴다.
+        let profileName = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = (profileName.isEmpty || profileName == "내 캐릭터") ? nil : profileName
+        guard let name = CharacterImageStore.appliedCharacterName(for: characterState) ?? fallback else {
+            return caption
+        }
+        return "\(name)의 \(caption)"
+    }
+
+    private var characterState: CharacterState {
+        // SyncCoordinator 와 동일 정책 — manualSleepOnly 면 자동 감지 끔.
+        let manualOnly = profile.isManualSleepOnly
+        return overrideState ?? CharacterStateResolver.resolve(
+            now: currentTime,
+            sleep: health.sleep,
+            workouts: health.recentWorkouts,
+            todaySteps: health.todaySteps,
+            weather: weather.snapshot,
+            inSleepSchedule: manualOnly ? false : health.isInBedSchedule,
+            hasSleepSchedule: manualOnly ? false : health.hasSleepSchedule,
+            // isFocused(INFocusStatusCenter)는 '어떤' 집중 모드인지 구분 못 해
+            // 방해금지·업무에도 잠들던 버그 → 수면 전용 신호(수면 Focus 필터)만 사용.
+            isFocusActive: manualOnly ? false : focus.filterSleepingCorrected(
+                sleepEndHour: profile.sleepEndHour, sleepEndMinute: profile.sleepEndMinute),
+            isGenericFocusActive: manualOnly ? false : focus.isFocused,
+            // Focus 를 전혀 감지 못 하는 환경이면 설정한 수면 시간창으로 폴백.
+            sleepWindowFallback: manualOnly ? false : focus.shouldFallbackToSleepWindow(),
+            isLikelyInWorkout: health.isLikelyInWorkout,
+            recentStepsPerMinute: health.recentStepsPerMinute,
+            phoneWorkoutState: SyncCoordinator.phoneWorkoutState(),
+            profile: profile
+        )
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                characterSection
-                weatherSection
-                watchSection
-                notificationsSection
-                cameraSection
-                healthSection
-                debugSection
+            ScrollView {
+                VStack(spacing: 20) {
+                    permissionBanner    // 권한 거절돼있을 때만 노출 (이전 layout 위에 얹음)
+                    weatherHeader
+                    characterHero
+                    metricsCard
+                    actionButtons
+                    watchStatusCard
+                    lastUpdateFooter
+                    Spacer(minLength: 24)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                // override 선택 자체로도 sync — characterState "값"이 안 변하는 경우
+                // (예: 밤에 resolver 가 이미 sleeping 인데 수동으로 '쿨쿨'을 고름)
+                // characterState onChange 가 발화하지 않아 위젯/워치에 안 나가던 버그.
+                // (body 타입체크 부하 때문에 바깥 체인이 아닌 여기에 부착 — 동작 동일.)
+                .onChange(of: overrideState) { _, _ in
+                    sendStateToWatch(characterState)
+                }
             }
-            .navigationTitle("withu")
-            .scrollDismissesKeyboard(.interactively)
+            .background(backgroundGradient.ignoresSafeArea())
+            .navigationTitle("Withy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView(overrideState: $overrideState,
+                             characterState: characterState,
+                             sendStateToWatch: sendStateToWatch)
+            }
             .task {
+                // 시작 즉시 Focus 플래그·현재 시각 반영 — 수면 집중모드가 이미 켜진 채로
+                // 앱을 열면 3초 타이머 전까지 깨어있음으로 뜨던 문제 방지.
+                focus.refresh(source: "앱 실행")
+                currentTime = Date()
+                #if DEBUG
+                // 진단/시뮬레이터 검증용: --state <raw> 로 시작하면 해당 상태로 override 고정.
+                //   예) --state sleeping → 수동 '쿨쿨' 선택과 동일 경로로 sync 까지 검증.
+                let args = ProcessInfo.processInfo.arguments
+                if let idx = args.firstIndex(of: "--state"), idx + 1 < args.count,
+                   let forced = CharacterState(rawValue: args[idx + 1]) {
+                    overrideState = forced
+                }
+                #endif
                 connectivity.activate()
                 await notifications.refreshAuthorizationStatus()
+                // 권한 요청은 OnboardingView 에서 단계별로 처리.
+                // 여기선 이미 허용된 권한 status 만 갱신 + 데이터 fetch.
                 weather.refresh()
+                await loadAll()
+                activityMessage = computeActivityMessage()
+                health.startObservingChanges()
+                maybeShowGuide()
+                // 종료 상태에서 알림을 탭해 켜진 경우 — onChange 등록 전에 delegate 가
+                // 먼저 플래그를 세웠을 수 있어 진입 시 한 번 직접 확인.
+                if notifications.wantsOpenGenerationScreen {
+                    notifications.wantsOpenGenerationScreen = false
+                    openGenScreenFromNotification = true
+                }
             }
+            .onChange(of: onboarded) { _, _ in maybeShowGuide() }
+            // 신규 사용자는 온보딩 직후 로그인 게이트(fullScreenCover)가 떠 있어
+            // 그 시점의 sheet 표시가 무시됨 — 로그인 완료 시점에 다시 시도.
+            .onChange(of: auth.state) { _, _ in maybeShowGuide() }
             .onChange(of: characterState) { _, newValue in
                 sendStateToWatch(newValue)
             }
@@ -60,119 +191,727 @@ struct ContentView: View {
                 Task { await notifications.scheduleWorkoutEndedIfNeeded(latest: newWorkouts.first) }
             }
             .onChange(of: weather.snapshot) { _, _ in
-                // 날씨 바뀌면 캐릭터 재계산 → 워치/위젯에 새 메시지 푸시
                 sendStateToWatch(characterState)
             }
+            .onChange(of: health.isInBedSchedule) { _, _ in
+                sendStateToWatch(characterState)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .characterProfileChanged)) { _ in
+                profile = CharacterProfileStore.load()
+                sendStateToWatch(characterState)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .characterImageChanged)) { _ in
+                imageRefreshKey &+= 1
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                // Foreground 진입 시 Focus 폴링 + 즉시 sync (iOS 가 Focus 변화를 push 안 함).
+                guard newPhase == .active else { return }
+                currentTime = Date()   // 앱 열 때 화면 상태 즉시 재판정 (열어도 자고 있던 문제)
+                focus.refresh(source: "앱 열림")
+                SyncCoordinator.syncNow(override: overrideState)
+            }
+            .onChange(of: focus.isFocusFilterSleeping) { _, _ in
+                // 수면 Focus 필터 토글이 반영되면 워치/위젯도 즉시 갱신.
+                sendStateToWatch(characterState)
+            }
+            // 생성 완료/기준 모습 알림 탭 → 만들어진 화면(배치)으로 바로 이동.
+            .navigationDestination(isPresented: $openGenScreenFromNotification) {
+                BatchCharacterGenView()
+            }
+            .onChange(of: notifications.wantsOpenGenerationScreen) { _, wants in
+                guard wants else { return }
+                notifications.wantsOpenGenerationScreen = false
+                openGenScreenFromNotification = true
+            }
+            // Control Center 로 Focus 토글하면 scenePhase 가 안 바뀌어서
+            // .onChange 도 안 옴 → 3초마다 직접 폴링. iOS background 진입 시 Timer
+            // 도 자동으로 멈춰서 배터리 영향 작음.
+            .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+                guard scenePhase == .active else { return }
+                focus.refresh()
+            }
+            // Focus API 가 Sleep Focus 를 false 로 거짓말하는 경우 대비 — HealthKit
+            // inBed 샘플도 30초 주기로 catchup 폴링 (HKObserverQuery 가 미스해도 안전).
+            // fetch 자체는 store query 라 3초 폴링은 부담. 30초가 균형.
+            .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+                guard scenePhase == .active else { return }
+                currentTime = Date()   // 시간 경과만으로도 화면 재판정 (수면→기상 자동 전환)
+                Task {
+                    _ = await health.fetchInBedSchedule()
+                    // 진행 중 운동(HR·걸음 페이스)도 같이 갱신 — 산책/달리기 반영 빨라짐.
+                    await health.refreshWorkoutInference()
+                    // 폰 전용 경로(CoreMotion 활동 분류) — 워치 없는 사용자용.
+                    // 워치가 연결돼 있으면 워치(심박) 기준만 쓰므로 생략.
+                    if !connectivity.isPaired {
+                        await MotionActivityManager.shared.refresh()
+                    }
+                    SyncCoordinator.syncNow(override: overrideState)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { !onboarded },
+            set: { _ in }
+        )) {
+            OnboardingView(onComplete: { onboarded = true })
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { onboarded && auth.state == .signedOut && !isPaywallDebugRun },
+            set: { _ in }
+        )) {
+            LoginGateView()
+        }
+        .sheet(isPresented: $showGuide) {
+            HelpGuideView(onDone: { seenGuide = true; showGuide = false })
+        }
+        #if DEBUG
+        .sheet(isPresented: $showPaywallDebug) {
+            PaywallView(onClose: { showPaywallDebug = false })
+        }
+        .sheet(isPresented: $showGalleryDebug) {
+            NavigationStack { CharacterGalleryView() }
+        }
+        .sheet(isPresented: $showGenDebug) {
+            NavigationStack { CharacterGenView() }
+        }
+        .onAppear {
+            switch debugScreenArg {
+            case "--paywall": showPaywallDebug = true
+            case "--guide":   showGuide = true
+            case "--gallery": showGalleryDebug = true
+            case "--gen":     showGenDebug = true
+            default: break
+            }
+        }
+        #endif
+        .task { await auth.restore() }
+    }
+
+    /// 첫 실행 사용법 안내 — 온보딩·로그인 게이트가 모두 끝난 뒤에만 (cover 위 sheet 무시 방지).
+    private func maybeShowGuide() {
+        if onboarded && auth.state == .signedIn && !seenGuide {
+            showGuide = true
         }
     }
 
-    private func sendStateToWatch(_ state: CharacterState) {
-        let msg = WatchMessage(
-            state: state,
-            todaySteps: health.todaySteps,
-            lastSleepHours: health.sleep.map { $0.totalAsleep / 3600 },
-            timestamp: Date()
+    // MARK: - Sections
+
+    private var backgroundGradient: LinearGradient {
+        // 기조는 브랜드 그린(새싹 캐릭터 색) — 상태 무드는 중간에 옅게만 (VibeKit 과 동일)
+        LinearGradient(
+            colors: [
+                Color.withuGreen.opacity(0.14),
+                characterState.tint.opacity(0.04),
+                Color(.systemBackground)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
         )
-        // 1) iOS 위젯이 읽을 수 있게 App Group 에 저장 + 위젯 타임라인 리로드
-        SharedAppState.save(msg)
-        WidgetCenter.shared.reloadAllTimelines()
-        // 2) 워치로도 전송
-        connectivity.send(msg)
     }
 
-    // MARK: - Weather section
-
-    private var weatherSection: some View {
-        Section("날씨") {
+    private var weatherHeader: some View {
+        HStack(spacing: 8) {
             if let snap = weather.snapshot {
-                HStack {
-                    Text("\(snap.condition.emoji) \(snap.condition.caption)")
-                        .font(.headline)
-                    Spacer()
-                    Text("\(snap.temperatureC, specifier: "%.1f")°C")
-                        .foregroundStyle(.secondary)
+                // 이모지 대신 이미 있는 픽셀 날씨 PNG 재사용 (야간 판정 포함 — 캐릭터 옆 장식과 같은 그림).
+                if let cond = weatherBackgroundCondition, UIImage(named: cond.decorationAssetName) != nil {
+                    Image(cond.decorationAssetName)
+                        .resizable().interpolation(.none).scaledToFit()
+                        .frame(width: 20, height: 20)
                 }
-                Text("측정: \(snap.timestamp.formatted(date: .omitted, time: .shortened))")
-                    .font(.footnote)
+                Text(snap.condition.caption)
+                    .font(.galmuri(13, relativeTo: .subheadline))
+                Text("·")
+                    .foregroundStyle(.secondary)
+                Text(String(format: "%.0f°", snap.temperatureC))
+                    .font(.galmuri(13, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             } else {
-                HStack {
-                    Text("날씨 정보 없음")
-                    Spacer()
-                    if weather.isFetching {
-                        ProgressView()
-                    }
-                }
-            }
-            Button {
-                weather.refresh(force: true)
-            } label: {
-                Text(weather.isFetching ? "가져오는 중…" : "날씨 새로고침")
-            }
-            .disabled(weather.isFetching)
-
-            if let err = weather.lastError {
-                Text(err).font(.footnote).foregroundStyle(.red)
-            }
-        }
-    }
-
-    // MARK: - Notifications section
-
-    private var notificationsSection: some View {
-        Section("알림") {
-            HStack {
-                Text("권한 상태")
-                Spacer()
-                Text(authStatusLabel)
+                Text("날씨 가져오는 중…")
+                    .font(.galmuri(13, relativeTo: .subheadline))
                     .foregroundStyle(.secondary)
             }
-            if notifications.authorizationStatus != .authorized {
-                Button("알림 권한 요청") {
-                    Task { await notifications.requestAuthorization() }
+            Spacer()
+            Toggle("날씨 표시", isOn: $showWeather)
+                .labelsHidden()
+                .fixedSize()
+            if weather.isFetching {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Button {
+                    weather.refresh(force: true)
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.pretendard(12, relativeTo: .caption))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var characterHero: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                // 캐릭터 (투명 PNG)
+                CharacterImageView(state: characterState, animated: true)
+                    .frame(width: 200, height: 200)
+                    .id("\(characterState.rawValue)-\(imageRefreshKey)")
+                // 날씨 표현 — 해/달/구름은 우상단 고정, 비/눈은 영역 전체 떨어짐.
+                // 메인 스위치(showWeather)로 켜고 끌 수 있음.
+                if showWeather {
+                    WeatherDecorationView(condition: weatherBackgroundCondition, size: 44)
+                        .frame(width: 240, height: 240)
+                        .allowsHitTesting(false)
                 }
             }
-            Button("매일 22:30 취침 리마인더 설정") {
-                Task { await notifications.scheduleBedtimeReminder() }
+            Text(captionWithName)
+                .font(.galmuri(20, relativeTo: .title3))
+                .multilineTextAlignment(.center)
+                .id(characterState)
+                .transition(.opacity)
+        }
+        .animation(.snappy, value: characterState)
+    }
+
+    /// 현재 시각 + 날씨 → 배경 condition 매핑.
+    /// 야간 (프로필 sleep window) 우선 — 날씨 무관하게 .night.
+    private var weatherBackgroundCondition: WeatherBackgroundCondition? {
+        // 야간 판정: 날씨에서 받은 sunrise/sunset 1순위, 없으면 프로필의 fallback 시간.
+        let isNight = CharacterImageStore.isCurrentlyNight(
+            sunrise: weather.snapshot?.sunrise,
+            sunset: weather.snapshot?.sunset,
+            fallbackStartMinute: profile.effectiveNightFallbackStart,
+            fallbackEndMinute: profile.effectiveNightFallbackEnd
+        )
+        if isNight { return .night }
+        guard let c = weather.snapshot?.condition else { return nil }
+        switch c {
+        case .sunny:           return .sunny
+        case .cloudy:          return .cloudy
+        case .rainy, .thunder: return .rainy
+        case .snowy:           return .snowy
+        default:               return nil
+        }
+    }
+
+    private var metricsCard: some View {
+        VStack(spacing: 0) {
+            cardHeaderBar(title: "오늘 활동") { RefreshIconButton(action: { await loadAll() }, tint: .withuCardFill) }
+
+            VStack(spacing: 8) {
+                HStack(spacing: 0) {
+                    metricItem(value: health.todaySteps.map { "\(Int($0))" } ?? "-",
+                               label: "걸음",
+                               dim: (health.todaySteps ?? 0) == 0) {
+                        Image("metric_steps")
+                            .resizable().interpolation(.none).scaledToFit()
+                            .frame(width: 20, height: 20)
+                    }
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.clock,
+                               value: health.todayActiveMinutes.map { "\(Int($0))" } ?? "-",
+                               label: "활동분",
+                               dim: (health.todayActiveMinutes ?? 0) == 0)
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.flame,
+                               value: health.todayActiveKcal.map { "\(Int($0))" } ?? "-",
+                               label: "kcal",
+                               dim: (health.todayActiveKcal ?? 0) == 0)
+                    Divider().frame(height: 32)
+                    metricItem(icon: PixelIconSet.moon,
+                               value: sleepHoursText,
+                               label: "수면",
+                               dim: sleepHoursText == "-")
+                }
+
+                if !activityMessage.text.isEmpty {
+                    HStack(spacing: 6) {
+                        Text(activityMessage.text)
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        // 아이콘은 문구 뒤에 — 앞에 있으면 문장 시작이 가려 보인다.
+                        if let asset = activityMessage.asset {
+                            Image(asset)
+                                .resizable().interpolation(.none).scaledToFit()
+                                .frame(width: 18, height: 18)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                }
             }
-            Button("등록된 알림 모두 취소", role: .destructive) {
-                notifications.cancelAll()
+            .padding(.vertical, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .pixelCardSurface()
+    }
+
+    /// 카드 상단 바 — 크림 제목 + (선택) 우측 요소. fill 로 바 색 지정(기본 갈색).
+    @ViewBuilder
+    private func cardHeaderBar<Trailing: View>(title: LocalizedStringKey,
+                                               fill: Color = .withuPixelOutline,
+                                               @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack {
+            Text(title)
+                .font(.galmuri(12, relativeTo: .caption))
+                .foregroundStyle(Color.withuCardFill)
+            Spacer()
+            trailing()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(fill)
+    }
+
+    /// 단색 도트 아이콘 버전 (활동분·kcal·수면).
+    private func metricItem(icon: [[UInt8]], value: String,
+                            label: LocalizedStringKey, dim: Bool) -> some View {
+        metricItem(value: value, label: label, dim: dim) {
+            PixelIcon(grid: icon, tint: .withuPixelOutline, size: 18)
+        }
+    }
+
+    /// dim = 값이 0/없음 → 흐리고 작게(허전함 완화). 의미값은 크고 또렷하게.
+    /// icon 은 도트/컬러 이미지 아무거나 (손그림 픽셀 아이콘도 그대로 받음).
+    private func metricItem<Icon: View>(value: String, label: LocalizedStringKey, dim: Bool,
+                                        @ViewBuilder icon: () -> Icon) -> some View {
+        VStack(spacing: 4) {
+            icon()
+                .opacity(dim ? 0.3 : 0.9)
+            Text(value)
+                .font(.galmuri(dim ? 15 : 19, relativeTo: .callout))
+                .foregroundStyle(dim ? Color.secondary : Color.primary)
+            Text(label)
+                .font(.galmuri(10, relativeTo: .caption2))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Slack 새로고침 메시지 같은 가벼운 격려/안내. 시간대 + 활동량 기반.
+    /// 메시지 문구 수정: 이 함수 안 morningMessages / lazyMessages / 활동량 분기 메시지.
+    private func computeActivityMessage() -> ActivityMessage {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let kcal = Int(health.todayActiveKcal ?? 0)
+        let steps = Int(health.todaySteps ?? 0)
+        let minutes = Int(health.todayActiveMinutes ?? 0)
+
+        // 아침 (11시 전) — 활동 적을 때 랜덤 인사
+        if hour < 11 && kcal < 100 {
+            let morningMessages: [ActivityMessage] = [
+                .init(text: String(localized: "좋은 아침! 오늘도 함께해요"), asset: "msg_sun"),
+                .init(text: String(localized: "새 하루 시작이에요"), asset: "msg_leaf"),
+                .init(text: String(localized: "기지개 펴고 시작해봐요"), asset: "msg_stretch"),
+                .init(text: String(localized: "물 한 잔 마시는 거 잊지 마세요"), asset: "msg_water")
+            ]
+            return morningMessages.randomElement() ?? .init(text: "", asset: nil)
+        }
+        // 활발한 날
+        if kcal >= 400 || minutes >= 60 || steps >= 10000 {
+            return .init(text: String(localized: "오늘 알찬 하루였네요! 평소보다 많이 움직였어요"),
+                         asset: "msg_stretch")
+        }
+        // 보통
+        if kcal >= 150 || steps >= 4000 {
+            return .init(text: String(localized: "오늘 \(steps)보 걸었어요"), asset: "msg_leaf")
+        }
+        // 잔잔한 날
+        let lazyMessages: [ActivityMessage] = [
+            .init(text: String(localized: "가벼운 산책 어때요"), asset: "msg_leaf")
+        ]
+        return lazyMessages.randomElement() ?? .init(text: "", asset: nil)
+    }
+
+    private var sleepHoursText: String {
+        guard let sleep = health.sleep, sleep.totalAsleep > 0 else { return "-" }
+        let h = sleep.totalAsleep / 3600
+        return String(format: "%.1fh", h)
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            // 핵심 액션 — 핑크 강조, 크게
+            heroAction(title: "함께할 캐릭터 생성하기", asset: "menu_wand") {
+                CharacterGenView()
             }
-            if let err = notifications.lastError {
-                Text(err).font(.footnote).foregroundStyle(.red)
+            // 보조 4개 — 2열 그리드 (작게)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                gridAction(title: "함께 사진 찍기", asset: "menu_camera") { CameraView() }
+                gridAction(title: "캐릭터 갤러리", asset: "menu_gallery") { CharacterGalleryView() }
+                gridAction(title: "캐릭터 진화시키기", asset: "menu_evolve") { CharacterEvolveView() }
+                gridAction(title: "내 캐릭터 설정하기", asset: "menu_settings") { CharacterProfileView() }
             }
         }
     }
 
-    private var authStatusLabel: String {
-        switch notifications.authorizationStatus {
-        case .notDetermined:    return "❓ 미요청"
-        case .denied:           return "❌ 거부됨"
-        case .authorized:       return "✅ 허용됨"
-        case .provisional:      return "🤖 자동 허용"
-        case .ephemeral:        return "🕐 일시 허용"
-        @unknown default:       return "?"
+    @ViewBuilder
+    private func heroAction<Dest: View>(title: LocalizedStringKey,
+                                        asset: String, @ViewBuilder destination: () -> Dest) -> some View {
+        NavigationLink { destination() } label: {
+            HStack(spacing: 14) {
+                Image(asset)
+                    .resizable().interpolation(.none).scaledToFit()
+                    .frame(width: 34, height: 34)
+                Text(title).font(.galmuri(16, relativeTo: .callout))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(Color.withuPinkText)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .pixelCardSurface(fill: .withuSageLight)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func gridAction<Dest: View>(title: LocalizedStringKey,
+                                        asset: String, @ViewBuilder destination: () -> Dest) -> some View {
+        NavigationLink { destination() } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                // 손그림 픽셀 아이콘(컬러) — interpolation(.none) 으로 픽셀 또렷하게.
+                Image(asset)
+                    .resizable().interpolation(.none).scaledToFit()
+                    .frame(width: 30, height: 30)
+                Text(title).font(.galmuri(13, relativeTo: .callout)).lineLimit(1)
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
+            .pixelCardSurface()
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var watchStatusCard: some View {
+        VStack(spacing: 0) {
+            cardHeaderBar(title: "Apple Watch", fill: .withuSage) {
+                HStack(spacing: 8) {
+                    if let last = connectivity.lastSentAt {
+                        Text(last.formatted(date: .omitted, time: .shortened))
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(Color.withuCardFill.opacity(0.75))
+                    }
+                    RefreshIconButton(action: { sendStateToWatch(characterState) }, tint: .withuCardFill)
+                }
+            }
+            HStack(spacing: 0) {
+                statusItem(label: "페어링", ok: connectivity.isPaired)
+                Divider().frame(height: 32)
+                statusItem(label: "앱 설치", ok: connectivity.isWatchAppInstalled)
+                Divider().frame(height: 32)
+                statusItem(label: "연결", ok: connectivity.isReachable)
+            }
+            .padding(.vertical, 12)
+        }
+        .pixelCardSurface()
+    }
+
+    private func statusItem(label: String, ok: Bool) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: ok ? "checkmark.circle.fill" : "minus.circle.fill")
+                .foregroundStyle(ok ? Color.withuSage : .secondary)
+                .font(.pretendard(16, relativeTo: .callout))
+            Text(label).font(.galmuri(10, relativeTo: .caption2)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Last update footer
+
+    /// 메인 하단 작은 footer — BG refresh 가 정상 작동 중인지 한눈에.
+    private var lastUpdateFooter: some View {
+        let bgDate = UserDefaults(suiteName: SharedAppState.groupID)?
+            .object(forKey: "withu.lastBackgroundRefreshAt") as? Date
+        return HStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 9))
+            if let date = bgDate {
+                Text("마지막 갱신 \(date.formatted(date: .omitted, time: .shortened))")
+            } else {
+                Text("백그라운드 갱신 대기 중")
+            }
+        }
+        .font(.pretendard(10))
+        .foregroundStyle(.tertiary)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Permission banner
+
+    /// 거절돼있어서 해당 기능이 막힌 권한 목록.
+    private var deniedPermissions: [String] {
+        var list: [String] = []
+        // 건강은 '요청 안 함'일 때만 경고 — read 권한은 iOS 가 허용 여부를 안 알려줘,
+        // 허용했지만 데이터가 없는 기기(.determinedNoData)에 경고를 띄우면 오탐(항목 7).
+        if health.authStatus == .notRequested { list.append(String(localized: "건강")) }
+        if weather.authorizationStatus == .denied || weather.authorizationStatus == .restricted {
+            list.append(String(localized: "위치"))
+        }
+        if notifications.authorizationStatus == .denied { list.append(String(localized: "알림")) }
+        return list
+    }
+
+    @ViewBuilder
+    private var permissionBanner: some View {
+        if !deniedPermissions.isEmpty {
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.pretendard(16, relativeTo: .callout))
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(deniedPermissions.joined(separator: " · ")) 권한이 꺼져 있어요")
+                            .font(.pretendard(13, relativeTo: .footnote))
+                            .foregroundStyle(.primary)
+                        Text("기능이 제한될 수 있어요. iOS 설정에서 켤 수 있어요.")
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.pretendard(11, relativeTo: .caption2))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
     }
 
-    // MARK: - Watch status section
+    // MARK: - Logic
+
+    private func sendStateToWatch(_ state: CharacterState) {
+        // override 가 살아있을 때만 명시. nil 이면 resolver 가 다시 계산해도 같은 값.
+        SyncCoordinator.syncNow(override: overrideState)
+    }
+
+    private func loadAll() async {
+        do { _ = try await health.fetchSleep(days: 7) } catch {}
+        do { _ = try await health.fetchWorkouts(days: 7) } catch {}
+        do { _ = try await health.fetchTodaySteps() } catch {}
+        do { _ = try await health.fetchTodayActiveMinutes() } catch {}
+        do { _ = try await health.fetchTodayActiveKcal() } catch {}
+        _ = await health.fetchInBedSchedule()
+        sendStateToWatch(characterState)
+        activityMessage = computeActivityMessage()
+    }
+}
+
+// MARK: - SettingsView
+
+struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var health = HealthKitManager.shared
+    @State private var connectivity = ConnectivityManager.shared
+    @State private var notifications = NotificationManager.shared
+    @State private var focus = FocusModeManager.shared
+    @State private var auth = AuthManager.shared
+
+    @Binding var overrideState: CharacterState?
+    let characterState: CharacterState
+    let sendStateToWatch: (CharacterState) -> Void
+
+    @State private var healthMessage: String = ""
+    @State private var notifMessage: String = ""
+    @State private var showWidgetGuide: Bool = false
+    @State private var showGuide: Bool = false
+    @State private var showOnboardingConfirm: Bool = false
+    @State private var showPaywall: Bool = false
+    @State private var showDeleteConfirm: Bool = false
+    @State private var isDeletingAccount: Bool = false
+    @State private var deleteError: String?
+    @AppStorage("withu.onboarded.v1") private var onboarded: Bool = false
+    // 취침 리마인더 시간 — 자정 기준 분 단위 (기본 22:30)
+    @AppStorage("withu.bedtimeReminderMinutes.v1") private var bedtimeReminderMinutes: Int = 22 * 60 + 30
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                backgroundGradient(for: .idle).ignoresSafeArea()
+                Form {
+                    Section {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            Label("캔디 충전", systemImage: "sparkles")
+                        }
+                    } header: {
+                        Text("더 만들기")
+                            .font(.pretendardBold(16, relativeTo: .callout))
+                    } footer: {
+                        Text("보유 캔디 \(GenerationQuota.displayedCandy())개")
+                            .font(.pretendard(11, relativeTo: .caption2))
+                    }
+                    watchSection
+                    healthSection
+                    notificationsSection
+                    Section {
+                        NavigationLink {
+                            CharacterProfileView()
+                        } label: {
+                            Label("내 캐릭터 설정하기", systemImage: "person.crop.circle.fill")
+                        }
+                        NavigationLink {
+                            AdvancedDiagnosticsView(
+                                health: $health,
+                                focus: $focus,
+                                connectivity: $connectivity,
+                                overrideState: $overrideState,
+                                characterState: characterState,
+                                sendStateToWatch: sendStateToWatch
+                            )
+                        } label: {
+                            Label("캐릭터 상태 살펴보기", systemImage: "gauge.with.dots.needle.50percent")
+                        }
+                    } header: {
+                        Text("캐릭터")
+                            .font(.pretendardBold(16, relativeTo: .callout))
+                    } footer: {
+                        Text("집중 모드·수면 기록·운동 감지·백그라운드 갱신 상태를 확인해요.")
+                            .font(.pretendard(11, relativeTo: .caption2))
+                    }
+                    Section {
+                        Button {
+                            showGuide = true
+                        } label: {
+                            Label("사용법 보기", systemImage: "questionmark.circle")
+                        }
+                        Button {
+                            showWidgetGuide = true
+                        } label: {
+                            Label("홈 화면·시계 화면에 두기", systemImage: "rectangle.stack.badge.plus")
+                        }
+                        Button {
+                            showOnboardingConfirm = true
+                        } label: {
+                            Label("처음 안내 다시 보기", systemImage: "arrow.counterclockwise.circle")
+                        }
+                    } header: {
+                        Text("도움말")
+                            .font(.pretendardBold(16, relativeTo: .callout))
+                    }
+                    Section {
+                        // ⚠️ 호스팅 후 URL 갱신 — GitHub Pages 등에 legal/ 의 두 markdown 을 HTML 로 배포.
+                        Link(destination: URL(string: "https://kkcdkk.github.io/withu/PRIVACY_POLICY.html")!) {
+                            Label("개인정보처리방침", systemImage: "lock.shield")
+                        }
+                        Link(destination: URL(string: "https://kkcdkk.github.io/withu/TERMS_OF_SERVICE.html")!) {
+                            Label("이용약관", systemImage: "doc.text")
+                        }
+                    } header: {
+                        Text("법적 정보")
+                            .font(.pretendardBold(16, relativeTo: .callout))
+                    }
+                    if KeychainStore.sessionToken() != nil {
+                        Section {
+                            Button {
+                                auth.signOut()
+                                dismiss()
+                            } label: {
+                                Label("로그아웃", systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                            Button(role: .destructive) {
+                                showDeleteConfirm = true
+                            } label: {
+                                if isDeletingAccount {
+                                    HStack(spacing: 8) {
+                                        ProgressView()
+                                        Text("삭제 중…")
+                                    }
+                                } else {
+                                    Label("계정 삭제", systemImage: "trash")
+                                }
+                            }
+                            .disabled(isDeletingAccount)
+                        } header: {
+                            Text("계정")
+                                .font(.pretendardBold(16, relativeTo: .callout))
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("설정")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showWidgetGuide) {
+                WidgetGuideView()
+            }
+            .sheet(isPresented: $showGuide) {
+                HelpGuideView(onDone: { showGuide = false })
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(onClose: { showPaywall = false })
+            }
+            .alert("처음 안내 다시 보기", isPresented: $showOnboardingConfirm) {
+                Button("다시 보기") {
+                    onboarded = false
+                    dismiss()
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("권한 안내를 처음부터 다시 보고, 거절한 권한도 다시 물어봐요.")
+            }
+            .alert("계정을 삭제할까요?", isPresented: $showDeleteConfirm) {
+                Button("삭제", role: .destructive) {
+                    Task {
+                        isDeletingAccount = true
+                        let ok = await auth.deleteAccount()
+                        isDeletingAccount = false
+                        if ok {
+                            dismiss()
+                        } else {
+                            deleteError = auth.lastError ?? "삭제에 실패했어요. 잠시 후 다시 시도해 주세요."
+                        }
+                    }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("계정·서버 기록과 이 기기의 캐릭터·갤러리, 충전 내역이 모두 삭제되며 되돌릴 수 없어요.")
+            }
+            .alert("계정 삭제 실패", isPresented: Binding(get: { deleteError != nil },
+                                                  set: { if !$0 { deleteError = nil } })) {
+                Button("확인", role: .cancel) { deleteError = nil }
+            } message: {
+                Text(deleteError ?? "")
+            }
+        }
+    }
 
     private var watchSection: some View {
-        Section("Apple Watch 연결") {
+        Section {
             HStack {
                 Text("페어링")
                 Spacer()
-                Text(connectivity.isPaired ? "✅" : "❌")
+                StatusPill(kind: connectivity.isPaired ? .ok : .off,
+                           label: connectivity.isPaired ? "연결됨" : "안 됨")
             }
             HStack {
-                Text("워치 앱 설치")
+                Text("앱 설치")
                 Spacer()
-                Text(connectivity.isWatchAppInstalled ? "✅" : "❌")
+                StatusPill(kind: connectivity.isWatchAppInstalled ? .ok : .off,
+                           label: connectivity.isWatchAppInstalled ? "설치됨" : "안 됨")
             }
             HStack {
-                Text("Reachable")
+                Text("연결 상태")
                 Spacer()
-                Text(connectivity.isReachable ? "✅" : "—")
+                StatusPill(kind: connectivity.isReachable ? .ok : .off,
+                           label: connectivity.isReachable ? "연결됨" : "대기 중")
             }
             if let last = connectivity.lastSentAt {
                 HStack {
@@ -182,164 +921,588 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            if let err = connectivity.lastError {
-                Text(err).font(.footnote).foregroundStyle(.red)
+            if let imgState = connectivity.lastImageTransferState {
+                Text(imgState).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
             }
-            Button("지금 보내기") {
+            RefreshRowButton(title: "지금 바로 동기화",
+                             systemImage: "applewatch.radiowaves.left.and.right") {
                 sendStateToWatch(characterState)
             }
+        } header: {
+            Text("애플 워치")
+                .font(.pretendardBold(16, relativeTo: .callout))
         }
     }
-
-    // MARK: - Character
-
-    private var characterSection: some View {
-        Section {
-            CharacterView(state: characterState)
-                .listRowBackground(Color.clear)
-        }
-    }
-
-    // MARK: - Camera
-
-    private var cameraSection: some View {
-        Section("카메라") {
-            NavigationLink {
-                CameraView()
-            } label: {
-                Label("캐릭터랑 사진 찍기", systemImage: "camera.fill")
-            }
-            NavigationLink {
-                CharacterGenView()
-            } label: {
-                Label("캐릭터 만들기", systemImage: "wand.and.stars")
-            }
-            NavigationLink {
-                BatchCharacterGenView()
-            } label: {
-                Label("여러 상태 한 번에 만들기", systemImage: "square.grid.3x3.fill")
-            }
-            NavigationLink {
-                CharacterGalleryView()
-            } label: {
-                Label("캐릭터 갤러리", systemImage: "photo.stack")
-            }
-        }
-    }
-
-    // MARK: - HealthKit
 
     private var healthSection: some View {
-        Section("HealthKit") {
+        Section {
             HStack {
-                Text("데이터 접근")
+                Text("권한")
                 Spacer()
-                Text(health.isAuthorized ? "✅ 가능" : "❓ 확인 안 됨")
-                    .foregroundStyle(.secondary)
+                // read 권한은 iOS 가 허용/거부를 안 알려줌 — 요청 여부 + 실제 데이터
+                // 조회 성공으로 추론한 3단 표시 (HealthAuthStatus 주석 참고).
+                switch health.authStatus {
+                case .authorized:
+                    StatusPill(kind: .ok, label: "허용됨")
+                case .determinedNoData:
+                    StatusPill(kind: .off, label: "허용 안 됨")
+                case .notRequested:
+                    StatusPill(kind: .off, label: "요청 안 함")
+                }
             }
-
-            Button("권한 요청") {
-                Task { await requestAuth() }
-            }
-            .disabled(healthLoading)
-
-            Button("데이터 불러오기") {
-                Task { await loadAll() }
-            }
-            .disabled(healthLoading)
-
-            Text(healthMessage)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-            if let s = health.sleep {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("💤 수면 (지난 7일)").font(.subheadline).bold()
-                    Text("총 수면: \(formatDuration(s.totalAsleep))")
-                    Text("기록 수: \(s.sampleCount)건")
-                    if let last = s.lastNight {
-                        Text("마지막: \(last.formatted(date: .abbreviated, time: .shortened))")
+            if health.authStatus == .notRequested {
+                // 아직 요청한 적 없으면 (온보딩에서 건너뜀) 시트가 실제로 뜬다.
+                Button("권한 요청") {
+                    Task {
+                        try? await health.requestAuthorization()
+                        await reloadHealth()
                     }
                 }
-                .font(.footnote)
-            }
-
-            if let steps = health.todaySteps {
-                Text("👟 오늘 걸음: \(Int(steps))보").font(.subheadline)
-            }
-
-            if !health.recentWorkouts.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("🏋️ 최근 운동").font(.subheadline).bold()
-                    ForEach(Array(health.recentWorkouts.prefix(5).enumerated()), id: \.offset) { _, w in
-                        HStack {
-                            Text(w.activity.displayName)
-                            Spacer()
-                            Text(formatDuration(w.duration))
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.footnote)
+            } else {
+                // iOS HealthKit 권한 시트는 1회성 — 이미 결정된 뒤에는 requestAuthorization 이
+                // 아무 UI 도 띄우지 않아서, 변경은 설정 앱으로 안내한다.
+                Button("권한 변경") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
                     }
                 }
+            }
+            RefreshRowButton(title: "데이터 새로고침") {
+                await reloadHealth()
+            }
+            if !healthMessage.isEmpty {
+                Text(healthMessage).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("건강 데이터")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        } footer: {
+            Text("운동·수면 시작을 즉시 반영하려면 단축어 자동화의 운동/수면 모드 트리거에 'Withy 캐릭터 새로고침'을 추가하세요.")
+                .font(.pretendard(11, relativeTo: .caption2))
+        }
+    }
+
+    private var notificationsSection: some View {
+        Section(header: Text("알림").font(.pretendardBold(16, relativeTo: .callout))) {
+            HStack {
+                Text("권한 상태")
+                Spacer()
+                Text(authStatusLabel).foregroundStyle(.secondary)
+            }
+            if notifications.authorizationStatus == .denied {
+                // 거부된 뒤에는 requestAuthorization 이 무반응 — 설정 앱으로 안내.
+                Button("알림 권한은 설정 앱에서 변경") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } else if notifications.authorizationStatus != .authorized {
+                Button("알림 권한 요청") {
+                    Task { await notifications.requestAuthorization() }
+                }
+            }
+            DatePicker("취침 리마인더 시간",
+                       selection: bedtimeReminderDate,
+                       displayedComponents: .hourAndMinute)
+            RefreshRowButton(title: "저장",
+                             systemImage: "bell.badge") {
+                let hour = bedtimeReminderMinutes / 60
+                let minute = bedtimeReminderMinutes % 60
+                await notifications.scheduleBedtimeReminder(hour: hour, minute: minute)
+                let time = String(format: "%02d:%02d", hour, minute)
+                notifMessage = notifications.lastError
+                    ?? String(localized: "취침 리마인더를 \(time)에 맞췄어요")
+            }
+            RefreshRowButton(title: "등록된 알림 모두 취소",
+                             systemImage: "bell.slash",
+                             role: .destructive) {
+                notifications.cancelAll()
+                notifMessage = String(localized: "알림을 모두 취소했어요")
+            }
+            if !notifMessage.isEmpty {
+                Text(notifMessage).font(.pretendard(13, relativeTo: .footnote)).foregroundStyle(.secondary)
             }
         }
     }
 
-    private func requestAuth() async {
-        healthLoading = true
-        defer { healthLoading = false }
-        do {
-            try await health.requestAuthorization()
-            healthMessage = "권한 요청 완료"
-        } catch {
-            healthMessage = "❌ \(error.localizedDescription)"
+    /// 분 단위 저장값 <-> DatePicker 용 Date 변환 (날짜 부분은 무시, 시:분만 의미).
+    private var bedtimeReminderDate: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: bedtimeReminderMinutes / 60,
+                                      minute: bedtimeReminderMinutes % 60,
+                                      second: 0, of: Date()) ?? Date()
+            },
+            set: { newDate in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                bedtimeReminderMinutes = (c.hour ?? 22) * 60 + (c.minute ?? 30)
+            }
+        )
+    }
+
+    private var authStatusLabel: String {
+        switch notifications.authorizationStatus {
+        case .notDetermined: return String(localized: "요청 안 함")
+        case .denied: return String(localized: "거부됨")
+        case .authorized, .provisional, .ephemeral: return String(localized: "허용됨")
+        @unknown default: return "—"
         }
     }
 
-    private func loadAll() async {
-        healthLoading = true
-        defer { healthLoading = false }
 
+    private func reloadHealth() async {
         var errors: [String] = []
-        do { _ = try await health.fetchSleep(days: 7) }
-        catch { errors.append("수면: \(error.localizedDescription)") }
-        do { _ = try await health.fetchWorkouts(days: 7) }
-        catch { errors.append("운동: \(error.localizedDescription)") }
-        do { _ = try await health.fetchTodaySteps() }
-        catch { errors.append("걸음: \(error.localizedDescription)") }
-
+        do { _ = try await health.fetchSleep(days: 7) } catch { errors.append("수면") }
+        do { _ = try await health.fetchWorkouts(days: 7) } catch { errors.append("운동") }
+        do { _ = try await health.fetchTodaySteps() } catch { errors.append("걸음") }
+        do { _ = try await health.fetchTodayActiveMinutes() } catch { errors.append("활동") }
+        do { _ = try await health.fetchTodayActiveKcal() } catch { errors.append("칼로리") }
+        _ = await health.fetchInBedSchedule()
+        sendStateToWatch(characterState)
         healthMessage = errors.isEmpty
-            ? "✅ 데이터 로드 완료"
-            : "⚠️ 일부 실패\n" + errors.joined(separator: "\n")
-    }
-
-    // MARK: - Debug
-
-    private var debugSection: some View {
-        Section("디버그 (상태 강제)") {
-            Picker("상태 강제", selection: $overrideState) {
-                Text("자동").tag(CharacterState?.none)
-                ForEach(CharacterState.allCases, id: \.self) { state in
-                    Text(state.rawValue).tag(CharacterState?.some(state))
-                }
-            }
-            .pickerStyle(.menu)
-
-            Text("자동 모드는 HealthKit 데이터 + 현재 시각으로 결정")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let h = Int(seconds) / 3600
-        let m = (Int(seconds) % 3600) / 60
-        return "\(h)시간 \(m)분"
+            ? String(localized: "최신화 완료")
+            : String(localized: "실패: \(errors.joined(separator: ", "))")
     }
 }
 
 #Preview {
     ContentView()
+}
+
+// MARK: - WidgetGuideView
+
+/// 사용자가 위젯 / 컴플리케이션을 어떻게 추가하는지 단계별 안내.
+struct WidgetGuideView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                backgroundGradient(for: .idle).ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        guideSection(
+                            icon: "iphone",
+                            tint: .cyan,
+                            title: "홈 화면 위젯",
+                            steps: [
+                                "홈 화면 빈 곳을 길게 눌러주세요",
+                                "왼쪽 위 더하기 버튼을 눌러주세요",
+                                "검색창에 \"Withy\" 라고 입력해주세요",
+                                "원하는 크기를 골라 추가해주세요",
+                            ]
+                        )
+                        guideSection(
+                            icon: "lock.iphone",
+                            tint: .mint,
+                            title: "잠금 화면 위젯",
+                            steps: [
+                                "잠금 화면을 길게 누른 뒤 '맞춤 설정'을 눌러주세요",
+                                "꾸밀 잠금 화면을 고르고 위젯 영역을 눌러주세요",
+                                "'위젯 추가'를 누르고 \"Withy\"를 검색해주세요",
+                                "원형·사각형·한 줄 중에서 골라주세요",
+                            ]
+                        )
+                        guideSection(
+                            icon: "applewatch",
+                            tint: .brown,
+                            title: "시계 화면에 올리기",
+                            steps: [
+                                "워치 화면을 길게 누른 뒤 '편집'을 눌러주세요",
+                                "위젯을 올리는 화면까지 옆으로 넘겨주세요",
+                                "원하는 자리를 누르고 \"Withy\"를 찾아주세요",
+                                "고른 다음 크라운을 눌러 마무리해주세요",
+                            ]
+                        )
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("홈 화면에 Withy 두기")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func guideSection(icon: String, tint: Color, title: String,
+                               steps: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(tint.opacity(0.18))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: icon)
+                        .font(.pretendard(20, relativeTo: .title3))
+                        .foregroundStyle(tint)
+                }
+                Text(title).font(.pretendard(16, relativeTo: .callout))
+                Spacer()
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(i + 1).")
+                            .font(.pretendard(16, relativeTo: .callout))
+                            .foregroundStyle(tint)
+                            .frame(width: 20, alignment: .leading)
+                        Text(step).font(.pretendard(16, relativeTo: .callout))
+                    }
+                }
+            }
+            .padding(.leading, 50)
+        }
+        .frostedCard(cornerRadius: 16)
+    }
+}
+
+// MARK: - AdvancedDiagnosticsView
+
+/// 일반 사용자에겐 노이즈인 진단 화면들. Settings → "고급 / 진단" 로 격리.
+struct AdvancedDiagnosticsView: View {
+    @Binding var health: HealthKitManager
+    @Binding var focus: FocusModeManager
+    @Binding var connectivity: ConnectivityManager
+    @Binding var overrideState: CharacterState?
+    let characterState: CharacterState
+    let sendStateToWatch: (CharacterState) -> Void
+
+    var body: some View {
+        ZStack {
+            backgroundGradient(for: .idle).ignoresSafeArea()
+            Form {
+                sleepWindowSection
+                focusSection
+                healthSleepSection
+                motionSection
+                debugSection
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("캐릭터 상태 살펴보기")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Sections (옮겨옴)
+
+    /// 수면/집중 신호 모니터 — 신호가 바뀐 순간마다 계기(앱 열림·동기화·수면필터)와 함께 쌓인다.
+    /// 예약 전환 시각에 '수면필터 ON' 줄이 없으면 = iOS 가 그 시점에 앱을 안 깨운 것.
+    @ViewBuilder
+    private var signalMonitorRows: some View {
+        let entries = FocusSignalLog.load()
+        DisclosureGroup("신호 모니터 (\(entries.count)건)") {
+            if entries.isEmpty {
+                Text("아직 기록이 없어요. 앱을 열어두거나 수면 모드를 켜보면 쌓여요.")
+                    .font(.pretendard(12, relativeTo: .caption))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(entries.suffix(40).reversed()) { e in
+                    HStack(spacing: 6) {
+                        Text(e.t.formatted(date: .omitted, time: .standard))
+                            .font(.caption.monospaced())
+                        Text(e.src)
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(e.src.hasPrefix("수면필터") ? Color.withuPinkText : .secondary)
+                        Spacer(minLength: 4)
+                        Text("집중 \(e.focusLabel)\(e.filter ? " · 필터수면" : "")\(e.inBed ? " · inBed" : "")")
+                            .font(.pretendard(11, relativeTo: .caption2))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        Button {
+            UIPasteboard.general.string = FocusSignalLog.exportText()
+        } label: {
+            Label("신호 기록 복사", systemImage: "doc.on.doc")
+        }
+        Button(role: .destructive) {
+            FocusSignalLog.clear()
+        } label: {
+            Text("신호 기록 지우기")
+        }
+    }
+
+    private var focusSection: some View {
+        Section {
+            HStack { Text("권한"); Spacer(); Text(focus.authorizationStatusLabel).foregroundStyle(.secondary) }
+            HStack { Text("집중모드"); Spacer(); Text(focus.focusStateLabel).foregroundStyle(.secondary) }
+            HStack {
+                Text("수면/집중 모드 신호")
+                Spacer()
+                StatusPill(kind: focus.isFocusFilterSleeping ? .ok : .off,
+                           label: focus.isFocusFilterSleeping ? "받는 중" : "꺼짐")
+            }
+            HStack {
+                Text("설정시간 기준")
+                Spacer()
+                StatusPill(kind: focus.shouldFallbackToSleepWindow() ? .ok : .off,
+                           label: focus.shouldFallbackToSleepWindow() ? "켜짐" : "꺼짐")
+            }
+            HStack {
+                Text("마지막으로 신호를 받은 시각")
+                Spacer()
+                Text(focus.focusFilterLastPerformAt.map { $0.formatted(date: .omitted, time: .standard) }
+                     ?? String(localized: "없음"))
+                    .foregroundStyle(.secondary)
+            }
+            if let last = focus.lastCheckedAt {
+                HStack {
+                    Text("마지막 확인")
+                    Spacer()
+                    Text(last.formatted(date: .omitted, time: .standard))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if !focus.focusFilterPerformLog.isEmpty {
+                DisclosureGroup("신호 기록 (최근 \(focus.focusFilterPerformLog.count)회)") {
+                    ForEach(Array(focus.focusFilterPerformLog.enumerated()), id: \.offset) { _, entry in
+                        HStack {
+                            Text(entry.date.formatted(date: .omitted, time: .standard))
+                                .font(.caption.monospaced())
+                            Spacer()
+                            Text(entry.sleeping ? String(localized: "수면 켜짐") : String(localized: "수면 꺼짐"))
+                                .font(.pretendard(12, relativeTo: .caption))
+                                .foregroundStyle(entry.sleeping ? .indigo : .secondary)
+                        }
+                    }
+                }
+            }
+            // 신호 모니터 — 수동 vs 예약(자동) 전환 때 실제로 뭐가 도착했는지 밤새 기록.
+            signalMonitorRows
+            if !focus.isAuthorized {
+                Button("집중 모드 권한 요청") {
+                    Task { await focus.requestAuthorization() }
+                }
+            }
+            RefreshRowButton(title: "지금 다시 확인") {
+                focus.refresh(source: "수동 확인")
+                sendStateToWatch(characterState)
+            }
+            if focus.isAuthorized && focus.rawFocusedValue == nil {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("설정 앱 열기", systemImage: "gear")
+                }
+            }
+        } header: {
+            Text("수면·집중 모드")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        }
+    }
+
+    /// 지금 상태가 왜 이렇게 나왔는지 바로 읽히게 — 설정된 수면/기상 시간창과 기준.
+    /// (예: '잠 깨는 중'은 일어나는 시간부터 1시간 동안 뜬다)
+    private var sleepWindowSection: some View {
+        let p = CharacterProfileStore.load()
+        func hhmm(_ h: Int, _ m: Int) -> String { String(format: "%02d:%02d", h, m) }
+        let wakeEndH = (p.sleepEndHour * 60 + p.sleepEndMinute + 60) / 60 % 24
+        let wakeEndM = (p.sleepEndHour * 60 + p.sleepEndMinute + 60) % 60
+        return Section {
+            HStack {
+                Text("수면 기준")
+                Spacer()
+                Text(p.isManualSleepOnly ? "설정 시간 기준" : "수면 모드 기준")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("설정한 수면 시간")
+                Spacer()
+                Text("\(hhmm(p.sleepStartHour, p.sleepStartMinute)) ~ \(hhmm(p.sleepEndHour, p.sleepEndMinute))")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("잠 깨는 중 구간")
+                Spacer()
+                Text("\(hhmm(p.sleepEndHour, p.sleepEndMinute)) ~ \(hhmm(wakeEndH, wakeEndM))")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("지금 판정")
+                Spacer()
+                Text(characterState.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("수면 시간 설정")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        } footer: {
+            Text("'잠 깨는 중'은 일어나는 시간부터 1시간 동안 나와요.")
+                .font(.pretendard(11, relativeTo: .caption2))
+        }
+    }
+
+    private var healthSleepSection: some View {
+        Section {
+            HStack {
+                Text("최근 48시간 잠자리 기록")
+                Spacer()
+                Text("\(health.inBedSampleCount24h)개")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("잠자리 시간대 여부")
+                Spacer()
+                StatusPill(kind: health.isInBedSchedule ? .ok : .off,
+                           label: health.isInBedSchedule ? "예" : "아니요")
+            }
+            if let start = health.lastInBedSampleStart {
+                HStack {
+                    Text("마지막 잠자리 시작")
+                    Spacer()
+                    Text(start.formatted(date: .omitted, time: .shortened))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Text("최근 7일 수면 기록")
+                Spacer()
+                Text("\(health.sleep?.sampleCount ?? 0)개")
+                    .foregroundStyle(.secondary)
+            }
+            if let last = health.sleep?.lastNight {
+                HStack {
+                    Text("마지막 수면 시작")
+                    Spacer()
+                    Text(last.formatted(date: .abbreviated, time: .shortened))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            RefreshRowButton(title: "수면 기록 다시 가져오기") {
+                _ = try? await health.fetchSleep(days: 7)
+                _ = await health.fetchInBedSchedule()
+                sendStateToWatch(characterState)
+            }
+        } header: {
+            Text("건강 앱 수면 정보")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        }
+    }
+
+    private var motionSection: some View {
+        Section {
+            HStack {
+                Text("운동 중 추정")
+                Spacer()
+                StatusPill(kind: health.isLikelyInWorkout ? .ok : .off,
+                           label: health.isLikelyInWorkout ? "예" : "아니요")
+            }
+            HStack {
+                Text("최근 90초 심박 기록")
+                Spacer()
+                Text("\(health.recentHRSampleCount)개")
+                    .foregroundStyle(.secondary)
+            }
+            if health.recentHRAverage > 0 {
+                HStack {
+                    Text("평균 심박수")
+                    Spacer()
+                    Text("분당 \(Int(health.recentHRAverage))회")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            RefreshRowButton(title: "심박으로 다시 확인") {
+                await health.refreshWorkoutInference()
+                sendStateToWatch(characterState)
+            }
+        } header: {
+            Text("운동 감지")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        }
+    }
+
+    private var debugSection: some View {
+        Section {
+            HStack {
+                Text("마지막 백그라운드 갱신")
+                Spacer()
+                Text(lastBgRefreshLabel)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("위젯 마지막 계산")
+                Spacer()
+                Text(widgetTimelineLabel)
+                    .foregroundStyle(.secondary)
+            }
+            Picker("상태 직접 고르기", selection: $overrideState) {
+                Text("자동 (추천)").tag(CharacterState?.none)
+                ForEach(CharacterState.allCases, id: \.self) { state in
+                    Text(state.koreanShortLabel).tag(CharacterState?.some(state))
+                }
+            }
+            .pickerStyle(.menu)
+            RefreshRowButton(title: "위젯 지금 새로고침") {
+                sendStateToWatch(characterState)
+                WidgetCenter.shared.reloadAllTimelines()
+                WidgetCenter.shared.reloadTimelines(ofKind: "withuWidget")
+                WidgetCenter.shared.reloadTimelines(ofKind: "withuComplication")
+            }
+            RefreshRowButton(title: "워치로 모든 그림 다시 동기화",
+                             systemImage: "applewatch.radiowaves.left.and.right") {
+                ConnectivityManager.shared.sendAllToWatch()
+            }
+            HStack {
+                Text("워치로 보내는 중")
+                Spacer()
+                Text("\(connectivity.outstandingTransfers)개")
+                    .foregroundStyle(.secondary)
+            }
+            if let s = connectivity.lastImageTransferState {
+                HStack {
+                    Text("워치 마지막 전송")
+                    Spacer()
+                    Text(s).font(.pretendard(11, relativeTo: .caption2)).foregroundStyle(.secondary)
+                        .lineLimit(2).multilineTextAlignment(.trailing)
+                }
+            }
+        } header: {
+            Text("위젯·워치 다시 맞추기")
+                .font(.pretendardBold(16, relativeTo: .callout))
+        } footer: {
+            Text("백그라운드 갱신은 30분~몇 시간 간격으로 자동 실행돼요. 워치 동기화는 첫 실행이나 워치 앱 설치 때 자동으로 한 번 돼요.")
+                .font(.pretendard(11, relativeTo: .caption2))
+        }
+    }
+
+    private var lastBgRefreshLabel: String {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        guard let date = defaults?.object(forKey: "withu.lastBackgroundRefreshAt") as? Date else {
+            return String(localized: "없음")
+        }
+        return date.formatted(date: .omitted, time: .standard)
+    }
+
+    /// 위젯이 마지막으로 타임라인을 계산한 시각·상태 — "위젯이 정말 갱신됐는지" 진단용.
+    /// 홈/잠금화면 인스턴스별로 따로 보여준다 (잠금화면에만 갱신이 안 닿는 케이스 구분).
+    private var widgetTimelineLabel: String {
+        let defaults = UserDefaults(suiteName: SharedAppState.groupID)
+        let families: [(key: String, label: String)] = [
+            ("systemSmall", "홈S"), ("systemMedium", "홈M"), ("systemLarge", "홈L"),
+            ("accessoryCircular", "잠금원형"), ("accessoryRectangular", "잠금직사각"),
+            ("accessoryInline", "잠금한줄"),
+        ]
+        var parts: [String] = []
+        for f in families {
+            guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt.\(f.key)") as? Date else { continue }
+            let time = date.formatted(date: .omitted, time: .shortened)
+            let raw = defaults?.string(forKey: "withu.widget.lastTimelineState.\(f.key)") ?? ""
+            let stateLabel = CharacterState(rawValue: raw)?.koreanShortLabel ?? "?"
+            parts.append("\(f.label) \(time)·\(stateLabel)")
+        }
+        if parts.isEmpty {
+            // 구버전 키 fallback
+            guard let date = defaults?.object(forKey: "withu.widget.lastTimelineAt") as? Date else {
+                return String(localized: "없음")
+            }
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        return parts.joined(separator: "  ")
+    }
 }

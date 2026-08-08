@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 단건 생성 화면 문구 (스펙 02 §2 — iOS 원문 그대로, 오타 '이용헤요' 포함). S2 소유. -->
+<resources>
+    <!-- 네비게이션 -->
+    <string name="gen_title">캐릭터 만들기</string>
+
+    <!-- 모드 -->
+    <string name="gen_mode_ai">AI로 캐릭터 생성하기</string>
+    <string name="gen_mode_import">내 이미지로 캐릭터 생성하기</string>
+
+    <!-- batchSection -->
+    <string name="gen_batch_title">여러 상태 한 번에 만들기</string>
+    <string name="gen_batch_subtitle">모든 상태의 모습을 한번에 만들어요</string>
+
+    <!-- modeSection -->
+    <string name="gen_mode_header">생성 옵션</string>
+    <string name="gen_mode_footer_import">가지고 있는 사진이나 그림을 그대로 이용헤요. 배경을 자동으로 제거하고 정사각형으로 다듬어요. 비용은 들지 않아요.</string>
+
+    <!-- stateSection -->
+    <string name="gen_state_header">상태</string>
+
+    <!-- promptSection -->
+    <string name="gen_prompt_header">캐릭터 프롬프트</string>
+    <string name="gen_prompt_caption">내 캐릭터가 어떤 모습인지 적어요. 상태별 동작·표정은 기본으로 시스템에 설정되어 있어요.</string>
+    <string name="gen_prompt_placeholder">예: 둥근 초록 새싹 캐릭터, 큰 눈, 작은 몸</string>
+    <string name="gen_helper_disclosure">항목별 입력</string>
+    <string name="gen_helper_subject_label">주제</string>
+    <string name="gen_helper_subject_placeholder">마시멜로 캐릭터</string>
+    <string name="gen_helper_looks_label">생김새</string>
+    <string name="gen_helper_looks_placeholder">큰 눈, 둥근 몸, 새싹</string>
+    <string name="gen_helper_color_label">색감 (선택)</string>
+    <string name="gen_helper_color_placeholder">연두 파스텔톤</string>
+    <string name="gen_helper_caption">채우면 위 설명칸에 자동으로 합쳐져요.</string>
+
+    <!-- referenceSection -->
+    <string name="gen_ref_header">참고 사진 (Optional)</string>
+    <string name="gen_ref_pick_album">앨범에서 선택</string>
+    <string name="gen_ref_pick_gallery">내 캐릭터에서 선택</string>
+    <string name="gen_ref_remove">사진 빼기</string>
+    <string name="gen_ref_keep_label">그대로 둘 것</string>
+    <string name="gen_ref_keep_placeholder">비우면 사진 그대로 유지돼요</string>
+    <string name="gen_ref_keep_examples">- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인</string>
+    <string name="gen_ref_change_label">바꿀 것</string>
+    <string name="gen_ref_change_placeholder">바꿀 점을 적어요</string>
+    <string name="gen_ref_change_examples">- 포즈: [원하는 포즈]\n- 행동: [행동]\n- 각도: [정면/측면/3/4]\n- 표정: [필요하면]\n- 소품: [필요하면]</string>
+    <string name="gen_ref_footer_has">사진의 캐릭터는 그대로 두고 \'바꿀 것\'에 기입해 준 요소만 바뀌어요. 비우면 위에서 고른 상태의 포즈로 만들어요.</string>
+
+    <!-- optionsSection -->
+    <string name="gen_style_header">스타일</string>
+    <string name="gen_style_picker_label">그림 스타일</string>
+    <string name="gen_style_soft">Soft</string>
+    <string name="gen_style_pixel">Pixel</string>
+
+    <!-- generateButtonSection -->
+    <string name="gen_progress">그리는 중… %1$d초</string>
+    <string name="gen_progress_nostart">그리는 중…</string>
+    <string name="gen_cancel">그만두기</string>
+    <string name="gen_recharge">더 만들기 (충전)</string>
+    <string name="gen_animate_toggle">움직이는 캐릭터로 만들기</string>
+    <string name="gen_cta">이 모습으로 만들기</string>
+    <!-- ⚠️ iOS 원문에서 의도적으로 갈라진 유일한 문구. Android 는 단건 생성도 foreground service 로
+         돌아서(A-6 2단계) 화면을 나가도 결과가 안 사라진다 — iOS 원문("너무 오래 떠나 있으면 결과가
+         사라질 수 있으니…")은 Android 에선 거짓이라 배치 batch_bg_note 와 같은 톤으로 맞췄다. -->
+    <string name="gen_footer_generating">앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요.</string>
+    <string name="gen_footer_waiting">보통 20~30초 정도 걸려요.</string>
+    <string name="gen_footer_free">첫 만들기 1번은 무료예요! 다음부터는 만들기·다듬기마다 캔디를 써요.</string>
+    <string name="gen_footer_insufficient">캔디가 부족해요. 충전하면 계속 만들 수 있어요.</string>
+    <string name="gen_footer_normal">보유 캔디 %1$d개 · 이번 만들기 %2$d캔디</string>
+    <string name="gen_footer_photo_costs_candy">사진을 넣으면 캔디를 써요. 무료 1번은 사진 없이 만들 때 쓸 수 있어요.</string>
+
+    <!-- 캔디 안내 팝업 -->
+    <string name="gen_candy_title_free">첫 만들기는 무료예요</string>
+    <string name="gen_candy_title_normal">캔디를 사용해요</string>
+    <string name="gen_candy_confirm_refine">다듬기</string>
+    <string name="gen_candy_confirm_new">만들기</string>
+    <string name="gen_candy_body_free">이번 1번은 무료로 만들어요. 다음부터는 만들기·다듬기마다 캔디를 써요 (한 장 1개).</string>
+    <string name="gen_candy_body_new">이번 만들기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="gen_candy_body_refine">이번 다듬기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+
+    <!-- resultSection -->
+    <string name="gen_result_header">결과</string>
+    <string name="gen_result_refined_badge">다듬은 버전 %1$d 을 보고 있어요</string>
+    <string name="gen_frame_first">1번째</string>
+    <string name="gen_frame_second">2번째 (움직임)</string>
+    <string name="gen_bg_label">배경</string>
+    <string name="gen_bg_white">흰 배경</string>
+    <string name="gen_bg_transparent">배경 빼기</string>
+    <string name="gen_bg_processing">배경 빼는 중…</string>
+    <string name="gen_revised_disclosure">실제로 사용한 설명 보기</string>
+    <string name="gen_apply_cta">\'%1$s\' 자리에 적용하기</string>
+    <string name="gen_save_photos">사진 앱에 저장</string>
+    <string name="gen_saved_to_gallery">캐릭터 갤러리에 저장됨</string>
+    <string name="gen_name_label">이 캐릭터의 이름 (선택)</string>
+    <string name="gen_name_placeholder">이름</string>
+    <string name="gen_name_hint">갤러리 \'캐릭터별\'에 이 이름으로 보여요.</string>
+
+    <!-- refinementSection -->
+    <string name="gen_refine_header">이어서 다듬기</string>
+    <string name="gen_refine_header_motion">이어서 다듬기 (움직임 프레임)</string>
+    <string name="gen_refine_button">다듬기</string>
+    <string name="gen_refine_footer">위 결과를 바탕으로 조금씩 바꿔가요. 다듬을 때마다 만들기와 같은 캔디가 들어요 (성공했을 때만 차감).</string>
+
+    <!-- versionHistorySection -->
+    <string name="gen_history_header">다듬기 이력</string>
+    <string name="gen_history_original">원본</string>
+    <string name="gen_history_refined">다듬음 %1$d</string>
+    <string name="gen_history_footer">탭해서 고른 버전이 적용 대상이 돼요. \'원본\'을 고르면 다듬기 전으로 돌아가요.</string>
+
+    <!-- importSection / importResultSection -->
+    <string name="gen_import_header">사진 고르기</string>
+    <string name="gen_import_pick">사진 고르기</string>
+    <string name="gen_import_pick_change">다른 사진으로 바꾸기</string>
+    <string name="gen_import_processing">배경 빼고 다듬는 중…</string>
+    <string name="gen_import_footer">사진을 고르면 정사각형으로 다듬어요. 배경을 뺄지는 아래에서 고를 수 있어요. 모두 기기 안에서 처리하고 비용은 들지 않아요.</string>
+    <string name="gen_import_result_header">미리보기</string>
+    <string name="gen_import_toggle_removebg">배경 빼기</string>
+    <string name="gen_import_bg_processing">배경 빼는 중…</string>
+
+    <!-- 알림(Alert) -->
+    <string name="gen_alert_applied_title">적용했어요</string>
+    <string name="gen_alert_applied_body">%1$s 자리의 캐릭터를 바꿨어요. 홈 화면·위젯·워치에 바로 반영돼요.</string>
+    <string name="gen_alert_saved_title">저장했어요</string>
+    <string name="gen_alert_saved_body">사진 앱에 저장했어요.</string>
+
+    <!-- 에러 문구 (ViewModel 참조) -->
+    <string name="gen_err_no_candy">캔디가 부족해요. 충전하면 계속 만들 수 있어요.</string>
+    <string name="gen_err_offline">지금은 연결이 어려워요. 와이파이나 인터넷을 확인하고 다시 해주세요.</string>
+    <string name="gen_err_image_load">이미지를 불러오지 못했어요. 다시 시도해 주세요.</string>
+    <string name="gen_err_reload">기존 이미지를 다시 불러오지 못했어요. 다시 시도해 주세요.</string>
+    <string name="gen_err_photo_load">사진을 불러오지 못했어요.</string>
+    <string name="gen_err_save_failed">저장하지 못했어요. 다시 시도해 주세요.</string>
+    <string name="gen_err_cancelled">이미지 생성을 그만뒀어요.</string>
+
+    <!-- 단건 생성 완료 알림 (화면을 떠난 사이 끝났을 때 — 배치 notify_* 와 톤 맞춤) -->
+    <string name="gen_notify_done_title">캐릭터가 완성됐어요</string>
+    <string name="gen_notify_done_body">열어서 확인하고 마음에 들면 적용해 보세요.</string>
+    <string name="gen_notify_failed_title">캐릭터를 만들지 못했어요</string>
+    <string name="gen_notify_failed_body">앱에서 다시 시도할 수 있어요.</string>
+</resources>

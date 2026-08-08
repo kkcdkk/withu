@@ -5,3 +5,85 @@ workers_dev = true
 
 [observability]
 enabled = true
+
+# --- 비용/남용 방어 (선택, 점진 배포) ---
+#
+# 1) OpenAI 키 (필수):
+#      npx wrangler secret put OPENAI_API_KEY
+#
+# 2) 공유 토큰 (앱만 호출 허용). 설정하면 X-Withu-Token 헤더 없는 호출은 401:
+#      npx wrangler secret put WITHU_API_TOKEN
+#    → 같은 값을 앱 withu/Networking/APIConfig.swift 의 apiToken 에 넣어야 함.
+#
+# 3) IP 일일 상한 (rate limit). KV namespace 를 만들고 아래 주석을 풀어 id 를 채운 뒤 deploy:
+#      npx wrangler kv namespace create RATE_KV
+#    그러면 출력된 id 를 여기에:
+#
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "여기에_생성된_namespace_id"
+
+# --- Phase 1: 계정/권리 D1 + Apple 로그인 ---
+#
+# 4) D1 데이터베이스 (계정·무료잔액·크레딧·구독 저장):
+#      npx wrangler d1 create withu-prod
+#    출력된 database_id 를 아래 binding 에 채우고 주석 해제:
+#
+[[d1_databases]]
+binding = "DB"
+database_name = "withu-prod"
+database_id = "1fa6ac78-220c-4b34-8547-bed6d4115077"
+
+#    마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+#
+# 5) 세션 토큰 서명 시크릿 (강한 랜덤):
+#      npx wrangler secret put SESSION_SECRET
+#
+# 6) 인증 강제 플래그 (Phase 2 끝나면 "true" 로). 미설정/false 면 /generate 는
+#    기존 X-Withu-Token 경로로 통과 (shadow 배포 — 기존 앱 호환):
+#      npx wrangler secret put ENFORCE_AUTH   (값: true)
+#
+# IP 일일 생성 상한(DAILY_IP_LIMIT=60). 남용/비용 방어.
+[[kv_namespaces]]
+binding = "RATE_KV"
+id = "7c9eb73dbe9b4d76a854b96cf558c5e3"
+
+# --- 생성 모니터링 (프롬프트/결과/수정 체인 로그 + /admin 대시보드) ---
+#
+# 7) 결과 이미지 저장용 R2 버킷:
+#      npx wrangler r2 bucket create withu-gen-logs
+#    (선택) 저장 비용 관리 — 30일 후 자동 삭제 라이프사이클:
+#      npx wrangler r2 bucket lifecycle add withu-gen-logs --prefix results/ --expire-days 30
+[[r2_buckets]]
+binding = "LOG_BUCKET"
+bucket_name = "withu-gen-logs"
+
+# 8) gen_events 테이블 마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+#
+# 9) 대시보드 접근 토큰 (강한 랜덤). 설정해야 /admin 이 열림:
+#      npx wrangler secret put ADMIN_TOKEN
+#    조회: https://withu-api.ysy1398.workers.dev/admin?token=<그 값>
+
+# --- 갤러리 클라우드 백업 (계정별 캐릭터 이미지 보관) ---
+#
+# 10) 갤러리 이미지 저장용 R2 버킷. 관측 로그(LOG_BUCKET)와 분리 —
+#     로그 lifecycle(30일 자동 삭제) 정책과 무관하게 사용자 데이터를 보존한다:
+#      npx wrangler r2 bucket create withu-gallery
+[[r2_buckets]]
+binding = "GALLERY_BUCKET"
+bucket_name = "withu-gallery"
+
+# 11) gallery_items 테이블 마이그레이션 적용:
+#      npx wrangler d1 migrations apply withu-prod --remote
+
+# 앱 번들 ID (Apple identityToken 의 aud 검증용). 공개값이라 vars 로 둠:
+[vars]
+APPLE_BUNDLE_ID = "sy.withu"
+# Google 로그인(Android) — ID token 의 aud 검증용 Web 클라이언트 ID. 공개값(시크릿 아님).
+GOOGLE_CLIENT_ID = "864550333990-tgnnsngh8i74b7uimfs9o9338ffsl58r.apps.googleusercontent.com"
+# TestFlight/QA 로 결제를 검증할 때만 아래 주석을 풀어 "1" (Sandbox 구매도 서버 적립 허용).
+# ⚠️ QA 끝나면 반드시 다시 주석 처리 후 재배포 — 켜둔 채 운영하면 누구나
+#    Sandbox 테스터 계정으로 무료 캔디 무한 적립 가능 (2026-07-19 제거, RELEASE_ACTIVATION.md).
+# ALLOW_SANDBOX_IAP = "1"

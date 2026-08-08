@@ -16,15 +16,19 @@ struct PlacedCharacter: Identifiable, Equatable {
     var position: CGPoint
     /// 정규화 사이즈 (정사각). 0.35 면 화면 너비의 35%
     var size: CGFloat
+    /// 회전 (라디안). 시계방향 +.
+    var rotation: CGFloat
 
     init(id: UUID = UUID(),
          state: CharacterState,
          position: CGPoint = CGPoint(x: 0.5, y: 0.55),
-         size: CGFloat = 0.35) {
+         size: CGFloat = 0.35,
+         rotation: CGFloat = 0) {
         self.id = id
         self.state = state
         self.position = position
         self.size = size
+        self.rotation = rotation
     }
 
     /// 정규화 좌표를 실제 pixel/point 좌표계로 변환

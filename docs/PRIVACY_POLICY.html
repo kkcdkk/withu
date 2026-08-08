@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개인정보처리방침 · withu</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.7; color: #1c1c1e; background: #f7f7f8;
+    margin: 0; padding: 0;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; letter-spacing: -0.01em; }
+  .meta { color: #8a8a8e; font-size: 0.85rem; margin-bottom: 20px; }
+  .lead { color: #3a3a3c; }
+  p, li { color: #3a3a3c; }
+  hr { border: none; border-top: 1px solid #e3e3e6; margin: 24px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e3e6; vertical-align: top; }
+  th { color: #1c1c1e; font-weight: 600; background: #efeff1; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+  a { color: #ff5e9a; }
+  .back { display: inline-block; margin-top: 32px; font-size: 0.9rem; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e5e5e7; background: #000; }
+    .lead, p, li { color: #c7c7cc; }
+    h1, th { color: #f5f5f7; }
+    .meta { color: #8a8a8e; }
+    th { background: #1c1c1e; }
+    td, th { border-bottom-color: #2c2c2e; }
+    hr { border-top-color: #2c2c2e; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>개인정보처리방침</h1>
+  <p class="meta">시행일 2026년 6월 3일 · 최종 개정일 2026년 6월 26일 · <a href="./en/PRIVACY_POLICY.html">English</a></p>
+  <p class="lead">withu (이하 "본 앱") 은 사용자의 개인정보를 소중히 다루며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 방침은 본 앱이 어떤 정보를 어떤 목적으로 수집·이용하며, 어떻게 보호하는지 설명합니다.</p>
+  <hr>
+
+  <h2>1. 수집하는 개인정보 항목</h2>
+  <p>본 앱은 다음 항목을 사용자가 명시적으로 권한을 허용하거나 직접 입력한 경우에만 수집합니다.</p>
+  <table>
+    <thead><tr><th>항목</th><th>종류</th><th>출처</th></tr></thead>
+    <tbody>
+      <tr><td>건강 데이터</td><td>걸음 수, 활동분, 활성 칼로리, 수면, 운동, 심박수</td><td>Apple HealthKit</td></tr>
+      <tr><td>위치 정보</td><td>대략적인 현재 위치 (날씨 조회용)</td><td>iOS CoreLocation</td></tr>
+      <tr><td>사진</td><td>사용자가 첨부한 참고 이미지 / 카메라로 촬영한 합성 사진</td><td>iOS Photos</td></tr>
+      <tr><td>사용자 입력</td><td>AI 캐릭터 생성 프롬프트, 캐릭터 이름·설명, 시간 설정</td><td>사용자 직접 입력</td></tr>
+      <tr><td>집중 모드 상태</td><td>iOS 수면 집중 모드 (Sleep Focus) 활성 여부</td><td>INFocusStatusCenter</td></tr>
+      <tr><td>계정 정보</td><td>Apple 사용자 식별자, 이메일 (사용자가 공유를 선택한 경우)</td><td>Sign in with Apple</td></tr>
+      <tr><td>이용 정보</td><td>무료·크레딧·구독 잔액, 캐릭터 생성 횟수 기록, 인앱 결제 트랜잭션 식별자</td><td>앱 이용 시 자동 생성</td></tr>
+    </tbody>
+  </table>
+  <p>본 앱은 이름·전화번호 등의 추가 식별 정보를 수집하지 않습니다.</p>
+
+  <h2>2. 수집 및 이용 목적</h2>
+  <p>수집된 정보는 다음 목적으로만 이용됩니다.</p>
+  <ul>
+    <li>건강 데이터: 사용자 활동에 따른 캐릭터 상태 변경 (걷는 중·자는 중 등)</li>
+    <li>위치 정보: Open-Meteo API 를 통한 현재 날씨 조회 (캐릭터 배경 layer)</li>
+    <li>사진: 사용자가 선택한 캐릭터 합성 / 참고 이미지로 AI 생성 보강</li>
+    <li>사용자 입력: OpenAI API 로 AI 캐릭터 이미지 생성, 앱 내 설정 저장</li>
+    <li>집중 모드 상태: 수면 모드 켤 때 캐릭터를 자는 상태로 자동 전환</li>
+    <li>계정 정보: 로그인 식별, 무료 체험 1회 제공 보장 (재설치 악용 방지)</li>
+    <li>이용 정보: 생성 횟수 차감·잔액 관리, 인앱 결제 검증 및 중복 적립 방지</li>
+  </ul>
+
+  <h2>3. 보유 및 저장 위치</h2>
+  <p>본 앱은 데이터를 두 곳에 나누어 저장합니다.</p>
+  <ul>
+    <li><strong>기기 내 저장 (대부분의 데이터)</strong>: 건강·위치·사진·캐릭터 이미지·앱 설정 등은 사용자 기기 내(iOS App Group 컨테이너)에만 저장되며 외부로 전송되지 않습니다. 앱을 삭제하면 즉시 완전히 소멸됩니다.</li>
+    <li><strong>서버 저장 (계정·이용 정보)</strong>: 로그인 및 결제 기능을 위해 계정 정보(Apple 사용자 식별자·이메일)와 이용 정보(잔액·생성 기록·결제 트랜잭션 식별자)는 운영자의 백엔드 서버(Cloudflare Workers · D1, 데이터 보관 위치: 미국)에 저장됩니다. 이 정보는 <strong>사용자가 앱 내에서 계정을 삭제하면 서버에서 전부 삭제됩니다.</strong></li>
+  </ul>
+  <p>본 앱은 건강·위치·사진 등 민감 데이터를 서버에 저장하지 않습니다.</p>
+
+  <h2>4. 제3자 제공 및 위탁</h2>
+  <p>다음 경우 외부 서비스로 데이터가 전송됩니다. 모두 사용자 명시 행위 또는 서비스 제공에 필요한 범위에 한정됩니다.</p>
+  <table>
+    <thead><tr><th>외부 서비스</th><th>어떤 데이터</th><th>언제</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI (gpt-image)</td><td>AI 생성 프롬프트 + 참고 이미지 (있을 때)</td><td>사용자가 "이미지 생성" 버튼을 누를 때</td></tr>
+      <tr><td>Open-Meteo</td><td>위도/경도 좌표</td><td>날씨 조회 시</td></tr>
+      <tr><td>운영자 백엔드 (Cloudflare)</td><td>계정 식별자, 생성 요청, 결제 영수증</td><td>로그인·생성·결제 시</td></tr>
+      <tr><td>Apple (App Store · Sign in with Apple)</td><td>로그인 인증, 인앱 결제 처리</td><td>로그인 및 결제 시</td></tr>
+      <tr><td>Apple Health / Apple Watch</td><td>HealthKit · WatchConnectivity 표준 채널</td><td>사용자 권한 하 표준 iOS 기능</td></tr>
+    </tbody>
+  </table>
+  <p>OpenAI, Open-Meteo, Apple 은 각각의 개인정보처리방침을 따릅니다. 본 앱은 OpenAI·Open-Meteo 에 이름·이메일 등 식별 정보를 전송하지 않습니다.</p>
+
+  <h2>5. 이용자의 권리</h2>
+  <ul>
+    <li><strong>권한 거부 / 철회</strong>: iOS 설정 → withu → 각 권한 토글로 즉시 가능</li>
+    <li><strong>계정 삭제</strong>: 앱 내 설정 → 계정 → "계정 삭제" 로 서버의 계정·이용 기록과 기기 내 데이터를 모두 즉시 삭제 (되돌릴 수 없음)</li>
+    <li><strong>기기 데이터 삭제</strong>: 앱 삭제 시 기기 내 모든 데이터가 즉시 완전히 소멸됨</li>
+    <li><strong>갤러리 항목 개별 삭제</strong>: 앱 내 캐릭터 갤러리에서 항목별 삭제</li>
+  </ul>
+
+  <h2>6. 안전성 확보 조치</h2>
+  <ul>
+    <li>모든 외부 API · 서버 호출은 HTTPS 로 암호화됩니다.</li>
+    <li>서버는 로그인 토큰 기반 인증으로 본인만 자신의 계정 정보에 접근할 수 있습니다.</li>
+    <li>서버에는 결제·계정 관리에 필요한 최소한의 정보만 저장하며, 건강·위치·사진 등 민감 데이터는 저장하지 않습니다.</li>
+    <li>기기 내 데이터는 iOS 의 표준 보안 정책에 따라 보호됩니다.</li>
+  </ul>
+
+  <h2>7. 개인정보 보호 책임자</h2>
+  <ul>
+    <li>책임자: withu 운영자</li>
+    <li>이메일: <a href="mailto:ysy1398@gmail.com">ysy1398@gmail.com</a></li>
+  </ul>
+
+  <h2>8. 변경 이력</h2>
+  <table>
+    <thead><tr><th>버전</th><th>일자</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>1.0</td><td>2026-06-03</td><td>최초 작성</td></tr>
+      <tr><td>1.1</td><td>2026-06-26</td><td>로그인·결제 기능 도입에 따른 계정·이용 정보의 서버 저장 및 계정 삭제 권리 반영</td></tr>
+    </tbody>
+  </table>
+
+  <a class="back" href="./index.html">← withu 법적 문서</a>
+</div>
+</body>
+</html>

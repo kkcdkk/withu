@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  홈 위젯 메타 (Glance) — 스펙 12 Part B.
+  updatePeriodMillis 최소 30분 (앱은 상태/이미지 변경 시 CharacterWidget().updateAll 로 즉시 갱신).
+  initialLayout 은 Glance 기본 로딩 레이아웃 사용 (실제 UI 는 provideGlance 가 그림).
+  배경 투명(스티커) 느낌 — resizeMode 로 small/medium/large 근사.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="50dp"
+    android:minHeight="50dp"
+    android:minResizeWidth="50dp"
+    android:minResizeHeight="50dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:description="@string/widget_description"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/glance_default_loading_layout"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

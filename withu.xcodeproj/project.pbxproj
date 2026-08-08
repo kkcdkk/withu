@@ -41,16 +41,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		1D34FFA32FB4C0500033EC7D /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1D34FFBD2FB4C2770033EC7D /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -88,8 +78,6 @@
 
 /* Begin PBXFileReference section */
 		1D34FECE2FB278620033EC7D /* withu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = withu.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1D34FF912FB4C04F0033EC7D /* withu Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "withu Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		1D34FFAA2FB4C2760033EC7D /* withu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = withu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "withu Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = withuComplicationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D822BE82FB92FA500E2A443 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -128,6 +116,7 @@
 		1D822C042FB9324700E2A443 /* Exceptions for "withu" folder in "withuComplicationExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Assets.xcassets,
 				Character/CharacterImageView.swift,
 				Character/CharacterState.swift,
 				Shared/CharacterImageStore.swift,
@@ -146,11 +135,26 @@
 		1D822CFD2FB93F3F00E2A443 /* Exceptions for "withu" folder in "withuWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Assets.xcassets,
 				Character/CharacterImageView.swift,
 				Character/CharacterState.swift,
 				Shared/CharacterImageStore.swift,
 				Shared/SharedAppState.swift,
 				Shared/WatchMessage.swift,
+			);
+			target = 1D822CE52FB93D6300E2A443 /* withuWidgetExtension */;
+		};
+		1DBC3D082FBCEB9B00685E35 /* Exceptions for "withu Watch App" folder in "withuComplicationExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+			);
+			target = 1D822BE52FB92FA500E2A443 /* withuComplicationExtension */;
+		};
+		1DBC3D092FBCEB9B00685E35 /* Exceptions for "withu Watch App" folder in "withuWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
 			);
 			target = 1D822CE52FB93D6300E2A443 /* withuWidgetExtension */;
 		};
@@ -170,6 +174,10 @@
 		};
 		1D34FFB32FB4C2760033EC7D /* withu Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1DBC3D082FBCEB9B00685E35 /* Exceptions for "withu Watch App" folder in "withuComplicationExtension" target */,
+				1DBC3D092FBCEB9B00685E35 /* Exceptions for "withu Watch App" folder in "withuWidgetExtension" target */,
+			);
 			path = "withu Watch App";
 			sourceTree = "<group>";
 		};
@@ -245,8 +253,6 @@
 			isa = PBXGroup;
 			children = (
 				1D34FECE2FB278620033EC7D /* withu.app */,
-				1D34FF912FB4C04F0033EC7D /* withu Watch App.app */,
-				1D34FFAA2FB4C2760033EC7D /* withu.app */,
 				1D34FFAF2FB4C2760033EC7D /* withu Watch App.app */,
 				1D822BE62FB92FA500E2A443 /* withuComplicationExtension.appex */,
 				1D822CE62FB93D6300E2A443 /* withuWidgetExtension.appex */,
@@ -274,11 +280,13 @@
 				1D34FECB2FB278620033EC7D /* Frameworks */,
 				1D34FECC2FB278620033EC7D /* Resources */,
 				1D822CF62FB93D6300E2A443 /* Embed Foundation Extensions */,
+				1D34FFBD2FB4C2770033EC7D /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				1D822CF42FB93D6300E2A443 /* PBXTargetDependency */,
+				1D34FFB22FB4C2760033EC7D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1D34FED02FB278620033EC7D /* withu */,
@@ -289,43 +297,6 @@
 			productName = withu;
 			productReference = 1D34FECE2FB278620033EC7D /* withu.app */;
 			productType = "com.apple.product-type.application";
-		};
-		1D34FF902FB4C04F0033EC7D /* withu Watch App */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 1D34FFA72FB4C0500033EC7D /* Build configuration list for PBXNativeTarget "withu Watch App" */;
-			buildPhases = (
-				1D34FF8F2FB4C04F0033EC7D /* Resources */,
-				1D34FFA32FB4C0500033EC7D /* Embed Watch Content */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "withu Watch App";
-			packageProductDependencies = (
-			);
-			productName = "withu Watch App";
-			productReference = 1D34FF912FB4C04F0033EC7D /* withu Watch App.app */;
-			productType = "com.apple.product-type.application.watchapp2-container";
-		};
-		1D34FFA92FB4C2760033EC7D /* withu */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 1D34FFBE2FB4C2770033EC7D /* Build configuration list for PBXNativeTarget "withu" */;
-			buildPhases = (
-				1D34FFA82FB4C2760033EC7D /* Resources */,
-				1D34FFBD2FB4C2770033EC7D /* Embed Watch Content */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				1D34FFB22FB4C2760033EC7D /* PBXTargetDependency */,
-			);
-			name = withu;
-			packageProductDependencies = (
-			);
-			productName = withu;
-			productReference = 1D34FFAA2FB4C2760033EC7D /* withu.app */;
-			productType = "com.apple.product-type.application.watchapp2-container";
 		};
 		1D34FFAE2FB4C2760033EC7D /* withu Watch App */ = {
 			isa = PBXNativeTarget;
@@ -408,12 +379,6 @@
 					1D34FECD2FB278620033EC7D = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
-					1D34FF902FB4C04F0033EC7D = {
-						CreatedOnToolsVersion = 26.4.1;
-					};
-					1D34FFA92FB4C2760033EC7D = {
-						CreatedOnToolsVersion = 26.4.1;
-					};
 					1D34FFAE2FB4C2760033EC7D = {
 						CreatedOnToolsVersion = 26.4.1;
 					};
@@ -440,8 +405,6 @@
 			projectRoot = "";
 			targets = (
 				1D34FECD2FB278620033EC7D /* withu */,
-				1D34FF902FB4C04F0033EC7D /* withu Watch App */,
-				1D34FFA92FB4C2760033EC7D /* withu */,
 				1D34FFAE2FB4C2760033EC7D /* withu Watch App */,
 				1D822BE52FB92FA500E2A443 /* withuComplicationExtension */,
 				1D822CE52FB93D6300E2A443 /* withuWidgetExtension */,
@@ -451,20 +414,6 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		1D34FECC2FB278620033EC7D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		1D34FF8F2FB4C04F0033EC7D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		1D34FFA82FB4C2760033EC7D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -678,9 +627,12 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = withu/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "AI 캐릭터랑 함께 사진을 찍기 위해 카메라가 필요해요.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AI 캐릭터가 수면/운동 데이터에 맞춰 반응하기 위해 건강 데이터를 읽어요.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "(현재 단계에선 쓰지 않지만 향후 기록 저장 기능에 사용해요.)";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AI 캐릭터 서버와 통신하기 위해 로컬 네트워크 접근이 필요합니다.  ";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "지금 날씨에 맞춰 캐릭터를 보여주려고 위치를 사용해요.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "촬영한 사진을 사진 앱에 저장하기 위해 권한이 필요해요.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -691,10 +643,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.4;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = sy.withu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -708,7 +660,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.4;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -726,9 +678,12 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = withu/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "AI 캐릭터랑 함께 사진을 찍기 위해 카메라가 필요해요.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AI 캐릭터가 수면/운동 데이터에 맞춰 반응하기 위해 건강 데이터를 읽어요.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "(현재 단계에선 쓰지 않지만 향후 기록 저장 기능에 사용해요.)";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "AI 캐릭터 서버와 통신하기 위해 로컬 네트워크 접근이 필요합니다.  ";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "지금 날씨에 맞춰 캐릭터를 보여주려고 위치를 사용해요.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "촬영한 사진을 사진 앱에 저장하기 위해 권한이 필요해요.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -739,10 +694,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 26.4;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = sy.withu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -756,42 +711,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 26.4;
-			};
-			name = Release;
-		};
-		1D34FFA12FB4C0500033EC7D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_KEY_CFBundleDisplayName = "withu Watch App";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "sy.withu-Watch-App";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		1D34FFA22FB4C0500033EC7D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_KEY_CFBundleDisplayName = "withu Watch App";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "sy.withu-Watch-App";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				VALIDATE_PRODUCT = YES;
+				XROS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -807,12 +727,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = withu;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = sy.withu;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = sy.withu;
 				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -824,7 +744,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.6;
 			};
 			name = Debug;
 		};
@@ -840,12 +760,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = withu;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = sy.withu;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = sy.withu;
 				PRODUCT_BUNDLE_IDENTIFIER = sy.withu.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -858,42 +778,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 26.4;
-			};
-			name = Release;
-		};
-		1D34FFBF2FB4C2770033EC7D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_KEY_CFBundleDisplayName = withu;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = sy.withu;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		1D34FFC02FB4C2770033EC7D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_KEY_CFBundleDisplayName = withu;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = sy.withu;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.6;
 			};
 			name = Release;
 		};
@@ -1050,29 +935,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1D34FFA72FB4C0500033EC7D /* Build configuration list for PBXNativeTarget "withu Watch App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1D34FFA12FB4C0500033EC7D /* Debug */,
-				1D34FFA22FB4C0500033EC7D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		1D34FFBA2FB4C2770033EC7D /* Build configuration list for PBXNativeTarget "withu Watch App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1D34FFBB2FB4C2770033EC7D /* Debug */,
 				1D34FFBC2FB4C2770033EC7D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1D34FFBE2FB4C2770033EC7D /* Build configuration list for PBXNativeTarget "withu" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1D34FFBF2FB4C2770033EC7D /* Debug */,
-				1D34FFC02FB4C2770033EC7D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

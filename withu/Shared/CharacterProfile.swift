@@ -1,0 +1,96 @@
+//
+//  CharacterProfile.swift
+//  withu (Shared)
+//
+//  사용자가 설정하는 캐릭터 프로필 — 이름, 설명, 수면/식사 시간.
+//  App Group UserDefaults 에 저장. resolver 가 시간 정보 사용.
+//
+
+import Foundation
+
+struct CharacterProfile: Codable, Equatable {
+    var name: String = "내 캐릭터"
+    var description: String = ""
+    /// AI 캐릭터 생성 시 baseIdentity 의 default — 외형/성격 한 줄 정의.
+    /// 비어있으면 hardcoded fallback 사용.
+    var aiPrompt: String = ""
+    /// 수면 시작 시 (0-23). 기본 22 = 22:00
+    var sleepStartHour: Int = 22
+    var sleepStartMinute: Int = 0
+    /// 기상 시 (0-23). 기본 7 = 07:00
+    var sleepEndHour: Int = 7
+    var sleepEndMinute: Int = 0
+    /// 점심 시작. 30분 동안 식사
+    var lunchHour: Int = 12
+    var lunchMinute: Int = 0
+    /// 저녁 시작. 30분 동안 식사
+    var dinnerHour: Int = 18
+    var dinnerMinute: Int = 0
+    /// true 면 Focus 모드 / HealthKit 수면 일정을 무시하고 위의 sleepStart/End 시간만으로 sleeping 판정.
+    /// Optional 인 이유: 옛 저장 데이터엔 이 키가 없어 nil. **기본값은 '설정 시간 기준'(true)** —
+    /// 설치 직후 별도 설정 없이도 밤에 확실히 자는 경험. '수면 모드 기준'(false)은 opt-in.
+    var manualSleepOnly: Bool?
+    /// 수면 기준 — nil(미설정)이면 '설정 시간 기준'(true). 이 프로퍼티만 읽어 기본값을 한 곳에서 관리.
+    var isManualSleepOnly: Bool { manualSleepOnly ?? true }
+    /// 야간 fallback 시작 (분, midnight 기준). 위치 권한 없거나 일출/일몰 못 받았을 때 사용.
+    /// nil → 20:00 (1200) 기본값.
+    var nightFallbackStartMinute: Int?
+    /// 야간 fallback 종료 (분, midnight 기준). nil → 06:00 (360) 기본값.
+    var nightFallbackEndMinute: Int?
+    // 애니메이션 사용 토글은 CharacterImageStore.animationEnabled 로 분리 — widget target 도 읽어야 함.
+
+    var effectiveNightFallbackStart: Int { nightFallbackStartMinute ?? 20 * 60 }
+    var effectiveNightFallbackEnd: Int { nightFallbackEndMinute ?? 6 * 60 }
+}
+
+enum CharacterProfileStore {
+    private static let key = "withu.characterProfile.v1"
+    private static var defaults: UserDefaults? {
+        UserDefaults(suiteName: SharedAppState.groupID)
+    }
+
+    static func load() -> CharacterProfile {
+        guard let defaults,
+              let data = defaults.data(forKey: key),
+              let profile = try? JSONDecoder().decode(CharacterProfile.self, from: data) else {
+            return CharacterProfile()
+        }
+        return profile
+    }
+
+    /// 적용한 캐릭터에 이름이 있으면 '내 캐릭터' 이름으로도 반영한다.
+    /// (만들 때 지은 이름 ↔ 내 캐릭터 설정 이름 연동 — '적용' 시점에만 동기화)
+    static func syncNameFromApplied(_ state: CharacterState) {
+        guard let name = CharacterImageStore.appliedCharacterName(for: state) else { return }
+        syncName(name)
+    }
+
+    /// 이름을 직접 알고 있을 때 (배치처럼 활성 소스 맵을 안 거치는 경로).
+    static func syncName(_ raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        var p = load()
+        guard p.name != name else { return }
+        p.name = name
+        save(p)
+    }
+
+    static func save(_ profile: CharacterProfile) {
+        guard let defaults,
+              let data = try? JSONEncoder().encode(profile) else { return }
+        defaults.set(data, forKey: key)
+        // 위젯이 미래 수면/기상 전환을 계산하도록 시간 창 요약도 즉시 공유 (프로필 변경 반영).
+        SharedAppState.saveSchedule(SharedAppState.ScheduleInfo(
+            manualSleepOnly: profile.isManualSleepOnly,
+            sleepStartMin: profile.sleepStartHour * 60 + profile.sleepStartMinute,
+            sleepEndMin: profile.sleepEndHour * 60 + profile.sleepEndMinute,
+            lunchMin: profile.lunchHour * 60 + profile.lunchMinute,
+            dinnerMin: profile.dinnerHour * 60 + profile.dinnerMinute))
+        // 메인 화면 등에 알려서 즉시 갱신
+        NotificationCenter.default.post(name: .characterProfileChanged, object: nil)
+    }
+}
+
+extension Notification.Name {
+    static let characterProfileChanged = Notification.Name("withu.characterProfileChanged")
+}

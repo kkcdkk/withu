@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 갤러리 strings (S4 소유) — 문구는 iOS CharacterGalleryView.swift 원문 그대로 (스펙 04 §2). -->
+<resources>
+    <!-- Landing (CharacterGalleryView) -->
+    <string name="gallery_title">캐릭터 갤러리</string>
+    <string name="gallery_mode_picker_label">보기</string>
+    <string name="gallery_mode_by_state">상태별</string>
+    <string name="gallery_mode_by_character">캐릭터별</string>
+    <string name="gallery_section_state_folders">상태별 폴더</string>
+    <string name="gallery_count">%1$d개</string>
+    <string name="gallery_folder_empty_subtitle">아직 없어요</string>
+    <string name="gallery_folder_applied_subtitle">%1$d개 · 지금 적용 중</string>
+    <string name="gallery_legacy_title">기타</string>
+    <string name="gallery_legacy_subtitle">%1$d개 · 예전에 만든 캐릭터</string>
+    <string name="gallery_legacy_header">예전에 만든 캐릭터</string>
+    <string name="gallery_by_character_empty">만든 캐릭터가 여기에 이름별로 모여요.</string>
+    <string name="gallery_unnamed_character">이름 없는 캐릭터</string>
+    <string name="gallery_batch_group_title">이 캐릭터</string>
+    <string name="gallery_apply_all">이 캐릭터로 모두 적용</string>
+    <string name="gallery_apply_all_confirm_title">이 캐릭터로 모두 적용할까요?</string>
+    <string name="gallery_apply_all_confirm_body">%1$d개 상태 자리의 캐릭터가 모두 이 캐릭터로 바뀌어요.</string>
+    <string name="gallery_apply_all_button">모두 적용</string>
+    <string name="gallery_apply_all_toast">%1$d개 모습을 모두 적용했어요</string>
+    <string name="gallery_empty_title">아직 만든 캐릭터가 없어요</string>
+    <string name="gallery_empty_body">캐릭터를 만들면 상태별 폴더에\n차곡차곡 모여요.</string>
+
+    <!-- StateFolderView -->
+    <string name="gallery_state_empty_title">%1$s 캐릭터가 아직 없어요</string>
+    <string name="gallery_state_empty_body">이 순간에 어울리는 캐릭터를 만들어 보세요.</string>
+    <string name="gallery_state_empty_button">생성하러 가기</string>
+
+    <!-- GalleryGrid (선택/취소/저장/삭제/닫기/확인은 common_* 공유 키 사용) -->
+    <string name="gallery_selection_count">%1$d개 선택</string>
+    <string name="gallery_badge_sequence">연속</string>
+    <string name="gallery_apply_sheet_title">\'%1$s\' 캐릭터를 어디에 적용할까요?</string>
+    <string name="gallery_apply_sheet_slot">%1$s 자리에</string>
+    <string name="gallery_delete_confirm_title">이 캐릭터를 지울까요?</string>
+    <string name="gallery_delete_toast">지웠어요</string>
+    <string name="gallery_save_alert_title">사진 저장</string>
+    <string name="gallery_bulk_delete_confirm_title">%1$d개를 지울까요?</string>
+    <string name="gallery_bulk_delete_toast">%1$d개를 지웠어요</string>
+    <string name="gallery_apply_success_toast">%1$s 자리에 적용했어요</string>
+    <string name="gallery_apply_fail_toast">적용하지 못했어요</string>
+    <string name="gallery_photos_permission_denied">사진 추가 권한이 꺼져 있어요. 설정에서 켜주세요.</string>
+    <string name="gallery_saved_multi">%1$d장을 사진 앱에 저장했어요.</string>
+    <string name="gallery_saved_single">사진 앱에 저장했어요.</string>
+    <string name="gallery_save_failed">저장하지 못했어요. 다시 시도해 주세요.</string>
+
+    <!-- 상세 시트 -->
+    <string name="gallery_detail_title">%1$s 캐릭터</string>
+    <string name="gallery_frame_first">1번째</string>
+    <string name="gallery_frame_second">2번째</string>
+    <string name="gallery_applied_pill">%1$s 자리에 적용 중</string>
+    <string name="gallery_sequence_caption">연속 이미지</string>
+    <string name="gallery_prompt_history">만든 기록</string>
+    <string name="gallery_copy_prompt">프롬프트 복사</string>
+    <string name="gallery_swap_frames">프레임 바꾸기</string>
+    <string name="gallery_motion_toggle">움직임</string>
+    <string name="gallery_apply_cta">\'%1$s\' 자리에 적용하기</string>
+    <string name="gallery_other_slot">다른 자리에</string>
+    <string name="gallery_other_slot_apply">다른 자리에 적용하기</string>
+    <string name="gallery_bg_remove">배경 빼기</string>
+    <string name="gallery_bg_keep">배경 있기</string>
+    <string name="gallery_bg_removing">배경 빼는 중…</string>
+    <string name="gallery_bg_save_cta">이대로 저장</string>
+    <string name="gallery_bg_fail_toast">배경을 빼지 못했어요</string>
+    <string name="gallery_bg_saved_toast">저장했어요</string>
+    <string name="gallery_refine_label">다듬기</string>
+    <string name="gallery_refine_placeholder">바꾸고 싶은 점 (예: 모자를 씌워줘)</string>
+    <string name="gallery_refine_button">다듬기</string>
+    <string name="gallery_refine_running">다듬는 중…</string>
+    <string name="gallery_refine_footer">다듬은 이력에서 골라 적용할 수 있어요.</string>
+    <string name="gallery_refine_confirm_title">캔디를 사용해요</string>
+    <string name="gallery_refine_confirm_body">이번 다듬기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="gallery_refine_confirm_button">다듬기</string>
+    <string name="gallery_no_candy_toast">캔디가 부족해요. 설정에서 충전할 수 있어요.</string>
+    <string name="gallery_no_image_toast">이미지를 받지 못했어요</string>
+    <!-- 다듬기 결과가 도착했는데 상세 시트가 이미 닫혀 있을 때의 폴백 저장 토스트 -->
+    <string name="gallery_refine_success_toast">다듬은 캐릭터를 갤러리에 저장했어요</string>
+
+    <!-- 다듬기 이력 (버전 비교) -->
+    <string name="gallery_refine_history_title">다듬기 이력</string>
+    <string name="gallery_refine_history_open">다듬기 이력 보기</string>
+    <string name="gallery_refine_continue">이어서 다듬기</string>
+    <string name="gallery_refine_version_original">원본</string>
+    <string name="gallery_refine_version_n">다듬음 %1$d</string>
+    <string name="gallery_refine_base_hint">선택한 버전을 기준으로 다듬어요.</string>
+    <string name="gallery_refine_adopt">적용</string>
+    <string name="gallery_refine_adopted_toast">다듬은 캐릭터로 바꿨어요</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="gallery_discard_title">저장하지 않은 변경이 있어요</string>
+    <string name="gallery_discard_message">닫으면 방금 바꾼 배경·다듬기 내용이 지워져요.</string>
+    <string name="gallery_discard_close">닫기</string>
+    <string name="gallery_discard_keep">계속 편집</string>
+</resources>

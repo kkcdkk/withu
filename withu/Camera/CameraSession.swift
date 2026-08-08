@@ -15,11 +15,11 @@ enum CameraError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:         return "카메라 권한이 없어요. 설정에서 켜주세요."
-        case .noCamera:              return "이 기기에서 카메라를 찾을 수 없어요."
-        case .configurationFailed:   return "카메라 구성에 실패했어요."
-        case .captureFailed:         return "사진 캡처에 실패했어요."
-        case .unavailableOnSimulator:return "시뮬레이터에서는 카메라를 쓸 수 없어요. 실기기로 테스트해주세요."
+        case .notAuthorized:         return String(localized: "카메라 권한이 없어요. 설정에서 켜주세요.")
+        case .noCamera:              return String(localized: "이 기기에서 카메라를 찾을 수 없어요.")
+        case .configurationFailed:   return String(localized: "카메라 구성에 실패했어요.")
+        case .captureFailed:         return String(localized: "사진 캡처에 실패했어요.")
+        case .unavailableOnSimulator:return String(localized: "시뮬레이터에서는 카메라를 쓸 수 없어요. 실기기로 테스트해주세요.")
         }
     }
 }
@@ -45,6 +45,7 @@ final class CameraSession: NSObject {
     private(set) var isConfigured: Bool = false
     private(set) var isRunning: Bool = false
     private(set) var lastError: String?
+    private(set) var currentPosition: AVCaptureDevice.Position = .back
 
     private override init() { super.init() }
 
@@ -91,9 +92,10 @@ final class CameraSession: NSObject {
                     self.session.removeOutput(output)
                 }
 
+                let initialPosition: AVCaptureDevice.Position = .back
                 guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                             for: .video,
-                                                            position: .back),
+                                                            position: initialPosition),
                       let input = try? AVCaptureDeviceInput(device: device),
                       self.session.canAddInput(input) else {
                     self.session.commitConfiguration()
@@ -113,6 +115,35 @@ final class CameraSession: NSObject {
             }
         }
         isConfigured = true
+        #endif
+    }
+
+    // MARK: - 카메라 전환 (전면/후면)
+
+    func switchCamera() {
+        #if targetEnvironment(simulator)
+        return
+        #else
+        let newPosition: AVCaptureDevice.Position = (currentPosition == .back) ? .front : .back
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                self.session.removeInput(input)
+            }
+            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
+                                                       for: .video,
+                                                       position: newPosition),
+                  let input = try? AVCaptureDeviceInput(device: device),
+                  self.session.canAddInput(input) else {
+                self.session.commitConfiguration()
+                Task { @MainActor in self.lastError = String(localized: "카메라 전환 실패") }
+                return
+            }
+            self.session.addInput(input)
+            self.session.commitConfiguration()
+            Task { @MainActor in self.currentPosition = newPosition }
+        }
         #endif
     }
 

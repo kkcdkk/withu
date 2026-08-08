@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- en 값은 iOS Localizable.xcstrings 의 en 원문. en 값이 없는 키는 생략 (기본 ko fallback — 00-PLAN §3-1). -->
+<resources>
+    <string name="camera_status_initializing">Initializing…</string>
+    <string name="camera_status_ready">Ready</string>
+    <string name="camera_status_error">Error</string>
+
+    <string name="camera_toast_saved">Saved to your gallery</string>
+    <string name="camera_delete_hint">Drag to move · pinch to resize · long-press to delete</string>
+    <string name="camera_picker_hint">Tap to add a character · drag to move · pinch to resize · press and hold to delete</string>
+
+    <string name="camera_permission_title">Camera access needed</string>
+    <string name="camera_permission_body">To take photos with your character,\nplease allow camera access.</string>
+    <string name="camera_permission_open_settings">Open Settings</string>
+    <string name="camera_permission_album_link">Or create from an album photo</string>
+
+    <string name="camera_err_simulator">The camera isn\'t available in the simulator. Please test on a real device.</string>
+
+    <string name="camera_preview_cancel">Cancel</string>
+    <string name="camera_preview_save">Save</string>
+
+    <string name="camera_err_not_authorized">No camera permission. Please turn it on in Settings.</string>
+    <string name="camera_err_no_camera">Couldn\'t find a camera on this device.</string>
+    <string name="camera_err_configuration">Camera setup failed.</string>
+    <string name="camera_err_capture">Failed to capture the photo.</string>
+    <string name="camera_err_switch">Failed to switch cameras</string>
+    <string name="camera_err_photo_permission">No permission to save photos. Please allow it in Settings.</string>
+    <string name="camera_err_save_failed">Save failed: %1$s</string>
+</resources>

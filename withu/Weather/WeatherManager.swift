@@ -14,10 +14,10 @@ enum WeatherError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .locationDenied:   return "위치 권한이 없어요. 설정에서 켜주세요."
-        case .noLocation:       return "현재 위치를 찾지 못했어요."
-        case .network(let e):   return "날씨 통신 실패: \(e.localizedDescription)"
-        case .decoding(let e):  return "날씨 응답 해석 실패: \(e.localizedDescription)"
+        case .locationDenied:   return String(localized: "위치 권한이 없어요. 설정에서 켜주세요.")
+        case .noLocation:       return String(localized: "현재 위치를 찾지 못했어요.")
+        case .network(let e):   return String(localized: "날씨 통신 실패: \(e.localizedDescription)")
+        case .decoding(let e):  return String(localized: "날씨 응답 해석 실패: \(e.localizedDescription)")
         }
     }
 }
@@ -102,7 +102,7 @@ extension WeatherManager: CLLocationManagerDelegate {
                                      didFailWithError error: Error) {
         Task { @MainActor in
             self.isFetching = false
-            self.lastError = "위치 조회 실패: \(error.localizedDescription)"
+            self.lastError = String(localized: "위치 조회 실패: \(error.localizedDescription)")
         }
     }
 }
@@ -114,28 +114,53 @@ private struct OpenMeteoResponse: Decodable {
         let temperature_2m: Double
         let weather_code: Int
     }
+    struct Daily: Decodable {
+        let time: [String]?
+        let sunrise: [String]?
+        let sunset: [String]?
+    }
     let current: Current
+    let daily: Daily?
 }
 
 extension WeatherManager {
+    /// Open-Meteo 의 일출/일몰은 "yyyy-MM-dd'T'HH:mm" (위치 local TZ, no offset).
+    /// `timezone=auto` 로 요청했으니 위치 로컬 시각. user TZ 와 같다고 가정 (대부분 케이스).
+    private static let openMeteoLocalFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        f.timeZone = TimeZone.current
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     private func fetchOpenMeteo(lat: Double, lon: Double) async {
         defer { isFetching = false }
+        // 좌표는 소수 2자리(~1km)로 반올림 — 날씨엔 충분하고, 정확한 위치가
+        // 기기 밖(타사 API)으로 나가지 않게 (App Privacy: '대략적 위치').
+        let lat = (lat * 100).rounded() / 100
+        let lon = (lon * 100).rounded() / 100
         let urlString =
             "https://api.open-meteo.com/v1/forecast" +
             "?latitude=\(lat)&longitude=\(lon)" +
-            "&current=temperature_2m,weather_code&timezone=auto"
+            "&current=temperature_2m,weather_code" +
+            "&daily=sunrise,sunset&timezone=auto"
 
         guard let url = URL(string: urlString) else {
-            lastError = "URL 생성 실패"
+            lastError = String(localized: "URL 생성 실패")
             return
         }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+            let sunriseStr = decoded.daily?.sunrise?.first
+            let sunsetStr = decoded.daily?.sunset?.first
             let snap = WeatherSnapshot(
                 condition: WeatherCondition(wmoCode: decoded.current.weather_code),
                 temperatureC: decoded.current.temperature_2m,
-                timestamp: Date()
+                timestamp: Date(),
+                sunrise: sunriseStr.flatMap { Self.openMeteoLocalFormatter.date(from: $0) },
+                sunset: sunsetStr.flatMap { Self.openMeteoLocalFormatter.date(from: $0) }
             )
             self.snapshot = snap
             self.lastError = nil

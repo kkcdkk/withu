@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Withy</string>
+    <string name="tile_label">Withy 캐릭터</string>
+    <string name="complication_label">Withy 캐릭터</string>
+    <string name="wear_waiting">폰에서 데이터를\n기다리는 중…</string>
+</resources>

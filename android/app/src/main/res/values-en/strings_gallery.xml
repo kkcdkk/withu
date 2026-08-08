@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- en 값은 iOS Localizable 카탈로그의 en 원문 그대로 (00-PLAN §3-1). -->
+<resources>
+    <!-- Landing (CharacterGalleryView) -->
+    <string name="gallery_title">Character Gallery</string>
+    <string name="gallery_mode_picker_label">View</string>
+    <string name="gallery_mode_by_state">By state</string>
+    <string name="gallery_mode_by_character">By character</string>
+    <string name="gallery_section_state_folders">Folders by state</string>
+    <string name="gallery_count">%1$d</string>
+    <string name="gallery_folder_empty_subtitle">Nothing yet</string>
+    <string name="gallery_folder_applied_subtitle">%1$d · currently applied</string>
+    <string name="gallery_legacy_title">Other</string>
+    <string name="gallery_legacy_subtitle">%1$d · made earlier</string>
+    <string name="gallery_legacy_header">Previously made characters</string>
+    <string name="gallery_by_character_empty">Characters you make are grouped here by name.</string>
+    <string name="gallery_unnamed_character">Unnamed character</string>
+    <string name="gallery_batch_group_title">This character</string>
+    <string name="gallery_apply_all">Apply this character everywhere</string>
+    <string name="gallery_apply_all_confirm_title">Apply this character everywhere?</string>
+    <string name="gallery_apply_all_confirm_body">The characters in %1$d state slots will all change to this character.</string>
+    <string name="gallery_apply_all_button">Apply all</string>
+    <string name="gallery_apply_all_toast">Applied all %1$d looks</string>
+    <string name="gallery_empty_title">No characters made yet</string>
+    <string name="gallery_empty_body">Characters you create are collected\nin folders by state.</string>
+
+    <!-- StateFolderView -->
+    <string name="gallery_state_empty_title">No %1$s character yet</string>
+    <string name="gallery_state_empty_body">Create a character that fits this moment.</string>
+    <string name="gallery_state_empty_button">Go create</string>
+
+    <!-- GalleryGrid -->
+    <string name="gallery_selection_count">%1$d selected</string>
+    <string name="gallery_badge_sequence">Sequence</string>
+    <string name="gallery_apply_sheet_title">Where should we apply the \'%1$s\' character?</string>
+    <string name="gallery_apply_sheet_slot">To the %1$s slot</string>
+    <string name="gallery_delete_confirm_title">Delete this character?</string>
+    <string name="gallery_delete_toast">Deleted</string>
+    <string name="gallery_save_alert_title">Save photo</string>
+    <string name="gallery_bulk_delete_confirm_title">Delete %1$d items?</string>
+    <string name="gallery_bulk_delete_toast">Deleted %1$d items</string>
+    <string name="gallery_apply_success_toast">Applied to the %1$s slot</string>
+    <string name="gallery_apply_fail_toast">Couldn\'t apply</string>
+    <string name="gallery_photos_permission_denied">Photo add permission is off. Please turn it on in Settings.</string>
+    <string name="gallery_saved_multi">Saved %1$d photos to your Photos app.</string>
+    <string name="gallery_saved_single">Saved to Photos.</string>
+    <string name="gallery_save_failed">Couldn\'t save. Please try again.</string>
+
+    <!-- 상세 시트 -->
+    <string name="gallery_detail_title">%1$s character</string>
+    <string name="gallery_frame_first">1st</string>
+    <string name="gallery_frame_second">2nd</string>
+    <string name="gallery_applied_pill">Applied to %1$s</string>
+    <string name="gallery_sequence_caption">Sequence images</string>
+    <string name="gallery_prompt_history">Creation history</string>
+    <string name="gallery_copy_prompt">Copy prompt</string>
+    <string name="gallery_swap_frames">Change frame</string>
+    <string name="gallery_motion_toggle">Animation</string>
+    <string name="gallery_apply_cta">Apply to the \'%1$s\' slot</string>
+    <string name="gallery_other_slot">To another slot</string>
+    <string name="gallery_bg_remove">Remove background</string>
+    <string name="gallery_bg_keep">Keep background</string>
+    <string name="gallery_bg_removing">Removing background…</string>
+    <string name="gallery_bg_save_cta">Save as shown</string>
+    <string name="gallery_bg_fail_toast">Couldn\'t remove the background</string>
+    <string name="gallery_bg_saved_toast">Saved</string>
+    <string name="gallery_refine_label">Refine</string>
+    <string name="gallery_refine_placeholder">What to change (e.g. add a hat)</string>
+    <string name="gallery_refine_button">Refine</string>
+    <string name="gallery_refine_running">Refining…</string>
+    <string name="gallery_refine_footer">Pick from your refine history and apply.</string>
+    <string name="gallery_refine_confirm_title">Uses candies</string>
+    <string name="gallery_refine_confirm_body">This refinement uses %1$d candies. You\'re only charged when it succeeds.</string>
+    <string name="gallery_refine_confirm_button">Refine</string>
+    <string name="gallery_no_candy_toast">Not enough candy. You can top up in Settings.</string>
+    <string name="gallery_no_image_toast">Didn\'t receive the image</string>
+    <string name="gallery_refine_success_toast">Refined character saved to your gallery</string>
+
+    <!-- 다듬기 이력 (버전 비교) -->
+    <string name="gallery_refine_history_title">Refine history</string>
+    <string name="gallery_refine_history_open">View refine history</string>
+    <string name="gallery_refine_continue">Continue refining</string>
+    <string name="gallery_refine_version_original">Original</string>
+    <string name="gallery_refine_version_n">Refined %1$d</string>
+    <string name="gallery_refine_base_hint">Refines from the selected version.</string>
+    <string name="gallery_refine_adopt">Apply</string>
+    <string name="gallery_refine_adopted_toast">Switched to the refined character</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="gallery_discard_title">You have unsaved changes</string>
+    <string name="gallery_discard_message">If you close, the background and refine changes you just made will be discarded.</string>
+    <string name="gallery_discard_close">Close</string>
+    <string name="gallery_discard_keep">Keep editing</string>
+</resources>

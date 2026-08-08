@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 배치 생성 화면 문구 (S3 소유) — iOS BatchCharacterGenView.swift 원문 그대로 (스펙 03 §2). -->
+<resources>
+    <!-- 네비/타이틀 -->
+    <string name="batch_title">여러 모습 만들기</string>
+
+    <!-- 상태 선택 섹션 -->
+    <string name="batch_states_header">만들고 싶은 상태 (%1$d개)</string>
+    <string name="batch_all_on">모두 켜기</string>
+    <string name="batch_all_off">모두 끄기</string>
+    <string name="batch_footer_count">%1$d개의 상태를 만들어요</string>
+    <string name="batch_footer_cost">%1$d캔디 소모</string>
+    <string name="batch_motion_toggle">움직임 (2장 · 메인에서 움직여요)</string>
+    <string name="batch_reset_hint">기본값으로 되돌리기</string>
+    <string name="batch_ref_album_small">앨범</string>
+    <string name="batch_ref_gallery_small">내 캐릭터</string>
+    <string name="batch_ref_remove_state">이 상태 사진 빼기</string>
+    <string name="batch_elapsed">%1$d초</string>
+
+    <!-- 캐릭터 이름 섹션 (선택) — 갤러리 '캐릭터별' 표시 이름 -->
+    <string name="batch_name_header">캐릭터 이름</string>
+    <string name="batch_name_placeholder">이 캐릭터의 이름 (선택)</string>
+    <string name="batch_name_footer">갤러리 \'캐릭터별\'에서 이 이름으로 보여요.</string>
+
+    <!-- 캐릭터 프롬프트 섹션 -->
+    <string name="batch_identity_header">캐릭터 프롬프트</string>
+    <string name="batch_identity_footer">모든 모습에 이 설명이 함께 쓰여요. 캐릭터의 생김새와 성격을 한 번에 정해 주세요.\n예: \"주근깨 많은 분홍 토끼, 커다랗고 귀여운 눈\"</string>
+
+    <!-- 참고 사진 섹션 -->
+    <string name="batch_ref_header">참고 사진 (Optional)</string>
+    <string name="batch_ref_footer">사진을 넣으면 그 캐릭터의 여러 모습으로 생성해요. 비워두면 위에 적은 설명만으로 새로 그려요.</string>
+    <string name="batch_pick_album">앨범에서 선택</string>
+    <string name="batch_pick_gallery">내 캐릭터에서 선택</string>
+    <string name="batch_ref_remove">사진 빼기</string>
+    <string name="batch_keep_label">그대로 둘 것</string>
+    <string name="batch_keep_placeholder">비우면 사진 그대로 유지돼요</string>
+    <string name="batch_keep_hint">- 캐릭터 정체성\n- 얼굴·표정 스타일\n- 몸 비율\n- 그림 스타일\n- 색·음영\n- 선 굵기\n- 전체 디자인</string>
+    <string name="batch_change_label">바꿀 것</string>
+    <string name="batch_change_placeholder">모든 모습에 함께 반영할 변화 (예: 모자 씌워줘, 색 연하게)</string>
+    <string name="batch_change_hint">각 상태의 포즈는 자동으로 적용되고, 여기 적은 변화가 모든 모습에 더해져요.</string>
+
+    <!-- 스타일 섹션 -->
+    <string name="batch_style_header">스타일</string>
+    <string name="batch_style_picker_label">그림 스타일</string>
+    <string name="batch_style_soft">Soft</string>
+    <string name="batch_style_pixel">Pixel</string>
+    <string name="batch_all_motion">모두 움직이는 캐릭터로 (한 모습당 2장)</string>
+    <string name="batch_style_footer">움직이는 캐릭터를 켜면 한 모습마다 두 장을 만들어 메인 화면에서 움직여요. 위에서 움직일 상태만 골라서 켤 수도 있어요.</string>
+
+    <!-- 시작 섹션 -->
+    <string name="batch_start">만들기 시작</string>
+    <string name="batch_generating">만드는 중… %1$d/%2$d</string>
+    <string name="batch_bg_note">앱을 닫거나 화면을 꺼도 계속 만들어요. 다 되면 알림으로 알려드려요. (%1$d/%2$d 완료)</string>
+    <string name="batch_stop">그만두기</string>
+    <string name="batch_not_enough">캔디 %1$d개로는 %2$d개 상태(약 %3$d캔디)를 한 번에 만들 수 없어요. 만들 상태를 줄이거나 캔디를 충전해 주세요.</string>
+    <string name="batch_paywall_cta">더 만들기 (구독·충전)</string>
+    <string name="batch_balance">보유 캔디 %1$d개 · %2$d캔디 소모</string>
+
+    <!-- 기준 모습 승인 -->
+    <string name="batch_approval_header">기준 모습 확인</string>
+    <string name="batch_approve">이 모습으로 나머지 만들기</string>
+    <!-- iOS idleRefineGroup — 첫 다듬기 라벨. 이력에서 이어갈 땐 batch_revise_continue. -->
+    <string name="batch_revise">다듬기</string>
+    <string name="batch_revising">다듬는 중…</string>
+    <string name="batch_revision_placeholder">수정사항을 적어주세요 (예: 더 둥글게, 색 연하게)</string>
+    <string name="batch_back_to_prompt">프롬프트 수정해서 다시</string>
+    <string name="batch_approval_footer">"먼저 만든 '기본' 모습이에요. 이 모습을 기준으로 나머지를 일관되게 만들어요.\n· 마음에 들면 위에서 진행\n· 만들어진 사진에서 수정하려면 '다듬기' 항목에서 수정사항을 입력해 보세요.\n· 프롬프트부터 바꾸려면 '프롬프트 수정해서 다시'"</string>
+
+    <!-- 결과 섹션 -->
+    <string name="batch_results_header">만들어진 모습</string>
+    <string name="batch_retry_card">눌러서 다시 만들기</string>
+    <string name="batch_apply">적용</string>
+    <string name="batch_applied">적용됨</string>
+    <string name="batch_apply_all">모두 적용하기 (%1$d개)</string>
+    <string name="batch_bg_remove_all">배경 모두 지우기</string>
+    <string name="batch_bg_removing">다듬는 중…</string>
+    <!-- iOS 라벨과 일치 — '처음 그림으로' → '흰 배경으로' (배경 모두 지우기의 반대짝). -->
+    <string name="batch_bg_restore_all">흰 배경으로</string>
+    <string name="batch_bg_preview_notice">미리보기를 바꿨어요. 홈·워치엔 \'모두 적용하기\'로 반영돼요.</string>
+    <string name="batch_save_all">사진 앱에 모두 저장 (%1$d장)</string>
+    <string name="batch_saving">저장하는 중…</string>
+
+    <!-- 상세 시트 -->
+    <string name="batch_detail_title">자세히 보기</string>
+    <string name="batch_frame_caption_base">%1$s · 기본</string>
+    <string name="batch_frame_caption_f1">%1$s · 움직임 프레임</string>
+    <string name="batch_bg_picker">배경</string>
+    <string name="batch_bg_white">흰 배경</string>
+    <string name="batch_bg_transparent">배경 빼기</string>
+    <string name="batch_bg_processing">배경 빼는 중…</string>
+    <string name="batch_swap_frames">프레임 바꾸기</string>
+    <string name="batch_motion_label">움직임</string>
+    <string name="batch_revise_q">어떻게 바꿀까요</string>
+    <string name="batch_revise_q_f1">이 움직임 프레임을 어떻게 바꿀까요</string>
+    <string name="batch_revise_placeholder">예: 더 귀엽게, 표정 밝게, 모자 씌워줘</string>
+    <string name="batch_ref_add">사진 넣기</string>
+    <string name="batch_ref_change">변경</string>
+    <string name="batch_ref_remove_small">제거</string>
+    <string name="batch_revise_cta">다듬기</string>
+
+    <!-- 다듬기 버전 이력 (적용 전 보관) — iOS revisionCompareView/revisionStrip -->
+    <string name="batch_revision_history_title">다듬기 이력</string>
+    <string name="batch_revise_continue">이어서 다듬기</string>
+    <string name="batch_revision_original">원본</string>
+    <string name="batch_revision_n">다듬음 %1$d</string>
+    <string name="batch_revision_base_hint">선택한 버전을 기준으로 다듬어요.</string>
+    <string name="batch_revision_accept">적용</string>
+    <string name="batch_revision_reject">취소</string>
+    <string name="batch_revised_badge">다듬음</string>
+
+    <!-- 캔디 소모 확인 팝업 — 만들기/나머지/수정 모두 공용 (단건 생성과 동일한 안내를 배치에도). -->
+    <string name="batch_candy_title">캔디를 사용해요</string>
+    <string name="batch_candy_confirm_make">만들기</string>
+    <string name="batch_candy_confirm_revise">다듬기</string>
+    <string name="batch_candy_body_start">이번 만들기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="batch_candy_body_rest">나머지 모습에 캔디 약 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <string name="batch_candy_body_revise">이번 다듬기에 캔디 %1$d개를 써요. 성공했을 때만 차감돼요.</string>
+    <!-- 기준 모습 다듬기 — 1번째는 무료, 2번째부터 캔디 차감 (iOS idleRevisionCost). -->
+    <string name="batch_candy_body_revise_free">이번 다듬기는 무료예요.</string>
+    <string name="batch_revise_cost_free">무료</string>
+    <string name="batch_revise_cost_candy">캔디 %1$d개</string>
+
+    <!-- 알럿/에러 -->
+    <string name="batch_done_title">다 만들었어요</string>
+    <string name="batch_done_body">"%1$d개 완성, %2$d개 못 만들었어요. 아래 '적용' 또는 '모두 적용하기'로 홈/워치에 반영해요."</string>
+    <string name="batch_save_alert_title">사진 저장</string>
+    <string name="batch_err_server">서버에 연결할 수 없어요. 네트워크 또는 서버 상태를 확인하고 다시 시도해 주세요.</string>
+    <string name="batch_err_no_image">이미지를 받지 못했어요</string>
+    <string name="batch_err_no_image_retry">이미지를 받지 못했어요. 다시 시도해 주세요.</string>
+    <string name="batch_err_failed_generic">만들지 못했어요</string>
+    <string name="batch_err_ref_load">참고 이미지를 불러올 수 없어요. 다른 사진으로 시도해 주세요.</string>
+    <string name="batch_photos_denied">사진 추가 권한이 거부됐어요. 설정 → Withy 에서 허용해 주세요.</string>
+    <string name="batch_photos_saved_one">사진 앱에 저장됐어요.</string>
+    <string name="batch_photos_saved_n">%1$d장 사진 앱에 저장됐어요.</string>
+    <string name="batch_photos_save_failed">저장하지 못했어요. 다시 시도해 주세요.</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="batch_discard_title">입력한 다듬기 내용이 있어요</string>
+    <string name="batch_discard_message">닫으면 방금 입력한 다듬기 문구·사진이 지워져요.</string>
+    <string name="batch_discard_keep">계속 편집</string>
+</resources>

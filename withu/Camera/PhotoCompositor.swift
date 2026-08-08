@@ -17,17 +17,34 @@ enum PhotoCompositor {
         let size = photo.size
         let renderer = UIGraphicsImageRenderer(size: size)
 
-        return renderer.image { _ in
+        return renderer.image { context in
             photo.draw(in: CGRect(origin: .zero, size: size))
+            drawPlaced(placed, in: size, context: context)
+        }
+    }
 
-            for character in placed {
-                let rect = character.rect(in: size)
+    /// 한 캐릭터 합성. 사용자 이미지 → Asset → SF Symbol fallback.
+    /// 배치된 캐릭터들을 캔버스에 그림 — 정규화 rect → 캔버스 좌표.
+    /// compose(카메라 사진)와 앨범 캔버스 합성(CameraView)이 공유.
+    static func drawPlaced(_ placed: [PlacedCharacter], in size: CGSize,
+                           context: UIGraphicsImageRendererContext) {
+        for character in placed {
+            let rect = character.rect(in: size)
+            if character.rotation != 0 {
+                // 캐릭터 중심 기준 회전
+                let cg = context.cgContext
+                cg.saveGState()
+                cg.translateBy(x: rect.midX, y: rect.midY)
+                cg.rotate(by: character.rotation)
+                cg.translateBy(x: -rect.midX, y: -rect.midY)
+                drawCharacter(state: character.state, in: rect)
+                cg.restoreGState()
+            } else {
                 drawCharacter(state: character.state, in: rect)
             }
         }
     }
 
-    /// 한 캐릭터 합성. 사용자 이미지 → Asset → SF Symbol fallback.
     private static func drawCharacter(state: CharacterState, in rect: CGRect) {
         if let userImage = CharacterImageStore.load(state) {
             drawAspectFit(userImage, in: rect)

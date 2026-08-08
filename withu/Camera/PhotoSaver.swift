@@ -12,8 +12,8 @@ enum PhotoSaveError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:    return "사진 저장 권한이 없어요. 설정에서 허용해주세요."
-        case .writeFailed(let e): return "저장 실패: \(e.localizedDescription)"
+        case .notAuthorized:    return String(localized: "사진 저장 권한이 없어요. 설정에서 허용해주세요.")
+        case .writeFailed(let e): return String(localized: "저장 실패: \(e.localizedDescription)")
         }
     }
 }

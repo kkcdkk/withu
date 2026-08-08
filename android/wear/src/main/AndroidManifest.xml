@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <!-- 손목 활동(산책/달리기/자전거) 감지 — 폰 없이도 워치가 스스로 상태 변경 -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!-- 폰이 두뇌 — 워치는 폰이 push 한 데이터가 있어야 의미가 있으므로 standalone=false -->
+    <application
+        android:name=".WearApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="true" />
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
+        <activity
+            android:name=".WearMainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Tile(=워치 위젯). 애플워치 컴플리케이션 대응. -->
+        <service
+            android:name=".tile.CharacterTileService"
+            android:exported="true"
+            android:label="@string/tile_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+        </service>
+
+        <!-- 시계 페이스 컴플리케이션 (캐릭터). iOS withuComplicationExtension 대응. -->
+        <service
+            android:name=".complication.CharacterComplicationService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/complication_label"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SMALL_IMAGE" />
+            <!-- 0 = 주기 갱신 없음. 데이터 도착 시 requestUpdateAll 로 즉시 갱신. -->
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0" />
+        </service>
+
+        <!-- 폰 Data Layer 수신 — 상태/이미지 도착 시 저장 + Tile 갱신 -->
+        <service
+            android:name=".sync.WearDataListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/withu" />
+            </intent-filter>
+        </service>
+
+        <!-- 손목 활동 전환 수신 -->
+        <receiver
+            android:name=".motion.WatchMotionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.seoyoung.withu.wear.ACTIVITY_TRANSITION" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  배치 생성 화면 en (S3 소유).
+  iOS Localizable 카탈로그에 확정된 en 번역이 없는 키는 생략 — 기본 로케일(ko)로 fallback
+  (00-PLAN §3-1). 로케일 무관(원문이 영어)인 키만 여기 둔다.
+-->
+<resources>
+    <string name="batch_style_soft">Soft</string>
+    <string name="batch_style_pixel">Pixel</string>
+
+    <!-- 캐릭터 이름 — placeholder/footer 는 iOS 카탈로그에 en 번역이 없어 생략(ko fallback). -->
+    <string name="batch_name_header">Character name</string>
+
+    <!-- 다듬기 버전 이력 -->
+    <string name="batch_revise_cta">Refine</string>
+    <string name="batch_candy_confirm_revise">Refine</string>
+    <string name="batch_candy_body_revise_free">This refine is free.</string>
+    <string name="batch_revise_cost_free">Free</string>
+    <string name="batch_revise_cost_candy">%1$d candies</string>
+    <string name="batch_revision_history_title">Refine history</string>
+    <string name="batch_revise_continue">Continue refining</string>
+    <string name="batch_revision_original">Original</string>
+    <string name="batch_revision_n">Refined %1$d</string>
+    <string name="batch_revision_base_hint">Refines from the selected version.</string>
+    <string name="batch_revision_accept">Apply</string>
+    <string name="batch_revision_reject">Cancel</string>
+    <string name="batch_revised_badge">Refined</string>
+
+    <!-- 저장 안 한 변경 보호 (A-4) -->
+    <string name="batch_discard_title">You have refine input</string>
+    <string name="batch_discard_message">If you close, the refine text and photo you just entered will be discarded.</string>
+    <string name="batch_discard_keep">Keep editing</string>
+</resources>

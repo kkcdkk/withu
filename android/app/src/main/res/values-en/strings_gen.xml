@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-generation screen strings (en). Keys 1:1 with values/strings_gen.xml. -->
+<resources>
+    <string name="gen_title">Make a character</string>
+
+    <string name="gen_mode_ai">Generate a character with AI</string>
+    <string name="gen_mode_import">Use my own image</string>
+
+    <string name="gen_batch_title">Make every state at once</string>
+    <string name="gen_batch_subtitle">Create the look for all states in one go</string>
+
+    <string name="gen_mode_header">Generation option</string>
+    <string name="gen_mode_footer_import">Uses a photo or drawing you already have. Removes the background automatically and squares it up. No cost.</string>
+
+    <string name="gen_state_header">State</string>
+
+    <string name="gen_prompt_header">Character prompt</string>
+    <string name="gen_prompt_caption">Describe what your character looks like. Poses and expressions per state are set by the system.</string>
+    <string name="gen_prompt_placeholder">e.g. round green sprout character, big eyes, small body</string>
+    <string name="gen_helper_disclosure">Fill by field</string>
+    <string name="gen_helper_subject_label">Subject</string>
+    <string name="gen_helper_subject_placeholder">marshmallow character</string>
+    <string name="gen_helper_looks_label">Looks</string>
+    <string name="gen_helper_looks_placeholder">big eyes, round body, sprout</string>
+    <string name="gen_helper_color_label">Colors (optional)</string>
+    <string name="gen_helper_color_placeholder">soft light-green pastel</string>
+    <string name="gen_helper_caption">Filling these merges into the description above automatically.</string>
+
+    <string name="gen_ref_header">Reference photo (Optional)</string>
+    <string name="gen_ref_pick_album">Choose from album</string>
+    <string name="gen_ref_pick_gallery">Choose from my characters</string>
+    <string name="gen_ref_remove">Remove photo</string>
+    <string name="gen_ref_keep_label">Keep as is</string>
+    <string name="gen_ref_keep_placeholder">Leave empty to keep the photo exactly</string>
+    <string name="gen_ref_keep_examples">- Character identity\n- Face/expression style\n- Body proportions\n- Art style\n- Color/shading\n- Line weight\n- Overall design</string>
+    <string name="gen_ref_change_label">Change</string>
+    <string name="gen_ref_change_placeholder">Write what to change</string>
+    <string name="gen_ref_change_examples">- Pose: [wanted pose]\n- Action: [action]\n- Angle: [front/side/3/4]\n- Expression: [if needed]\n- Props: [if needed]</string>
+    <string name="gen_ref_footer_has">The character in the photo stays the same; only what you list under \'Change\' changes. Leave empty to use the pose of the chosen state.</string>
+
+    <string name="gen_style_header">Style</string>
+    <string name="gen_style_picker_label">Art style</string>
+    <string name="gen_style_soft">Soft</string>
+    <string name="gen_style_pixel">Pixel</string>
+
+    <string name="gen_progress">Drawing… %1$ds</string>
+    <string name="gen_progress_nostart">Drawing…</string>
+    <string name="gen_cancel">Stop</string>
+    <string name="gen_recharge">Make more (recharge)</string>
+    <string name="gen_animate_toggle">Make a moving character</string>
+    <string name="gen_cta">Make it like this</string>
+    <!-- ⚠️ iOS 원문에서 의도적으로 갈라진 유일한 문구 (values/strings_gen.xml 주석 참고). -->
+    <string name="gen_footer_generating">We\'ll keep making it even if you close the app or turn off the screen. You\'ll get a notification when it\'s done.</string>
+    <string name="gen_footer_waiting">Usually takes about 20–30 seconds.</string>
+    <string name="gen_footer_free">Your first make is free! After that each make/refine uses candy.</string>
+    <string name="gen_footer_insufficient">Not enough candy. Recharge to keep making.</string>
+    <string name="gen_footer_normal">Candy %1$d · this make %2$d candy</string>
+    <string name="gen_footer_photo_costs_candy">Adding a photo uses candy. The free one is for making without a photo.</string>
+
+    <string name="gen_candy_title_free">Your first make is free</string>
+    <string name="gen_candy_title_normal">Uses candy</string>
+    <string name="gen_candy_confirm_refine">Refine</string>
+    <string name="gen_candy_confirm_new">Make</string>
+    <string name="gen_candy_body_free">This one is free. After that each make/refine uses candy (1 per image).</string>
+    <string name="gen_candy_body_new">This make uses %1$d candy. Charged only on success.</string>
+    <string name="gen_candy_body_refine">This refine uses %1$d candy. Charged only on success.</string>
+
+    <string name="gen_result_header">Result</string>
+    <string name="gen_result_refined_badge">Viewing refined version %1$d</string>
+    <string name="gen_frame_first">Frame 1</string>
+    <string name="gen_frame_second">Frame 2 (motion)</string>
+    <string name="gen_bg_label">Background</string>
+    <string name="gen_bg_white">White background</string>
+    <string name="gen_bg_transparent">Remove background</string>
+    <string name="gen_bg_processing">Removing background…</string>
+    <string name="gen_revised_disclosure">See the description actually used</string>
+    <string name="gen_apply_cta">Apply to \'%1$s\'</string>
+    <string name="gen_save_photos">Save to Photos</string>
+    <string name="gen_saved_to_gallery">Saved to character gallery</string>
+    <string name="gen_name_label">Name for this character (optional)</string>
+    <string name="gen_name_placeholder">Name</string>
+    <string name="gen_name_hint">Shows under this name in the gallery\'s \'By character\'.</string>
+
+    <string name="gen_refine_header">Keep refining</string>
+    <string name="gen_refine_header_motion">Keep refining (motion frame)</string>
+    <string name="gen_refine_button">Refine</string>
+    <string name="gen_refine_footer">Adjust little by little from the result above. Each refine uses the same candy as a make (charged only on success).</string>
+
+    <string name="gen_history_header">Refine history</string>
+    <string name="gen_history_original">Original</string>
+    <string name="gen_history_refined">Refined %1$d</string>
+    <string name="gen_history_footer">The version you tap becomes the one applied. Pick \'Original\' to go back before refining.</string>
+
+    <string name="gen_import_header">Choose a photo</string>
+    <string name="gen_import_pick">Choose a photo</string>
+    <string name="gen_import_pick_change">Choose a different photo</string>
+    <string name="gen_import_processing">Removing background and squaring up…</string>
+    <string name="gen_import_footer">Squares up the photo you pick. Choose whether to remove the background below. All processed on-device, no cost.</string>
+    <string name="gen_import_result_header">Preview</string>
+    <string name="gen_import_toggle_removebg">Remove background</string>
+    <string name="gen_import_bg_processing">Removing background…</string>
+
+    <string name="gen_alert_applied_title">Applied</string>
+    <string name="gen_alert_applied_body">Changed the character in the %1$s slot. It reflects on home, widgets, and watch right away.</string>
+    <string name="gen_alert_saved_title">Saved</string>
+    <string name="gen_alert_saved_body">Saved to Photos.</string>
+
+    <string name="gen_err_no_candy">Not enough candy. Recharge to keep making.</string>
+    <string name="gen_err_offline">Connection is hard right now. Check your Wi-Fi or internet and try again.</string>
+    <string name="gen_err_image_load">Couldn\'t load the image. Please try again.</string>
+    <string name="gen_err_reload">Couldn\'t reload the existing image. Please try again.</string>
+    <string name="gen_err_photo_load">Couldn\'t load the photo.</string>
+    <string name="gen_err_save_failed">Couldn\'t save. Please try again.</string>
+    <string name="gen_err_cancelled">Stopped image generation.</string>
+
+    <string name="gen_notify_done_title">Your character is ready</string>
+    <string name="gen_notify_done_body">Open it, take a look, and apply it if you like it.</string>
+    <string name="gen_notify_failed_title">Couldn\'t make the character</string>
+    <string name="gen_notify_failed_body">You can try again in the app.</string>
+</resources>

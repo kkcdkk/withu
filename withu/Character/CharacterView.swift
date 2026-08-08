@@ -20,7 +20,7 @@ struct CharacterView: View {
             }
 
             Text(state.caption)
-                .font(.headline)
+                .font(.galmuri(17, relativeTo: .headline))
                 .foregroundStyle(.primary)
                 .transition(.opacity)
                 .id(state)   // 상태 바뀌면 텍스트 fade 새로 트리거
